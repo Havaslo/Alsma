@@ -8,6 +8,7 @@ import { AllInclusivePage } from "@/pages/AllInclusivePage";
 import { EntertainmentPage } from "@/pages/EntertainmentPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { OffersPage } from "@/pages/OffersPage";
 import { PublicContentPage } from "@/pages/PublicContentPage";
 import { RoomsPage } from "@/pages/RoomsPage";
 import { SpaPage } from "@/pages/SpaPage";
@@ -25,10 +26,7 @@ export const App = () => {
         path={AMAZI_ROUTES.entertainment}
       />
       <Route element={<AllInclusivePage />} path={AMAZI_ROUTES.allInclusive} />
-      <Route
-        element={<PublicContentPage pageKey="offers" />}
-        path={AMAZI_ROUTES.offers}
-      />
+      <Route element={<OffersPage />} path={AMAZI_ROUTES.offers} />
       <Route
         element={<PublicContentPage pageKey="about" />}
         path={AMAZI_ROUTES.about}
