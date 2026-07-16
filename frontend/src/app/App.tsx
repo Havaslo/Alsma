@@ -6,11 +6,13 @@ import { AccountPage } from "@/pages/AccountPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminLoginPage } from "@/pages/AdminLoginPage";
 import { AllInclusivePage } from "@/pages/AllInclusivePage";
+import { BlogPage } from "@/pages/BlogPage";
 import { CelebrationsPage } from "@/pages/CelebrationsPage";
 import { EntertainmentPage } from "@/pages/EntertainmentPage";
 import { HardwareProceduresPage } from "@/pages/HardwareProceduresPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { NewsPage } from "@/pages/NewsPage";
 import { OffersPage } from "@/pages/OffersPage";
 import { PublicContentPage } from "@/pages/PublicContentPage";
 import { RoomsPage } from "@/pages/RoomsPage";
@@ -36,14 +38,8 @@ export const App = () => {
         path={AMAZI_ROUTES.hardwareProcedures}
       />
       <Route element={<CelebrationsPage />} path={AMAZI_ROUTES.celebrations} />
-      <Route
-        element={<PublicContentPage pageKey="news" />}
-        path={AMAZI_ROUTES.news}
-      />
-      <Route
-        element={<PublicContentPage pageKey="blog" />}
-        path={AMAZI_ROUTES.blog}
-      />
+      <Route element={<NewsPage />} path={AMAZI_ROUTES.news} />
+      <Route element={<BlogPage />} path={AMAZI_ROUTES.blog} />
       <Route
         element={<PublicContentPage pageKey="privacy" />}
         path={AMAZI_ROUTES.privacy}
