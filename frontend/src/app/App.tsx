@@ -7,6 +7,7 @@ import { AdminLoginPage } from "@/pages/AdminLoginPage";
 import { AllInclusivePage } from "@/pages/AllInclusivePage";
 import { CelebrationsPage } from "@/pages/CelebrationsPage";
 import { EntertainmentPage } from "@/pages/EntertainmentPage";
+import { HardwareProceduresPage } from "@/pages/HardwareProceduresPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { OffersPage } from "@/pages/OffersPage";
@@ -33,7 +34,7 @@ export const App = () => {
         path={AMAZI_ROUTES.about}
       />
       <Route
-        element={<PublicContentPage pageKey="hardware-procedures" />}
+        element={<HardwareProceduresPage />}
         path={AMAZI_ROUTES.hardwareProcedures}
       />
       <Route element={<CelebrationsPage />} path={AMAZI_ROUTES.celebrations} />
