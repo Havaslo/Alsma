@@ -9,12 +9,12 @@ import logoWhite from "@/assets/alsma/logo-white.svg";
 import { cn } from "@/lib/cn";
 
 const navigation = [
-  "Проживание",
-  "SPA",
-  "Развлечения",
-  "Все включено",
-  "О нас",
-  "Акции",
+  { label: "Проживание", to: AMAZI_ROUTES.rooms },
+  { label: "SPA", to: AMAZI_ROUTES.spa },
+  { label: "Развлечения", to: AMAZI_ROUTES.entertainment },
+  { label: "Все включено", to: AMAZI_ROUTES.allInclusive },
+  { label: "О нас", to: AMAZI_ROUTES.about },
+  { label: "Акции", to: AMAZI_ROUTES.offers },
 ];
 
 export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
@@ -39,10 +39,10 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
         {navigation.map((item) => (
           <Link
             className="transition hover:opacity-70"
-            key={item}
-            to={AMAZI_ROUTES.home}
+            key={item.to}
+            to={item.to}
           >
-            {item}
+            {item.label}
           </Link>
         ))}
       </nav>
@@ -65,12 +65,8 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
       {open && (
         <nav className="absolute inset-x-0 top-16 flex flex-col gap-3 rounded-3xl bg-brand p-6 text-brand-foreground lg:hidden">
           {navigation.map((item) => (
-            <Link
-              key={item}
-              onClick={() => setOpen(false)}
-              to={AMAZI_ROUTES.home}
-            >
-              {item}
+            <Link key={item.to} onClick={() => setOpen(false)} to={item.to}>
+              {item.label}
             </Link>
           ))}
         </nav>

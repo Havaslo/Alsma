@@ -6,6 +6,7 @@ import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminLoginPage } from "@/pages/AdminLoginPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { PublicContentPage } from "@/pages/PublicContentPage";
 
 export const App = () => {
   return (
@@ -13,6 +14,50 @@ export const App = () => {
       <Route element={<HomePage />} path={AMAZI_ROUTES.home} />
       <Route element={<LoginPage />} path={AMAZI_ROUTES.login} />
       <Route element={<AccountPage />} path={AMAZI_ROUTES.account} />
+      <Route
+        element={<PublicContentPage pageKey="rooms" />}
+        path={AMAZI_ROUTES.rooms}
+      />
+      <Route
+        element={<PublicContentPage pageKey="spa" />}
+        path={AMAZI_ROUTES.spa}
+      />
+      <Route
+        element={<PublicContentPage pageKey="entertainment" />}
+        path={AMAZI_ROUTES.entertainment}
+      />
+      <Route
+        element={<PublicContentPage pageKey="all-inclusive" />}
+        path={AMAZI_ROUTES.allInclusive}
+      />
+      <Route
+        element={<PublicContentPage pageKey="offers" />}
+        path={AMAZI_ROUTES.offers}
+      />
+      <Route
+        element={<PublicContentPage pageKey="about" />}
+        path={AMAZI_ROUTES.about}
+      />
+      <Route
+        element={<PublicContentPage pageKey="hardware-procedures" />}
+        path={AMAZI_ROUTES.hardwareProcedures}
+      />
+      <Route
+        element={<PublicContentPage pageKey="celebrations" />}
+        path={AMAZI_ROUTES.celebrations}
+      />
+      <Route
+        element={<PublicContentPage pageKey="news" />}
+        path={AMAZI_ROUTES.news}
+      />
+      <Route
+        element={<PublicContentPage pageKey="blog" />}
+        path={AMAZI_ROUTES.blog}
+      />
+      <Route
+        element={<PublicContentPage pageKey="privacy" />}
+        path={AMAZI_ROUTES.privacy}
+      />
       <Route element={<AdminLoginPage />} path={AMAZI_ROUTES.adminLogin} />
       <Route
         element={<AdminDashboardPage />}
