@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AMAZI_FALLBACK_ROUTE, AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { AboutPage } from "@/pages/AboutPage";
 import { AccountPage } from "@/pages/AccountPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminLoginPage } from "@/pages/AdminLoginPage";
@@ -29,10 +30,7 @@ export const App = () => {
       />
       <Route element={<AllInclusivePage />} path={AMAZI_ROUTES.allInclusive} />
       <Route element={<OffersPage />} path={AMAZI_ROUTES.offers} />
-      <Route
-        element={<PublicContentPage pageKey="about" />}
-        path={AMAZI_ROUTES.about}
-      />
+      <Route element={<AboutPage />} path={AMAZI_ROUTES.about} />
       <Route
         element={<HardwareProceduresPage />}
         path={AMAZI_ROUTES.hardwareProcedures}
