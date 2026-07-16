@@ -5,6 +5,7 @@ import { AccountPage } from "@/pages/AccountPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminLoginPage } from "@/pages/AdminLoginPage";
 import { AllInclusivePage } from "@/pages/AllInclusivePage";
+import { CelebrationsPage } from "@/pages/CelebrationsPage";
 import { EntertainmentPage } from "@/pages/EntertainmentPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -35,10 +36,7 @@ export const App = () => {
         element={<PublicContentPage pageKey="hardware-procedures" />}
         path={AMAZI_ROUTES.hardwareProcedures}
       />
-      <Route
-        element={<PublicContentPage pageKey="celebrations" />}
-        path={AMAZI_ROUTES.celebrations}
-      />
+      <Route element={<CelebrationsPage />} path={AMAZI_ROUTES.celebrations} />
       <Route
         element={<PublicContentPage pageKey="news" />}
         path={AMAZI_ROUTES.news}

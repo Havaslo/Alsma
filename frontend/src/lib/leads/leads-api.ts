@@ -3,6 +3,8 @@ import { apiClient } from "@/lib/api/api-client";
 export type LeadInput = {
   readonly checkInDate?: string;
   readonly checkOutDate?: string;
+  readonly comment?: string;
+  readonly email?: string;
   readonly formCode: string;
   readonly formTitle: string;
   readonly guestsCount?: number;
