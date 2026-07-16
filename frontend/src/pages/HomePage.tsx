@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 
+import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import heroImage from "@/assets/alsma/hero.jpg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import natureImage from "@/assets/alsma/nature.jpg";
@@ -80,7 +81,7 @@ export const HomePage = () => {
               <a
                 aria-label="Личный кабинет"
                 className="hidden size-11 place-items-center rounded-full border border-brand-foreground/20 bg-brand-foreground/10 sm:grid"
-                href="#account"
+                href={AMAZI_ROUTES.account}
               >
                 <UserRound className="size-5" />
               </a>

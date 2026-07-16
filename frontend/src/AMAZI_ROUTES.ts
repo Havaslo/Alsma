@@ -1,6 +1,8 @@
 /** User-facing paths consumed by both React Router and the Amazi preview navigation. */
 export const AMAZI_ROUTES = {
+  account: "/account",
   home: "/",
+  login: "/login",
 } as const;
 
 /** Non-navigable fallback kept outside the preview route catalog. */
