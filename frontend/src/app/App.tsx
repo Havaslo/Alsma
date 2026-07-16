@@ -4,6 +4,7 @@ import { AMAZI_FALLBACK_ROUTE, AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AccountPage } from "@/pages/AccountPage";
 import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 import { AdminLoginPage } from "@/pages/AdminLoginPage";
+import { EntertainmentPage } from "@/pages/EntertainmentPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PublicContentPage } from "@/pages/PublicContentPage";
@@ -19,7 +20,7 @@ export const App = () => {
       <Route element={<RoomsPage />} path={AMAZI_ROUTES.rooms} />
       <Route element={<SpaPage />} path={AMAZI_ROUTES.spa} />
       <Route
-        element={<PublicContentPage pageKey="entertainment" />}
+        element={<EntertainmentPage />}
         path={AMAZI_ROUTES.entertainment}
       />
       <Route

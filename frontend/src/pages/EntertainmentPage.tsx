@@ -1,0 +1,171 @@
+import { Check, Clock, Users } from "lucide-react";
+
+import entertainmentHeroImage from "@/assets/alsma/spa-forest-walk.jpg";
+import { PublicHero } from "@/components/site/PublicHero";
+import { SiteHeader } from "@/components/site/SiteHeader";
+import {
+  ACTIVE_ZONES,
+  ANIMATION_PROGRAM,
+  EQUIPMENT,
+  SEASONS,
+} from "@/lib/site/entertainment";
+import { PUBLIC_PAGES } from "@/lib/site/public-pages";
+import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
+
+export const EntertainmentPage = () => {
+  const page = PUBLIC_PAGES.entertainment;
+  const content = usePublishedSiteContent("entertainment");
+  const hero = content.data?.items.find(
+    (item) => item.itemKey === "hero",
+  )?.content;
+  const title =
+    typeof hero?.title === "string" ? hero.title : "Развлечения и анимация";
+  const description =
+    typeof hero?.description === "string" ? hero.description : page.description;
+
+  return (
+    <main className="min-h-screen bg-page text-page-foreground">
+      <SiteHeader />
+      <PublicHero
+        description={description}
+        eyebrow="Активности и семейный отдых"
+        image={entertainmentHeroImage}
+        title={title}
+      />
+      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+        <div className="text-center">
+          <p className="text-sm font-semibold tracking-widest text-brand uppercase">
+            На территории комплекса
+          </p>
+          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+            Территория для активного отдыха
+          </h2>
+        </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
+          {ACTIVE_ZONES.map((zone) => (
+            <article
+              className="overflow-hidden rounded-4xl bg-panel"
+              key={zone.title}
+            >
+              <img
+                alt={zone.title}
+                className="h-64 w-full object-cover"
+                src={zone.image}
+              />
+              <div className="p-7">
+                <h3 className="font-heading text-3xl font-semibold text-brand">
+                  {zone.title}
+                </h3>
+                <p className="mt-4 leading-7 text-muted-ui-foreground">
+                  {zone.description}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {zone.tags.map((tag) => (
+                    <span
+                      className="rounded-full bg-brand/10 px-4 py-2 text-sm text-brand"
+                      key={tag}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-panel py-24">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
+            Сезонные активности
+          </h2>
+          <div className="mt-12 grid gap-7 lg:grid-cols-2">
+            {SEASONS.map((season) => (
+              <article
+                className="relative min-h-[36rem] overflow-hidden rounded-4xl text-brand-foreground"
+                key={season.label}
+              >
+                <img
+                  alt={season.title}
+                  className="absolute inset-0 size-full object-cover"
+                  src={season.image}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/35 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-8">
+                  <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
+                    {season.label}
+                  </span>
+                  <h3 className="mt-5 font-heading text-4xl font-semibold">
+                    {season.title}
+                  </h3>
+                  <p className="mt-3 text-brand-foreground/80">
+                    {season.description}
+                  </p>
+                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {season.items.map((item) => (
+                      <li
+                        className="rounded-xl bg-brand-foreground/10 px-4 py-3 backdrop-blur"
+                        key={item}
+                      >
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+        <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
+          Программа анимации
+        </h2>
+        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {ANIMATION_PROGRAM.map(([time, activity, details, age]) => (
+            <article className="rounded-3xl bg-brand/10 p-6" key={activity}>
+              <div className="flex justify-between gap-4 text-sm text-brand">
+                <span className="flex items-center gap-2 font-semibold">
+                  <Clock className="size-4" /> {time}
+                </span>
+                <span className="flex items-center gap-2">
+                  <Users className="size-4" /> {age}
+                </span>
+              </div>
+              <h3 className="mt-5 font-heading text-2xl font-semibold text-brand">
+                {activity}
+              </h3>
+              <p className="mt-3 text-muted-ui-foreground">{details}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-brand py-24 text-brand-foreground">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
+            Прокат оборудования
+          </h2>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {EQUIPMENT.map((group) => (
+              <article
+                className="rounded-3xl bg-brand-foreground/10 p-7"
+                key={group.title}
+              >
+                <h3 className="font-heading text-3xl font-semibold">
+                  {group.title}
+                </h3>
+                <ul className="mt-6 space-y-4">
+                  {group.items.map((item) => (
+                    <li className="flex items-center gap-3" key={item}>
+                      <Check className="size-4 shrink-0" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+};
