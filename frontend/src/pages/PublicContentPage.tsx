@@ -2,6 +2,7 @@ import { ArrowRight, Check } from "lucide-react";
 
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
+import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const PublicContentPage = ({
   pageKey,
@@ -9,12 +10,19 @@ export const PublicContentPage = ({
   readonly pageKey: PublicPageKey;
 }) => {
   const page = PUBLIC_PAGES[pageKey];
+  const content = usePublishedSiteContent(pageKey);
+  const hero = content.data?.items.find(
+    (item) => item.itemKey === "hero",
+  )?.content;
+  const title = typeof hero?.title === "string" ? hero.title : page.title;
+  const description =
+    typeof hero?.description === "string" ? hero.description : page.description;
   return (
     <main className="min-h-screen bg-page text-page-foreground">
       <SiteHeader />
       <section className="relative flex min-h-[78vh] items-end overflow-hidden text-brand-foreground">
         <img
-          alt={page.title}
+          alt={title}
           className="absolute inset-0 size-full object-cover"
           src={page.heroImage}
         />
@@ -24,10 +32,10 @@ export const PublicContentPage = ({
             {page.eyebrow}
           </p>
           <h1 className="mt-4 max-w-4xl font-heading text-5xl leading-tight font-semibold sm:text-6xl">
-            {page.title}
+            {title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85">
-            {page.description}
+            {description}
           </p>
           <a
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground"
