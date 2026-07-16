@@ -6,6 +6,8 @@ export type LeadInput = {
   readonly formCode: string;
   readonly formTitle: string;
   readonly guestsCount?: number;
+  readonly name?: string;
+  readonly phone?: string;
   readonly sourcePage: string;
 };
 
