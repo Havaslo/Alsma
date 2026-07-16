@@ -7,6 +7,7 @@ import { AdminLoginPage } from "@/pages/AdminLoginPage";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PublicContentPage } from "@/pages/PublicContentPage";
+import { RoomsPage } from "@/pages/RoomsPage";
 
 export const App = () => {
   return (
@@ -14,10 +15,7 @@ export const App = () => {
       <Route element={<HomePage />} path={AMAZI_ROUTES.home} />
       <Route element={<LoginPage />} path={AMAZI_ROUTES.login} />
       <Route element={<AccountPage />} path={AMAZI_ROUTES.account} />
-      <Route
-        element={<PublicContentPage pageKey="rooms" />}
-        path={AMAZI_ROUTES.rooms}
-      />
+      <Route element={<RoomsPage />} path={AMAZI_ROUTES.rooms} />
       <Route
         element={<PublicContentPage pageKey="spa" />}
         path={AMAZI_ROUTES.spa}
