@@ -20,6 +20,38 @@ export type SiteLead = {
   readonly phone: string | null;
   readonly status: "cancelled" | "completed" | "new" | "processing";
 };
+export type BookingRequest = {
+  readonly checkInDate: string | null;
+  readonly checkOutDate: string | null;
+  readonly guestName: string;
+  readonly id: string;
+  readonly paidAt: string | null;
+  readonly roomName: string | null;
+};
+export type AdminClient = {
+  readonly _count: { bookings: number };
+  readonly bonusProgram: { balance: number; level: string } | null;
+  readonly fullName: string | null;
+  readonly id: string;
+  readonly phone: string;
+};
+export type AdminRequest = {
+  readonly category: string;
+  readonly contact: string | null;
+  readonly id: string;
+  readonly requester: string | null;
+  readonly status: SiteLead["status"];
+  readonly title: string;
+};
+type Page<TItem> = {
+  readonly items: TItem[];
+  readonly pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+};
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
 
 export const adminLogin = (input: { email: string; password: string }) =>
@@ -52,6 +84,49 @@ export const updateAdminLead = (input: {
 }) =>
   apiClient.patch<{ lead: SiteLead }>(
     `/admin/site-leads/${input.leadId}`,
+    { status: input.status },
+    { headers: headers() },
+  );
+export const loadAdminBookings = (signal?: AbortSignal) =>
+  apiClient.get<Page<BookingRequest>>("/admin/bookings", {
+    headers: headers(),
+    params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const loadAdminClients = (signal?: AbortSignal) =>
+  apiClient.get<Page<AdminClient>>("/admin/clients", {
+    headers: headers(),
+    params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const loadAdminRequests = (signal?: AbortSignal) =>
+  apiClient.get<Page<AdminRequest>>("/admin/requests", {
+    headers: headers(),
+    params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const markBookingPaid = (recordId: string) =>
+  apiClient.post(
+    `/admin/bookings/${recordId}/mark-paid`,
+    {},
+    { headers: headers() },
+  );
+export const updateClientBonus = (input: {
+  balance: number;
+  level: string;
+  recordId: string;
+}) =>
+  apiClient.put(
+    `/admin/clients/${input.recordId}/bonus`,
+    { balance: input.balance, level: input.level },
+    { headers: headers() },
+  );
+export const updateAdminRequest = (input: {
+  recordId: string;
+  status: SiteLead["status"];
+}) =>
+  apiClient.patch(
+    `/admin/requests/${input.recordId}`,
     { status: input.status },
     { headers: headers() },
   );
