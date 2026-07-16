@@ -1,10 +1,11 @@
 import { Router } from "express";
 
+import { createLeadsRouter } from "./features/leads/leads.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
-import type { DatabaseHealth } from "./lib/database/database.js";
+import type { Database } from "./lib/database/database.js";
 
 type CreateApiRouterOptions = {
-  readonly database: DatabaseHealth;
+  readonly database: Database;
 };
 
 export const createApiRouter = ({
@@ -13,6 +14,7 @@ export const createApiRouter = ({
   const router = Router();
 
   router.use(createSystemRouter({ database }));
+  router.use("/site-leads", createLeadsRouter(database));
 
   return router;
 };

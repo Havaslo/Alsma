@@ -3,13 +3,13 @@ import helmet from "helmet";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 
-import type { DatabaseHealth } from "./lib/database/database.js";
+import type { Database } from "./lib/database/database.js";
 import { errorHandler } from "./lib/http/error-handler.js";
 import { notFoundHandler } from "./lib/http/not-found-handler.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
-  readonly database: DatabaseHealth;
+  readonly database: Database;
   readonly logger: Logger;
 };
 

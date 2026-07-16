@@ -1,0 +1,15 @@
+import { z } from "zod";
+
+export const createLeadBodySchema = z.object({
+  checkInDate: z.iso.date().optional(),
+  checkOutDate: z.iso.date().optional(),
+  email: z.email().max(320).optional(),
+  formCode: z.string().trim().min(1).max(120),
+  formTitle: z.string().trim().min(1).max(200),
+  guestsCount: z.number().int().min(1).max(20).optional(),
+  name: z.string().trim().min(1).max(160).optional(),
+  phone: z.string().trim().min(5).max(40).optional(),
+  sourcePage: z.string().trim().min(1).max(120),
+});
+
+export type CreateLeadBody = z.infer<typeof createLeadBodySchema>;
