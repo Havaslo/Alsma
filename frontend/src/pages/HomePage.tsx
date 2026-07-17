@@ -11,6 +11,7 @@ import {
   HomeReviewsSection,
   HomeRoomsSection,
 } from "@/components/site/HomeContentSections";
+import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { getSiteCollection } from "@/lib/site/content-collections";
 import {
@@ -67,10 +68,10 @@ export const HomePage = () => {
   return (
     <main className="min-h-screen bg-page text-page-foreground">
       <section className="relative min-h-screen overflow-hidden text-brand-foreground">
-        <img
+        <SiteHeroMedia
           alt="Загородный отель АЛСМА"
           className="absolute inset-0 size-full object-cover"
-          src={typeof hero?.image === "string" ? hero.image : heroImage}
+          source={typeof hero?.image === "string" ? hero.image : heroImage}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 

@@ -51,15 +51,13 @@ export const saveAdminSiteContent = (input: {
     { headers: adminHeaders() },
   );
 export const uploadSiteMedia = (file: File) =>
-  apiClient.post<{ file: { readonly url: string } }>(
-    "/media/admin/upload",
-    file,
-    {
-      headers: {
-        ...adminHeaders(),
-        "Content-Type": file.type,
-        "X-File-Name": file.name,
-        "X-Media-Category": "site-content",
-      },
+  apiClient.post<{
+    file: { readonly contentType: string; readonly url: string };
+  }>("/media/admin/upload", file, {
+    headers: {
+      ...adminHeaders(),
+      "Content-Type": file.type,
+      "X-File-Name": file.name,
+      "X-Media-Category": "site-content",
     },
-  );
+  });

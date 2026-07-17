@@ -1,5 +1,7 @@
 import { ArrowDown } from "lucide-react";
 
+import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
+
 type PublicHeroProps = {
   readonly description: string;
   readonly eyebrow: string;
@@ -14,10 +16,9 @@ export const PublicHero = ({
   title,
 }: PublicHeroProps) => (
   <section className="relative flex min-h-[78vh] items-end overflow-hidden text-brand-foreground">
-    <img
-      alt=""
+    <SiteHeroMedia
       className="absolute inset-0 size-full object-cover"
-      src={image}
+      source={image}
     />
     <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/20 via-page-foreground/30 to-page-foreground/85" />
     <div className="relative mx-auto w-full max-w-7xl px-5 pt-40 pb-20 text-center sm:px-8">
