@@ -4,6 +4,7 @@ import heroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import { EditorialCard } from "@/components/site/EditorialCard";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { getSiteCollection } from "@/lib/site/content-collections";
 import { NEWS_ITEMS } from "@/lib/site/editorial";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
@@ -22,10 +23,11 @@ export const NewsPage = () => {
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
+  const newsItems = getSiteCollection(content.data?.items, "items", NEWS_ITEMS);
   const items =
     filter === "all"
-      ? NEWS_ITEMS
-      : NEWS_ITEMS.filter((item) => item.category === filter);
+      ? newsItems
+      : newsItems.filter((item) => item.category === filter);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">

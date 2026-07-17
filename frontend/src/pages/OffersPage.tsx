@@ -4,6 +4,7 @@ import heroImage from "@/assets/alsma/offers-hero.jpg";
 import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { getSiteCollection } from "@/lib/site/content-collections";
 import {
   ACTIVE_OFFERS,
   OFFER_EVENTS,
@@ -24,6 +25,17 @@ export const OffersPage = () => {
       : "Акции для отдыха в любой сезон";
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
+  const offers = getSiteCollection(
+    content.data?.items,
+    "proposals",
+    ACTIVE_OFFERS,
+  );
+  const scenarios = getSiteCollection(
+    content.data?.items,
+    "ready-scenarios",
+    READY_SCENARIOS,
+  );
+  const events = getSiteCollection(content.data?.items, "events", OFFER_EVENTS);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -44,7 +56,7 @@ export const OffersPage = () => {
           </h2>
         </div>
         <div className="mt-12 grid gap-7 lg:grid-cols-3">
-          {ACTIVE_OFFERS.map((offer) => (
+          {offers.map((offer) => (
             <article
               className="group relative min-h-[32rem] overflow-hidden rounded-4xl text-brand-foreground"
               key={offer.title}
@@ -81,7 +93,7 @@ export const OffersPage = () => {
             </h2>
           </div>
           <div className="mt-12 space-y-8">
-            {READY_SCENARIOS.map((scenario, index) => (
+            {scenarios.map((scenario, index) => (
               <article
                 className="overflow-hidden rounded-4xl bg-page lg:grid lg:grid-cols-[2fr_3fr]"
                 key={scenario.title}
@@ -127,7 +139,7 @@ export const OffersPage = () => {
           </h2>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {OFFER_EVENTS.map((event) => (
+          {events.map((event) => (
             <article
               className="rounded-3xl border border-line p-7"
               key={event.title}

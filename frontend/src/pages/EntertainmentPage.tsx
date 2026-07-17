@@ -3,6 +3,7 @@ import { Check, Clock, Users } from "lucide-react";
 import entertainmentHeroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { getSiteCollection } from "@/lib/site/content-collections";
 import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
@@ -22,6 +23,26 @@ export const EntertainmentPage = () => {
     typeof hero?.title === "string" ? hero.title : "Развлечения и анимация";
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
+  const zones = getSiteCollection(
+    content.data?.items,
+    "active-zones",
+    ACTIVE_ZONES,
+  );
+  const seasons = getSiteCollection(
+    content.data?.items,
+    "seasonal-slides",
+    SEASONS,
+  );
+  const programs = getSiteCollection(
+    content.data?.items,
+    "animation-programs",
+    ANIMATION_PROGRAM,
+  );
+  const equipment = getSiteCollection(
+    content.data?.items,
+    "equipment-cards",
+    EQUIPMENT,
+  );
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -42,7 +63,7 @@ export const EntertainmentPage = () => {
           </h2>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {ACTIVE_ZONES.map((zone) => (
+          {zones.map((zone) => (
             <article
               className="overflow-hidden rounded-4xl bg-panel"
               key={zone.title}
@@ -80,7 +101,7 @@ export const EntertainmentPage = () => {
             Сезонные активности
           </h2>
           <div className="mt-12 grid gap-7 lg:grid-cols-2">
-            {SEASONS.map((season) => (
+            {seasons.map((season) => (
               <article
                 className="relative min-h-[36rem] overflow-hidden rounded-4xl text-brand-foreground"
                 key={season.label}
@@ -122,7 +143,7 @@ export const EntertainmentPage = () => {
           Программа анимации
         </h2>
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {ANIMATION_PROGRAM.map(([time, activity, details, age]) => (
+          {programs.map(([time, activity, details, age]) => (
             <article className="rounded-3xl bg-brand/10 p-6" key={activity}>
               <div className="flex justify-between gap-4 text-sm text-brand">
                 <span className="flex items-center gap-2 font-semibold">
@@ -146,7 +167,7 @@ export const EntertainmentPage = () => {
             Прокат оборудования
           </h2>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {EQUIPMENT.map((group) => (
+            {equipment.map((group) => (
               <article
                 className="rounded-3xl bg-brand-foreground/10 p-7"
                 key={group.title}

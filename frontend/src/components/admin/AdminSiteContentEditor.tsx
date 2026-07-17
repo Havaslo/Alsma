@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { FilePenLine, LoaderCircle, Save } from "lucide-react";
 
+import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
 import {
@@ -91,6 +92,97 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
   );
 };
 
+type CollectionSection = keyof typeof SITE_COLLECTIONS;
+const CollectionForm = ({
+  items,
+  section,
+}: {
+  readonly items: SiteContentItem[];
+  readonly section: CollectionSection;
+}) => {
+  const collections = SITE_COLLECTIONS[section] as Record<
+    string,
+    readonly unknown[]
+  >;
+  const keys = Object.keys(collections);
+  const [itemKey, setItemKey] = useState(keys[0] ?? "items");
+  const stored = items.find((item) => item.itemKey === itemKey);
+  const [json, setJson] = useState(() =>
+    JSON.stringify(
+      stored?.content.items ?? collections[itemKey] ?? [],
+      null,
+      2,
+    ),
+  );
+  const [error, setError] = useState("");
+  const save = useSaveAdminSiteContent();
+  const selectCollection = (key: string) => {
+    setItemKey(key);
+    const item = items.find((entry) => entry.itemKey === key);
+    setJson(
+      JSON.stringify(item?.content.items ?? collections[key] ?? [], null, 2),
+    );
+    setError("");
+  };
+  return (
+    <form
+      className="mt-8 border-t border-line pt-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        try {
+          const parsed = JSON.parse(json) as unknown;
+          if (!Array.isArray(parsed)) throw new Error();
+          setError("");
+          save.mutate({
+            content: { items: parsed },
+            itemKey,
+            position: 10,
+            section,
+            status: "published",
+            title: itemKey,
+          });
+        } catch {
+          setError("Введите корректный JSON-массив.");
+        }
+      }}
+    >
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h3 className="font-heading text-2xl font-semibold">
+            Коллекции страницы
+          </h3>
+          <p className="mt-1 text-sm text-muted-ui-foreground">
+            Карточки и списки публикуются сразу после сохранения.
+          </p>
+        </div>
+        <select
+          className="rounded-xl border border-line bg-page px-4 py-3"
+          onChange={(event) => selectCollection(event.target.value)}
+          value={itemKey}
+        >
+          {keys.map((key) => (
+            <option key={key} value={key}>
+              {key}
+            </option>
+          ))}
+        </select>
+      </div>
+      <textarea
+        className="mt-4 min-h-96 w-full rounded-2xl border border-line bg-page p-4 font-mono text-sm outline-none focus:border-focus"
+        onChange={(event) => setJson(event.target.value)}
+        value={json}
+      />
+      {error && <p className="text-danger mt-2 text-sm">{error}</p>}
+      <button
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+        type="submit"
+      >
+        <Save className="size-4" /> Сохранить коллекцию
+      </button>
+    </form>
+  );
+};
+
 export const AdminSiteContentEditor = () => {
   const [section, setSection] = useState<PublicPageKey>("rooms");
   const content = useAdminSiteContent(section);
@@ -124,11 +216,20 @@ export const AdminSiteContentEditor = () => {
           <LoaderCircle className="size-7 animate-spin text-brand" />
         </div>
       ) : (
-        <ContentForm
-          key={`${section}:${stored?.id ?? "new"}`}
-          section={section}
-          stored={stored}
-        />
+        <>
+          <ContentForm
+            key={`${section}:${stored?.id ?? "new"}`}
+            section={section}
+            stored={stored}
+          />
+          {section in SITE_COLLECTIONS && (
+            <CollectionForm
+              items={content.data?.items ?? []}
+              key={`collections:${section}`}
+              section={section as CollectionSection}
+            />
+          )}
+        </>
       )}
     </section>
   );
