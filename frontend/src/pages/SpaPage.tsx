@@ -7,6 +7,7 @@ import {
   SpaCeremoniesSection,
   SpaCompanySection,
   SpaInformationSections,
+  SpaMembershipSection,
   SpaPromotionsSection,
 } from "@/components/site/SpaAdditionalSections";
 import { SpaRequestForm } from "@/components/site/SpaRequestForm";
@@ -77,6 +78,7 @@ export const SpaPage = () => {
           ))}
         </div>
       </section>
+      <SpaMembershipSection />
       <section className="bg-panel py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">

@@ -26,6 +26,62 @@ const ceremonyGroups = [
   },
 ] as const;
 
+const additionalServices = [
+  ["Минерально-молочная ванна «Клеопатра» — 20 мин", "1 300 ₽"],
+  ["Жемчужная ванна — 20 мин", "1 000 ₽"],
+  ["Минеральная ванна с морской солью — 20 мин", "1 000 ₽"],
+  ["Йодобромная минеральная ванна — 20 мин", "1 200 ₽"],
+  ["Хлорофиловая ванна — 20 мин", "1 200 ₽"],
+  ["Салициловая ванна — 20 мин", "1 200 ₽"],
+  ["Душ Шарко — 20 мин", "800 ₽"],
+  ["Гидромассажная ванна с подводным душем — 20 мин", "1 200 ₽"],
+  ["Циркулярный душ — 10 мин", "600 ₽"],
+  ["SPA-капсула водная — 30 мин", "1 500 ₽"],
+  ["SPA-капсула сухая — 30 мин", "1 300 ₽"],
+  ["SPA-капсула с углекислым газом и кислородом — 30 мин", "1 700 ₽"],
+  ["Аренда халата", "150 ₽"],
+  ["Одноразовые тапочки", "100 ₽"],
+  ["Чайная церемония", "350 ₽"],
+  ["Дневное посещение — взрослые", "1 000 ₽"],
+  ["Дневное посещение — дети", "500 ₽"],
+  ["Абонемент на 8 посещений — взрослые", "3 500 ₽"],
+  ["Абонемент на 8 посещений — дети", "2 500 ₽"],
+  ["Групповой сеанс с 21:00 до 23:00", "5 000 ₽"],
+  ["Аренда SPA-комплекса — 1,5 часа", "15 000 ₽"],
+  ["Баня-бочка — 1 час", "1 200 ₽"],
+  ["Парафинотерапия рук или ног — 20 мин", "800 ₽"],
+] as const;
+
+export const SpaMembershipSection = () => (
+  <section className="px-5 pb-10 sm:px-8">
+    <div className="mx-auto grid max-w-7xl gap-8 rounded-4xl bg-brand px-7 py-10 text-brand-foreground sm:px-10 lg:grid-cols-[1fr_auto] lg:items-center lg:px-14">
+      <div className="max-w-3xl">
+        <p className="text-sm font-semibold tracking-widest uppercase opacity-65">Абонемент на SPA</p>
+        <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Абонемент на SPA</h2>
+        <p className="mt-5 text-lg leading-8 opacity-80">8 посещений SPA-комплекса в месяц: уличные и внутренний бассейны, джакузи, соляная, финская, паровая и травяная сауны, душ впечатлений. Взрослые — 3 500 ₽, дети — 2 500 ₽.</p>
+      </div>
+      <a className="inline-flex justify-center rounded-full bg-accent-ui px-8 py-4 font-semibold text-accent-ui-foreground" href="#spa-cta">Купить абонемент</a>
+    </div>
+  </section>
+);
+
+export const SpaAdditionalServicesSection = () => (
+  <section className="px-5 py-24 sm:px-8">
+    <div className="mx-auto max-w-7xl">
+      <div className="text-center">
+        <p className="text-sm font-semibold tracking-widest text-brand uppercase">Посещение и сервис</p>
+        <h2 className="mx-auto mt-4 max-w-4xl font-heading text-4xl font-semibold sm:text-5xl">Дополнительные услуги и посещение SPA</h2>
+      </div>
+      <div className="mt-12 overflow-hidden rounded-4xl bg-panel">
+        <table className="w-full border-collapse text-left">
+          <thead><tr className="bg-muted-ui/50 text-sm uppercase text-muted-ui-foreground"><th className="px-5 py-4 sm:px-7">Услуга</th><th className="px-5 py-4 sm:px-7">Стоимость</th></tr></thead>
+          <tbody>{additionalServices.map(([service, price]) => <tr className="border-t border-line" key={service}><td className="px-5 py-4 sm:px-7">{service}</td><td className="whitespace-nowrap px-5 py-4 font-semibold sm:px-7">{price}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+);
+
 export const SpaCeremoniesSection = () => (
   <section className="bg-panel py-24">
     <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -159,6 +215,7 @@ export const SpaInformationSections = () => (
         </div>
       </article>
     </section>
+    <SpaAdditionalServicesSection />
     <section className="bg-panel py-24">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
