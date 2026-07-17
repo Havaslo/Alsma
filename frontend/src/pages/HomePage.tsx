@@ -11,7 +11,10 @@ import {
   HomeReviewsSection,
   HomeRoomsSection,
 } from "@/components/site/HomeContentSections";
-import { HomeDiscoverySections } from "@/components/site/HomeDiscoverySections";
+import {
+  HomeContactSections,
+  HomeExperienceSections,
+} from "@/components/site/HomeDiscoverySections";
 import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { getSiteCollection } from "@/lib/site/content-collections";
@@ -244,8 +247,9 @@ export const HomePage = () => {
       </section>
       <HomeRestSection cards={restCards} />
       <HomeRoomsSection rooms={rooms} />
-      <HomeDiscoverySections />
+      <HomeExperienceSections />
       <HomeReviewsSection reviews={reviews} />
+      <HomeContactSections />
     </main>
   );
 };

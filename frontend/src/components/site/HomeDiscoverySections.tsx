@@ -34,7 +34,7 @@ const entertainment = [
   ["Живая музыка и шоу", "Вечерние концерты, музыкальные программы и яркие шоу для особого настроения", entertainmentMusic],
 ] as const;
 
-export const HomeDiscoverySections = () => (
+export const HomeExperienceSections = () => (
   <>
     <section className="bg-panel py-24" id="spa">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -105,7 +105,11 @@ export const HomeDiscoverySections = () => (
         </div>
       </div>
     </section>
+  </>
+);
 
+export const HomeContactSections = () => (
+  <>
     <section className="py-24" id="contacts">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
         <div className="rounded-4xl bg-muted-ui/65 p-8 sm:p-10">

@@ -1,4 +1,4 @@
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
@@ -23,45 +23,28 @@ export const HomeRestSection = ({
         гастрономию и первозданность реликтового леса.
       </p>
     </div>
-    <div className="mt-14 grid gap-6 md:grid-cols-2">
+    <div className="scrollbar-none mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
       {cards.map((card) => (
         <article
-          className="group overflow-hidden rounded-3xl bg-panel shadow-lg"
+          className="group grid min-w-full snap-start overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid-cols-[0.9fr_1.1fr]"
           key={card.title}
         >
-          <div className="h-72 overflow-hidden">
+          <div className="order-2 flex flex-col justify-center p-8 sm:p-10 lg:order-1 lg:p-12">
+            <div className="flex flex-wrap gap-2">
+              {card.tags.map((tag) => (
+                <span className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand" key={tag}>{tag}</span>
+              ))}
+            </div>
+            <h3 className="mt-6 font-heading text-4xl font-semibold sm:text-5xl">{card.title}</h3>
+            <p className="mt-5 leading-8 text-muted-ui-foreground">{card.description}</p>
+            <div className="mt-10 flex items-end justify-between gap-4"><div><span className="text-sm text-muted-ui-foreground">Стоимость программы</span><strong className="mt-2 block text-3xl">{card.price}</strong></div><a className="inline-flex rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground" href={card.href ?? "#booking"}>Подробнее</a></div>
+          </div>
+          <div className="order-1 h-80 overflow-hidden lg:order-2 lg:h-140">
             <img
               alt={card.title}
               className="size-full object-cover transition duration-500 group-hover:scale-105"
               src={card.image}
             />
-          </div>
-          <div className="p-7">
-            <div className="flex flex-wrap gap-2">
-              {card.tags.map((tag) => (
-                <span
-                  className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand"
-                  key={tag}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <h3 className="mt-4 font-heading text-3xl font-semibold">
-              {card.title}
-            </h3>
-            <p className="mt-3 leading-7 text-muted-ui-foreground">
-              {card.description}
-            </p>
-            <div className="mt-6 flex items-center justify-between gap-4">
-              <strong className="text-lg text-brand">{card.price}</strong>
-              <a
-                className="inline-flex items-center gap-2 font-semibold text-brand"
-                href={card.href ?? "#booking"}
-              >
-                Подробнее <ArrowRight className="size-4" />
-              </a>
-            </div>
           </div>
         </article>
       ))}
@@ -74,7 +57,7 @@ export const HomePromotionsSection = ({
 }: {
   readonly offers: readonly ActiveOffer[];
 }) => (
-  <section className="bg-panel py-24" id="offers">
+  <section className="py-24" id="offers">
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
@@ -92,28 +75,18 @@ export const HomePromotionsSection = ({
           Все предложения <ArrowRight className="size-4" />
         </a>
       </div>
-      <div className="mt-12 grid gap-6 lg:grid-cols-3">
+      <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
         {offers.map((offer) => (
           <article
-            className="group relative min-h-96 overflow-hidden rounded-3xl text-brand-foreground"
+            className="group min-w-80 max-w-90 snap-start overflow-hidden rounded-4xl bg-brand text-brand-foreground sm:min-w-90"
             key={offer.title}
           >
-            <img
-              alt={offer.title}
-              className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
-              src={offer.image}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/30 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-7">
-              <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
-                {offer.tag}
-              </span>
-              <h3 className="mt-5 font-heading text-3xl font-semibold">
-                {offer.title}
-              </h3>
-              <p className="mt-3 text-brand-foreground/80">
-                {offer.description}
-              </p>
+            <div className="h-56 overflow-hidden"><img alt={offer.title} className="size-full object-cover transition duration-500 group-hover:scale-105" src={offer.image} /></div>
+            <div className="p-7">
+              <span className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">{offer.tag}</span>
+              <h3 className="mt-4 font-heading text-3xl font-semibold">{offer.title}</h3>
+              <p className="mt-3 text-brand-foreground/80">{offer.description}</p>
+              <a className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui" href={AMAZI_ROUTES.offers}>Подробнее <ArrowRight className="size-4" /></a>
             </div>
           </article>
         ))}
@@ -127,24 +100,19 @@ export const HomeReviewsSection = ({
 }: {
   readonly reviews: readonly HomeReview[];
 }) => (
-  <section className="bg-brand px-4 py-24 text-brand-foreground sm:px-6">
+  <section className="px-4 py-24 sm:px-6">
     <div className="mx-auto max-w-7xl">
-      <p className="text-sm font-bold tracking-widest uppercase opacity-70">
-        Отзывы гостей
-      </p>
-      <h2 className="mt-4 max-w-2xl font-heading text-4xl font-semibold sm:text-5xl">
-        Впечатления, которыми хочется поделиться
-      </h2>
-      <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+      <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">Истории вашего отдыха</h2>
+      <p className="mt-5 text-center text-lg text-muted-ui-foreground">Общий рейтинг <strong className="text-page-foreground">4.9</strong> · <strong className="text-page-foreground">1200+ отзывов</strong></p>
+      <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3">
         {reviews.map((review) => (
           <article
-            className="rounded-3xl bg-brand-foreground/10 p-6"
+            className="min-w-80 max-w-90 snap-start rounded-4xl bg-panel p-7"
             key={`${review.source}:${review.name}`}
           >
-            <Star className="size-5 fill-current" />
+            <div className="flex items-center justify-between"><span className="tracking-widest text-accent-ui">★★★★★</span><span className="rounded-full border border-line px-3 py-1 text-xs text-muted-ui-foreground">{review.source}</span></div>
             <p className="mt-5 leading-7">{review.text}</p>
             <p className="mt-6 font-semibold">{review.name}</p>
-            <p className="text-sm opacity-70">{review.source}</p>
           </article>
         ))}
       </div>
@@ -175,10 +143,10 @@ export const HomeRoomsSection = ({
           Все номера <ArrowRight className="size-4" />
         </a>
       </div>
-      <div className="mt-12 grid gap-6 lg:grid-cols-3">
+      <div className="scrollbar-none mt-12 flex gap-6 overflow-x-auto pb-2">
         {rooms.map((room) => (
           <article
-            className="overflow-hidden rounded-3xl bg-page shadow-lg"
+            className="min-w-80 overflow-hidden rounded-4xl bg-page shadow-lg sm:min-w-90"
             key={room.title}
           >
             <img
