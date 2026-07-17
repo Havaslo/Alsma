@@ -2,7 +2,10 @@ import { Router } from "express";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
-import { createRequireAdmin } from "../admin-auth/admin-auth.middleware.js";
+import {
+  createRequireAdmin,
+  createRequireAdminPermission,
+} from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import {
@@ -31,12 +34,14 @@ export const createSiteContentRouter = (database: Database): Router => {
   router.get(
     "/admin/:section",
     requireAdmin,
+    createRequireAdminPermission("site.manage"),
     validateRequest({ params: siteSectionParamsSchema }),
     createListAdminContentHandler(repository),
   );
   router.put(
     "/admin/:section/:itemKey",
     requireAdmin,
+    createRequireAdminPermission("site.manage"),
     validateRequest({
       body: upsertSiteContentBodySchema,
       params: siteContentParamsSchema,

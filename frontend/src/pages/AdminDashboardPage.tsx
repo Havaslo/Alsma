@@ -12,6 +12,7 @@ import {
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
+import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
@@ -41,7 +42,10 @@ const menu = [
 export const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const admin = useAdmin();
-  const leads = useAdminLeads();
+  const permissions = admin.data?.user.permissions ?? [];
+  const can = (permission: string) =>
+    permissions.includes("*") || permissions.includes(permission);
+  const leads = useAdminLeads(can("leads.access"));
   const update = useUpdateAdminLead();
   if (admin.isLoading)
     return (
@@ -104,95 +108,108 @@ export const AdminDashboardPage = () => {
             </span>
           </div>
         </header>
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <article className="rounded-3xl border border-line bg-panel p-5">
-            <p className="text-sm text-muted-ui-foreground">Всего заявок</p>
-            <p className="mt-2 text-3xl font-semibold text-brand">
-              {leads.data?.pagination.totalItems ?? 0}
-            </p>
-          </article>
-          <article className="rounded-3xl border border-line bg-panel p-5">
-            <p className="text-sm text-muted-ui-foreground">Новые</p>
-            <p className="mt-2 text-3xl font-semibold text-brand">
-              {leads.data?.items.filter((item) => item.status === "new")
-                .length ?? 0}
-            </p>
-          </article>
-          <article className="rounded-3xl border border-line bg-panel p-5">
-            <p className="text-sm text-muted-ui-foreground">В работе</p>
-            <p className="mt-2 text-3xl font-semibold text-brand">
-              {leads.data?.items.filter((item) => item.status === "processing")
-                .length ?? 0}
-            </p>
-          </article>
-        </div>
-        <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-panel">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-4xl border-collapse text-left text-sm">
-              <thead className="bg-muted-ui text-muted-ui-foreground">
-                <tr>
-                  <th className="px-5 py-4">Дата</th>
-                  <th className="px-5 py-4">Форма</th>
-                  <th className="px-5 py-4">Контакт</th>
-                  <th className="px-5 py-4">Детали</th>
-                  <th className="px-5 py-4">Статус</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.data?.items.map((lead) => (
-                  <tr className="border-t border-line" key={lead.id}>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      {new Date(lead.createdAt).toLocaleDateString("ru-RU")}
-                    </td>
-                    <td className="px-5 py-4 font-medium">{lead.formTitle}</td>
-                    <td className="px-5 py-4">
-                      {lead.name || lead.phone || lead.email || "Не указан"}
-                    </td>
-                    <td className="px-5 py-4 text-muted-ui-foreground">
-                      {lead.details.checkInDate
-                        ? `${lead.details.checkInDate} — ${lead.details.checkOutDate}, ${lead.details.guestsCount} гост.`
-                        : "—"}
-                    </td>
-                    <td className="px-5 py-4">
-                      <select
-                        className="rounded-xl border border-line bg-page px-3 py-2"
-                        disabled={update.isPending}
-                        onChange={(event) =>
-                          update.mutate({
-                            leadId: lead.id,
-                            status: event.target.value as SiteLead["status"],
-                          })
-                        }
-                        value={lead.status}
-                      >
-                        {Object.entries(labels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {leads.isLoading && (
-            <div className="grid place-items-center p-12">
-              <LoaderCircle className="size-7 animate-spin text-brand" />
+        {can("leads.access") && (
+          <>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <article className="rounded-3xl border border-line bg-panel p-5">
+                <p className="text-sm text-muted-ui-foreground">Всего заявок</p>
+                <p className="mt-2 text-3xl font-semibold text-brand">
+                  {leads.data?.pagination.totalItems ?? 0}
+                </p>
+              </article>
+              <article className="rounded-3xl border border-line bg-panel p-5">
+                <p className="text-sm text-muted-ui-foreground">Новые</p>
+                <p className="mt-2 text-3xl font-semibold text-brand">
+                  {leads.data?.items.filter((item) => item.status === "new")
+                    .length ?? 0}
+                </p>
+              </article>
+              <article className="rounded-3xl border border-line bg-panel p-5">
+                <p className="text-sm text-muted-ui-foreground">В работе</p>
+                <p className="mt-2 text-3xl font-semibold text-brand">
+                  {leads.data?.items.filter(
+                    (item) => item.status === "processing",
+                  ).length ?? 0}
+                </p>
+              </article>
             </div>
-          )}
-          {!leads.isLoading && !leads.data?.items.length && (
-            <p className="p-12 text-center text-muted-ui-foreground">
-              Заявок пока нет.
-            </p>
-          )}
-        </div>
-        <AdminOperationsPanel />
-        <AdminKnowledgeBasePanel />
-        <AdminAgentScenariosPanel />
-        <AdminSettingsPanel currentUserId={admin.data.user.id} />
-        <AdminSiteContentEditor />
+            <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-panel">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-4xl border-collapse text-left text-sm">
+                  <thead className="bg-muted-ui text-muted-ui-foreground">
+                    <tr>
+                      <th className="px-5 py-4">Дата</th>
+                      <th className="px-5 py-4">Форма</th>
+                      <th className="px-5 py-4">Контакт</th>
+                      <th className="px-5 py-4">Детали</th>
+                      <th className="px-5 py-4">Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.data?.items.map((lead) => (
+                      <tr className="border-t border-line" key={lead.id}>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          {new Date(lead.createdAt).toLocaleDateString("ru-RU")}
+                        </td>
+                        <td className="px-5 py-4 font-medium">
+                          {lead.formTitle}
+                        </td>
+                        <td className="px-5 py-4">
+                          {lead.name || lead.phone || lead.email || "Не указан"}
+                        </td>
+                        <td className="px-5 py-4 text-muted-ui-foreground">
+                          {lead.details.checkInDate
+                            ? `${lead.details.checkInDate} — ${lead.details.checkOutDate}, ${lead.details.guestsCount} гост.`
+                            : "—"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <select
+                            className="rounded-xl border border-line bg-page px-3 py-2"
+                            disabled={update.isPending}
+                            onChange={(event) =>
+                              update.mutate({
+                                leadId: lead.id,
+                                status: event.target
+                                  .value as SiteLead["status"],
+                              })
+                            }
+                            value={lead.status}
+                          >
+                            {Object.entries(labels).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {leads.isLoading && (
+                <div className="grid place-items-center p-12">
+                  <LoaderCircle className="size-7 animate-spin text-brand" />
+                </div>
+              )}
+              {!leads.isLoading && !leads.data?.items.length && (
+                <p className="p-12 text-center text-muted-ui-foreground">
+                  Заявок пока нет.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+        {(can("dashboard.access") || can("requests.access")) && (
+          <AdminOperationsPanel />
+        )}
+        {can("knowledge.manage") && <AdminKnowledgeBasePanel />}
+        {can("scenarios.access") && <AdminAgentScenariosPanel />}
+        {can("settings.access") && (
+          <AdminSettingsPanel currentUserId={admin.data.user.id} />
+        )}
+        {can("site.manage") && <AdminSiteContentEditor />}
+        {can("integrations.access") && <AdminIntegrationsPanel />}
       </section>
     </main>
   );

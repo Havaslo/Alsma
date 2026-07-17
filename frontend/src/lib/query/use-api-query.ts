@@ -11,6 +11,7 @@ type QueryRequest<TData> = (
 ) => Promise<AxiosResponse<TData>>;
 
 type ApiQueryOptions<TData> = {
+  readonly enabled?: boolean;
   readonly errorMessage?: string;
   readonly onError?: (error: Error) => void;
   readonly onSettled?: (data: TData | undefined, error: Error | null) => void;
@@ -24,6 +25,7 @@ export const useApiQuery = <TData>(
   options: ApiQueryOptions<TData> = {},
 ) => {
   const query = useQuery({
+    enabled: options.enabled,
     queryFn: async ({ signal }) => (await request(signal)).data,
     queryKey,
   });

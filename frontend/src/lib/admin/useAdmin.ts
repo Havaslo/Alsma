@@ -21,8 +21,10 @@ export const ADMIN_LEADS_QUERY_KEY = ["admin-leads"] as const;
 export const ADMIN_OPERATIONS_QUERY_KEY = ["admin-operations"] as const;
 export const useAdmin = () =>
   useApiQuery(ADMIN_QUERY_KEY, (signal) => loadAdmin(signal));
-export const useAdminLeads = () =>
-  useApiQuery(ADMIN_LEADS_QUERY_KEY, (signal) => loadAdminLeads(signal));
+export const useAdminLeads = (enabled = true) =>
+  useApiQuery(ADMIN_LEADS_QUERY_KEY, (signal) => loadAdminLeads(signal), {
+    enabled,
+  });
 export const useUpdateAdminLead = () => {
   const client = useQueryClient();
   return useApiMutation(updateAdminLead, {

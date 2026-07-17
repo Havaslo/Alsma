@@ -2,7 +2,10 @@ import { Router } from "express";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
-import { createRequireAdmin } from "../admin-auth/admin-auth.middleware.js";
+import {
+  createRequireAdmin,
+  createRequireAdminPermission,
+} from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { createAgentScenariosRepository } from "./agent-scenarios.repository.js";
@@ -18,6 +21,7 @@ export const createAgentScenariosRouter = (database: Database): Router => {
     createAdminAuthService(createAdminAuthRepository(database)),
   );
   router.use(requireAdmin);
+  router.use(createRequireAdminPermission("scenarios.access"));
   router.get("/", async (_request, response) => {
     response.json(await repository.list());
   });
