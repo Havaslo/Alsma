@@ -101,6 +101,7 @@ export const App = () => {
           <Route element={<HomePage />} path={AMAZI_ROUTES.home} />
           <Route element={<LoginPage />} path={AMAZI_ROUTES.login} />
           <Route element={<AccountPage />} path={AMAZI_ROUTES.account} />
+          <Route element={<AccountPage />} path="/account/setup-name" />
           <Route element={<RoomsPage />} path={AMAZI_ROUTES.rooms} />
           <Route element={<SpaPage />} path={AMAZI_ROUTES.spa} />
           <Route
@@ -129,6 +130,23 @@ export const App = () => {
             element={<AdminDashboardPage />}
             path={AMAZI_ROUTES.adminDashboard}
           />
+          {[
+            "/admin",
+            "/admin/agent-scenarios",
+            "/admin/booking-requests",
+            "/admin/clients",
+            "/admin/clients/:clientId",
+            "/admin/integrations",
+            "/admin/knowledge-base",
+            "/admin/requests",
+            "/admin/requests/:requestId",
+            "/admin/settings",
+            "/admin/site-leads",
+            "/admin/site-management",
+            "/admin/site-management/:sectionId",
+          ].map((path) => (
+            <Route element={<AdminDashboardPage />} key={path} path={path} />
+          ))}
           <Route
             element={<Navigate replace to={AMAZI_ROUTES.home} />}
             path={AMAZI_FALLBACK_ROUTE}
