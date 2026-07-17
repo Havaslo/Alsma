@@ -79,6 +79,8 @@ export const loadAdmin = (signal?: AbortSignal) =>
     headers: headers(),
     signal,
   });
+export const logoutAdmin = () =>
+  apiClient.post("/admin/auth/logout", {}, { headers: headers() });
 export const loadAdminLeads = (signal?: AbortSignal) =>
   apiClient.get<{
     items: SiteLead[];

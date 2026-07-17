@@ -13,7 +13,7 @@ import {
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { completeGuestProfile } from "@/lib/auth/guest-auth-api";
+import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
 import { GUEST_PROFILE_QUERY_KEY, useGuestAuth } from "@/lib/auth/useGuestAuth";
 
@@ -70,7 +70,8 @@ export const AccountPage = () => {
         </section>
       </main>
     );
-  const logout = () => {
+  const logout = async () => {
+    await logoutGuest().catch(() => undefined);
     writeGuestSession(null);
     queryClient.clear();
     navigate(AMAZI_ROUTES.home);
@@ -123,8 +124,30 @@ export const AccountPage = () => {
               Здесь появятся предстоящие и завершённые поездки, даты проживания
               и состав услуг.
             </p>
-            <div className="mt-6 rounded-2xl bg-muted-ui p-5 text-sm text-muted-ui-foreground">
-              Активных бронирований пока нет.
+            <div className="mt-6 space-y-3">
+              {guest.bookings.map((booking) => (
+                <article
+                  className="rounded-2xl bg-muted-ui p-4"
+                  key={booking.id}
+                >
+                  <p className="font-semibold text-brand">{booking.roomName}</p>
+                  <p className="mt-1 text-sm text-muted-ui-foreground">
+                    {new Date(booking.checkInDate).toLocaleDateString("ru-RU")}{" "}
+                    —{" "}
+                    {new Date(booking.checkOutDate).toLocaleDateString("ru-RU")}{" "}
+                    · {booking.guestsCount} гост.
+                  </p>
+                  <p className="mt-2 text-sm">
+                    {booking.status}
+                    {booking.totalAmount ? ` · ${booking.totalAmount} ₽` : ""}
+                  </p>
+                </article>
+              ))}
+              {!guest.bookings.length && (
+                <div className="rounded-2xl bg-muted-ui p-5 text-sm text-muted-ui-foreground">
+                  Активных бронирований пока нет.
+                </div>
+              )}
             </div>
           </article>
           <article className="rounded-3xl border border-line p-6">
@@ -138,7 +161,12 @@ export const AccountPage = () => {
             </p>
             <div className="mt-6 rounded-2xl bg-brand p-5 text-brand-foreground">
               <p className="text-sm opacity-70">Текущий уровень</p>
-              <p className="mt-1 text-2xl font-semibold">Standard</p>
+              <p className="mt-1 text-2xl font-semibold">
+                {guest.bonusProgram?.level ?? "Standard"}
+              </p>
+              <p className="mt-2 text-sm opacity-80">
+                {guest.bonusProgram?.balance ?? 0} бонусов
+              </p>
             </div>
           </article>
         </section>

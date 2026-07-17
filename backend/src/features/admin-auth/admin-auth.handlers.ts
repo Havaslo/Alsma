@@ -29,6 +29,16 @@ export const createAdminMeHandler =
   async (_request, response) => {
     response.json({ user: response.locals.admin });
   };
+export const createAdminLogoutHandler =
+  (service: AdminAuthService): RequestHandler =>
+  async (request, response) => {
+    const authorization = request.headers.authorization ?? "";
+    response.json(
+      await service.logout(
+        authorization.startsWith("Bearer ") ? authorization.slice(7) : "",
+      ),
+    );
+  };
 export const createAdminStatusHandler =
   (service: AdminAuthService): RequestHandler =>
   async (_request, response) => {

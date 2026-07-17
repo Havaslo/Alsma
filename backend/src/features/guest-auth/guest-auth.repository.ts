@@ -1,9 +1,15 @@
 import type { Database } from "../../lib/database/database.js";
 
+const guestInclude = {
+  bonusProgram: true,
+  bookings: { orderBy: { checkInDate: "desc" as const } },
+} as const;
+
 export const createGuestAuthRepository = (database: Database) => ({
   completeProfile: (userId: string, fullName: string) =>
     database.client.guestUser.update({
       data: { fullName },
+      include: guestInclude,
       where: { id: userId },
     }),
   consumeCode: (id: string, sessionHash: string, sessionExpiresAt: Date) =>
@@ -27,12 +33,16 @@ export const createGuestAuthRepository = (database: Database) => ({
     database.client.guestLoginCode.findUnique({ where: { id } }),
   findSession: (tokenHash: string) =>
     database.client.guestLoginCode.findFirst({
-      include: { user: true },
+      include: { user: { include: guestInclude } },
       where: {
         codeHash: tokenHash,
         consumedAt: { not: null },
         expiresAt: { gt: new Date() },
       },
+    }),
+  revokeSession: (tokenHash: string) =>
+    database.client.guestLoginCode.deleteMany({
+      where: { codeHash: tokenHash, consumedAt: { not: null } },
     }),
   findUserByEmail: (email: string) =>
     database.client.guestUser.findFirst({ where: { email } }),

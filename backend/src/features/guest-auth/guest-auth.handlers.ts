@@ -25,6 +25,13 @@ export const createMeHandler =
   async (request, response) => {
     response.json(await service.me(bearerToken(request.headers.authorization)));
   };
+export const createLogoutHandler =
+  (service: GuestAuthService): RequestHandler =>
+  async (request, response) => {
+    response.json(
+      await service.logout(bearerToken(request.headers.authorization)),
+    );
+  };
 
 export const createRequestCodeHandler =
   (service: GuestAuthService): RequestHandler =>

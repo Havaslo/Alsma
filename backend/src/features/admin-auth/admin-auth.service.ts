@@ -79,6 +79,10 @@ export const createAdminAuthService = (repository: AdminAuthRepository) => {
         );
       return createLogin(user);
     },
+    logout: async (token: string) => {
+      if (token) await repository.revokeSession(tokenHash(token));
+      return { ok: true };
+    },
     me: async (token: string) => {
       const session = await repository.findSession(tokenHash(token));
       if (!session)

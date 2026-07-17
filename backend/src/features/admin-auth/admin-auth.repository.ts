@@ -37,6 +37,8 @@ export const createAdminAuthRepository = (database: Database) => ({
       include: { role: true },
       where: { email },
     }),
+  revokeSession: (tokenHash: string) =>
+    database.client.adminSession.deleteMany({ where: { tokenHash } }),
 });
 
 export type AdminAuthRepository = ReturnType<typeof createAdminAuthRepository>;

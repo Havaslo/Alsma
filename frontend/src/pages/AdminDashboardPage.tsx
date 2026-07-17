@@ -18,6 +18,7 @@ import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
 import type { SiteLead } from "@/lib/admin/admin-api";
+import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import {
   useAdmin,
@@ -55,7 +56,8 @@ export const AdminDashboardPage = () => {
     );
   if (!admin.data?.user)
     return <Navigate replace to={AMAZI_ROUTES.adminLogin} />;
-  const logout = () => {
+  const logout = async () => {
+    await logoutAdmin().catch(() => undefined);
     writeAdminSession(null);
     queryClient.clear();
     navigate(AMAZI_ROUTES.adminLogin);

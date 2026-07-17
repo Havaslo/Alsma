@@ -11,11 +11,26 @@ import type {
 const hash = (value: string): string =>
   createHash("sha256").update(value).digest("hex");
 const publicUser = (user: {
+  bonusProgram: { balance: number; level: string } | null;
+  bookings: Array<{
+    checkInDate: Date;
+    checkOutDate: Date;
+    guestsCount: number;
+    id: string;
+    roomName: string;
+    status: string;
+    totalAmount: { toString(): string } | null;
+  }>;
   email: string | null;
   fullName: string | null;
   id: string;
   phone: string;
 }) => ({
+  bonusProgram: user.bonusProgram,
+  bookings: user.bookings.map((booking) => ({
+    ...booking,
+    totalAmount: booking.totalAmount?.toString() ?? null,
+  })),
   email: user.email,
   fullName: user.fullName,
   id: user.id,
@@ -52,6 +67,10 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
     return session?.user
       ? { authenticated: true, guest: publicUser(session.user) }
       : { authenticated: false, guest: null };
+  },
+  logout: async (token: string | null) => {
+    if (token) await repository.revokeSession(hash(token));
+    return { ok: true };
   },
   requestCode: async (input: RequestCodeBody) => {
     const email =

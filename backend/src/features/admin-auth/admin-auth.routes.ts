@@ -5,6 +5,7 @@ import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createAdminInitializeHandler,
   createAdminLoginHandler,
+  createAdminLogoutHandler,
   createAdminMeHandler,
   createAdminStatusHandler,
 } from "./admin-auth.handlers.js";
@@ -31,5 +32,10 @@ export const createAdminAuthRouter = (database: Database): Router => {
     createAdminLoginHandler(service),
   );
   router.get("/me", createRequireAdmin(service), createAdminMeHandler(service));
+  router.post(
+    "/logout",
+    createRequireAdmin(service),
+    createAdminLogoutHandler(service),
+  );
   return router;
 };

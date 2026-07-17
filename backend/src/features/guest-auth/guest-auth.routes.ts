@@ -4,6 +4,7 @@ import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createCompleteProfileHandler,
+  createLogoutHandler,
   createMeHandler,
   createRequestCodeHandler,
   createVerifyCodeHandler,
@@ -30,6 +31,7 @@ export const createGuestAuthRouter = (database: Database): Router => {
     createVerifyCodeHandler(service),
   );
   router.get("/me", createMeHandler(service));
+  router.post("/logout", createLogoutHandler(service));
   router.post(
     "/complete-profile",
     validateRequest({ body: completeProfileBodySchema }),
