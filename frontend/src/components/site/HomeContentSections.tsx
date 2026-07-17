@@ -1,6 +1,8 @@
 import { ArrowRight, Star } from "lucide-react";
 
+import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
+import type { RoomCategory } from "@/lib/site/rooms";
 
 export const HomeRestSection = ({
   cards,
@@ -89,6 +91,63 @@ export const HomeReviewsSection = ({
             <p className="mt-5 leading-7">{review.text}</p>
             <p className="mt-6 font-semibold">{review.name}</p>
             <p className="text-sm opacity-70">{review.source}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+export const HomeRoomsSection = ({
+  rooms,
+}: {
+  readonly rooms: readonly RoomCategory[];
+}) => (
+  <section className="bg-panel py-24" id="rooms">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-bold tracking-widest text-brand uppercase">
+            Проживание
+          </p>
+          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+            Номера среди соснового леса
+          </h2>
+        </div>
+        <a
+          className="inline-flex items-center gap-2 font-semibold text-brand"
+          href={AMAZI_ROUTES.rooms}
+        >
+          Все номера <ArrowRight className="size-4" />
+        </a>
+      </div>
+      <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        {rooms.map((room) => (
+          <article
+            className="overflow-hidden rounded-3xl bg-page shadow-lg"
+            key={room.title}
+          >
+            <img
+              alt={room.title}
+              className="h-64 w-full object-cover"
+              src={room.image}
+            />
+            <div className="p-6">
+              <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand">
+                <span>{room.area}</span>
+                <span>·</span>
+                <span>{room.capacity}</span>
+              </div>
+              <h3 className="mt-3 font-heading text-3xl font-semibold">
+                {room.title}
+              </h3>
+              <p className="mt-3 line-clamp-3 leading-7 text-muted-ui-foreground">
+                {room.description}
+              </p>
+              <p className="mt-5 text-lg font-semibold text-brand">
+                {room.price} / ночь
+              </p>
+            </div>
           </article>
         ))}
       </div>

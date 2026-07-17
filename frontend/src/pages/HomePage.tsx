@@ -8,6 +8,7 @@ import logoWhite from "@/assets/alsma/logo-white.svg";
 import {
   HomeRestSection,
   HomeReviewsSection,
+  HomeRoomsSection,
 } from "@/components/site/HomeContentSections";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { getSiteCollection } from "@/lib/site/content-collections";
@@ -17,15 +18,16 @@ import {
   type HomeRestCard,
   type HomeReview,
 } from "@/lib/site/home-content";
+import { ROOM_CATEGORIES, type RoomCategory } from "@/lib/site/rooms";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 const navigation = [
-  "Проживание",
-  "SPA",
-  "Развлечения",
-  "Все включено",
-  "О нас",
-  "Акции",
+  { href: AMAZI_ROUTES.rooms, label: "Проживание" },
+  { href: AMAZI_ROUTES.spa, label: "SPA" },
+  { href: AMAZI_ROUTES.entertainment, label: "Развлечения" },
+  { href: AMAZI_ROUTES.allInclusive, label: "Все включено" },
+  { href: AMAZI_ROUTES.about, label: "О нас" },
+  { href: AMAZI_ROUTES.offers, label: "Акции" },
 ];
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,6 +36,7 @@ export const HomePage = () => {
   const [guestsCount, setGuestsCount] = useState(2);
   const leadMutation = useCreateLead();
   const content = usePublishedSiteContent("home");
+  const roomsContent = usePublishedSiteContent("rooms");
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
@@ -46,6 +49,11 @@ export const HomePage = () => {
     content.data?.items,
     "reviews",
     HOME_REVIEWS,
+  );
+  const rooms = getSiteCollection<RoomCategory>(
+    roomsContent.data?.items,
+    "cards",
+    ROOM_CATEGORIES,
   );
 
   return (
@@ -71,10 +79,10 @@ export const HomePage = () => {
               {navigation.map((item) => (
                 <a
                   className="text-brand-foreground/90 transition hover:text-brand-foreground"
-                  href="#rest"
-                  key={item}
+                  href={item.href}
+                  key={item.href}
                 >
-                  {item}
+                  {item.label}
                 </a>
               ))}
             </nav>
@@ -103,8 +111,12 @@ export const HomePage = () => {
             {menuOpen && (
               <nav className="absolute inset-x-0 top-16 flex flex-col gap-3 rounded-3xl bg-brand p-6 lg:hidden">
                 {navigation.map((item) => (
-                  <a href="#rest" key={item} onClick={() => setMenuOpen(false)}>
-                    {item}
+                  <a
+                    href={item.href}
+                    key={item.href}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {item.label}
                   </a>
                 ))}
               </nav>
@@ -203,6 +215,7 @@ export const HomePage = () => {
       </section>
 
       <HomeRestSection cards={restCards} />
+      <HomeRoomsSection rooms={rooms} />
       <HomeReviewsSection reviews={reviews} />
     </main>
   );
