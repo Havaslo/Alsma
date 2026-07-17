@@ -17,6 +17,7 @@ import natureImage from "@/assets/alsma/nature.jpg";
 import restaurantImage from "@/assets/alsma/restaurant.jpg";
 import roomImage from "@/assets/alsma/room.jpg";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 const navigation = [
   "Проживание",
@@ -46,6 +47,10 @@ export const HomePage = () => {
   const [checkOutDate, setCheckOutDate] = useState("2026-07-23");
   const [guestsCount, setGuestsCount] = useState(2);
   const leadMutation = useCreateLead();
+  const content = usePublishedSiteContent("home");
+  const hero = content.data?.items.find(
+    (item) => item.itemKey === "hero",
+  )?.content;
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -53,7 +58,7 @@ export const HomePage = () => {
         <img
           alt="Загородный отель АЛСМА"
           className="absolute inset-0 size-full object-cover"
-          src={heroImage}
+          src={typeof hero?.image === "string" ? hero.image : heroImage}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 
@@ -124,11 +129,14 @@ export const HomePage = () => {
               4.9 в Яндекс Картах
             </a>
             <h1 className="max-w-5xl font-heading text-5xl leading-tight font-semibold sm:text-6xl lg:text-7xl">
-              Отдых, который возвращает к себе
+              {typeof hero?.title === "string"
+                ? hero.title
+                : "Отдых, который возвращает к себе"}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85">
-              Загородный отель в окружении соснового леса: уютные номера, SPA,
-              авторская кухня и настоящее спокойствие.
+              {typeof hero?.description === "string"
+                ? hero.description
+                : "Загородный отель в окружении соснового леса: уютные номера, SPA, авторская кухня и настоящее спокойствие."}
             </p>
           </div>
 

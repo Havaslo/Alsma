@@ -28,7 +28,7 @@ export const AboutPage = () => {
       <PublicHero
         description={description}
         eyebrow="Об АЛСМА"
-        image={heroImage}
+        image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={title}
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">

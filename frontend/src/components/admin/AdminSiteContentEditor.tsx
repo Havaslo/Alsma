@@ -1,10 +1,12 @@
 import { useState } from "react";
 
+import { useMutation } from "@tanstack/react-query";
 import { FilePenLine, LoaderCircle, Save } from "lucide-react";
 
 import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
+import { uploadSiteMedia } from "@/lib/site/site-content-api";
 import {
   useAdminSiteContent,
   useSaveAdminSiteContent,
@@ -33,6 +35,15 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
   const [status, setStatus] = useState<SiteContentItem["status"]>(
     stored?.status ?? "published",
   );
+  const [image, setImage] = useState(
+    typeof stored?.content.image === "string"
+      ? stored.content.image
+      : fallback.heroImage,
+  );
+  const upload = useMutation({
+    mutationFn: uploadSiteMedia,
+    onSuccess: ({ data }) => setImage(data.file.url),
+  });
 
   return (
     <form
@@ -40,7 +51,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
       onSubmit={(event) => {
         event.preventDefault();
         save.mutate({
-          content: { description, title },
+          content: { description, image, title },
           itemKey: "hero",
           position: 0,
           section,
@@ -64,6 +75,28 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
           onChange={(event) => setDescription(event.target.value)}
           value={description}
         />
+      </label>
+      <label className="text-sm font-medium">
+        Изображение или видео hero
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+          <input
+            className="min-w-0 flex-1 rounded-2xl border border-line bg-page px-4 py-3"
+            onChange={(event) => setImage(event.target.value)}
+            value={image}
+          />
+          <label className="cursor-pointer rounded-full border border-line px-5 py-3 text-center font-semibold text-brand">
+            Загрузить файл
+            <input
+              accept="image/*,video/mp4,video/webm"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) upload.mutate(file);
+              }}
+              type="file"
+            />
+          </label>
+        </div>
       </label>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <label className="text-sm font-medium">

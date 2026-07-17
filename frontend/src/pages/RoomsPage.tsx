@@ -32,7 +32,7 @@ export const RoomsPage = () => {
       <PublicHero
         description={description}
         eyebrow="Номера и коттеджи"
-        image={page.heroImage}
+        image={typeof hero?.image === "string" ? hero.image : page.heroImage}
         title={title}
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">

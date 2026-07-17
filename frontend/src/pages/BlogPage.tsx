@@ -37,7 +37,7 @@ export const BlogPage = () => {
             : page.description
         }
         eyebrow="Вдохновение для поездки в АЛСМА"
-        image={heroImage}
+        image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={typeof hero?.title === "string" ? hero.title : "Блог"}
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">

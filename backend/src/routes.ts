@@ -8,6 +8,7 @@ import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-sce
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
+import { createMediaRouter } from "./features/media/media.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
 import type { Database } from "./lib/database/database.js";
@@ -29,6 +30,7 @@ export const createApiRouter = ({
   router.use("/auth", createGuestAuthRouter(database));
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
+  router.use("/media", createMediaRouter(database));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
 

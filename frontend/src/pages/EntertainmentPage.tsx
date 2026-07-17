@@ -50,7 +50,9 @@ export const EntertainmentPage = () => {
       <PublicHero
         description={description}
         eyebrow="Активности и семейный отдых"
-        image={entertainmentHeroImage}
+        image={
+          typeof hero?.image === "string" ? hero.image : entertainmentHeroImage
+        }
         title={title}
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">

@@ -25,7 +25,7 @@ export const SpaPage = () => {
       <PublicHero
         description={description}
         eyebrow="SPA-центр"
-        image={spaHeroImage}
+        image={typeof hero?.image === "string" ? hero.image : spaHeroImage}
         title={title}
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">

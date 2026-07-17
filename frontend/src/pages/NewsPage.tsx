@@ -39,7 +39,7 @@ export const NewsPage = () => {
             : page.description
         }
         eyebrow="Актуальное в отеле АЛСМА"
-        image={heroImage}
+        image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={
           typeof hero?.title === "string" ? hero.title : "Новости и события"
         }
