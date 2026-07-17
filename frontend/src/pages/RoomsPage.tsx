@@ -21,11 +21,8 @@ export const RoomsPage = () => {
     "cards",
     ROOM_CATEGORIES,
   );
-  const comparison = getSiteCollection(
-    content.data?.items,
-    "comparison",
-    ROOM_COMPARISON,
-  );
+  const comparisonRooms = ROOM_CATEGORIES;
+  const comparison = ROOM_COMPARISON;
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -63,7 +60,7 @@ export const RoomsPage = () => {
               <thead className="bg-brand/10">
                 <tr>
                   <th className="p-5">Параметр</th>
-                  {rooms.map((room) => (
+                  {comparisonRooms.map((room) => (
                     <th className="p-5" key={room.title}>
                       {room.title}
                     </th>
@@ -77,7 +74,7 @@ export const RoomsPage = () => {
                     {row.values.map((value, index) => (
                       <td
                         className="p-5"
-                        key={`${row.label}:${rooms[index]?.title ?? index}`}
+                        key={`${row.label}:${comparisonRooms[index]?.title ?? index}`}
                       >
                         {value}
                       </td>

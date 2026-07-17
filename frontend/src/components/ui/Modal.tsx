@@ -112,7 +112,7 @@ export const Modal = ({
     >
       <section className="flex max-h-screen flex-col">
         <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-5">
-          <h2 className="m-0 font-heading text-xl font-semibold" id={titleId}>
+          <h2 className="m-0 font-heading text-2xl font-semibold sm:text-4xl" id={titleId}>
             {title}
           </h2>
           <Button

@@ -2,19 +2,8 @@ import { useState } from "react";
 
 import { Sparkles } from "lucide-react";
 
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
-import { Modal } from "@/components/ui/Modal";
+import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
 import type { RoomCategory } from "@/lib/site/rooms";
-
-const getRecommendation = (
-  rooms: readonly RoomCategory[],
-  guests: number,
-  priority: string,
-) => {
-  if (priority === "space" || guests >= 4) return rooms.at(-1);
-  if (priority === "view" || guests === 3) return rooms[1] ?? rooms[0];
-  return rooms[0];
-};
 
 export const RoomsSupportSections = ({
   rooms,
@@ -22,10 +11,6 @@ export const RoomsSupportSections = ({
   readonly rooms: readonly RoomCategory[];
 }) => {
   const [quizOpen, setQuizOpen] = useState(false);
-  const [guests, setGuests] = useState(2);
-  const [priority, setPriority] = useState("quiet");
-  const [submitted, setSubmitted] = useState(false);
-  const recommendation = getRecommendation(rooms, guests, priority);
 
   return (
     <>
@@ -60,8 +45,8 @@ export const RoomsSupportSections = ({
         </div>
       </section>
 
-      <section className="bg-brand py-20 text-brand-foreground">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
+      <section className="bg-page px-5 py-20 text-brand-foreground sm:px-8">
+        <div className="mx-auto max-w-7xl rounded-4xl bg-brand px-8 py-10 shadow-xl sm:px-12 sm:py-12">
           <p className="text-sm font-semibold tracking-widest uppercase opacity-70">
             AI-рекомендатор
           </p>
@@ -78,7 +63,6 @@ export const RoomsSupportSections = ({
             <button
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-panel px-7 py-4 font-semibold text-brand"
               onClick={() => {
-                setSubmitted(false);
                 setQuizOpen(true);
               }}
               type="button"
@@ -86,80 +70,14 @@ export const RoomsSupportSections = ({
               <Sparkles className="size-5" /> Подобрать номер
             </button>
           </div>
-          <div className="mt-10 border-t border-brand-foreground/20 pt-8">
-            <LeadRequestForm
-              formCode="rooms-corpuses"
-              formTitle="Заявка на размещение по корпусам"
-              showDetails
-              sourcePage="rooms"
-            />
-          </div>
         </div>
       </section>
 
-      <Modal
-        closeLabel="Закрыть подбор номера"
+      <RoomRecommendationQuiz
         onClose={() => setQuizOpen(false)}
         open={quizOpen}
-        title="Подбор идеального номера"
-      >
-        {submitted && recommendation ? (
-          <div className="py-4">
-            <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-              Рекомендуем
-            </p>
-            <h3 className="mt-3 font-heading text-4xl font-semibold">
-              {recommendation.title}
-            </h3>
-            <p className="mt-4 leading-7 text-muted-ui-foreground">
-              {recommendation.description}
-            </p>
-            <p className="mt-6 text-xl font-semibold text-brand">
-              {recommendation.price} / ночь
-            </p>
-          </div>
-        ) : (
-          <form
-            className="grid gap-5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSubmitted(true);
-            }}
-          >
-            <label className="font-medium">
-              Количество гостей
-              <select
-                className="mt-2 block w-full rounded-2xl border border-line bg-page px-4 py-3"
-                onChange={(event) => setGuests(Number(event.target.value))}
-                value={guests}
-              >
-                <option value={1}>1 гость</option>
-                <option value={2}>2 гостя</option>
-                <option value={3}>3 гостя</option>
-                <option value={4}>4 и более гостей</option>
-              </select>
-            </label>
-            <label className="font-medium">
-              Что важнее всего?
-              <select
-                className="mt-2 block w-full rounded-2xl border border-line bg-page px-4 py-3"
-                onChange={(event) => setPriority(event.target.value)}
-                value={priority}
-              >
-                <option value="quiet">Тишина и уют</option>
-                <option value="view">Вид и зона отдыха</option>
-                <option value="space">Максимум пространства</option>
-              </select>
-            </label>
-            <button
-              className="rounded-full bg-brand px-6 py-4 font-semibold text-brand-foreground"
-              type="submit"
-            >
-              Получить рекомендацию
-            </button>
-          </form>
-        )}
-      </Modal>
+        rooms={rooms}
+      />
     </>
   );
 };
