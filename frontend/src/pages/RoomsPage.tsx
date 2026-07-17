@@ -1,5 +1,6 @@
 import { PublicHero } from "@/components/site/PublicHero";
 import { RoomCard } from "@/components/site/RoomCard";
+import { RoomsSupportSections } from "@/components/site/RoomsSupportSections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { getSiteCollection } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
@@ -90,6 +91,7 @@ export const RoomsPage = () => {
           </div>
         </div>
       </section>
+      <RoomsSupportSections rooms={rooms} />
     </main>
   );
 };
