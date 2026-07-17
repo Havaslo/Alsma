@@ -2,7 +2,14 @@ import familyImage from "@/assets/alsma/family-holiday.png";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
 import spaImage from "@/assets/alsma/spa-wellness.png";
 
-export const ACTIVE_OFFERS = [
+export type ActiveOffer = {
+  readonly description: string;
+  readonly image: string;
+  readonly tag: string;
+  readonly title: string;
+};
+
+export const ACTIVE_OFFERS: readonly ActiveOffer[] = [
   {
     description:
       "Выходные с термальной зоной, авторскими ритуалами и проживанием в атмосфере полной перезагрузки.",

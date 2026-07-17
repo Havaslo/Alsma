@@ -2,6 +2,7 @@ import { ArrowRight, Star } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
+import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
 
 export const HomeRestSection = ({
@@ -64,6 +65,59 @@ export const HomeRestSection = ({
           </div>
         </article>
       ))}
+    </div>
+  </section>
+);
+
+export const HomePromotionsSection = ({
+  offers,
+}: {
+  readonly offers: readonly ActiveOffer[];
+}) => (
+  <section className="bg-panel py-24" id="offers">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-bold tracking-widest text-brand uppercase">
+            Специальные предложения
+          </p>
+          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+            Выберите свой сценарий отдыха
+          </h2>
+        </div>
+        <a
+          className="inline-flex items-center gap-2 font-semibold text-brand"
+          href={AMAZI_ROUTES.offers}
+        >
+          Все предложения <ArrowRight className="size-4" />
+        </a>
+      </div>
+      <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        {offers.map((offer) => (
+          <article
+            className="group relative min-h-96 overflow-hidden rounded-3xl text-brand-foreground"
+            key={offer.title}
+          >
+            <img
+              alt={offer.title}
+              className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
+              src={offer.image}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/30 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-7">
+              <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
+                {offer.tag}
+              </span>
+              <h3 className="mt-5 font-heading text-3xl font-semibold">
+                {offer.title}
+              </h3>
+              <p className="mt-3 text-brand-foreground/80">
+                {offer.description}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   </section>
 );

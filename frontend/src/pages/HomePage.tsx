@@ -6,6 +6,7 @@ import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import heroImage from "@/assets/alsma/hero.jpg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import {
+  HomePromotionsSection,
   HomeRestSection,
   HomeReviewsSection,
   HomeRoomsSection,
@@ -18,6 +19,7 @@ import {
   type HomeRestCard,
   type HomeReview,
 } from "@/lib/site/home-content";
+import { ACTIVE_OFFERS, type ActiveOffer } from "@/lib/site/offers";
 import { ROOM_CATEGORIES, type RoomCategory } from "@/lib/site/rooms";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -37,6 +39,7 @@ export const HomePage = () => {
   const leadMutation = useCreateLead();
   const content = usePublishedSiteContent("home");
   const roomsContent = usePublishedSiteContent("rooms");
+  const offersContent = usePublishedSiteContent("offers");
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
@@ -54,6 +57,11 @@ export const HomePage = () => {
     roomsContent.data?.items,
     "cards",
     ROOM_CATEGORIES,
+  );
+  const offers = getSiteCollection<ActiveOffer>(
+    offersContent.data?.items,
+    "proposals",
+    ACTIVE_OFFERS,
   );
 
   return (
@@ -214,6 +222,7 @@ export const HomePage = () => {
         </div>
       </section>
 
+      <HomePromotionsSection offers={offers} />
       <HomeRestSection cards={restCards} />
       <HomeRoomsSection rooms={rooms} />
       <HomeReviewsSection reviews={reviews} />
