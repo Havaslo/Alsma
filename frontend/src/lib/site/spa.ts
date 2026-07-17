@@ -1,7 +1,10 @@
 import bathImage from "@/assets/alsma/spa-bath-new.jpg";
 import faceImage from "@/assets/alsma/spa-face-care-new.jpg";
 import massageImage from "@/assets/alsma/spa-massage-new.jpg";
+import massagePromotionImage from "@/assets/alsma/spa-massage.jpg";
 import mineralImage from "@/assets/alsma/spa-mineral-water-new.jpg";
+import programsImage from "@/assets/alsma/spa-programs.jpg";
+import quantumImage from "@/assets/alsma/spa-quantum.jpg";
 
 export const SPA_SPACES = [
   {
@@ -82,4 +85,65 @@ export const WATER_PROCEDURES = [
     ],
     title: "SPA-капсулы",
   },
+] as const;
+
+export const SPA_COMPANY_FORMATS = [
+  {
+    items: [
+      "Парение с парамастером",
+      "SPA-церемонии на компанию",
+      "Фруктовые тарелки и ягодные морсы",
+      "Ужин в ресторане или барбекю в стеклянном куполе",
+    ],
+    title: "Для девичника",
+  },
+  {
+    items: [
+      "Интенсивное парение с парамастером",
+      "Тайский массаж",
+      "Душ Шарко и купели с минеральной водой",
+      "Мангальная зона и безалкогольные коктейли",
+    ],
+    title: "Для мальчишника",
+  },
+  {
+    items: [
+      "Групповая запись на массаж",
+      "Общая зона отдыха с чаем и морсами",
+      "Можно с проживанием или без",
+    ],
+    title: "Для любой компании",
+  },
+] as const;
+
+export const SPA_PROMOTIONS = [
+  {
+    deadline: "До 15 мая 2026",
+    description: "3 сеанса криосауны и консультация специалиста",
+    image: quantumImage,
+    price: "6 000 ₽",
+    title: "Неделя криотерапии −35%",
+  },
+  {
+    deadline: "До 25 мая 2026",
+    description: "Массаж, прессотерапия и кислородная капсула",
+    image: massagePromotionImage,
+    price: "9 000 ₽",
+    title: "Комплекс «Антистресс» −25%",
+  },
+  {
+    deadline: "До 10 июня 2026",
+    description: "5 процедур LPG, RF-лифтинг и кислородная капсула",
+    image: programsImage,
+    price: "20 000 ₽",
+    title: "Весенняя перезагрузка",
+  },
+] as const;
+
+export const SPA_CONTRAINDICATIONS = [
+  "Онкология любого типа",
+  "Температура, грипп и острые вирусные инфекции",
+  "Тромбоз и тромбофлебит",
+  "Свежие переломы и открытые раны",
+  "Кожные заболевания в стадии воспаления",
 ] as const;

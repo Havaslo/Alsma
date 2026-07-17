@@ -3,6 +3,12 @@ import { Check, Clock } from "lucide-react";
 import spaHeroImage from "@/assets/alsma/spa-hero-new.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import {
+  SpaCeremoniesSection,
+  SpaCompanySection,
+  SpaInformationSections,
+  SpaPromotionsSection,
+} from "@/components/site/SpaAdditionalSections";
 import { SpaRequestForm } from "@/components/site/SpaRequestForm";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { MASSAGES, SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
@@ -123,6 +129,9 @@ export const SpaPage = () => {
           ))}
         </div>
       </section>
+      <SpaCeremoniesSection />
+      <SpaCompanySection />
+      <SpaPromotionsSection />
       <section className="bg-brand py-20 text-brand-foreground" id="spa-cta">
         <div className="mx-auto max-w-5xl px-5 sm:px-8">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
@@ -134,6 +143,7 @@ export const SpaPage = () => {
           <SpaRequestForm />
         </div>
       </section>
+      <SpaInformationSections />
     </main>
   );
 };
