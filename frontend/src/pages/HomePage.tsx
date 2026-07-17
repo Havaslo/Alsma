@@ -1,6 +1,14 @@
 import { useState } from "react";
 
-import { CalendarDays, Menu, Star, UserRound, Users, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  Menu,
+  Star,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import heroImage from "@/assets/alsma/hero.jpg";
@@ -35,6 +43,12 @@ const navigation = [
   { href: AMAZI_ROUTES.allInclusive, label: "Все включено" },
   { href: AMAZI_ROUTES.about, label: "О нас" },
   { href: AMAZI_ROUTES.offers, label: "Акции" },
+];
+const moreNavigation = [
+  { href: AMAZI_ROUTES.hardwareProcedures, label: "Аппаратные процедуры" },
+  { href: AMAZI_ROUTES.news, label: "Новости" },
+  { href: AMAZI_ROUTES.blog, label: "Блог" },
+  { href: AMAZI_ROUTES.celebrations, label: "Торжества" },
 ];
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -98,6 +112,12 @@ export const HomePage = () => {
                   {item.label}
                 </a>
               ))}
+              <div className="group relative">
+                <button className="flex items-center gap-1 py-3 text-brand-foreground/90" type="button">Еще <ChevronDown className="size-4" /></button>
+                <div className="invisible absolute top-full right-0 w-72 translate-y-2 rounded-3xl bg-page p-3 text-brand opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                  {moreNavigation.map((item) => <a className="block rounded-2xl px-4 py-3 hover:bg-panel" href={item.href} key={item.href}>{item.label}</a>)}
+                </div>
+              </div>
             </nav>
             <div className="flex items-center gap-2">
               <a
@@ -123,7 +143,7 @@ export const HomePage = () => {
             </div>
             {menuOpen && (
               <nav className="absolute inset-x-0 top-16 flex flex-col gap-3 rounded-3xl bg-brand p-6 lg:hidden">
-                {navigation.map((item) => (
+                {[...navigation, ...moreNavigation].map((item) => (
                   <a
                     href={item.href}
                     key={item.href}

@@ -31,6 +31,7 @@ export const RoomsPage = () => {
     <main className="min-h-screen bg-page text-page-foreground">
       <SiteHeader />
       <PublicHero
+        badge="Более 80-ти номеров"
         description={description}
         eyebrow="Номера и коттеджи"
         image={typeof hero?.image === "string" ? hero.image : page.heroImage}
@@ -38,10 +39,7 @@ export const RoomsPage = () => {
       />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            Более 80 номеров
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
             Варианты размещения
           </h2>
           <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">

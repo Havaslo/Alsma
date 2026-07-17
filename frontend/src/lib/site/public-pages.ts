@@ -33,7 +33,7 @@ export type PublicPageDefinition = {
 export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
   about: {
     description:
-      "Место силы, созданное с уважением к природе и вниманием к каждому гостю.",
+      "«Алсма» — загородный SPA-отель с большой территорией, бассейнами и отдыхом для всей семьи.",
     eyebrow: "Об отеле",
     heroImage: natureImage,
     highlights: [
@@ -53,7 +53,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
   },
   "all-inclusive": {
     description:
-      "Проживание, питание, SPA и развлечения в одном продуманном формате.",
+      "Главный ресторан со шведским столом, барбекю в стеклянном куполе, лёгкое меню в SPA-зоне и вечерняя барная атмосфера — всё, что делает отдых в АЛСМЕ по-настоящему беззаботным.",
     eyebrow: "Всё включено",
     heroImage: allInclusiveImage,
     highlights: [
@@ -67,7 +67,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "all-inclusive",
-    title: "Отдыхайте — обо всём остальном позаботимся мы",
+    title: "Вкусный отдых, который входит в ваш ритм восстановления",
   },
   blog: {
     description:
@@ -106,7 +106,8 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
     title: "Торжества и корпоративный отдых",
   },
   entertainment: {
-    description: "Активности для взрослых и детей в любое время года.",
+    description:
+      "Насыщенная программа активностей, спортивных мероприятий и развлечений для гостей всех возрастов.",
     eyebrow: "Развлечения",
     heroImage: entertainmentImage,
     highlights: [
