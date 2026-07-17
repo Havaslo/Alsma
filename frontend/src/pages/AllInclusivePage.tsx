@@ -1,7 +1,10 @@
 import { Check, Sparkles } from "lucide-react";
 
 import heroImage from "@/assets/alsma/all-inclusive-hero-new.jpg";
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
+import {
+  AllInclusiveAnimationSection,
+  AllInclusiveFinalSection,
+} from "@/components/site/AllInclusiveSupportSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import {
@@ -95,7 +98,7 @@ export const AllInclusivePage = () => {
         </div>
       </section>
       <section className="mx-auto max-w-7xl space-y-10 px-5 py-24 sm:px-8">
-        {FEATURED_FORMATS.map((format, index) => (
+        {FEATURED_FORMATS.slice(0, 3).map((format, index) => (
           <article
             className="overflow-hidden rounded-4xl bg-panel lg:grid lg:grid-cols-2"
             key={format.title}
@@ -123,22 +126,20 @@ export const AllInclusivePage = () => {
           </article>
         ))}
       </section>
-      <section className="bg-brand py-20 text-brand-foreground">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Подобрать отдых по тарифу
-          </h2>
-          <p className="mt-4 mb-8 text-lg text-brand-foreground/75">
-            Оставьте контакты — мы расскажем о формате и предложим подходящий
-            вариант.
-          </p>
-          <LeadRequestForm
-            formCode="all-inclusive-request"
-            formTitle="Заявка по тарифу «Всё включено»"
-            sourcePage="all-inclusive"
-          />
-        </div>
+      <AllInclusiveAnimationSection />
+      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+        {FEATURED_FORMATS.slice(3).map((format) => (
+          <article className="overflow-hidden rounded-4xl bg-panel lg:grid lg:grid-cols-2" key={format.title}>
+            <img alt={format.title} className="aspect-[4/3] size-full object-cover" src={format.image} />
+            <div className="p-8 sm:p-12">
+              <h2 className="font-heading text-4xl font-semibold">{format.title}</h2>
+              <p className="mt-5 leading-7 text-muted-ui-foreground">{format.description}</p>
+              <ul className="mt-7 space-y-4">{format.items.map((item) => <li className="flex gap-3" key={item}><Check className="mt-1 size-4 shrink-0 text-brand" /> {item}</li>)}</ul>
+            </div>
+          </article>
+        ))}
       </section>
+      <AllInclusiveFinalSection />
     </main>
   );
 };
