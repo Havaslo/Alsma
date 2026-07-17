@@ -2,11 +2,17 @@ import type { Database } from "../../lib/database/database.js";
 import { getPaginationRange } from "../../lib/http/pagination.js";
 import type {
   AdminOperationsQuery,
+  CreateBookingBody,
   UpdateBonusBody,
+  UpdateClientBody,
   UpdateRequestStatusBody,
 } from "./admin-operations.schemas.js";
 
 export const createAdminOperationsRepository = (database: Database) => ({
+  createBooking: (input: CreateBookingBody) =>
+    database.client.bookingRequest.create({ data: input }),
+  deleteClient: (recordId: string) =>
+    database.client.guestUser.delete({ where: { id: recordId } }),
   listBookings: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([
@@ -72,6 +78,15 @@ export const createAdminOperationsRepository = (database: Database) => ({
       create: { ...input, userId: recordId },
       update: input,
       where: { userId: recordId },
+    }),
+  updateClient: (recordId: string, input: UpdateClientBody) =>
+    database.client.guestUser.update({
+      data: {
+        email: input.email,
+        fullName: input.fullName,
+        phone: input.phone || `email:${input.email}`,
+      },
+      where: { id: recordId },
     }),
   updateRequest: (recordId: string, input: UpdateRequestStatusBody) =>
     database.client.adminRequest.update({

@@ -9,20 +9,25 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import {
+  createBookingHandler,
   createCompleteTaskHandler,
+  createDeleteClientHandler,
   createListBookingsHandler,
   createListClientsHandler,
   createListRequestsHandler,
   createListTasksHandler,
   createMarkBookingPaidHandler,
   createUpdateBonusHandler,
+  createUpdateClientHandler,
   createUpdateRequestHandler,
 } from "./admin-operations.handlers.js";
 import { createAdminOperationsRepository } from "./admin-operations.repository.js";
 import {
   adminOperationsQuerySchema,
+  createBookingBodySchema,
   recordParamsSchema,
   updateBonusBodySchema,
+  updateClientBodySchema,
   updateRequestStatusBodySchema,
 } from "./admin-operations.schemas.js";
 
@@ -43,6 +48,11 @@ export const createAdminOperationsRouter = (database: Database): Router => {
     createListBookingsHandler(repository),
   );
   router.post(
+    "/bookings",
+    validateRequest({ body: createBookingBodySchema }),
+    createBookingHandler(repository),
+  );
+  router.post(
     "/bookings/:recordId/mark-paid",
     validateRequest({ params: recordParamsSchema }),
     createMarkBookingPaidHandler(repository),
@@ -59,6 +69,19 @@ export const createAdminOperationsRouter = (database: Database): Router => {
       params: recordParamsSchema,
     }),
     createUpdateBonusHandler(repository),
+  );
+  router.put(
+    "/clients/:recordId",
+    validateRequest({
+      body: updateClientBodySchema,
+      params: recordParamsSchema,
+    }),
+    createUpdateClientHandler(repository),
+  );
+  router.delete(
+    "/clients/:recordId",
+    validateRequest({ params: recordParamsSchema }),
+    createDeleteClientHandler(repository),
   );
   router.get(
     "/requests",

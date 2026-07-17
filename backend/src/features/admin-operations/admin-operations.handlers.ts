@@ -4,8 +4,10 @@ import { createPaginatedResponse } from "../../lib/http/pagination.js";
 import type { AdminOperationsRepository } from "./admin-operations.repository.js";
 import type {
   AdminOperationsQuery,
+  CreateBookingBody,
   RecordParams,
   UpdateBonusBody,
+  UpdateClientBody,
   UpdateRequestStatusBody,
 } from "./admin-operations.schemas.js";
 
@@ -24,6 +26,15 @@ const listHandler =
 export const createListBookingsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listBookings);
+export const createBookingHandler =
+  (repository: AdminOperationsRepository): RequestHandler =>
+  async (_request, response) => {
+    response.status(201).json({
+      booking: await repository.createBooking(
+        response.locals.input.body as CreateBookingBody,
+      ),
+    });
+  };
 export const createListClientsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listClients);
@@ -60,6 +71,24 @@ export const createUpdateBonusHandler =
         response.locals.input.body as UpdateBonusBody,
       ),
     });
+  };
+export const createUpdateClientHandler =
+  (repository: AdminOperationsRepository): RequestHandler =>
+  async (_request, response) => {
+    response.json({
+      client: await repository.updateClient(
+        (response.locals.input.params as RecordParams).recordId,
+        response.locals.input.body as UpdateClientBody,
+      ),
+    });
+  };
+export const createDeleteClientHandler =
+  (repository: AdminOperationsRepository): RequestHandler =>
+  async (_request, response) => {
+    await repository.deleteClient(
+      (response.locals.input.params as RecordParams).recordId,
+    );
+    response.status(204).end();
   };
 export const createUpdateRequestHandler =
   (repository: AdminOperationsRepository): RequestHandler =>

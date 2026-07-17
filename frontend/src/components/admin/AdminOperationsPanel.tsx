@@ -8,6 +8,8 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { AdminBookingForm } from "@/components/admin/AdminBookingForm";
+import { AdminClientRow } from "@/components/admin/AdminClientRow";
 import type { SiteLead } from "@/lib/admin/admin-api";
 import {
   useAdminBookings,
@@ -17,7 +19,6 @@ import {
   useManagerTasks,
   useMarkBookingPaid,
   useUpdateAdminRequest,
-  useUpdateClientBonus,
 } from "@/lib/admin/useAdmin";
 
 type Tab = "bookings" | "clients" | "requests" | "tasks";
@@ -36,7 +37,6 @@ export const AdminOperationsPanel = () => {
   const tasks = useManagerTasks();
   const completeTask = useCompleteManagerTask();
   const markPaid = useMarkBookingPaid();
-  const updateBonus = useUpdateClientBonus();
   const updateRequest = useUpdateAdminRequest();
   const tabs = [
     { icon: CalendarCheck, id: "bookings" as const, label: "Бронирования" },
@@ -67,6 +67,7 @@ export const AdminOperationsPanel = () => {
       <div className="mt-5 overflow-hidden rounded-3xl border border-line bg-panel">
         {tab === "bookings" && (
           <div>
+            <AdminBookingForm />
             {bookings.data?.items.map((item) => (
               <article
                 className="flex flex-col justify-between gap-4 border-b border-line p-5 sm:flex-row sm:items-center"
@@ -101,43 +102,7 @@ export const AdminOperationsPanel = () => {
         {tab === "clients" && (
           <div>
             {clients.data?.items.map((item) => (
-              <article
-                className="grid gap-4 border-b border-line p-5 sm:grid-cols-[1fr_auto_auto] sm:items-center"
-                key={item.id}
-              >
-                <div>
-                  <h3 className="font-semibold text-brand">
-                    {item.fullName || "Гость АЛСМА"}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-ui-foreground">
-                    {item.phone} · бронирований: {item._count.bookings}
-                  </p>
-                </div>
-                <input
-                  aria-label="Баланс бонусов"
-                  className="w-28 rounded-xl border border-line bg-page px-3 py-2"
-                  defaultValue={item.bonusProgram?.balance ?? 0}
-                  id={`bonus-${item.id}`}
-                  min={0}
-                  type="number"
-                />
-                <button
-                  className="rounded-full border border-line px-4 py-2 font-semibold text-brand"
-                  onClick={() => {
-                    const input = document.getElementById(
-                      `bonus-${item.id}`,
-                    ) as HTMLInputElement;
-                    updateBonus.mutate({
-                      balance: Number(input.value),
-                      level: item.bonusProgram?.level ?? "standard",
-                      recordId: item.id,
-                    });
-                  }}
-                  type="button"
-                >
-                  Сохранить
-                </button>
-              </article>
+              <AdminClientRow item={item} key={item.id} />
             ))}
             {!clients.data?.items.length && (
               <p className="p-10 text-center text-muted-ui-foreground">

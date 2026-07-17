@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import {
   completeManagerTask,
+  createAdminBooking,
+  deleteAdminClient,
   loadAdmin,
   loadAdminBookings,
   loadAdminClients,
@@ -9,6 +11,7 @@ import {
   loadAdminRequests,
   loadManagerTasks,
   markBookingPaid,
+  updateAdminClient,
   updateAdminLead,
   updateAdminRequest,
   updateClientBonus,
@@ -63,6 +66,30 @@ export const useMarkBookingPaid = () => {
     onSuccess: () =>
       void client.invalidateQueries({ queryKey: ADMIN_OPERATIONS_QUERY_KEY }),
     successMessage: "Оплата отмечена",
+  });
+};
+export const useCreateAdminBooking = () => {
+  const client = useQueryClient();
+  return useApiMutation(createAdminBooking, {
+    onSuccess: () =>
+      void client.invalidateQueries({ queryKey: ADMIN_OPERATIONS_QUERY_KEY }),
+    successMessage: "Заявка на бронирование создана",
+  });
+};
+export const useUpdateAdminClient = () => {
+  const client = useQueryClient();
+  return useApiMutation(updateAdminClient, {
+    onSuccess: () =>
+      void client.invalidateQueries({ queryKey: ADMIN_OPERATIONS_QUERY_KEY }),
+    successMessage: "Данные клиента обновлены",
+  });
+};
+export const useDeleteAdminClient = () => {
+  const client = useQueryClient();
+  return useApiMutation(deleteAdminClient, {
+    onSuccess: () =>
+      void client.invalidateQueries({ queryKey: ADMIN_OPERATIONS_QUERY_KEY }),
+    successMessage: "Клиент удалён",
   });
 };
 export const useUpdateClientBonus = () => {

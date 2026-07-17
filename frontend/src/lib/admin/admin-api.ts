@@ -26,14 +26,18 @@ export type BookingRequest = {
   readonly checkInDate: string | null;
   readonly checkOutDate: string | null;
   readonly guestName: string;
+  readonly guestsCount: number;
+  readonly email: string | null;
   readonly id: string;
   readonly paidAt: string | null;
   readonly roomName: string | null;
+  readonly phone: string;
 };
 export type AdminClient = {
   readonly _count: { bookings: number };
   readonly bonusProgram: { balance: number; level: string } | null;
   readonly fullName: string | null;
+  readonly email: string | null;
   readonly id: string;
   readonly phone: string;
 };
@@ -134,6 +138,26 @@ export const markBookingPaid = (recordId: string) =>
     {},
     { headers: headers() },
   );
+export const createAdminBooking = (input: {
+  checkInDate: string;
+  checkOutDate: string;
+  email: string | null;
+  guestName: string;
+  guestsCount: number;
+  phone: string;
+  roomName: string;
+}) => apiClient.post("/admin/bookings", input, { headers: headers() });
+export const updateAdminClient = (input: {
+  email: string | null;
+  fullName: string;
+  phone: string | null;
+  recordId: string;
+}) =>
+  apiClient.put(`/admin/clients/${input.recordId}`, input, {
+    headers: headers(),
+  });
+export const deleteAdminClient = (recordId: string) =>
+  apiClient.delete(`/admin/clients/${recordId}`, { headers: headers() });
 export const updateClientBonus = (input: {
   balance: number;
   level: string;
