@@ -11,6 +11,7 @@ import {
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
@@ -188,6 +189,7 @@ export const AdminDashboardPage = () => {
         </div>
         <AdminOperationsPanel />
         <AdminKnowledgeBasePanel />
+        <AdminAgentScenariosPanel />
         <AdminSiteContentEditor />
       </section>
     </main>
