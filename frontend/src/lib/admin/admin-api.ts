@@ -45,6 +45,15 @@ export type AdminRequest = {
   readonly status: SiteLead["status"];
   readonly title: string;
 };
+export type ManagerTask = {
+  readonly completedAt: string | null;
+  readonly description: string | null;
+  readonly dueAt: string | null;
+  readonly id: string;
+  readonly priority: string;
+  readonly status: string;
+  readonly title: string;
+};
 type Page<TItem> = {
   readonly items: TItem[];
   readonly pagination: {
@@ -107,6 +116,18 @@ export const loadAdminRequests = (signal?: AbortSignal) =>
     params: { page: 1, pageSize: 100 },
     signal,
   });
+export const loadManagerTasks = (signal?: AbortSignal) =>
+  apiClient.get<Page<ManagerTask>>("/admin/manager-tasks", {
+    headers: headers(),
+    params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const completeManagerTask = (recordId: string) =>
+  apiClient.post(
+    `/admin/manager-tasks/${recordId}/complete`,
+    {},
+    { headers: headers() },
+  );
 export const markBookingPaid = (recordId: string) =>
   apiClient.post(
     `/admin/bookings/${recordId}/mark-paid`,

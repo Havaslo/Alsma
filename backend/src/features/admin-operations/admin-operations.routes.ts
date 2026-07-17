@@ -6,9 +6,11 @@ import { createRequireAdmin } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import {
+  createCompleteTaskHandler,
   createListBookingsHandler,
   createListClientsHandler,
   createListRequestsHandler,
+  createListTasksHandler,
   createMarkBookingPaidHandler,
   createUpdateBonusHandler,
   createUpdateRequestHandler,
@@ -64,6 +66,16 @@ export const createAdminOperationsRouter = (database: Database): Router => {
       params: recordParamsSchema,
     }),
     createUpdateRequestHandler(repository),
+  );
+  router.get(
+    "/manager-tasks",
+    validateRequest({ query: adminOperationsQuerySchema }),
+    createListTasksHandler(repository),
+  );
+  router.post(
+    "/manager-tasks/:recordId/complete",
+    validateRequest({ params: recordParamsSchema }),
+    createCompleteTaskHandler(repository),
   );
   return router;
 };

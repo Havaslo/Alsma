@@ -44,6 +44,24 @@ export const createAdminOperationsRepository = (database: Database) => ({
     ]);
     return { items, total };
   },
+  listTasks: async (query: AdminOperationsQuery) => {
+    const { skip, take } = getPaginationRange(query);
+    const [items, total] = await database.client.$transaction([
+      database.client.managerTask.findMany({
+        include: { assignee: { select: { displayName: true, id: true } } },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        skip,
+        take,
+      }),
+      database.client.managerTask.count(),
+    ]);
+    return { items, total };
+  },
+  completeTask: (recordId: string) =>
+    database.client.managerTask.update({
+      data: { completedAt: new Date(), status: "completed" },
+      where: { id: recordId },
+    }),
   markBookingPaid: (recordId: string) =>
     database.client.bookingRequest.update({
       data: { paidAt: new Date(), status: "completed" },

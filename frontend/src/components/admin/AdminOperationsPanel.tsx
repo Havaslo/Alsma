@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   BadgeCheck,
   CalendarCheck,
+  ListChecks,
   MessageSquareText,
   UsersRound,
 } from "lucide-react";
@@ -12,12 +13,14 @@ import {
   useAdminBookings,
   useAdminClients,
   useAdminRequests,
+  useCompleteManagerTask,
+  useManagerTasks,
   useMarkBookingPaid,
   useUpdateAdminRequest,
   useUpdateClientBonus,
 } from "@/lib/admin/useAdmin";
 
-type Tab = "bookings" | "clients" | "requests";
+type Tab = "bookings" | "clients" | "requests" | "tasks";
 const statuses: SiteLead["status"][] = [
   "new",
   "processing",
@@ -30,6 +33,8 @@ export const AdminOperationsPanel = () => {
   const bookings = useAdminBookings();
   const clients = useAdminClients();
   const requests = useAdminRequests();
+  const tasks = useManagerTasks();
+  const completeTask = useCompleteManagerTask();
   const markPaid = useMarkBookingPaid();
   const updateBonus = useUpdateClientBonus();
   const updateRequest = useUpdateAdminRequest();
@@ -37,6 +42,7 @@ export const AdminOperationsPanel = () => {
     { icon: CalendarCheck, id: "bookings" as const, label: "Бронирования" },
     { icon: UsersRound, id: "clients" as const, label: "Клиенты" },
     { icon: MessageSquareText, id: "requests" as const, label: "Обращения" },
+    { icon: ListChecks, id: "tasks" as const, label: "Задачи" },
   ];
 
   return (
@@ -175,6 +181,43 @@ export const AdminOperationsPanel = () => {
             {!requests.data?.items.length && (
               <p className="p-10 text-center text-muted-ui-foreground">
                 Обращений пока нет.
+              </p>
+            )}
+          </div>
+        )}
+        {tab === "tasks" && (
+          <div>
+            {tasks.data?.items.map((item) => (
+              <article
+                className="flex flex-col justify-between gap-4 border-b border-line p-5 sm:flex-row sm:items-center"
+                key={item.id}
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-brand">{item.title}</h3>
+                    <span className="rounded-full bg-brand/10 px-2 py-1 text-xs text-brand">
+                      {item.priority}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-ui-foreground">
+                    {item.description || "Без описания"}
+                  </p>
+                </div>
+                <button
+                  className="rounded-full border border-line px-4 py-2 font-semibold text-brand disabled:opacity-50"
+                  disabled={
+                    item.status === "completed" || completeTask.isPending
+                  }
+                  onClick={() => completeTask.mutate(item.id)}
+                  type="button"
+                >
+                  {item.status === "completed" ? "Выполнена" : "Выполнить"}
+                </button>
+              </article>
+            ))}
+            {!tasks.data?.items.length && (
+              <p className="p-10 text-center text-muted-ui-foreground">
+                Задач пока нет.
               </p>
             )}
           </div>

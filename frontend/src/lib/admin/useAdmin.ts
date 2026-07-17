@@ -1,11 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
+  completeManagerTask,
   loadAdmin,
   loadAdminBookings,
   loadAdminClients,
   loadAdminLeads,
   loadAdminRequests,
+  loadManagerTasks,
   markBookingPaid,
   updateAdminLead,
   updateAdminRequest,
@@ -41,6 +43,18 @@ export const useAdminRequests = () =>
   useApiQuery([...ADMIN_OPERATIONS_QUERY_KEY, "requests"], (signal) =>
     loadAdminRequests(signal),
   );
+export const useManagerTasks = () =>
+  useApiQuery([...ADMIN_OPERATIONS_QUERY_KEY, "tasks"], (signal) =>
+    loadManagerTasks(signal),
+  );
+export const useCompleteManagerTask = () => {
+  const client = useQueryClient();
+  return useApiMutation(completeManagerTask, {
+    onSuccess: () =>
+      void client.invalidateQueries({ queryKey: ADMIN_OPERATIONS_QUERY_KEY }),
+    successMessage: "Задача выполнена",
+  });
+};
 export const useMarkBookingPaid = () => {
   const client = useQueryClient();
   return useApiMutation(markBookingPaid, {

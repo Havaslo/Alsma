@@ -30,6 +30,18 @@ export const createListClientsHandler = (
 export const createListRequestsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listRequests);
+export const createListTasksHandler = (
+  repository: AdminOperationsRepository,
+): RequestHandler => listHandler(repository.listTasks);
+export const createCompleteTaskHandler =
+  (repository: AdminOperationsRepository): RequestHandler =>
+  async (_request, response) => {
+    response.json({
+      task: await repository.completeTask(
+        (response.locals.input.params as RecordParams).recordId,
+      ),
+    });
+  };
 export const createMarkBookingPaidHandler =
   (repository: AdminOperationsRepository): RequestHandler =>
   async (_request, response) => {
