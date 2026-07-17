@@ -11,6 +11,7 @@ import {
   HomeReviewsSection,
   HomeRoomsSection,
 } from "@/components/site/HomeContentSections";
+import { HomeDiscoverySections } from "@/components/site/HomeDiscoverySections";
 import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { getSiteCollection } from "@/lib/site/content-collections";
@@ -226,6 +227,7 @@ export const HomePage = () => {
       <HomePromotionsSection offers={offers} />
       <HomeRestSection cards={restCards} />
       <HomeRoomsSection rooms={rooms} />
+      <HomeDiscoverySections />
       <HomeReviewsSection reviews={reviews} />
     </main>
   );
