@@ -8,6 +8,7 @@ import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
   EQUIPMENT,
+  KIDS_SERVICES,
   SEASONS,
 } from "@/lib/site/entertainment";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
@@ -42,6 +43,11 @@ export const EntertainmentPage = () => {
     content.data?.items,
     "equipment-cards",
     EQUIPMENT,
+  );
+  const kidsServices = getSiteCollection(
+    content.data?.items,
+    "kids-services",
+    KIDS_SERVICES,
   );
 
   return (
@@ -161,6 +167,50 @@ export const EntertainmentPage = () => {
               <p className="mt-3 text-muted-ui-foreground">{details}</p>
             </article>
           ))}
+        </div>
+      </section>
+      <section className="bg-panel py-24">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="text-center">
+            <p className="text-sm font-semibold tracking-widest text-brand uppercase">
+              Для семей с детьми
+            </p>
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Детские услуги
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {kidsServices.map((service) => (
+              <article
+                className="overflow-hidden rounded-3xl bg-page"
+                key={service.title}
+              >
+                <img
+                  alt={service.title}
+                  className="h-64 w-full object-cover"
+                  src={service.image}
+                />
+                <div className="p-7">
+                  <h3 className="font-heading text-3xl font-semibold text-brand">
+                    {service.title}
+                  </h3>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {service.tags.map((tag) => (
+                      <span
+                        className="rounded-full bg-brand/10 px-3 py-2 text-sm text-brand"
+                        key={tag}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-6 text-lg font-semibold text-brand">
+                    {service.price}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
       <section className="bg-brand py-24 text-brand-foreground">

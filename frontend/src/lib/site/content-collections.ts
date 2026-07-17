@@ -3,6 +3,7 @@ import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
   EQUIPMENT,
+  KIDS_SERVICES,
   SEASONS,
 } from "@/lib/site/entertainment";
 import {
@@ -23,6 +24,7 @@ export const SITE_COLLECTIONS = {
     "active-zones": ACTIVE_ZONES,
     "animation-programs": ANIMATION_PROGRAM,
     "equipment-cards": EQUIPMENT,
+    "kids-services": KIDS_SERVICES,
     "seasonal-slides": SEASONS,
   },
   home: {

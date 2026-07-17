@@ -1,8 +1,11 @@
 import trailsImage from "@/assets/alsma/eco-trails.jpg";
+import kidsAnimationImage from "@/assets/alsma/entertainment-kids-animation.png";
+import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
 import clubImage from "@/assets/alsma/kids-club.jpg";
 import terraceImage from "@/assets/alsma/open-terrace-river-view.jpg";
 import summerImage from "@/assets/alsma/season-summer.jpg";
 import winterImage from "@/assets/alsma/season-winter.jpg";
+import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
 import sportsImage from "@/assets/alsma/sports-ground.jpg";
 
 export const ACTIVE_ZONES = [
@@ -111,5 +114,26 @@ export const EQUIPMENT = [
   {
     items: ["Настольные игры", "Мячи", "Бадминтон", "Рыболовные снасти"],
     title: "Игры и развлечения",
+  },
+] as const;
+
+export const KIDS_SERVICES = [
+  {
+    image: kidsAnimationImage,
+    price: "от 15 000 ₽",
+    tags: ["Творческая зона", "Мягкая зона", "Настольные игры", "Аниматор"],
+    title: "Игровая комната «Лесная сказка»",
+  },
+  {
+    image: liveMusicImage,
+    price: "от 15 000 ₽",
+    tags: ["Аниматоры", "Шоу-программа", "Детское меню", "Оформление"],
+    title: "Детские праздники под ключ",
+  },
+  {
+    image: ceremonyImage,
+    price: "от 15 000 ₽",
+    tags: ["Сбалансированное меню", "Готовим с детьми", "Индивидуально"],
+    title: "Детское меню",
   },
 ] as const;
