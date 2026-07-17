@@ -27,7 +27,7 @@ const contacts = [
 
 export const SiteFooter = () => (
   <footer className="bg-brand py-16 text-brand-foreground">
-    <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[1.1fr_1fr_0.9fr_1.2fr]">
+    <div className="mx-auto grid max-w-[100rem] gap-10 px-5 sm:px-8 lg:grid-cols-[1.1fr_1fr_0.9fr_1.2fr]">
       <div>
         <Link aria-label="АЛСМА" to={AMAZI_ROUTES.home}>
           <img
@@ -110,7 +110,7 @@ export const SiteFooter = () => (
         </a>
       </div>
     </div>
-    <div className="mx-auto mt-12 max-w-7xl border-t border-brand-foreground/15 px-5 pt-6 text-sm text-brand-foreground/50 sm:px-8">
+    <div className="mx-auto mt-12 max-w-[100rem] border-t border-brand-foreground/15 px-5 pt-6 text-sm text-brand-foreground/50 sm:px-8">
       © 2026 Отель АЛСМА. Все права защищены.
     </div>
   </footer>

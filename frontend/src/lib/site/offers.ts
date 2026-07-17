@@ -1,5 +1,6 @@
 import familyImage from "@/assets/alsma/family-holiday.png";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
+import longStayImage from "@/assets/alsma/room-4.jpg";
 import spaImage from "@/assets/alsma/spa-wellness.png";
 
 export type ActiveOffer = {
@@ -30,6 +31,13 @@ export const ACTIVE_OFFERS: readonly ActiveOffer[] = [
     image: familyImage,
     tag: "Семьям",
     title: "Семейные каникулы",
+  },
+  {
+    description:
+      "Особые условия и дополнительные привилегии для неспешного отдыха от пяти ночей.",
+    image: longStayImage,
+    tag: "Long stay",
+    title: "Длительное проживание",
   },
 ] as const;
 

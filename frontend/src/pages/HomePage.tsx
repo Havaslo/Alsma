@@ -34,7 +34,7 @@ import {
   type HomeReview,
 } from "@/lib/site/home-content";
 import { ACTIVE_OFFERS, type ActiveOffer } from "@/lib/site/offers";
-import { ROOM_CATEGORIES, type RoomCategory } from "@/lib/site/rooms";
+import { HOME_ROOM_CATEGORIES, type RoomCategory } from "@/lib/site/rooms";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 const navigation = [
@@ -76,7 +76,7 @@ export const HomePage = () => {
   const rooms = getSiteCollection<RoomCategory>(
     roomsContent.data?.items,
     "cards",
-    ROOM_CATEGORIES,
+    HOME_ROOM_CATEGORIES,
   );
   const offers = getSiteCollection<ActiveOffer>(
     offersContent.data?.items,
@@ -94,8 +94,8 @@ export const HomePage = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 
-        <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pt-5 pb-10 sm:px-6">
-          <header className="fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-3 backdrop-blur-md">
+        <div className="relative mx-auto flex min-h-screen max-w-[100rem] flex-col px-4 pt-5 pb-10 sm:px-6">
+          <header className="fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[100rem] -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-3 backdrop-blur-md">
             <a aria-label="АЛСМА" href="#top">
               <img
                 alt="АЛСМА"

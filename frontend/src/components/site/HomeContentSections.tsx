@@ -10,7 +10,7 @@ export const HomeRestSection = ({
 }: {
   readonly cards: readonly HomeRestCard[];
 }) => (
-  <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6" id="rest">
+  <section className="mx-auto max-w-[100rem] px-4 py-24 sm:px-6" id="rest">
     <div className="mx-auto max-w-3xl text-center">
       <p className="text-sm font-bold tracking-widest text-brand uppercase">
         Отдых в АЛСМА
@@ -58,8 +58,8 @@ export const HomePromotionsSection = ({
   readonly offers: readonly ActiveOffer[];
 }) => (
   <section className="py-24" id="offers">
-    <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
+      <div className="mx-auto max-w-3xl text-center">
         <div>
           <p className="text-sm font-bold tracking-widest text-brand uppercase">
           Акции и спецпредложения
@@ -68,12 +68,9 @@ export const HomePromotionsSection = ({
             Выберите предложение под ваш формат отдыха
           </h2>
         </div>
-        <a
-          className="inline-flex items-center gap-2 font-semibold text-brand"
-          href={AMAZI_ROUTES.offers}
-        >
-          Все предложения <ArrowRight className="size-4" />
-        </a>
+        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+          Семейные заезды, выгодные будни и специальные условия для тех, кто хочет остаться дольше.
+        </p>
       </div>
       <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
         {offers.map((offer) => (
@@ -91,6 +88,11 @@ export const HomePromotionsSection = ({
           </article>
         ))}
       </div>
+      <div className="mt-8 text-center">
+        <a className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground" href={AMAZI_ROUTES.offers}>
+          Все акции <ArrowRight className="size-4" />
+        </a>
+      </div>
     </div>
   </section>
 );
@@ -101,7 +103,7 @@ export const HomeReviewsSection = ({
   readonly reviews: readonly HomeReview[];
 }) => (
   <section className="px-4 py-24 sm:px-6">
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-[100rem]">
       <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">Истории вашего отдыха</h2>
       <p className="mt-5 text-center text-lg text-muted-ui-foreground">Общий рейтинг <strong className="text-page-foreground">4.9</strong> · <strong className="text-page-foreground">1200+ отзывов</strong></p>
       <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3">
@@ -126,8 +128,8 @@ export const HomeRoomsSection = ({
   readonly rooms: readonly RoomCategory[];
 }) => (
   <section className="bg-panel py-24" id="rooms">
-    <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
+      <div className="mx-auto max-w-4xl text-center">
         <div>
           <p className="text-sm font-bold tracking-widest text-brand uppercase">
             Проживание
@@ -136,12 +138,9 @@ export const HomeRoomsSection = ({
             Уют, скрытый в кронах сосен
           </h2>
         </div>
-        <a
-          className="inline-flex items-center gap-2 font-semibold text-brand"
-          href={AMAZI_ROUTES.rooms}
-        >
-          Все номера <ArrowRight className="size-4" />
-        </a>
+        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+          Современные интерьеры номеров и красота леса за панорамными окнами — идеальное сочетание для любого варианта отдыха.
+        </p>
       </div>
       <div className="scrollbar-none mt-12 flex gap-6 overflow-x-auto pb-2">
         {rooms.map((room) => (

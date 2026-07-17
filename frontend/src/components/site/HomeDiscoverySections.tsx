@@ -37,7 +37,7 @@ const entertainment = [
 export const HomeExperienceSections = () => (
   <>
     <section className="bg-panel py-24" id="spa">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">Технологии здоровья и ритуалы красоты</h2>
           <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">Авторские программы восстановления объединяют чувственные ритуалы, аппаратные методики и атмосферу полной тишины.</p>
@@ -59,7 +59,7 @@ export const HomeExperienceSections = () => (
     </section>
 
     <section className="py-24" id="about">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
         <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">Всё для вашего спокойного отдыха</h2>
         <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {features.map(([title, items, image, href]) => (
@@ -86,14 +86,14 @@ export const HomeExperienceSections = () => (
     </section>
 
     <section className="hidden bg-brand py-24 text-brand-foreground md:block">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-[100rem] px-6">
         <h2 className="mb-10 text-center font-heading text-4xl font-semibold sm:text-5xl">Пространство тишины с видом сверху</h2>
         <div className="rounded-4xl border border-supporting p-5"><img alt="Пространство тишины с видом сверху" className="w-full rounded-3xl" src={spaceImage} /></div>
       </div>
     </section>
 
     <section className="py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
         <div className="text-center"><h2 className="font-heading text-4xl font-semibold sm:text-5xl">Развлечения и анимация</h2><p className="mt-4 text-muted-ui-foreground">Насыщенная программа активностей для гостей всех возрастов</p></div>
         <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {entertainment.map(([title, description, image]) => (
@@ -111,7 +111,7 @@ export const HomeExperienceSections = () => (
 export const HomeContactSections = () => (
   <>
     <section className="py-24" id="contacts">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
+      <div className="mx-auto grid max-w-[100rem] gap-8 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
         <div className="rounded-4xl bg-muted-ui/65 p-8 sm:p-10">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">Ждем вас в гости</h2>
           <div className="mt-8 space-y-6 leading-7"><div><p className="text-xs text-muted-ui-foreground">Адрес</p><p className="mt-2">Нижегородская область, 35 км от Н. Новгорода</p></div><div><p className="text-xs text-muted-ui-foreground">Телефон</p><a className="mt-2 block font-medium text-brand" href="tel:+79302838828">+7 930 283-88-28</a></div><div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-muted-ui-foreground">Заезд</p><p className="mt-2">с 14:00</p></div><div><p className="text-xs text-muted-ui-foreground">Выезд</p><p className="mt-2">до 12:00</p></div></div></div>
@@ -122,7 +122,7 @@ export const HomeContactSections = () => (
     </section>
 
     <section className="px-4 pb-24 sm:px-6">
-      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-4xl px-6 py-14 text-center text-brand-foreground">
+      <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-14 text-center text-brand-foreground">
         <img alt="" className="absolute inset-0 size-full object-cover" src={ctaImage} />
         <div className="absolute inset-0 bg-brand/80" />
         <div className="relative"><p className="text-xs font-semibold tracking-widest uppercase opacity-75">Поможем выбрать формат отдыха</p><h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Планируете отдых в АЛСМЕ?</h2><p className="mx-auto mt-6 max-w-4xl text-lg leading-8 opacity-85">Оставьте заявку, если хотите забронировать номер или узнать подробнее об услугах, SPA, проживании и сценариях отдыха.</p><a className="mt-8 inline-flex rounded-full bg-brand px-8 py-4 text-sm font-semibold" href="#booking">Подробнее</a></div>

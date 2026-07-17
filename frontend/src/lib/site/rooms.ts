@@ -1,6 +1,7 @@
 import room1Image from "@/assets/alsma/room-1.jpg";
 import room2Image from "@/assets/alsma/room-2.jpg";
 import room3Image from "@/assets/alsma/room-3.jpg";
+import room4Image from "@/assets/alsma/room-4.jpg";
 
 export type RoomCategory = {
   readonly amenities: readonly string[];
@@ -56,6 +57,37 @@ export const ROOM_CATEGORIES: readonly RoomCategory[] = [
     image: room3Image,
     price: "от 31 000 ₽",
     title: "Family Suite",
+  },
+];
+
+export const HOME_ROOM_CATEGORIES: readonly RoomCategory[] = [
+  {
+    ...ROOM_CATEGORIES[0],
+    capacity: "1–2 гостя",
+    title: "Студия в сосновом лесу",
+  },
+  {
+    ...ROOM_CATEGORIES[1],
+    area: "48 м²",
+    capacity: "2–4 гостя",
+    title: "Семейный номер Люкс",
+  },
+  {
+    ...ROOM_CATEGORIES[2],
+    area: "76 м²",
+    capacity: "4–6 гостей",
+    title: "Коттедж на берегу",
+  },
+  {
+    amenities: ["Панорамные окна", "Гостиная", "Мини-бар", "Ванная"],
+    area: "58 м²",
+    beds: "1 двуспальная кровать",
+    capacity: "1–2 гостя",
+    description:
+      "Светлый просторный номер с панорамным видом на сосновый лес и приватной зоной отдыха.",
+    image: room4Image,
+    price: "от 27 000 ₽",
+    title: "Панорамный сьют",
   },
 ];
 
