@@ -36,6 +36,7 @@ model AppSetting {
 model AdminRole {
   id          String      @id @default(uuid()) @db.Uuid
   name        String      @unique
+  description String?
   permissions String[]    @default([])
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -50,6 +51,7 @@ model AdminUser {
   displayName  String        @map("display_name")
   passwordHash String        @map("password_hash")
   status       UserStatus    @default(active)
+  permissionOverrides Json   @default("{}") @map("permission_overrides")
   roleId       String?       @map("role_id") @db.Uuid
   role         AdminRole?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)

@@ -14,6 +14,7 @@ import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
+import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
 import type { SiteLead } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
@@ -190,6 +191,7 @@ export const AdminDashboardPage = () => {
         <AdminOperationsPanel />
         <AdminKnowledgeBasePanel />
         <AdminAgentScenariosPanel />
+        <AdminSettingsPanel currentUserId={admin.data.user.id} />
         <AdminSiteContentEditor />
       </section>
     </main>

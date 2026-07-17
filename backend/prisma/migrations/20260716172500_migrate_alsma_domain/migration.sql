@@ -14,6 +14,7 @@ CREATE TYPE "ContentStatus" AS ENUM ('draft', 'published', 'archived');
 CREATE TABLE "admin_roles" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
+    "description" TEXT,
     "permissions" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,
@@ -28,6 +29,7 @@ CREATE TABLE "admin_users" (
     "display_name" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "status" "UserStatus" NOT NULL DEFAULT 'active',
+    "permission_overrides" JSONB NOT NULL DEFAULT '{}',
     "role_id" UUID,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,

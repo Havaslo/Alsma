@@ -4,6 +4,8 @@ import { apiClient } from "@/lib/api/api-client";
 export type AdminUser = {
   readonly displayName: string;
   readonly email: string;
+  readonly id: string;
+  readonly permissions: string[];
   readonly role: string;
 };
 export type SiteLead = {

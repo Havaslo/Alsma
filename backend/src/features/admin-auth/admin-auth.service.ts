@@ -14,14 +14,26 @@ const publicUser = (user: {
   displayName: string;
   email: string;
   id: string;
+  permissionOverrides: unknown;
   role: { name: string; permissions: string[] } | null;
-}) => ({
-  displayName: user.displayName,
-  email: user.email,
-  id: user.id,
-  permissions: user.role?.permissions ?? [],
-  role: user.role?.name ?? "Administrator",
-});
+}) => {
+  const permissions = new Set(user.role?.permissions ?? []);
+  const overrides =
+    user.permissionOverrides && typeof user.permissionOverrides === "object"
+      ? (user.permissionOverrides as Record<string, unknown>)
+      : {};
+  Object.entries(overrides).forEach(([permission, enabled]) => {
+    if (enabled === true) permissions.add(permission);
+    if (enabled === false) permissions.delete(permission);
+  });
+  return {
+    displayName: user.displayName,
+    email: user.email,
+    id: user.id,
+    permissions: [...permissions],
+    role: user.role?.name ?? "Without role",
+  };
+};
 
 export const createAdminAuthService = (repository: AdminAuthRepository) => {
   const createLogin = async (
