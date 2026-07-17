@@ -1,4 +1,4 @@
-import { Check, Clock } from "lucide-react";
+import { Check } from "lucide-react";
 
 import spaHeroImage from "@/assets/alsma/spa-hero-new.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
@@ -45,7 +45,7 @@ export const SpaPage = () => {
           </p>
         </div>
         <div className="mt-14 space-y-10">
-          {SPA_SPACES.map((space, index) => (
+          {SPA_SPACES.slice(0, 2).map((space, index) => (
             <article
               className="overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid lg:grid-cols-2"
               key={space.title}
@@ -55,7 +55,7 @@ export const SpaPage = () => {
                 className={`aspect-[4/3] size-full object-cover ${index % 2 ? "lg:order-2" : ""}`}
                 src={space.image}
               />
-              <div className="p-8 sm:p-12">
+              <div className="flex flex-col p-8 sm:p-12">
                 <p className="text-sm font-semibold tracking-widest text-brand uppercase">
                   SPA-пространство
                 </p>
@@ -73,32 +73,45 @@ export const SpaPage = () => {
                     </li>
                   ))}
                 </ul>
+                <a
+                  className="mt-8 inline-flex w-fit items-center justify-center rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-brand-foreground"
+                  href="#spa-cta"
+                >
+                  Записаться
+                </a>
               </div>
             </article>
           ))}
         </div>
       </section>
       <SpaMembershipSection />
-      <section className="bg-panel py-24">
+      <section className="py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
-            Массажные процедуры
-          </h2>
-          <div className="mt-12 grid gap-4 md:grid-cols-2">
-            {MASSAGES.map(([name, duration, price]) => (
-              <article
-                className="flex items-center justify-between gap-5 rounded-2xl bg-page p-5"
-                key={`${name}:${duration}`}
-              >
-                <div>
-                  <h3 className="font-semibold">{name}</h3>
-                  <p className="mt-1 flex items-center gap-2 text-sm text-muted-ui-foreground">
-                    <Clock className="size-4" /> {duration}
-                  </p>
-                </div>
-                <p className="shrink-0 font-semibold text-brand">{price}</p>
-              </article>
-            ))}
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">Массажные процедуры</h2>
+            <p className="mt-5 text-lg text-muted-ui-foreground">Полный перечень массажей с длительностью и стоимостью.</p>
+          </div>
+          <div className="mt-14 overflow-hidden rounded-3xl bg-panel">
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-muted-ui/50 text-sm font-semibold tracking-widest text-muted-ui-foreground uppercase">
+                    <th className="px-7 py-4">Процедура</th>
+                    <th className="px-7 py-4">Длительность</th>
+                    <th className="px-7 py-4">Стоимость</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MASSAGES.map(([name, duration, price]) => (
+                    <tr className="border-t border-line" key={`${name}:${duration}`}>
+                      <td className="px-7 py-4 text-lg font-semibold">{name}</td>
+                      <td className="px-7 py-4 text-lg text-muted-ui-foreground">{duration}</td>
+                      <td className="px-7 py-4 text-lg font-semibold">{price}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

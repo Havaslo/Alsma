@@ -152,15 +152,19 @@ export const SpaCompanySection = () => (
         </article>
       ))}
     </div>
+    <p className="mt-6 rounded-3xl bg-panel px-8 py-6 text-muted-ui-foreground">
+      Мы собираем программу под вас. Просто скажите, чего вы хотите.
+    </p>
   </section>
 );
 
 export const SpaPromotionsSection = () => (
-  <section className="bg-panel py-24">
+  <section className="py-24">
     <div className="mx-auto max-w-7xl px-5 sm:px-8">
-      <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
-        Актуальные акции
-      </h2>
+      <div className="text-center">
+        <h2 className="font-heading text-4xl font-semibold sm:text-5xl">Актуальные акции</h2>
+        <p className="mt-5 text-lg text-muted-ui-foreground">Специальные предложения на процедуры</p>
+      </div>
       <div className="mt-12 grid gap-6 lg:grid-cols-3">
         {SPA_PROMOTIONS.map((promotion) => (
           <article
@@ -172,7 +176,7 @@ export const SpaPromotionsSection = () => (
               className="h-60 w-full object-cover"
               src={promotion.image}
             />
-            <div className="p-7">
+            <div className="flex min-h-80 flex-col p-7">
               <h3 className="font-heading text-3xl font-semibold">
                 {promotion.title}
               </h3>
@@ -181,6 +185,7 @@ export const SpaPromotionsSection = () => (
               </p>
               <p className="mt-5 text-sm text-brand">{promotion.deadline}</p>
               <p className="mt-2 text-2xl font-semibold">{promotion.price}</p>
+              <a className="mt-auto inline-flex w-full justify-center rounded-full bg-brand px-6 py-3.5 font-semibold text-brand-foreground" href="#spa-cta">Забронировать</a>
             </div>
           </article>
         ))}
@@ -206,12 +211,18 @@ export const SpaInformationSections = () => (
             Кафе «Минерал»
           </h2>
           <p className="mt-5 leading-7 text-muted-ui-foreground">
-            Полезное меню, свежевыжатые соки, детокс-напитки и лёгкие закуски
-            для завершения SPA-программы.
+            Уютное кафе при SPA-комплексе с полезным меню, свежевыжатыми соками,
+            детокс-напитками и лёгкими закусками. Идеально для завершения SPA-программы.
+          </p>
+          <p className="mt-4 leading-7 text-muted-ui-foreground">
+            По предварительному заказу возможна подача травяных чаёв, ягодных морсов,
+            фруктовых тарелок, закусок и лёгких десертов прямо в зону отдыха SPA. Для
+            компаний — барбекю в стеклянном куполе или ужин в ресторане после процедур.
           </p>
           <p className="mt-6 rounded-2xl bg-page px-5 py-4 font-medium">
-            Ежедневно с 10:00 до 22:00
+            Режим работы: Ежедневно с 10:00 до 22:00
           </p>
+          <a className="mt-8 inline-flex rounded-full bg-brand px-7 py-4 text-sm font-semibold text-brand-foreground" href="#spa-cta">Меню</a>
         </div>
       </article>
     </section>
