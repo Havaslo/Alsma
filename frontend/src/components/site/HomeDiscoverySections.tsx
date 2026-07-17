@@ -3,6 +3,7 @@ import { ArrowRight, Mail, MapPin, Phone } from "lucide-react";
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import natureImage from "@/assets/alsma/nature.jpg";
 import spaImage from "@/assets/alsma/spa-programs.jpg";
+import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 
 const discoveries = [
   {
@@ -58,16 +59,16 @@ export const HomeDiscoverySections = () => (
         ))}
       </div>
     </section>
-    <section className="bg-panel py-20" id="contacts">
+    <section className="bg-brand py-20 text-brand-foreground" id="contacts">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
         <div>
-          <p className="text-sm font-semibold tracking-widest text-brand uppercase">
+          <p className="text-sm font-semibold tracking-widest uppercase opacity-70">
             Свяжитесь с нами
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Поможем спланировать отдых
           </h2>
-          <p className="mt-5 max-w-2xl leading-7 text-muted-ui-foreground">
+          <p className="mt-5 max-w-2xl leading-7 text-brand-foreground/75">
             Расскажем о свободных номерах, программах SPA, трансфере и форматах
             отдыха для семьи или компании.
           </p>
@@ -85,10 +86,18 @@ export const HomeDiscoverySections = () => (
           >
             <Mail className="size-5" /> info@alsma-baza.ru
           </a>
-          <div className="flex items-center gap-4 rounded-3xl bg-page p-5">
+          <div className="flex items-center gap-4 rounded-3xl bg-page p-5 text-page-foreground">
             <MapPin className="size-5 shrink-0 text-brand" /> Нижегородская
             область, Борский район
           </div>
+        </div>
+        <div className="border-t border-brand-foreground/20 pt-8 lg:col-span-2">
+          <LeadRequestForm
+            formCode="home-general"
+            formTitle="Общая заявка с главной страницы"
+            showDetails
+            sourcePage="home"
+          />
         </div>
       </div>
     </section>

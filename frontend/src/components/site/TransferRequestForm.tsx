@@ -20,7 +20,7 @@ export const TransferRequestForm = () => {
         event.preventDefault();
         lead.mutate({
           comment: `Трансфер: ${origin}; дата: ${date}; время: ${time}; пассажиров: ${passengers}`,
-          formCode: "transfer-request",
+          formCode: "about-transfer",
           formTitle: "Заявка на трансфер",
           name,
           phone,
