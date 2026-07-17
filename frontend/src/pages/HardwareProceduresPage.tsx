@@ -62,13 +62,13 @@ export const HardwareProceduresPage = () => {
                     {procedure.description}
                   </p>
                   <div className="mt-auto grid grid-cols-2 gap-3 pt-7">
-                    <div className="rounded-2xl bg-brand/10 p-4">
-                      <Clock className="size-4 text-brand" />
-                      <p className="mt-2 font-semibold">{procedure.duration}</p>
+                    <div className="flex items-center gap-3 rounded-2xl bg-brand/10 p-4">
+                      <Clock className="size-5 shrink-0 text-brand" />
+                      <p className="font-semibold">{procedure.duration}</p>
                     </div>
-                    <div className="rounded-2xl bg-brand/10 p-4">
-                      <RussianRuble className="size-4 text-brand" />
-                      <p className="mt-2 font-semibold">{procedure.price}</p>
+                    <div className="flex items-center gap-3 rounded-2xl bg-brand/10 p-4">
+                      <RussianRuble className="size-5 shrink-0 text-brand" />
+                      <p className="font-semibold">{procedure.price}</p>
                     </div>
                   </div>
                 </div>

@@ -3,13 +3,13 @@ import { CalendarDays, ChevronDown } from "lucide-react";
 import type { EditorialItem } from "@/lib/site/editorial";
 
 export const EditorialCard = ({ item }: { readonly item: EditorialItem }) => (
-  <article className="overflow-hidden rounded-4xl bg-panel">
+  <article className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel">
     <img
       alt={item.title}
       className="h-64 w-full object-cover"
       src={item.image}
     />
-    <div className="p-7">
+    <div className="flex flex-1 flex-col p-7">
       <div className="flex flex-wrap gap-2">
         {item.tags.map((tag) => (
           <span
@@ -29,7 +29,7 @@ export const EditorialCard = ({ item }: { readonly item: EditorialItem }) => (
       <p className="mt-4 leading-7 text-muted-ui-foreground">
         {item.description}
       </p>
-      <details className="group mt-5">
+      <details className="group mt-auto pt-6">
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-brand">
           Подробнее{" "}
           <ChevronDown className="size-4 transition group-open:rotate-180" />
