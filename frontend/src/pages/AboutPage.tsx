@@ -3,6 +3,7 @@ import { Clock, Mail, MapPin, Phone, RussianRuble } from "lucide-react";
 import heroImage from "@/assets/alsma/spa-programs.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import {
   HOTEL_ADVANTAGES,
@@ -96,6 +97,10 @@ export const AboutPage = () => {
           />
         </div>
       </section>
+      <SocialLinksSection
+        description="Публикуем специальные предложения, новости отеля, анонсы заездов и атмосферные кадры из лесного SPA-отдыха."
+        title="Узнавайте первыми о новых акциях, событиях и красивых моментах отдыха в АЛСМА"
+      />
       <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
         <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
           Трансфер до отеля

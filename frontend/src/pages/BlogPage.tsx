@@ -1,11 +1,10 @@
 import { useState } from "react";
 
-import { ExternalLink } from "lucide-react";
-
 import heroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import { EditorialCard } from "@/components/site/EditorialCard";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { BLOG_ITEMS } from "@/lib/site/editorial";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
@@ -69,40 +68,10 @@ export const BlogPage = () => {
           ))}
         </div>
       </section>
-      <section className="bg-panel py-20">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-2 lg:items-center">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-              Следите за нами в соцсетях
-            </p>
-            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-              Больше историй, идей и вдохновения
-            </h2>
-            <p className="mt-5 leading-7 text-muted-ui-foreground">
-              Показываем атмосферу отдыха, делимся анонсами и рассказываем о
-              красивых местах рядом с АЛСМА.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <a
-              className="flex items-center justify-between rounded-3xl bg-page p-6 font-semibold text-brand"
-              href="https://vk.com/alsma_nnov"
-              rel="noreferrer"
-              target="_blank"
-            >
-              ВКонтакте <ExternalLink className="size-5" />
-            </a>
-            <a
-              className="flex items-center justify-between rounded-3xl bg-page p-6 font-semibold text-brand"
-              href="https://web.max.ru/158586418"
-              rel="noreferrer"
-              target="_blank"
-            >
-              MAX <ExternalLink className="size-5" />
-            </a>
-          </div>
-        </div>
-      </section>
+      <SocialLinksSection
+        description="Показываем атмосферу отдыха, делимся анонсами, публикуем статьи и рассказываем о красивых местах рядом с АЛСМА."
+        title="Больше историй, идей для поездок и вдохновения — в наших соцсетях"
+      />
     </main>
   );
 };
