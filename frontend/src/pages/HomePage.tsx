@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   CalendarDays,
@@ -12,6 +12,7 @@ import {
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import heroImage from "@/assets/alsma/hero.jpg";
+import logoGreen from "@/assets/alsma/logo-green.svg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import {
   HomePromotionsSection,
@@ -53,6 +54,7 @@ const moreNavigation = [
 ];
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [checkInDate, setCheckInDate] = useState("2026-06-12");
   const [checkOutDate, setCheckOutDate] = useState("2026-06-15");
   const [guestsCount, setGuestsCount] = useState(2);
@@ -84,6 +86,14 @@ export const HomePage = () => {
     ACTIVE_OFFERS,
   );
 
+  useEffect(() => {
+    const updateHeader = () => setHeaderScrolled(window.scrollY > 32);
+
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+    return () => window.removeEventListener("scroll", updateHeader);
+  }, []);
+
   return (
     <main className="min-h-screen bg-page text-page-foreground">
       <section className="relative min-h-screen overflow-hidden text-brand-foreground">
@@ -95,18 +105,20 @@ export const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 
         <div className="relative mx-auto flex min-h-screen max-w-[100rem] flex-col px-4 pt-5 pb-10 sm:px-6">
-          <header className="fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-4 backdrop-blur-sm">
+          <header
+            className={`fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300 ${headerScrolled ? "border-brand/10 bg-page text-brand shadow-xl" : "border-brand-foreground/15 bg-brand-foreground/5 text-brand-foreground"}`}
+          >
             <a aria-label="АЛСМА" href="#top">
               <img
                 alt="АЛСМА"
                 className="h-10 w-36 object-contain"
-                src={logoWhite}
+                src={headerScrolled ? logoGreen : logoWhite}
               />
             </a>
             <nav className="hidden items-center gap-5 text-base font-medium lg:flex xl:gap-7 xl:text-lg 2xl:gap-8">
               {navigation.map((item) => (
                 <a
-                  className="text-brand-foreground/90 transition hover:text-brand-foreground"
+                  className={headerScrolled ? "text-brand transition hover:text-brand/75" : "text-brand-foreground/90 transition hover:text-brand-foreground"}
                   href={item.href}
                   key={item.href}
                 >
@@ -114,7 +126,7 @@ export const HomePage = () => {
                 </a>
               ))}
               <div className="group relative">
-                <button className="flex items-center gap-1 py-3 text-brand-foreground/90" type="button">Еще <ChevronDown className="size-4" /></button>
+                <button className={`flex items-center gap-1 py-3 ${headerScrolled ? "text-brand" : "text-brand-foreground/90"}`} type="button">Еще <ChevronDown className="size-4" /></button>
                 <div className="invisible absolute top-full right-0 w-72 translate-y-2 rounded-3xl bg-page p-3 text-brand opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                   {moreNavigation.map((item) => <a className="block rounded-2xl px-4 py-3 hover:bg-panel" href={item.href} key={item.href}>{item.label}</a>)}
                 </div>
@@ -123,10 +135,10 @@ export const HomePage = () => {
             <div className="flex items-center gap-2">
               <a
                 aria-label="Личный кабинет"
-                className="hidden size-12 place-items-center rounded-full border border-brand-foreground/20 bg-brand-foreground/10 sm:grid"
+                className={`hidden size-12 place-items-center rounded-full border sm:grid ${headerScrolled ? "border-brand/15 bg-panel text-brand" : "border-brand-foreground/20 bg-brand-foreground/10 text-brand-foreground"}`}
                 href={AMAZI_ROUTES.account}
               >
-                <span className="grid size-9 place-items-center rounded-full border border-brand-foreground/15 bg-brand-foreground/10">
+                <span className={`grid size-9 place-items-center rounded-full border ${headerScrolled ? "border-brand/10 bg-page" : "border-brand-foreground/15 bg-brand-foreground/10"}`}>
                   <UserRound className="size-5" />
                 </span>
               </a>
@@ -138,7 +150,7 @@ export const HomePage = () => {
               </a>
               <button
                 aria-label="Меню"
-                className="grid size-11 place-items-center rounded-full border border-brand-foreground/20 bg-brand-foreground/10 lg:hidden"
+                className={`grid size-11 place-items-center rounded-full border lg:hidden ${headerScrolled ? "border-brand/15 bg-panel text-brand" : "border-brand-foreground/20 bg-brand-foreground/10 text-brand-foreground"}`}
                 onClick={() => setMenuOpen((value) => !value)}
               >
                 {menuOpen ? <X /> : <Menu />}
