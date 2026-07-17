@@ -29,20 +29,20 @@
 :root {
   --amazi-theme-mode: light;
   color-scheme: light !important;
-  --amazi-theme-light-color-background: #f8fafc;
-  --amazi-theme-light-color-foreground: #0f172a;
-  --amazi-theme-light-color-surface: #ffffff;
-  --amazi-theme-light-color-surface-foreground: #0f172a;
-  --amazi-theme-light-color-primary: #2563eb;
-  --amazi-theme-light-color-primary-foreground: #ffffff;
-  --amazi-theme-light-color-secondary: #475569;
-  --amazi-theme-light-color-secondary-foreground: #ffffff;
-  --amazi-theme-light-color-accent: #14b8a6;
-  --amazi-theme-light-color-accent-foreground: #042f2e;
-  --amazi-theme-light-color-muted: #e2e8f0;
-  --amazi-theme-light-color-muted-foreground: #64748b;
-  --amazi-theme-light-color-border: #cbd5e1;
-  --amazi-theme-light-color-ring: #2563eb;
+  --amazi-theme-light-color-background: #f7f4ee;
+  --amazi-theme-light-color-foreground: #262626;
+  --amazi-theme-light-color-surface: #efe9dc;
+  --amazi-theme-light-color-surface-foreground: #262626;
+  --amazi-theme-light-color-primary: #1f4d3b;
+  --amazi-theme-light-color-primary-foreground: #f7f4ee;
+  --amazi-theme-light-color-secondary: #a7b8a1;
+  --amazi-theme-light-color-secondary-foreground: #173a2c;
+  --amazi-theme-light-color-accent: #c8a66a;
+  --amazi-theme-light-color-accent-foreground: #262626;
+  --amazi-theme-light-color-muted: #ded4c7;
+  --amazi-theme-light-color-muted-foreground: #6c685f;
+  --amazi-theme-light-color-border: #d3cec2;
+  --amazi-theme-light-color-ring: #1f4d3b;
   --amazi-theme-light-color-danger: #dc2626;
   --amazi-theme-light-color-danger-foreground: #ffffff;
   --amazi-theme-dark-color-background: #0f172a;
@@ -61,7 +61,7 @@
   --amazi-theme-dark-color-ring: #93c5fd;
   --amazi-theme-dark-color-danger: #f87171;
   --amazi-theme-dark-color-danger-foreground: #450a0a;
-  --font-primary: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-primary: "Playfair Display", Georgia, serif;
   --font-secondary: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

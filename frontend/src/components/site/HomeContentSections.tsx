@@ -16,11 +16,11 @@ export const HomeRestSection = ({
         Отдых в АЛСМА
       </p>
       <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-        Всё необходимое, чтобы замедлиться
+        Каким будет ваш идеальный отдых!
       </h2>
       <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-        Пространство, где каждый день наполнен природой, заботой и тёплыми
-        впечатлениями.
+        Ваш личный сценарий отдыха, который объединит wellness-процедуры,
+        гастрономию и первозданность реликтового леса.
       </p>
     </div>
     <div className="mt-14 grid gap-6 md:grid-cols-2">
@@ -79,10 +79,10 @@ export const HomePromotionsSection = ({
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            Специальные предложения
+          Акции и спецпредложения
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Выберите свой сценарий отдыха
+            Выберите предложение под ваш формат отдыха
           </h2>
         </div>
         <a
@@ -165,7 +165,7 @@ export const HomeRoomsSection = ({
             Проживание
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Номера среди соснового леса
+            Уют, скрытый в кронах сосен
           </h2>
         </div>
         <a

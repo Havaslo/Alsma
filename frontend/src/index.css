@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 @import "./AMAZI_THEME_GENERATED.css";
 
@@ -17,6 +18,12 @@
 
   body {
     @apply m-0 min-w-80 bg-page font-body text-page-foreground antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
   }
 
   button,

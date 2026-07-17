@@ -225,6 +225,23 @@ export const HomePage = () => {
       </section>
 
       <HomePromotionsSection offers={offers} />
+      <section className="pb-24">
+        <div className="mx-auto grid max-w-7xl gap-8 rounded-4xl bg-panel px-8 py-10 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-brand uppercase">Следите за нами в соц сетях</p>
+            <h2 className="mt-3 font-heading text-3xl font-semibold text-brand sm:text-4xl">Узнавайте первыми о новых акциях, событиях и красивых моментах отдыха в АЛСМА</h2>
+            <p className="mt-4 leading-7 text-muted-ui-foreground">Публикуем специальные предложения, новости отеля, анонсы заездов и атмосферные кадры из лесного SPA-отдыха.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["ВКонтакте", "https://vk.com/alsma_nnov"],
+              ["Telegram", "https://t.me/alsma_hotel"],
+              ["MAX", "https://web.max.ru/158586418"],
+              ["YouTube", "https://youtube.com"],
+            ].map(([label, href]) => <a className="flex items-center justify-between rounded-3xl bg-page px-5 py-4 font-semibold text-brand" href={href} key={label} rel="noreferrer" target="_blank">{label}<span>↗</span></a>)}
+          </div>
+        </div>
+      </section>
       <HomeRestSection cards={restCards} />
       <HomeRoomsSection rooms={rooms} />
       <HomeDiscoverySections />

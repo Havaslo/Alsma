@@ -28,7 +28,7 @@ export const SiteOfferPopup = () => {
     if (!banner) return undefined;
     const timer = window.setTimeout(
       () => setVisiblePath(location.pathname),
-      banner.displayDelaySeconds * 1_000,
+      Math.max(banner.displayDelaySeconds, 15) * 1_000,
     );
     return () => window.clearTimeout(timer);
   }, [banner, location.pathname]);
