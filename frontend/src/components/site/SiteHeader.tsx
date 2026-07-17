@@ -63,7 +63,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
       <div className="flex items-center gap-2">
         <Link
           aria-label="Личный кабинет"
-          className="grid size-11 place-items-center rounded-full border border-current/15"
+          className="hidden size-11 place-items-center rounded-full border border-current/15 sm:grid"
           to={AMAZI_ROUTES.account}
         >
           <UserRound className="size-5" />

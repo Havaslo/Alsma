@@ -25,7 +25,7 @@ export const PublicHero = ({
       <p className="text-sm font-bold tracking-widest text-brand-foreground/75 uppercase">
         {eyebrow}
       </p>
-      <h1 className="mx-auto mt-4 max-w-4xl font-heading text-5xl leading-tight font-semibold sm:text-6xl">
+      <h1 className="mx-auto mt-4 max-w-4xl font-heading text-4xl leading-tight font-semibold sm:text-5xl md:text-6xl">
         {title}
       </h1>
       {badge && (

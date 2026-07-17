@@ -52,8 +52,8 @@ const moreNavigation = [
 ];
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [checkInDate, setCheckInDate] = useState("2026-07-20");
-  const [checkOutDate, setCheckOutDate] = useState("2026-07-23");
+  const [checkInDate, setCheckInDate] = useState("2026-06-12");
+  const [checkOutDate, setCheckOutDate] = useState("2026-06-15");
   const [guestsCount, setGuestsCount] = useState(2);
   const leadMutation = useCreateLead();
   const content = usePublishedSiteContent("home");
@@ -94,7 +94,7 @@ export const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 
         <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pt-5 pb-10 sm:px-6">
-          <header className="fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/20 bg-page-foreground/15 px-5 py-3 backdrop-blur-md">
+          <header className="fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-3 backdrop-blur-md">
             <a aria-label="АЛСМА" href="#top">
               <img
                 alt="АЛСМА"
@@ -169,7 +169,7 @@ export const HomePage = () => {
               <Star className="size-4 fill-current" />
               4.9 в Яндекс Картах
             </a>
-            <h1 className="max-w-5xl font-heading text-5xl leading-tight font-semibold sm:text-6xl lg:text-7xl">
+            <h1 className="max-w-5xl font-heading text-4xl leading-tight font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
               {typeof hero?.title === "string"
                 ? hero.title
                 : "Отдых, который возвращает к себе"}
