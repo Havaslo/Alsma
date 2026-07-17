@@ -1,7 +1,8 @@
 import { useState } from "react";
 
-import { LoaderCircle, Send } from "lucide-react";
+import { Send } from "lucide-react";
 
+import { Loader } from "@/components/ui/Loader";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
 type LeadRequestFormProps = {
@@ -79,11 +80,7 @@ export const LeadRequestForm = ({
         disabled={lead.isPending}
         type="submit"
       >
-        {lead.isPending ? (
-          <LoaderCircle className="size-4 animate-spin" />
-        ) : (
-          <Send className="size-4" />
-        )}
+        {lead.isPending ? <Loader size="sm" /> : <Send className="size-4" />}
         Отправить
       </button>
       {lead.isSuccess && <p className="sm:col-span-3">{successMessage}</p>}

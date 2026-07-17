@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ChevronDown, Menu, UserRound, X } from "lucide-react";
@@ -25,13 +25,31 @@ const moreNavigation = [
   { label: "Политика конфиденциальности", to: AMAZI_ROUTES.privacy },
 ];
 
-export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
+export const SiteHeader = ({
+  bookingTo = AMAZI_ROUTES.rooms,
+  light = false,
+  transparentAtTop = false,
+}: {
+  readonly bookingTo?: string;
+  readonly light?: boolean;
+  readonly transparentAtTop?: boolean;
+}) => {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const useLightStyle = light || (transparentAtTop && scrolled);
+
+  useEffect(() => {
+    if (!transparentAtTop) return;
+    const update = () => setScrolled(window.scrollY > 32);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [transparentAtTop]);
   return (
     <header
       className={cn(
         "fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border px-5 py-3 backdrop-blur-md",
-        light
+        useLightStyle
           ? "border-brand/10 bg-panel/90 text-brand shadow-lg"
           : "border-brand-foreground/20 bg-page-foreground/15 text-brand-foreground",
       )}
@@ -40,7 +58,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
         <img
           alt="АЛСМА"
           className="h-10 w-36 object-contain"
-          src={light ? logoGreen : logoWhite}
+          src={useLightStyle ? logoGreen : logoWhite}
         />
       </Link>
       <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
@@ -83,7 +101,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
         </Link>
         <Link
           className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
-          to={AMAZI_ROUTES.rooms}
+          to={bookingTo}
         >
           Забронировать
         </Link>
@@ -105,7 +123,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
           <Link
             className="mt-2 rounded-full bg-page px-5 py-3 text-center font-semibold text-brand"
             onClick={() => setOpen(false)}
-            to={AMAZI_ROUTES.rooms}
+            to={bookingTo}
           >
             Забронировать
           </Link>

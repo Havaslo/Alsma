@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
-import { LoaderCircle, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoGreen from "@/assets/alsma/logo-green.svg";
+import { Loader } from "@/components/ui/Loader";
 import { adminLogin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import { getApiErrorMessage } from "@/lib/api/api-error";
@@ -69,9 +70,7 @@ export const AdminLoginPage = () => {
             disabled={mutation.isPending}
             type="submit"
           >
-            {mutation.isPending && (
-              <LoaderCircle className="mr-2 size-4 animate-spin" />
-            )}
+            {mutation.isPending && <Loader className="mr-2" size="sm" />}
             Войти
           </button>
         </form>

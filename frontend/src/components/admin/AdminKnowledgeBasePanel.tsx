@@ -1,14 +1,10 @@
 import { useState } from "react";
 
-import {
-  BookOpen,
-  CirclePlus,
-  LoaderCircle,
-  MessageCircleQuestion,
-} from "lucide-react";
+import { BookOpen, CirclePlus, MessageCircleQuestion } from "lucide-react";
 
 import { KnowledgeArticleEditor } from "@/components/admin/KnowledgeArticleEditor";
 import { KnowledgeRuleEditor } from "@/components/admin/KnowledgeRuleEditor";
+import { Loader } from "@/components/ui/Loader";
 import {
   useKnowledgeBase,
   useTestKnowledgeAnswer,
@@ -35,7 +31,7 @@ export const AdminKnowledgeBasePanel = () => {
       </h2>
       {knowledge.isLoading ? (
         <div className="grid place-items-center p-12">
-          <LoaderCircle className="size-7 animate-spin text-brand" />
+          <Loader className="text-brand" />
         </div>
       ) : (
         <div className="mt-6 grid gap-8 xl:grid-cols-2">

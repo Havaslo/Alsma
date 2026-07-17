@@ -2,17 +2,11 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  CalendarDays,
-  Gift,
-  LoaderCircle,
-  LogOut,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { CalendarDays, Gift, LogOut, Mail, Phone } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { Loader } from "@/components/ui/Loader";
 import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
 import { GUEST_PROFILE_QUERY_KEY, useGuestAuth } from "@/lib/auth/useGuestAuth";
@@ -31,7 +25,7 @@ export const AccountPage = () => {
   if (auth.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
-        <LoaderCircle className="size-8 animate-spin text-brand" />
+        <Loader className="text-brand" size="lg" />
       </main>
     );
   if (!guest) return <Navigate replace to={AMAZI_ROUTES.login} />;

@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import {
   ClipboardList,
   LayoutDashboard,
-  LoaderCircle,
   LogOut,
   Settings,
   UsersRound,
@@ -17,6 +16,7 @@ import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePa
 import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
+import { Loader } from "@/components/ui/Loader";
 import type { SiteLead } from "@/lib/admin/admin-api";
 import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
@@ -51,7 +51,7 @@ export const AdminDashboardPage = () => {
   if (admin.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
-        <LoaderCircle className="size-8 animate-spin text-brand" />
+        <Loader className="text-brand" size="lg" />
       </main>
     );
   if (!admin.data?.user)
@@ -191,7 +191,7 @@ export const AdminDashboardPage = () => {
               </div>
               {leads.isLoading && (
                 <div className="grid place-items-center p-12">
-                  <LoaderCircle className="size-7 animate-spin text-brand" />
+                  <Loader className="text-brand" />
                 </div>
               )}
               {!leads.isLoading && !leads.data?.items.length && (

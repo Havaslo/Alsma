@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { requestLoginCode, verifyLoginCode } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
@@ -96,7 +97,7 @@ export const LoginPage = () => {
                 type="submit"
               >
                 {requestMutation.isPending && (
-                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                  <Loader className="mr-2" size="sm" />
                 )}
                 Получить код
               </button>

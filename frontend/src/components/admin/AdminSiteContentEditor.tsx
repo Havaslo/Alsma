@@ -1,8 +1,9 @@
 import { useState } from "react";
 
 import { useMutation } from "@tanstack/react-query";
-import { FilePenLine, LoaderCircle, Save } from "lucide-react";
+import { FilePenLine, Save } from "lucide-react";
 
+import { Loader } from "@/components/ui/Loader";
 import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
@@ -250,7 +251,7 @@ export const AdminSiteContentEditor = () => {
       </div>
       {content.isLoading ? (
         <div className="grid place-items-center p-12">
-          <LoaderCircle className="size-7 animate-spin text-brand" />
+          <Loader className="text-brand" />
         </div>
       ) : (
         <>
