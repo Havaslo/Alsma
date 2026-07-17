@@ -143,7 +143,7 @@ export const HomePage = () => {
                 </span>
               </a>
               <a
-                className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold sm:block"
+                className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
                 href="#booking"
               >
                 Забронировать

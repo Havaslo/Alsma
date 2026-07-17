@@ -25,17 +25,14 @@ export const HorizontalCarousel = ({
   const slides = Children.toArray(children);
   const [viewportRef, emblaApi] = useEmblaCarousel({
     align: "start",
-    containScroll: "trimSnaps",
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
 
   const updateControls = useCallback(() => {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
-    setScrollSnaps(emblaApi.scrollSnapList());
     setCanScrollPrev(emblaApi.canScrollPrev());
     setCanScrollNext(emblaApi.canScrollNext());
   }, [emblaApi]);
@@ -84,9 +81,9 @@ export const HorizontalCarousel = ({
       >
         <ChevronRight className="size-5" />
       </button>
-      {scrollSnaps.length > 1 && (
+      {slides.length > 1 && (
         <div className="mt-8 flex justify-center gap-3">
-          {scrollSnaps.map((_, index) => (
+          {slides.map((_, index) => (
             <button
               aria-label={`Перейти к слайду ${index + 1}`}
               className={cn(

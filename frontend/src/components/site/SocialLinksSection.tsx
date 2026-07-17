@@ -1,10 +1,16 @@
-import { ExternalLink } from "lucide-react";
+import {
+  AtSign,
+  ExternalLink,
+  MessageCircle,
+  Send,
+  Youtube,
+} from "lucide-react";
 
 const socialLinks = [
-  ["ВКонтакте", "https://vk.com/alsma_nnov"],
-  ["MAX", "https://web.max.ru/158586418"],
-  ["Telegram", "https://t.me/alsma_hotel"],
-  ["YouTube", "https://youtube.com"],
+  ["ВКонтакте", "Новости, акции и анонсы", "https://vk.com/alsma_nnov", AtSign],
+  ["MAX", "Быстрые обновления и связь", "https://web.max.ru/158586418", MessageCircle],
+  ["Telegram", "Свежие новости и публикации", "https://t.me/alsma_hotel", Send],
+  ["YouTube", "Видео, обзоры и атмосфера отеля", "https://youtube.com", Youtube],
 ] as const;
 
 type SocialLinksSectionProps = {
@@ -31,16 +37,24 @@ export const SocialLinksSection = ({
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {socialLinks.map(([label, href]) => (
+          {socialLinks.map(([label, hint, href, Icon]) => (
             <a
-              className="flex items-center justify-between rounded-3xl bg-page px-5 py-4 font-semibold text-brand transition hover:bg-page/80"
+              className="group flex items-center justify-between rounded-3xl bg-page px-5 py-4 text-brand transition hover:bg-page/80"
               href={href}
               key={label}
               rel="noreferrer"
               target="_blank"
             >
-              {label}
-              <ExternalLink className="size-4" />
+              <span className="flex min-w-0 items-center gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-brand-foreground">
+                  <Icon className="size-5" />
+                </span>
+                <span className="min-w-0">
+                  <strong className="block font-semibold">{label}</strong>
+                  <span className="mt-1 block text-sm text-muted-ui-foreground">{hint}</span>
+                </span>
+              </span>
+              <ExternalLink className="size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </a>
           ))}
         </div>

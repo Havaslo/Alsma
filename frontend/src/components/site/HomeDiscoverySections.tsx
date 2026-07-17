@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { ArrowRight } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
@@ -33,6 +35,50 @@ const entertainment = [
   ["Прокат", "Велосипеды, SUP-борды, лыжи, санки и всё для активного отдыха на природе", entertainmentRental],
   ["Живая музыка и шоу", "Вечерние концерты, музыкальные программы и яркие шоу для особого настроения", entertainmentMusic],
 ] as const;
+
+const mapMarkers = [
+  { label: "Волейбольное поле", position: "top-[31%] left-[38%]" },
+  { label: "Главный корпус", position: "top-[53%] left-[59%]" },
+  { label: "SPA-комплекс", position: "top-[47%] left-[70%]" },
+  { label: "Ресторан", position: "top-[44%] left-[78%]" },
+  { label: "Парковка", position: "top-[42%] left-[88%]" },
+  { label: "Коттеджи", position: "top-[70%] left-[30%]" },
+  { label: "Пляж", position: "top-[83%] left-[82%]" },
+] as const;
+
+const HomeMapSection = () => {
+  const [selectedMarker, setSelectedMarker] = useState(0);
+
+  return (
+    <section className="hidden bg-brand py-24 text-brand-foreground md:block">
+      <div className="mx-auto max-w-[100rem] px-6">
+        <h2 className="mb-10 text-center font-heading text-4xl font-semibold sm:text-5xl">
+          Пространство тишины с видом сверху
+        </h2>
+        <div className="rounded-4xl border border-supporting p-5">
+          <div className="relative overflow-hidden rounded-3xl">
+            <img alt="Пространство тишины с видом сверху" className="w-full" src={spaceImage} />
+            {mapMarkers.map((marker, index) => (
+              <button
+                aria-label={marker.label}
+                className={`absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-page bg-supporting shadow-lg transition hover:scale-110 ${marker.position}`}
+                key={marker.label}
+                onClick={() => setSelectedMarker(index)}
+                type="button"
+              />
+            ))}
+            <div className={`absolute -translate-x-1/2 -translate-y-full pb-5 ${mapMarkers[selectedMarker].position}`}>
+              <div className="w-52 rounded-3xl border-8 border-page bg-page p-2 text-center text-page-foreground shadow-xl">
+                <img alt="" className="h-36 w-full rounded-2xl object-cover" src={spaceImage} />
+                <p className="px-2 pt-3 pb-1 font-semibold">{mapMarkers[selectedMarker].label}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 export const HomeExperienceSections = () => (
   <>
@@ -85,12 +131,7 @@ export const HomeExperienceSections = () => (
       </div>
     </section>
 
-    <section className="hidden bg-brand py-24 text-brand-foreground md:block">
-      <div className="mx-auto max-w-[100rem] px-6">
-        <h2 className="mb-10 text-center font-heading text-4xl font-semibold sm:text-5xl">Пространство тишины с видом сверху</h2>
-        <div className="rounded-4xl border border-supporting p-5"><img alt="Пространство тишины с видом сверху" className="w-full rounded-3xl" src={spaceImage} /></div>
-      </div>
-    </section>
+    <HomeMapSection />
 
     <section className="py-24">
       <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
@@ -99,7 +140,7 @@ export const HomeExperienceSections = () => (
           {entertainment.map(([title, description, image]) => (
             <article className="flex overflow-hidden rounded-3xl bg-panel xl:flex-col" key={title}>
               <img alt={title} className="w-2/5 object-cover xl:h-48 xl:w-full" src={image} />
-              <div className="flex flex-1 flex-col p-6"><h3 className="font-heading text-2xl font-semibold">{title}</h3><p className="mt-3 leading-7 text-muted-ui-foreground">{description}</p><a className="mt-6 inline-flex w-fit items-center gap-2 font-semibold text-brand" href={AMAZI_ROUTES.entertainment}>Подробнее <ArrowRight className="size-4" /></a></div>
+              <div className="flex flex-1 flex-col p-6"><h3 className="font-heading text-2xl font-semibold">{title}</h3><p className="mt-3 leading-7 text-muted-ui-foreground">{description}</p><a className="mt-auto inline-flex w-fit items-center gap-2 pt-6 font-semibold text-brand" href={AMAZI_ROUTES.entertainment}>Подробнее <ArrowRight className="size-4" /></a></div>
             </article>
           ))}
         </div>

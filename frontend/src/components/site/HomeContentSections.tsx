@@ -31,13 +31,13 @@ export const HomeRestSection = ({
           key={card.title}
         >
           <div className="order-2 flex flex-col justify-center p-8 sm:p-10 lg:order-1 lg:p-12">
-            <div className="flex flex-wrap gap-2">
+            <h3 className="font-heading text-4xl font-semibold sm:text-5xl">{card.title}</h3>
+            <p className="mt-5 leading-8 text-muted-ui-foreground">{card.description}</p>
+            <div className="mt-8 flex flex-wrap gap-2">
               {card.tags.map((tag) => (
                 <span className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand" key={tag}>{tag}</span>
               ))}
             </div>
-            <h3 className="mt-6 font-heading text-4xl font-semibold sm:text-5xl">{card.title}</h3>
-            <p className="mt-5 leading-8 text-muted-ui-foreground">{card.description}</p>
             <div className="mt-10 flex items-end justify-between gap-4"><div><span className="text-sm text-muted-ui-foreground">Стоимость программы</span><strong className="mt-2 block text-3xl">{card.price}</strong></div><a className="inline-flex rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground" href={card.href ?? "#booking"}>Подробнее</a></div>
           </div>
           <div className="order-1 h-80 overflow-hidden lg:order-2 lg:h-140">
@@ -134,7 +134,7 @@ export const HomeRoomsSection = ({
 }: {
   readonly rooms: readonly RoomCategory[];
 }) => (
-  <section className="bg-panel py-24" id="rooms">
+  <section className="bg-page py-24" id="rooms">
     <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
       <div className="mx-auto max-w-4xl text-center">
         <div>
@@ -182,6 +182,15 @@ export const HomeRoomsSection = ({
           </article>
         ))}
       </HorizontalCarousel>
+      <div className="mx-auto mt-14 max-w-5xl text-center">
+        <h3 className="font-heading text-3xl font-semibold">AI-консьерж</h3>
+        <p className="mt-4 text-lg leading-8 text-muted-ui-foreground">
+          Не знаете, какой номер выбрать? Подберем лучший формат отдыха по составу гостей, сценарию поездки и желаемому уровню приватности.
+        </p>
+        <a className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page" href={AMAZI_ROUTES.rooms}>
+          Спросить AI
+        </a>
+      </div>
     </div>
   </section>
 );
