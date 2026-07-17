@@ -54,21 +54,39 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
           </Link>
         ))}
         <div className="group relative">
-          <button className="flex items-center gap-1 py-3 transition hover:opacity-70" type="button">Еще <ChevronDown className="size-4" /></button>
+          <button
+            className="flex items-center gap-1 py-3 transition hover:opacity-70"
+            type="button"
+          >
+            Еще <ChevronDown className="size-4" />
+          </button>
           <div className="invisible absolute top-full right-0 w-72 translate-y-2 rounded-3xl bg-page p-3 text-brand opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-            {moreNavigation.map((item) => <Link className="block rounded-2xl px-4 py-3 hover:bg-panel" key={item.to} to={item.to}>{item.label}</Link>)}
+            {moreNavigation.map((item) => (
+              <Link
+                className="block rounded-2xl px-4 py-3 hover:bg-panel"
+                key={item.to}
+                to={item.to}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </div>
       </nav>
       <div className="flex items-center gap-2">
         <Link
           aria-label="Личный кабинет"
-          className="hidden size-11 place-items-center rounded-full border border-current/15 sm:grid"
+          className="hidden size-11 place-items-center rounded-full sm:grid"
           to={AMAZI_ROUTES.account}
         >
           <UserRound className="size-5" />
         </Link>
-        <Link className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block" to={AMAZI_ROUTES.rooms}>Забронировать</Link>
+        <Link
+          className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
+          to={AMAZI_ROUTES.rooms}
+        >
+          Забронировать
+        </Link>
         <button
           aria-label="Меню"
           className="grid size-11 place-items-center rounded-full border border-current/15 lg:hidden"
@@ -84,7 +102,13 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
               {item.label}
             </Link>
           ))}
-          <Link className="mt-2 rounded-full bg-page px-5 py-3 text-center font-semibold text-brand" onClick={() => setOpen(false)} to={AMAZI_ROUTES.rooms}>Забронировать</Link>
+          <Link
+            className="mt-2 rounded-full bg-page px-5 py-3 text-center font-semibold text-brand"
+            onClick={() => setOpen(false)}
+            to={AMAZI_ROUTES.rooms}
+          >
+            Забронировать
+          </Link>
         </nav>
       )}
     </header>

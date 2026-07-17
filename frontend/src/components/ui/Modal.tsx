@@ -1,6 +1,6 @@
 import {
   type ComponentPropsWithoutRef,
-  type PointerEvent,
+  type MouseEvent,
   type ReactNode,
   useEffect,
   useId,
@@ -29,16 +29,13 @@ export const Modal = ({
   className,
   closeLabel = "Close",
   footer,
+  onClick,
   onClose,
-  onPointerCancel,
-  onPointerDown,
-  onPointerUp,
   open,
   title,
   ...props
 }: ModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const pointerStartedOnBackdropRef = useRef(false);
   const titleId = useId();
 
   useEffect(() => {
@@ -64,29 +61,24 @@ export const Modal = ({
     };
   }, [open]);
 
-  const handlePointerDown = (event: PointerEvent<HTMLDialogElement>) => {
-    onPointerDown?.(event);
-    pointerStartedOnBackdropRef.current =
-      !event.defaultPrevented && event.target === event.currentTarget;
-  };
+  useEffect(() => {
+    if (!open) return;
 
-  const handlePointerUp = (event: PointerEvent<HTMLDialogElement>) => {
-    onPointerUp?.(event);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
 
-    if (
-      !event.defaultPrevented &&
-      pointerStartedOnBackdropRef.current &&
-      event.target === event.currentTarget
-    ) {
+    document.addEventListener("keydown", handleEscape);
+
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, open]);
+
+  const handleClick = (event: MouseEvent<HTMLDialogElement>) => {
+    onClick?.(event);
+
+    if (!event.defaultPrevented && event.target === event.currentTarget) {
       onClose();
     }
-
-    pointerStartedOnBackdropRef.current = false;
-  };
-
-  const handlePointerCancel = (event: PointerEvent<HTMLDialogElement>) => {
-    pointerStartedOnBackdropRef.current = false;
-    onPointerCancel?.(event);
   };
 
   return (
@@ -98,6 +90,7 @@ export const Modal = ({
         className,
       )}
       ref={dialogRef}
+      onClick={handleClick}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -105,14 +98,14 @@ export const Modal = ({
       onClose={() => {
         if (open) onClose();
       }}
-      onPointerCancel={handlePointerCancel}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
       {...props}
     >
       <section className="flex max-h-screen flex-col">
         <header className="flex items-center justify-between gap-4 border-b border-line px-6 py-5">
-          <h2 className="m-0 font-heading text-2xl font-semibold sm:text-4xl" id={titleId}>
+          <h2
+            className="m-0 font-heading text-2xl font-semibold sm:text-4xl"
+            id={titleId}
+          >
             {title}
           </h2>
           <Button
