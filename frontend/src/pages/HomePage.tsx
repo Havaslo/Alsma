@@ -95,7 +95,7 @@ export const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
 
         <div className="relative mx-auto flex min-h-screen max-w-[100rem] flex-col px-4 pt-5 pb-10 sm:px-6">
-          <header className="fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[100rem] -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-3 backdrop-blur-md">
+          <header className="fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-brand-foreground/15 bg-brand-foreground/5 px-5 py-4 backdrop-blur-sm">
             <a aria-label="АЛСМА" href="#top">
               <img
                 alt="АЛСМА"
@@ -103,7 +103,7 @@ export const HomePage = () => {
                 src={logoWhite}
               />
             </a>
-            <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
+            <nav className="hidden items-center gap-5 text-base font-medium lg:flex xl:gap-7 xl:text-lg 2xl:gap-8">
               {navigation.map((item) => (
                 <a
                   className="text-brand-foreground/90 transition hover:text-brand-foreground"
@@ -123,10 +123,12 @@ export const HomePage = () => {
             <div className="flex items-center gap-2">
               <a
                 aria-label="Личный кабинет"
-                className="hidden size-11 place-items-center rounded-full border border-brand-foreground/20 bg-brand-foreground/10 sm:grid"
+                className="hidden size-12 place-items-center rounded-full border border-brand-foreground/20 bg-brand-foreground/10 sm:grid"
                 href={AMAZI_ROUTES.account}
               >
-                <UserRound className="size-5" />
+                <span className="grid size-9 place-items-center rounded-full border border-brand-foreground/15 bg-brand-foreground/10">
+                  <UserRound className="size-5" />
+                </span>
               </a>
               <a
                 className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold sm:block"
