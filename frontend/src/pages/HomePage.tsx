@@ -50,7 +50,11 @@ const moreNavigation = [
   { href: AMAZI_ROUTES.hardwareProcedures, label: "Аппаратные процедуры" },
   { href: AMAZI_ROUTES.news, label: "Новости" },
   { href: AMAZI_ROUTES.blog, label: "Блог" },
-  { href: AMAZI_ROUTES.celebrations, label: "Торжества" },
+  {
+    href: AMAZI_ROUTES.celebrations,
+    label: "Торжества и корпоративный отдых",
+  },
+  { href: AMAZI_ROUTES.privacy, label: "Политика конфиденциальности" },
 ];
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,7 +122,11 @@ export const HomePage = () => {
             <nav className="hidden items-center gap-5 text-base font-medium lg:flex xl:gap-7 xl:text-lg 2xl:gap-8">
               {navigation.map((item) => (
                 <a
-                  className={headerScrolled ? "text-brand transition hover:text-brand/75" : "text-brand-foreground/90 transition hover:text-brand-foreground"}
+                  className={
+                    headerScrolled
+                      ? "text-brand transition hover:text-brand/75"
+                      : "text-brand-foreground/90 transition hover:text-brand-foreground"
+                  }
                   href={item.href}
                   key={item.href}
                 >
@@ -126,21 +134,32 @@ export const HomePage = () => {
                 </a>
               ))}
               <div className="group relative">
-                <button className={`flex items-center gap-1 py-3 ${headerScrolled ? "text-brand" : "text-brand-foreground/90"}`} type="button">Еще <ChevronDown className="size-4" /></button>
+                <button
+                  className={`flex items-center gap-1 py-3 outline-none ${headerScrolled ? "text-brand" : "text-brand-foreground/90"}`}
+                  type="button"
+                >
+                  Еще <ChevronDown className="size-4" />
+                </button>
                 <div className="invisible absolute top-full right-0 w-72 translate-y-2 rounded-3xl bg-page p-3 text-brand opacity-0 shadow-xl transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                  {moreNavigation.map((item) => <a className="block rounded-2xl px-4 py-3 hover:bg-panel" href={item.href} key={item.href}>{item.label}</a>)}
+                  {moreNavigation.map((item) => (
+                    <a
+                      className="block rounded-2xl px-4 py-3 hover:bg-panel"
+                      href={item.href}
+                      key={item.href}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
                 </div>
               </div>
             </nav>
             <div className="flex items-center gap-2">
               <a
                 aria-label="Личный кабинет"
-                className={`hidden size-12 place-items-center rounded-full border sm:grid ${headerScrolled ? "border-brand/15 bg-panel text-brand" : "border-brand-foreground/20 bg-brand-foreground/10 text-brand-foreground"}`}
+                className={`hidden size-12 place-items-center rounded-full outline-none sm:grid ${headerScrolled ? "text-brand" : "text-brand-foreground"}`}
                 href={AMAZI_ROUTES.account}
               >
-                <span className={`grid size-9 place-items-center rounded-full border ${headerScrolled ? "border-brand/10 bg-page" : "border-brand-foreground/15 bg-brand-foreground/10"}`}>
-                  <UserRound className="size-5" />
-                </span>
+                <UserRound className="size-5" />
               </a>
               <a
                 className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"

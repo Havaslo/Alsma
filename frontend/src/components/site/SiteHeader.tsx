@@ -55,7 +55,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
         ))}
         <div className="group relative">
           <button
-            className="flex items-center gap-1 py-3 transition hover:opacity-70"
+            className="flex items-center gap-1 py-3 transition outline-none hover:opacity-70"
             type="button"
           >
             Еще <ChevronDown className="size-4" />
@@ -76,7 +76,7 @@ export const SiteHeader = ({ light = false }: { readonly light?: boolean }) => {
       <div className="flex items-center gap-2">
         <Link
           aria-label="Личный кабинет"
-          className="hidden size-11 place-items-center rounded-full sm:grid"
+          className="hidden size-11 place-items-center rounded-full outline-none sm:grid"
           to={AMAZI_ROUTES.account}
         >
           <UserRound className="size-5" />

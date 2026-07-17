@@ -1,6 +1,7 @@
 import {
   type ComponentPropsWithoutRef,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   useEffect,
   useId,
@@ -68,9 +69,9 @@ export const Modal = ({
       if (event.key === "Escape") onClose();
     };
 
-    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("keydown", handleEscape, true);
 
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape, true);
   }, [onClose, open]);
 
   const handleClick = (event: MouseEvent<HTMLDialogElement>) => {
@@ -79,6 +80,10 @@ export const Modal = ({
     if (!event.defaultPrevented && event.target === event.currentTarget) {
       onClose();
     }
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) onClose();
   };
 
   return (
@@ -91,6 +96,7 @@ export const Modal = ({
       )}
       ref={dialogRef}
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
