@@ -1,6 +1,7 @@
 import allInclusiveImage from "@/assets/alsma/all-inclusive.jpg";
 import celebrationsImage from "@/assets/alsma/celebrations.jpg";
 import entertainmentImage from "@/assets/alsma/entertainment.jpg";
+import heroImage from "@/assets/alsma/hero.jpg";
 import natureImage from "@/assets/alsma/nature.jpg";
 import offersImage from "@/assets/alsma/offers.png";
 import restaurantImage from "@/assets/alsma/restaurant.jpg";
@@ -14,6 +15,7 @@ export type PublicPageKey =
   | "celebrations"
   | "entertainment"
   | "hardware-procedures"
+  | "home"
   | "news"
   | "offers"
   | "privacy"
@@ -137,6 +139,15 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
     ],
     key: "hardware-procedures",
     title: "Аппаратные процедуры",
+  },
+  home: {
+    description:
+      "Загородный спа-отель на слиянии двух рек в окружении соснового леса.",
+    eyebrow: "Главная страница",
+    heroImage,
+    highlights: [],
+    key: "home",
+    title: "Отдых, который возвращает к себе",
   },
   news: {
     description: "Новые программы, события и важные обновления отеля.",

@@ -6,6 +6,11 @@ import {
   SEASONS,
 } from "@/lib/site/entertainment";
 import {
+  HOME_POPUP_BANNERS,
+  HOME_REST_CARDS,
+  HOME_REVIEWS,
+} from "@/lib/site/home-content";
+import {
   ACTIVE_OFFERS,
   OFFER_EVENTS,
   READY_SCENARIOS,
@@ -19,6 +24,11 @@ export const SITE_COLLECTIONS = {
     "animation-programs": ANIMATION_PROGRAM,
     "equipment-cards": EQUIPMENT,
     "seasonal-slides": SEASONS,
+  },
+  home: {
+    "ideal-rest": HOME_REST_CARDS,
+    "popup-banners": HOME_POPUP_BANNERS,
+    reviews: HOME_REVIEWS,
   },
   news: { items: NEWS_ITEMS },
   offers: {

@@ -1,22 +1,22 @@
 import { useState } from "react";
 
-import {
-  ArrowRight,
-  CalendarDays,
-  Menu,
-  Star,
-  UserRound,
-  Users,
-  X,
-} from "lucide-react";
+import { CalendarDays, Menu, Star, UserRound, Users, X } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import heroImage from "@/assets/alsma/hero.jpg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
-import natureImage from "@/assets/alsma/nature.jpg";
-import restaurantImage from "@/assets/alsma/restaurant.jpg";
-import roomImage from "@/assets/alsma/room.jpg";
+import {
+  HomeRestSection,
+  HomeReviewsSection,
+} from "@/components/site/HomeContentSections";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { getSiteCollection } from "@/lib/site/content-collections";
+import {
+  HOME_REST_CARDS,
+  HOME_REVIEWS,
+  type HomeRestCard,
+  type HomeReview,
+} from "@/lib/site/home-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 const navigation = [
@@ -27,20 +27,6 @@ const navigation = [
   "О нас",
   "Акции",
 ];
-const cards = [
-  {
-    image: roomImage,
-    label: "Проживание",
-    title: "Номера среди соснового леса",
-  },
-  {
-    image: restaurantImage,
-    label: "Гастрономия",
-    title: "Ресторан и авторская кухня",
-  },
-  { image: natureImage, label: "Территория", title: "Величественная природа" },
-];
-
 export const HomePage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkInDate, setCheckInDate] = useState("2026-07-20");
@@ -51,6 +37,16 @@ export const HomePage = () => {
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
+  const restCards = getSiteCollection<HomeRestCard>(
+    content.data?.items,
+    "ideal-rest",
+    HOME_REST_CARDS,
+  );
+  const reviews = getSiteCollection<HomeReview>(
+    content.data?.items,
+    "reviews",
+    HOME_REVIEWS,
+  );
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -206,50 +202,8 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6" id="rest">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            Отдых в АЛСМА
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Всё необходимое, чтобы замедлиться
-          </h2>
-          <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-            Пространство, где каждый день наполнен природой, заботой и тёплыми
-            впечатлениями.
-          </p>
-        </div>
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {cards.map((card) => (
-            <article
-              className="group overflow-hidden rounded-3xl bg-panel shadow-lg"
-              key={card.title}
-            >
-              <div className="h-72 overflow-hidden">
-                <img
-                  alt={card.title}
-                  className="size-full object-cover transition duration-500 group-hover:scale-105"
-                  src={card.image}
-                />
-              </div>
-              <div className="p-7">
-                <p className="text-xs font-bold tracking-widest text-brand uppercase">
-                  {card.label}
-                </p>
-                <h3 className="mt-3 font-heading text-3xl font-semibold">
-                  {card.title}
-                </h3>
-                <a
-                  className="mt-6 inline-flex items-center gap-2 font-semibold text-brand"
-                  href="#booking"
-                >
-                  Подробнее <ArrowRight className="size-4" />
-                </a>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      <HomeRestSection cards={restCards} />
+      <HomeReviewsSection reviews={reviews} />
     </main>
   );
 };

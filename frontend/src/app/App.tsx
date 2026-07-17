@@ -6,6 +6,7 @@ import {
   AMAZI_FALLBACK_ROUTE,
   AMAZI_ROUTES,
 } from "@/AMAZI_ROUTES";
+import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { HomePage } from "@/pages/HomePage";
 
@@ -147,6 +148,7 @@ export const App = () => {
         </Routes>
       </Suspense>
       {publicRoutes.has(location.pathname) && <SiteFooter />}
+      <SiteOfferPopup />
     </>
   );
 };
