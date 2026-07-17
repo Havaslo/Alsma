@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
 import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
@@ -23,10 +24,10 @@ export const HomeRestSection = ({
         гастрономию и первозданность реликтового леса.
       </p>
     </div>
-    <div className="scrollbar-none mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+    <HorizontalCarousel className="mt-14">
       {cards.map((card) => (
         <article
-          className="group grid min-w-full snap-start overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid-cols-[0.9fr_1.1fr]"
+          className="group grid h-full overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid-cols-[0.9fr_1.1fr]"
           key={card.title}
         >
           <div className="order-2 flex flex-col justify-center p-8 sm:p-10 lg:order-1 lg:p-12">
@@ -48,7 +49,7 @@ export const HomeRestSection = ({
           </div>
         </article>
       ))}
-    </div>
+    </HorizontalCarousel>
   </section>
 );
 
@@ -72,10 +73,13 @@ export const HomePromotionsSection = ({
           Семейные заезды, выгодные будни и специальные условия для тех, кто хочет остаться дольше.
         </p>
       </div>
-      <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+      <HorizontalCarousel
+        className="mt-12"
+        slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
+      >
         {offers.map((offer) => (
           <article
-            className="group min-w-80 max-w-90 snap-start overflow-hidden rounded-4xl bg-brand text-brand-foreground sm:min-w-90"
+            className="group h-full overflow-hidden rounded-4xl bg-brand text-brand-foreground"
             key={offer.title}
           >
             <div className="h-56 overflow-hidden"><img alt={offer.title} className="size-full object-cover transition duration-500 group-hover:scale-105" src={offer.image} /></div>
@@ -87,7 +91,7 @@ export const HomePromotionsSection = ({
             </div>
           </article>
         ))}
-      </div>
+      </HorizontalCarousel>
       <div className="mt-8 text-center">
         <a className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground" href={AMAZI_ROUTES.offers}>
           Все акции <ArrowRight className="size-4" />
@@ -106,10 +110,13 @@ export const HomeReviewsSection = ({
     <div className="mx-auto max-w-[100rem]">
       <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">Истории вашего отдыха</h2>
       <p className="mt-5 text-center text-lg text-muted-ui-foreground">Общий рейтинг <strong className="text-page-foreground">4.9</strong> · <strong className="text-page-foreground">1200+ отзывов</strong></p>
-      <div className="scrollbar-none mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3">
+      <HorizontalCarousel
+        className="mt-12"
+        slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
+      >
         {reviews.map((review) => (
           <article
-            className="min-w-80 max-w-90 snap-start rounded-4xl bg-panel p-7"
+            className="h-full rounded-4xl bg-panel p-7"
             key={`${review.source}:${review.name}`}
           >
             <div className="flex items-center justify-between"><span className="tracking-widest text-accent-ui">★★★★★</span><span className="rounded-full border border-line px-3 py-1 text-xs text-muted-ui-foreground">{review.source}</span></div>
@@ -117,7 +124,7 @@ export const HomeReviewsSection = ({
             <p className="mt-6 font-semibold">{review.name}</p>
           </article>
         ))}
-      </div>
+      </HorizontalCarousel>
     </div>
   </section>
 );
@@ -142,10 +149,13 @@ export const HomeRoomsSection = ({
           Современные интерьеры номеров и красота леса за панорамными окнами — идеальное сочетание для любого варианта отдыха.
         </p>
       </div>
-      <div className="scrollbar-none mt-12 flex gap-6 overflow-x-auto pb-2">
+      <HorizontalCarousel
+        className="mt-12"
+        slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
+      >
         {rooms.map((room) => (
           <article
-            className="min-w-80 overflow-hidden rounded-4xl bg-page shadow-lg sm:min-w-90"
+            className="h-full overflow-hidden rounded-4xl bg-page shadow-lg"
             key={room.title}
           >
             <img
@@ -171,7 +181,7 @@ export const HomeRoomsSection = ({
             </div>
           </article>
         ))}
-      </div>
+      </HorizontalCarousel>
     </div>
   </section>
 );
