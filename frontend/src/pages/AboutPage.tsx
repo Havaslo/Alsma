@@ -7,6 +7,7 @@ import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import {
   HOTEL_ADVANTAGES,
   HOTEL_CONTACTS,
+  HOTEL_SERVICE_HOURS,
   TRANSFER_OPTIONS,
 } from "@/lib/site/about";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
@@ -135,6 +136,32 @@ export const AboutPage = () => {
             Согласуем поездку и удобное время встречи заранее.
           </p>
           <TransferRequestForm />
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+        <div className="text-center">
+          <p className="text-sm font-semibold tracking-widest text-brand uppercase">
+            Для вашего удобства
+          </p>
+          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+            График работы служб
+          </h2>
+        </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {HOTEL_SERVICE_HOURS.map((service) => (
+            <article
+              className="rounded-3xl border border-line p-7"
+              key={service.title}
+            >
+              <h3 className="font-heading text-3xl font-semibold">
+                {service.title}
+              </h3>
+              <p className="mt-4 text-xl font-semibold text-brand">
+                {service.hours}
+              </p>
+              <p className="mt-3 text-muted-ui-foreground">{service.note}</p>
+            </article>
+          ))}
         </div>
       </section>
     </main>

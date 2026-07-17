@@ -1,6 +1,8 @@
 import barbecueImage from "@/assets/alsma/barbecue-glass-dome.jpg";
 import buffetImage from "@/assets/alsma/breakfast-lunch-dinner.jpg";
+import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
 import beachImage from "@/assets/alsma/river-beach.jpg";
+import spaProgramsImage from "@/assets/alsma/spa-programs.jpg";
 import welcomeImage from "@/assets/alsma/welcome-day.jpg";
 
 export const INCLUSIVE_OVERVIEW = [
@@ -56,6 +58,20 @@ export const FEATURED_FORMATS = [
     image: barbecueImage,
     items: ["Шашлык и овощи на гриле", "Люля-кебаб", "Рыба горячего копчения"],
     title: "Барбекю-вечеринки в стеклянном куполе",
+  },
+  {
+    description:
+      "Термальная зона, бассейн с минеральной водой и пространства для спокойного восстановления доступны гостям отеля.",
+    image: spaProgramsImage,
+    items: ["Термальная зона", "Минеральный бассейн", "Зоны отдыха"],
+    title: "Локации для отдыха и восстановления",
+  },
+  {
+    description:
+      "Вечером отдых продолжается в баре с авторскими напитками, живой музыкой и спокойной атмосферой.",
+    image: liveMusicImage,
+    items: ["Барная карта", "Живая музыка", "Камерные вечера"],
+    title: "Барная карта и атмосфера вечера",
   },
   {
     description:
