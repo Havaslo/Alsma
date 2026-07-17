@@ -340,3 +340,30 @@ ALTER TABLE "manager_tasks" ADD CONSTRAINT "manager_tasks_assignee_id_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "knowledge_chunks" ADD CONSTRAINT "knowledge_chunks_article_id_fkey" FOREIGN KEY ("article_id") REFERENCES "knowledge_articles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Seed the documented local-development administrator.
+INSERT INTO "admin_roles" (
+    "id", "name", "description", "permissions", "created_at", "updated_at"
+) VALUES (
+    '12607395-b2fb-4ad9-8160-c17b9688dc6c',
+    'Administrator',
+    'Full local development access',
+    '["*"]'::JSONB,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+) ON CONFLICT ("name") DO NOTHING;
+
+INSERT INTO "admin_users" (
+    "id", "email", "display_name", "password_hash", "status",
+    "permission_overrides", "role_id", "created_at", "updated_at"
+) VALUES (
+    '31e4e446-d079-4be0-84ab-c18c86c32b56',
+    'admin@example.com',
+    'Admin',
+    '82a0a822fd31af11758d63a168e0413a:a7b7b52fdcdb550397907d45241c18b70b2a8d525097662d4997d7d91fdcc273aa675352a18f6aa42f49c2fce3ec32d1392af2c138c3570e700cf32554fe3f98',
+    'active',
+    '{}'::JSONB,
+    (SELECT "id" FROM "admin_roles" WHERE "name" = 'Administrator'),
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+) ON CONFLICT ("email") DO NOTHING;

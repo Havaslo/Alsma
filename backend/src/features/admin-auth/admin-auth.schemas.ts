@@ -5,7 +5,7 @@ export const adminCredentialsSchema = z.object({
     .email()
     .max(320)
     .transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(200),
+  password: z.string().min(5).max(200),
 });
 
 export const initializeAdminBodySchema = adminCredentialsSchema.extend({
