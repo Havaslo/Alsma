@@ -1,7 +1,6 @@
 import { CalendarDays, Check, Tag } from "lucide-react";
 
 import heroImage from "@/assets/alsma/offers-hero.jpg";
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { getSiteCollection } from "@/lib/site/content-collections";
@@ -55,28 +54,20 @@ export const OffersPage = () => {
             Все действующие предложения
           </h2>
         </div>
-        <div className="mt-12 grid gap-7 lg:grid-cols-3">
+        <div className="mt-12 grid gap-7 md:grid-cols-2 xl:grid-cols-3">
           {offers.map((offer) => (
             <article
-              className="group relative min-h-[32rem] overflow-hidden rounded-4xl text-brand-foreground"
+              className="group flex overflow-hidden rounded-4xl bg-brand text-brand-foreground"
               key={offer.title}
             >
-              <img
-                alt={offer.title}
-                className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
-                src={offer.image}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/30 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-7">
-                <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
-                  {offer.tag}
-                </span>
-                <h3 className="mt-5 font-heading text-3xl font-semibold">
-                  {offer.title}
-                </h3>
-                <p className="mt-4 leading-7 text-brand-foreground/80">
-                  {offer.description}
-                </p>
+              <div className="flex min-h-full flex-col">
+                <div className="h-56 overflow-hidden"><img alt={offer.title} className="size-full object-cover transition duration-500 group-hover:scale-105" src={offer.image} /></div>
+                <div className="flex flex-1 flex-col p-7">
+                  <span className="w-fit rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">{offer.tag}</span>
+                  <h3 className="mt-4 font-heading text-3xl font-semibold">{offer.title}</h3>
+                  <p className="mt-4 leading-7 text-brand-foreground/80">{offer.description}</p>
+                  <span className="mt-6 font-semibold text-accent-ui">Подробнее ↗</span>
+                </div>
               </div>
             </article>
           ))}
@@ -92,15 +83,15 @@ export const OffersPage = () => {
               Готовые сценарии отдыха
             </h2>
           </div>
-          <div className="mt-12 space-y-8">
-            {scenarios.map((scenario, index) => (
+          <div className="mt-12 grid gap-8 xl:grid-cols-2">
+            {scenarios.map((scenario) => (
               <article
-                className="overflow-hidden rounded-4xl bg-page lg:grid lg:grid-cols-[2fr_3fr]"
+                className="overflow-hidden rounded-4xl bg-page"
                 key={scenario.title}
               >
                 <img
                   alt={scenario.title}
-                  className={`aspect-[4/3] size-full object-cover ${index % 2 ? "lg:order-2" : ""}`}
+                  className="h-80 w-full object-cover"
                   src={scenario.image}
                 />
                 <div className="flex flex-col p-8 sm:p-10">
@@ -135,7 +126,7 @@ export const OffersPage = () => {
             Календарь акций
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Ближайшие мероприятия
+            Мероприятия и спецпредложения по месяцам
           </h2>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
@@ -177,21 +168,6 @@ export const OffersPage = () => {
               </li>
             ))}
           </ul>
-        </div>
-      </section>
-      <section className="bg-brand py-20 text-brand-foreground">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Подобрать специальное предложение
-          </h2>
-          <p className="mt-4 mb-8 text-lg text-brand-foreground/75">
-            Оставьте контакты — мы уточним даты и подберём подходящий сценарий.
-          </p>
-          <LeadRequestForm
-            formCode="offer-request"
-            formTitle="Заявка по специальному предложению"
-            sourcePage="offers"
-          />
         </div>
       </section>
     </main>
