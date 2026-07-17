@@ -1,14 +1,18 @@
-import { Check, Users } from "lucide-react";
+import { useState } from "react";
+
+import { Users } from "lucide-react";
 
 import heroImage from "@/assets/alsma/spa-river-aerial.jpg";
 import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { Modal } from "@/components/ui/Modal";
 import { EVENT_FORMATS, EVENT_GALLERY } from "@/lib/site/celebrations";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const CelebrationsPage = () => {
+  const [requestOpen, setRequestOpen] = useState(false);
   const page = PUBLIC_PAGES.celebrations;
   const content = usePublishedSiteContent("celebrations");
   const hero = content.data?.items.find(
@@ -36,7 +40,7 @@ export const CelebrationsPage = () => {
             Форматы мероприятий
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Сценарий под ваш повод и количество гостей
+            Подберём сценарий под ваш повод и количество гостей
           </h2>
           <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
             От частного ужина до двухдневного корпоративного выезда с
@@ -64,17 +68,50 @@ export const CelebrationsPage = () => {
                 <p className="mt-5 leading-7 text-muted-ui-foreground">
                   {event.description}
                 </p>
-                <ul className="mt-6 space-y-3">
+                <div className="mt-6 flex flex-wrap gap-3">
                   {event.details.map((detail) => (
-                    <li className="flex gap-3" key={detail}>
-                      <Check className="mt-1 size-4 shrink-0 text-brand" />{" "}
+                    <span
+                      className="rounded-full bg-page px-4 py-2 text-sm font-medium"
+                      key={detail}
+                    >
                       {detail}
-                    </li>
+                    </span>
                   ))}
-                </ul>
+                </div>
               </div>
             </article>
           ))}
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 pb-24 sm:px-8">
+        <div className="relative overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground sm:px-10">
+          <img
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 size-full object-cover"
+            src={heroImage}
+          />
+          <div className="absolute inset-0 bg-page-foreground/70" />
+          <div className="relative mx-auto max-w-4xl">
+            <p className="text-sm font-semibold tracking-widest uppercase opacity-75">
+              Обсудим ваш формат
+            </p>
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Планируете корпоративный отдых?
+            </h2>
+            <p className="mt-6 text-lg leading-8 opacity-85">
+              Свяжитесь с нами, и мы поможем продумать сценарий выезда:
+              проживание, питание, программу, активности и комфортное размещение
+              команды.
+            </p>
+            <button
+              className="mt-8 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
+              onClick={() => setRequestOpen(true)}
+              type="button"
+            >
+              Подробнее
+            </button>
+          </div>
         </div>
       </section>
       <section className="bg-panel py-24">
@@ -86,6 +123,10 @@ export const CelebrationsPage = () => {
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
               Локации, блюда и примеры событий
             </h2>
+            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+              Подобрали визуальные акценты, которые помогают представить формат
+              будущего торжества или корпоративного отдыха.
+            </p>
           </div>
           <div className="mt-12 grid gap-7 md:grid-cols-3">
             {EVENT_GALLERY.map((item) => (
@@ -111,15 +152,17 @@ export const CelebrationsPage = () => {
           </div>
         </div>
       </section>
-      <section className="bg-brand py-20 text-brand-foreground">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Обсудим ваш визит
-          </h2>
-          <p className="mt-4 mb-8 text-lg text-brand-foreground/75">
-            Расскажите о событии — мы подготовим сценарий, размещение, питание и
-            программу.
-          </p>
+      <Modal
+        closeLabel="Закрыть форму заявки"
+        onClose={() => setRequestOpen(false)}
+        open={requestOpen}
+        title="Обсудим ваш визит"
+      >
+        <p className="mb-6 leading-7 text-muted-ui-foreground">
+          Оставьте контакты, и мы свяжемся с вами, чтобы обсудить количество
+          гостей, формат программы и подобрать подходящее решение.
+        </p>
+        <div className="rounded-3xl bg-brand p-6 text-brand-foreground">
           <LeadRequestForm
             formCode="celebrations-request"
             formTitle="Заявка на корпоративный отдых"
@@ -127,7 +170,7 @@ export const CelebrationsPage = () => {
             sourcePage="celebrations"
           />
         </div>
-      </section>
+      </Modal>
     </main>
   );
 };
