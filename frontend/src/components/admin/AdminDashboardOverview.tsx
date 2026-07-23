@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { AdminDashboardCharts } from "@/components/admin/AdminDashboardCharts";
 import { AdminDashboardDetails } from "@/components/admin/AdminDashboardDetails";
-import { useAdminBookings } from "@/lib/admin/useAdmin";
 
 const kpis = [
   {
@@ -64,41 +64,7 @@ const insights = [
   },
 ] as const;
 
-const chartBars = [34, 42, 38, 54, 49, 68, 62, 82, 74, 91, 86, 100];
-
-const AnalyticsCard = ({
-  description,
-  title,
-}: {
-  readonly description: string;
-  readonly title: string;
-}) => (
-  <article className="rounded-3xl border border-line bg-brand-foreground p-5">
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <h3 className="text-2xl font-semibold">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-          {description}
-        </p>
-      </div>
-      <button className="text-xs font-semibold text-brand" type="button">
-        Детализация
-      </button>
-    </div>
-    <div className="mt-6 flex h-56 items-end gap-2 rounded-2xl border border-line px-5 pt-8 pb-5">
-      {chartBars.map((height, index) => (
-        <span
-          className="min-w-2 flex-1 rounded-t-lg bg-brand/75"
-          key={`${title}-${index}`}
-          style={{ height: `${height}%` }}
-        />
-      ))}
-    </div>
-  </article>
-);
-
 export const AdminDashboardOverview = () => {
-  const bookings = useAdminBookings();
   const calls = [
     {
       contact: "+7 921 442-18-06",
@@ -226,53 +192,7 @@ export const AdminDashboardOverview = () => {
             17 июня 2026
           </span>
         </div>
-        <div className="mt-6 grid gap-4 xl:grid-cols-2">
-          <AnalyticsCard
-            description="Динамика подтверждённых броней по времени."
-            title="Создано броней"
-          />
-          <AnalyticsCard
-            description="Рост суммы подтверждённых броней по времени."
-            title="Сумма броней"
-          />
-          <AnalyticsCard
-            description="График загрузки звонками по ключевым интервалам смены."
-            title="Динамика входящих звонков"
-          />
-          <article className="rounded-3xl border border-line bg-brand-foreground p-5">
-            <h3 className="text-2xl font-semibold">Воронка бронирования</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-              Показывает, на каком этапе теряются потенциальные бронирования.
-            </p>
-            <div className="mt-7 space-y-6">
-              {[
-                ["Новое обращение", "84", "100%"],
-                ["Подбор варианта", "52", "72%"],
-                ["Подтверждение", "31", "48%"],
-                [
-                  "Бронь",
-                  String(bookings.data?.pagination.totalItems ?? 19),
-                  "31%",
-                ],
-              ].map(([label, value, width], index) => (
-                <div key={label}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>
-                      {index + 1}. {label}
-                    </span>
-                    <strong>{value}</strong>
-                  </div>
-                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-muted-ui/50">
-                    <div
-                      className="h-full rounded-full bg-brand"
-                      style={{ width }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        </div>
+        <AdminDashboardCharts />
       </section>
       <AdminDashboardDetails />
     </>
