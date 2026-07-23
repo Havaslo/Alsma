@@ -1,6 +1,6 @@
 {
   "name": "amazi-project-backend",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
@@ -12,6 +12,7 @@
     "db:check": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate": "tsx src/lib/database/migrate-command.ts",
+    "db:seed:reference": "tsx src/lib/database/seed-reference-data-command.ts",
     "dev": "tsx watch src/server.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
