@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import heroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import musicImage from "@/assets/alsma/entertainment-live-music.png";
+import heroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import programsImage from "@/assets/alsma/spa-programs.jpg";
 import riverImage from "@/assets/alsma/spa-river-aerial.jpg";
 import { EditorialCard } from "@/components/site/EditorialCard";
@@ -22,7 +22,8 @@ const filters = [
 const upcomingEvents = [
   {
     date: "12 октября 2026",
-    description: "Камерный ужин с сезонным меню от шефа, сопровождением и живой музыкой в уютной вечерней атмосфере.",
+    description:
+      "Камерный ужин с сезонным меню от шефа, сопровождением и живой музыкой в уютной вечерней атмосфере.",
     href: "https://t.me/alsma_hotel",
     image: musicImage,
     tag: "Популярно",
@@ -30,7 +31,8 @@ const upcomingEvents = [
   },
   {
     date: "22 октября 2026",
-    description: "Практики мягкого восстановления, полезный brunch, лекция о ресурсном состоянии и персональные рекомендации.",
+    description:
+      "Практики мягкого восстановления, полезный brunch, лекция о ресурсном состоянии и персональные рекомендации.",
     href: "https://vk.com/alsma_nnov",
     image: programsImage,
     tag: "Новый формат",
@@ -38,7 +40,8 @@ const upcomingEvents = [
   },
   {
     date: "3 ноября 2026",
-    description: "Активности на природе, детская программа, пикник и спокойный вечерний отдых для всей семьи.",
+    description:
+      "Активности на природе, детская программа, пикник и спокойный вечерний отдых для всей семьи.",
     href: "https://t.me/alsma_hotel",
     image: riverImage,
     tag: "Для всей семьи",
@@ -104,19 +107,51 @@ export const NewsPage = () => {
       <section className="bg-panel/70 py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm font-semibold tracking-widest text-brand uppercase">Ближайшие форматы</p>
-            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Мероприятия</h2>
-            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">Подборка событий, которые можно сохранить себе и посмотреть в социальных сетях отеля.</p>
+            <p className="text-sm font-semibold tracking-widest text-brand uppercase">
+              Ближайшие форматы
+            </p>
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Мероприятия
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+              Подборка событий, которые можно сохранить себе и посмотреть в
+              социальных сетях отеля.
+            </p>
           </div>
           <div className="mt-12 space-y-5">
             {upcomingEvents.map((event) => (
-              <article className="overflow-hidden rounded-4xl border border-line bg-page lg:grid lg:grid-cols-[22.5rem_1fr]" key={event.title}>
-                <img alt={event.title} className="h-72 size-full object-cover lg:h-full" src={event.image} />
+              <article
+                className="overflow-hidden rounded-4xl border border-line bg-page lg:grid lg:grid-cols-[22.5rem_1fr]"
+                key={event.title}
+              >
+                <img
+                  alt={event.title}
+                  className="size-full h-72 object-cover lg:h-full"
+                  src={event.image}
+                />
                 <div className="flex flex-col p-7 sm:p-8">
-                  <div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-supporting/30 px-4 py-2 text-sm font-semibold text-brand">{event.tag}</span><span className="text-sm text-muted-ui-foreground">{event.date}</span></div>
-                  <h3 className="mt-5 font-heading text-3xl font-semibold text-brand">{event.title}</h3>
-                  <p className="mt-4 max-w-3xl leading-7 text-muted-ui-foreground">{event.description}</p>
-                  <a className="mt-7 inline-flex w-fit rounded-full border border-brand px-6 py-3 font-semibold text-brand" href={event.href} rel="noreferrer" target="_blank">Смотреть публикацию</a>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full bg-supporting/30 px-4 py-2 text-sm font-semibold text-brand">
+                      {event.tag}
+                    </span>
+                    <span className="text-sm text-muted-ui-foreground">
+                      {event.date}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 font-heading text-3xl font-semibold text-brand">
+                    {event.title}
+                  </h3>
+                  <p className="mt-4 max-w-3xl leading-7 text-muted-ui-foreground">
+                    {event.description}
+                  </p>
+                  <a
+                    className="mt-7 inline-flex w-fit rounded-full border border-brand px-6 py-3 font-semibold text-brand"
+                    href={event.href}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Смотреть публикацию
+                  </a>
                 </div>
               </article>
             ))}

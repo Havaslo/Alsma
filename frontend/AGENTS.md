@@ -2,8 +2,8 @@
 
 ## Role
 
-Build the frontend project by extending the fixed Vite React scaffold and its reusable components.
-Do not replace the scaffold or introduce a second application architecture.
+Build the ALSMA frontend by extending its existing Vite React architecture and product components.
+Do not introduce a second application architecture.
 
 ## Required Guidance
 
@@ -23,9 +23,9 @@ Read every applicable document when a task crosses multiple areas.
 - Use TypeScript, React, and the configured `@/` imports.
 - Use arrow functions only.
 - Extend existing components and utilities before adding replacements.
-- Build user-visible UI with the scaffold's styled components. Do not produce a final UI with raw
+- Build user-visible UI with the product's styled components. Do not produce a final UI with raw
   or unstyled native buttons, inputs, selects, checkboxes, textareas, dialogs, tables, or placeholder
-  containers when a matching scaffold component exists.
+  containers when a matching product component exists.
 - Use native controls only inside reusable primitives when required for browser semantics and
   accessibility; page and feature code must consume the styled primitive.
 - Use `DateInput` for user-facing date selection. Do not render `input type="date"` or rely on the

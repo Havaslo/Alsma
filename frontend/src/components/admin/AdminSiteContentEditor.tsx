@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { useMutation } from "@tanstack/react-query";
 import { FilePenLine, Save } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
@@ -20,47 +22,57 @@ type ContentFormProps = {
   stored?: SiteContentItem;
 };
 
+type ContentFormValues = {
+  description: string;
+  image: string;
+  status: SiteContentItem["status"];
+  title: string;
+};
+
 const ContentForm = ({ section, stored }: ContentFormProps) => {
   const fallback = PUBLIC_PAGES[section];
   const save = useSaveAdminSiteContent();
-  const [title, setTitle] = useState(
-    typeof stored?.content.title === "string"
-      ? stored.content.title
-      : fallback.title,
-  );
-  const [description, setDescription] = useState(
-    typeof stored?.content.description === "string"
-      ? stored.content.description
-      : fallback.description,
-  );
-  const [status, setStatus] = useState<SiteContentItem["status"]>(
-    stored?.status ?? "published",
-  );
-  const [image, setImage] = useState(
-    typeof stored?.content.image === "string"
-      ? stored.content.image
-      : fallback.heroImage,
-  );
+  const form = useForm<ContentFormValues>({
+    defaultValues: {
+      description:
+        typeof stored?.content.description === "string"
+          ? stored.content.description
+          : fallback.description,
+      image:
+        typeof stored?.content.image === "string"
+          ? stored.content.image
+          : fallback.heroImage,
+      status: stored?.status ?? "published",
+      title:
+        typeof stored?.content.title === "string"
+          ? stored.content.title
+          : fallback.title,
+    },
+  });
   const upload = useMutation({
     mutationFn: uploadSiteMedia,
     onSuccess: ({ data }) => {
       const mediaUrl = new URL(data.file.url, window.location.origin);
       mediaUrl.searchParams.set("contentType", data.file.contentType);
-      setImage(`${mediaUrl.pathname}${mediaUrl.search}`);
+      form.setValue("image", `${mediaUrl.pathname}${mediaUrl.search}`);
     },
   });
 
   return (
-    <form
+    <Form
       className="mt-6 grid gap-5"
-      onSubmit={(event) => {
-        event.preventDefault();
+      form={form}
+      onSubmit={(values) => {
         save.mutate({
-          content: { description, image, title },
+          content: {
+            description: values.description,
+            image: values.image,
+            title: values.title,
+          },
           itemKey: "hero",
           position: 0,
           section,
-          status,
+          status: values.status,
           title: "Главный экран",
         });
       }}
@@ -69,16 +81,14 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
         Заголовок
         <input
           className="mt-2 w-full rounded-2xl border border-line bg-page px-4 py-3 outline-none focus:border-focus"
-          onChange={(event) => setTitle(event.target.value)}
-          value={title}
+          {...form.register("title")}
         />
       </label>
       <label className="text-sm font-medium">
         Описание
         <textarea
           className="mt-2 min-h-32 w-full rounded-2xl border border-line bg-page px-4 py-3 outline-none focus:border-focus"
-          onChange={(event) => setDescription(event.target.value)}
-          value={description}
+          {...form.register("description")}
         />
       </label>
       <label className="text-sm font-medium">
@@ -86,8 +96,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           <input
             className="min-w-0 flex-1 rounded-2xl border border-line bg-page px-4 py-3"
-            onChange={(event) => setImage(event.target.value)}
-            value={image}
+            {...form.register("image")}
           />
           <label className="cursor-pointer rounded-full border border-line px-5 py-3 text-center font-semibold text-brand">
             Загрузить файл
@@ -108,10 +117,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
           Статус
           <select
             className="mt-2 block rounded-xl border border-line bg-page px-4 py-3"
-            onChange={(event) =>
-              setStatus(event.target.value as SiteContentItem["status"])
-            }
-            value={status}
+            {...form.register("status")}
           >
             <option value="draft">Черновик</option>
             <option value="published">Опубликовано</option>
@@ -126,7 +132,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
           <Save className="size-4" /> Сохранить
         </button>
       </div>
-    </form>
+    </Form>
   );
 };
 
@@ -143,44 +149,51 @@ const CollectionForm = ({
     readonly unknown[]
   >;
   const keys = Object.keys(collections);
-  const [itemKey, setItemKey] = useState(keys[0] ?? "items");
-  const stored = items.find((item) => item.itemKey === itemKey);
-  const [json, setJson] = useState(() =>
-    JSON.stringify(
-      stored?.content.items ?? collections[itemKey] ?? [],
-      null,
-      2,
-    ),
-  );
-  const [error, setError] = useState("");
+  const firstItemKey = keys[0] ?? "items";
+  const initialStored = items.find((item) => item.itemKey === firstItemKey);
+  const form = useForm({
+    defaultValues: {
+      itemKey: firstItemKey,
+      json: JSON.stringify(
+        initialStored?.content.items ?? collections[firstItemKey] ?? [],
+        null,
+        2,
+      ),
+    },
+  });
   const save = useSaveAdminSiteContent();
   const selectCollection = (key: string) => {
-    setItemKey(key);
+    form.setValue("itemKey", key);
     const item = items.find((entry) => entry.itemKey === key);
-    setJson(
+    form.setValue(
+      "json",
       JSON.stringify(item?.content.items ?? collections[key] ?? [], null, 2),
     );
-    setError("");
+    form.clearErrors("json");
   };
+
   return (
-    <form
+    <Form
       className="mt-8 border-t border-line pt-6"
-      onSubmit={(event) => {
-        event.preventDefault();
+      form={form}
+      onSubmit={(values) => {
         try {
-          const parsed = JSON.parse(json) as unknown;
+          const parsed = JSON.parse(values.json) as unknown;
           if (!Array.isArray(parsed)) throw new Error();
-          setError("");
+          form.clearErrors("json");
           save.mutate({
             content: { items: parsed },
-            itemKey,
+            itemKey: values.itemKey,
             position: 10,
             section,
             status: "published",
-            title: itemKey,
+            title: values.itemKey,
           });
         } catch {
-          setError("Введите корректный JSON-массив.");
+          form.setError("json", {
+            message: "Введите корректный JSON-массив.",
+            type: "validate",
+          });
         }
       }}
     >
@@ -195,8 +208,9 @@ const CollectionForm = ({
         </div>
         <select
           className="rounded-xl border border-line bg-page px-4 py-3"
-          onChange={(event) => selectCollection(event.target.value)}
-          value={itemKey}
+          {...form.register("itemKey", {
+            onChange: (event) => selectCollection(event.target.value),
+          })}
         >
           {keys.map((key) => (
             <option key={key} value={key}>
@@ -207,17 +221,20 @@ const CollectionForm = ({
       </div>
       <textarea
         className="mt-4 min-h-96 w-full rounded-2xl border border-line bg-page p-4 font-mono text-sm outline-none focus:border-focus"
-        onChange={(event) => setJson(event.target.value)}
-        value={json}
+        {...form.register("json")}
       />
-      {error && <p className="text-danger mt-2 text-sm">{error}</p>}
+      {form.formState.errors.json?.message && (
+        <p className="text-danger mt-2 text-sm">
+          {form.formState.errors.json.message}
+        </p>
+      )}
       <button
         className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
         type="submit"
       >
         <Save className="size-4" /> Сохранить коллекцию
       </button>
-    </form>
+    </Form>
   );
 };
 

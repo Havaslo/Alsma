@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Gift, LogOut, Mail, Phone } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { Form } from "@/components/Form";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
@@ -16,7 +17,7 @@ export const AccountPage = () => {
   const queryClient = useQueryClient();
   const auth = useGuestAuth();
   const guest = auth.data?.guest;
-  const [fullName, setFullName] = useState("");
+  const profileForm = useForm({ defaultValues: { fullName: "" } });
   const profileMutation = useMutation({
     mutationFn: completeGuestProfile,
     onSuccess: () =>
@@ -40,19 +41,15 @@ export const AccountPage = () => {
           <p className="mt-3 text-muted-ui-foreground">
             Имя будет отображаться в личном кабинете и бронированиях.
           </p>
-          <form
+          <Form
             className="mt-7 space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              profileMutation.mutate({ fullName });
-            }}
+            form={profileForm}
+            onSubmit={(values) => profileMutation.mutate(values)}
           >
             <input
               className="w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-              onChange={(event) => setFullName(event.target.value)}
               placeholder="Ваше имя"
-              required
-              value={fullName}
+              {...profileForm.register("fullName", { required: true })}
             />
             <button
               className="w-full rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground"
@@ -60,7 +57,7 @@ export const AccountPage = () => {
             >
               Продолжить
             </button>
-          </form>
+          </Form>
         </section>
       </main>
     );

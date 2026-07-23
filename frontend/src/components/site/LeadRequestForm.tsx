@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Send } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
@@ -13,6 +14,13 @@ type LeadRequestFormProps = {
   readonly successMessage?: string;
 };
 
+type LeadFormValues = {
+  comment: string;
+  email: string;
+  name: string;
+  phone: string;
+};
+
 export const LeadRequestForm = ({
   formCode,
   formTitle,
@@ -20,58 +28,50 @@ export const LeadRequestForm = ({
   sourcePage,
   successMessage = "Заявка принята. Мы скоро свяжемся с вами.",
 }: LeadRequestFormProps) => {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [comment, setComment] = useState("");
   const lead = useCreateLead();
+  const form = useForm<LeadFormValues>({
+    defaultValues: { comment: "", email: "", name: "", phone: "" },
+  });
 
   return (
-    <form
+    <Form
       className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]"
-      onSubmit={(event) => {
-        event.preventDefault();
+      form={form}
+      onSubmit={(values) => {
         lead.mutate({
-          comment: comment || undefined,
-          email: email || undefined,
+          comment: values.comment || undefined,
+          email: values.email || undefined,
           formCode,
           formTitle,
-          name,
-          phone,
+          name: values.name,
+          phone: values.phone,
           sourcePage,
         });
       }}
     >
       <input
         className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-5 py-4 outline-none placeholder:text-brand-foreground/60 focus:border-brand-foreground"
-        onChange={(event) => setName(event.target.value)}
         placeholder="Ваше имя"
-        required
-        value={name}
+        {...form.register("name", { required: true })}
       />
       <input
         className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-5 py-4 outline-none placeholder:text-brand-foreground/60 focus:border-brand-foreground"
-        onChange={(event) => setPhone(event.target.value)}
         placeholder="Телефон"
-        required
         type="tel"
-        value={phone}
+        {...form.register("phone", { required: true })}
       />
       {showDetails && (
         <>
           <input
             className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-5 py-4 outline-none placeholder:text-brand-foreground/60 focus:border-brand-foreground sm:col-span-2"
-            onChange={(event) => setEmail(event.target.value)}
             placeholder="Электронная почта"
-            required
             type="email"
-            value={email}
+            {...form.register("email", { required: showDetails })}
           />
           <textarea
             className="min-h-28 rounded-3xl border border-brand-foreground/20 bg-brand-foreground/10 px-5 py-4 outline-none placeholder:text-brand-foreground/60 focus:border-brand-foreground sm:col-span-3"
-            onChange={(event) => setComment(event.target.value)}
             placeholder="Расскажите о формате и количестве гостей"
-            value={comment}
+            {...form.register("comment")}
           />
         </>
       )}
@@ -89,6 +89,6 @@ export const LeadRequestForm = ({
           Не удалось отправить заявку. Попробуйте ещё раз.
         </p>
       )}
-    </form>
+    </Form>
   );
 };

@@ -88,8 +88,12 @@ export const SpaPage = () => {
       <section className="py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">Массажные процедуры</h2>
-            <p className="mt-5 text-lg text-muted-ui-foreground">Полный перечень массажей с длительностью и стоимостью.</p>
+            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+              Массажные процедуры
+            </h2>
+            <p className="mt-5 text-lg text-muted-ui-foreground">
+              Полный перечень массажей с длительностью и стоимостью.
+            </p>
           </div>
           <div className="mt-14 overflow-hidden rounded-3xl bg-panel">
             <div className="overflow-x-auto">
@@ -103,10 +107,19 @@ export const SpaPage = () => {
                 </thead>
                 <tbody>
                   {MASSAGES.map(([name, duration, price]) => (
-                    <tr className="border-t border-line" key={`${name}:${duration}`}>
-                      <td className="px-7 py-4 text-lg font-semibold">{name}</td>
-                      <td className="px-7 py-4 text-lg text-muted-ui-foreground">{duration}</td>
-                      <td className="px-7 py-4 text-lg font-semibold">{price}</td>
+                    <tr
+                      className="border-t border-line"
+                      key={`${name}:${duration}`}
+                    >
+                      <td className="px-7 py-4 text-lg font-semibold">
+                        {name}
+                      </td>
+                      <td className="px-7 py-4 text-lg text-muted-ui-foreground">
+                        {duration}
+                      </td>
+                      <td className="px-7 py-4 text-lg font-semibold">
+                        {price}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

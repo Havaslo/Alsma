@@ -64,7 +64,10 @@ export const HorizontalCarousel = ({
         <div className="-mr-6 flex touch-pan-y">
           {slides.map((slide, index) => (
             <div
-              className={cn("min-w-0 shrink-0 grow-0 basis-full pr-6", slideClassName)}
+              className={cn(
+                "min-w-0 shrink-0 grow-0 basis-full pr-6",
+                slideClassName,
+              )}
               key={index}
             >
               {slide}

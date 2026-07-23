@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 
+import { Form } from "@/components/Form";
 import type { AdminClient } from "@/lib/admin/admin-api";
 import {
   useDeleteAdminClient,
@@ -11,56 +12,58 @@ export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
   const update = useUpdateAdminClient();
   const remove = useDeleteAdminClient();
   const updateBonus = useUpdateClientBonus();
-  const [fullName, setFullName] = useState(item.fullName ?? "");
-  const [phone, setPhone] = useState(
-    item.phone.startsWith("email:") ? "" : item.phone,
-  );
-  const [email, setEmail] = useState(item.email ?? "");
-  const [balance, setBalance] = useState(item.bonusProgram?.balance ?? 0);
+  const form = useForm({
+    defaultValues: {
+      balance: item.bonusProgram?.balance ?? 0,
+      email: item.email ?? "",
+      fullName: item.fullName ?? "",
+      phone: item.phone.startsWith("email:") ? "" : item.phone,
+    },
+  });
+
   return (
-    <article className="grid gap-3 border-b border-line p-5 lg:grid-cols-[1fr_1fr_1fr_auto_auto] lg:items-center">
+    <Form
+      className="grid gap-3 border-b border-line p-5 lg:grid-cols-[1fr_1fr_1fr_auto_auto] lg:items-center"
+      form={form}
+      onSubmit={(values) => {
+        update.mutate({
+          email: values.email || null,
+          fullName: values.fullName,
+          phone: values.phone || null,
+          recordId: item.id,
+        });
+        updateBonus.mutate({
+          balance: values.balance,
+          level: item.bonusProgram?.level ?? "standard",
+          recordId: item.id,
+        });
+      }}
+    >
       <input
         className="rounded-xl border border-line bg-page px-3 py-2"
-        onChange={(event) => setFullName(event.target.value)}
-        value={fullName}
+        {...form.register("fullName")}
       />
       <input
         className="rounded-xl border border-line bg-page px-3 py-2"
-        onChange={(event) => setPhone(event.target.value)}
         placeholder="Телефон"
-        value={phone}
+        {...form.register("phone")}
       />
       <input
         className="rounded-xl border border-line bg-page px-3 py-2"
-        onChange={(event) => setEmail(event.target.value)}
         placeholder="Email"
         type="email"
-        value={email}
+        {...form.register("email")}
       />
       <input
         className="w-28 rounded-xl border border-line bg-page px-3 py-2"
         min={0}
-        onChange={(event) => setBalance(Number(event.target.value))}
         type="number"
-        value={balance}
+        {...form.register("balance", { min: 0, valueAsNumber: true })}
       />
       <div className="flex gap-2">
         <button
           className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-brand"
-          onClick={() => {
-            update.mutate({
-              email: email || null,
-              fullName,
-              phone: phone || null,
-              recordId: item.id,
-            });
-            updateBonus.mutate({
-              balance,
-              level: item.bonusProgram?.level ?? "standard",
-              recordId: item.id,
-            });
-          }}
-          type="button"
+          type="submit"
         >
           Сохранить
         </button>
@@ -72,6 +75,6 @@ export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
           Удалить
         </button>
       </div>
-    </article>
+    </Form>
   );
 };

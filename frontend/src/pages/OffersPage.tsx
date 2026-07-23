@@ -61,12 +61,26 @@ export const OffersPage = () => {
               key={offer.title}
             >
               <div className="flex min-h-full flex-col">
-                <div className="h-56 overflow-hidden"><img alt={offer.title} className="size-full object-cover transition duration-500 group-hover:scale-105" src={offer.image} /></div>
+                <div className="h-56 overflow-hidden">
+                  <img
+                    alt={offer.title}
+                    className="size-full object-cover transition duration-500 group-hover:scale-105"
+                    src={offer.image}
+                  />
+                </div>
                 <div className="flex flex-1 flex-col p-7">
-                  <span className="w-fit rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">{offer.tag}</span>
-                  <h3 className="mt-4 font-heading text-3xl font-semibold">{offer.title}</h3>
-                  <p className="mt-4 leading-7 text-brand-foreground/80">{offer.description}</p>
-                  <span className="mt-6 font-semibold text-accent-ui">Подробнее ↗</span>
+                  <span className="w-fit rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
+                    {offer.tag}
+                  </span>
+                  <h3 className="mt-4 font-heading text-3xl font-semibold">
+                    {offer.title}
+                  </h3>
+                  <p className="mt-4 leading-7 text-brand-foreground/80">
+                    {offer.description}
+                  </p>
+                  <span className="mt-6 font-semibold text-accent-ui">
+                    Подробнее ↗
+                  </span>
                 </div>
               </div>
             </article>

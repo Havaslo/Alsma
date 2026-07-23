@@ -1,7 +1,9 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { CalendarDays, Users } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { Loader } from "@/components/ui/Loader";
@@ -33,51 +35,79 @@ const BookingField = ({
 );
 
 export const HomeBookingBar = () => {
-  const [checkInDate, setCheckInDate] = useState("2026-06-12");
-  const [checkOutDate, setCheckOutDate] = useState("2026-06-15");
-  const [guestsCount, setGuestsCount] = useState(2);
   const leadMutation = useCreateLead();
+  const form = useForm({
+    defaultValues: {
+      checkInDate: "2026-06-12",
+      checkOutDate: "2026-06-15",
+      guestsCount: 2,
+    },
+  });
+  const checkInDate = useWatch({
+    control: form.control,
+    name: "checkInDate",
+  });
 
   return (
-    <form
+    <Form
       className="mx-auto grid w-full max-w-5xl gap-3 rounded-3xl border border-brand-foreground/30 bg-panel/90 p-4 text-page-foreground shadow-2xl backdrop-blur sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]"
+      form={form}
       id="booking"
-      onSubmit={(event) => {
-        event.preventDefault();
+      onSubmit={(values) => {
         leadMutation.mutate({
-          checkInDate,
-          checkOutDate,
+          checkInDate: values.checkInDate,
+          checkOutDate: values.checkOutDate,
           formCode: "home-booking-widget",
           formTitle: "Подбор номера на главной странице",
-          guestsCount,
+          guestsCount: values.guestsCount,
           sourcePage: "home",
         });
       }}
     >
       <BookingField icon={CalendarDays} label="Дата заезда">
-        <DatePicker
-          ariaLabel="Дата заезда"
-          onChange={(date) => {
-            setCheckInDate(date);
-            if (date > checkOutDate) setCheckOutDate(date);
-          }}
-          value={checkInDate}
+        <Controller
+          control={form.control}
+          name="checkInDate"
+          render={({ field }) => (
+            <DatePicker
+              ariaLabel="Дата заезда"
+              onChange={(date) => {
+                field.onChange(date);
+                if (date > form.getValues("checkOutDate")) {
+                  form.setValue("checkOutDate", date);
+                }
+              }}
+              value={field.value}
+            />
+          )}
         />
       </BookingField>
       <BookingField icon={CalendarDays} label="Дата выезда">
-        <DatePicker
-          ariaLabel="Дата выезда"
-          min={checkInDate}
-          onChange={setCheckOutDate}
-          value={checkOutDate}
+        <Controller
+          control={form.control}
+          name="checkOutDate"
+          render={({ field }) => (
+            <DatePicker
+              ariaLabel="Дата выезда"
+              min={checkInDate}
+              onChange={field.onChange}
+              value={field.value}
+            />
+          )}
         />
       </BookingField>
       <BookingField icon={Users} label="Количество гостей">
-        <DropdownSelect
-          ariaLabel="Количество гостей"
-          onChange={setGuestsCount}
-          options={guestOptions}
-          value={guestsCount}
+        <Controller
+          control={form.control}
+          name="guestsCount"
+          render={({ field }) => (
+            <DropdownSelect
+              ariaLabel="Количество гостей"
+              onChange={field.onChange}
+              options={guestOptions}
+              value={field.value}
+            />
+          )}
         />
       </BookingField>
       <button
@@ -91,6 +121,6 @@ export const HomeBookingBar = () => {
           "Найти номер"
         )}
       </button>
-    </form>
+    </Form>
   );
 };

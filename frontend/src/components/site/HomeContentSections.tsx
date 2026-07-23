@@ -31,14 +31,36 @@ export const HomeRestSection = ({
           key={card.title}
         >
           <div className="order-2 flex flex-col justify-center p-8 sm:p-10 lg:order-1 lg:p-12">
-            <h3 className="font-heading text-4xl font-semibold sm:text-5xl">{card.title}</h3>
-            <p className="mt-5 leading-8 text-muted-ui-foreground">{card.description}</p>
+            <h3 className="font-heading text-4xl font-semibold sm:text-5xl">
+              {card.title}
+            </h3>
+            <p className="mt-5 leading-8 text-muted-ui-foreground">
+              {card.description}
+            </p>
             <div className="mt-8 flex flex-wrap gap-2">
               {card.tags.map((tag) => (
-                <span className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand" key={tag}>{tag}</span>
+                <span
+                  className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand"
+                  key={tag}
+                >
+                  {tag}
+                </span>
               ))}
             </div>
-            <div className="mt-10 flex items-end justify-between gap-4"><div><span className="text-sm text-muted-ui-foreground">Стоимость программы</span><strong className="mt-2 block text-3xl">{card.price}</strong></div><a className="inline-flex rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground" href={card.href ?? "#booking"}>Подробнее</a></div>
+            <div className="mt-10 flex items-end justify-between gap-4">
+              <div>
+                <span className="text-sm text-muted-ui-foreground">
+                  Стоимость программы
+                </span>
+                <strong className="mt-2 block text-3xl">{card.price}</strong>
+              </div>
+              <a
+                className="inline-flex rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground"
+                href={card.href ?? "#booking"}
+              >
+                Подробнее
+              </a>
+            </div>
           </div>
           <div className="order-1 h-80 overflow-hidden lg:order-2 lg:h-140">
             <img
@@ -63,14 +85,15 @@ export const HomePromotionsSection = ({
       <div className="mx-auto max-w-3xl text-center">
         <div>
           <p className="text-sm font-bold tracking-widest text-brand uppercase">
-          Акции и спецпредложения
+            Акции и спецпредложения
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Выберите предложение под ваш формат отдыха
           </h2>
         </div>
         <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Семейные заезды, выгодные будни и специальные условия для тех, кто хочет остаться дольше.
+          Семейные заезды, выгодные будни и специальные условия для тех, кто
+          хочет остаться дольше.
         </p>
       </div>
       <HorizontalCarousel
@@ -82,18 +105,38 @@ export const HomePromotionsSection = ({
             className="group h-full overflow-hidden rounded-4xl bg-brand text-brand-foreground"
             key={offer.title}
           >
-            <div className="h-56 overflow-hidden"><img alt={offer.title} className="size-full object-cover transition duration-500 group-hover:scale-105" src={offer.image} /></div>
+            <div className="h-56 overflow-hidden">
+              <img
+                alt={offer.title}
+                className="size-full object-cover transition duration-500 group-hover:scale-105"
+                src={offer.image}
+              />
+            </div>
             <div className="p-7">
-              <span className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">{offer.tag}</span>
-              <h3 className="mt-4 font-heading text-3xl font-semibold">{offer.title}</h3>
-              <p className="mt-3 text-brand-foreground/80">{offer.description}</p>
-              <a className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui" href={AMAZI_ROUTES.offers}>Подробнее <ArrowRight className="size-4" /></a>
+              <span className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
+                {offer.tag}
+              </span>
+              <h3 className="mt-4 font-heading text-3xl font-semibold">
+                {offer.title}
+              </h3>
+              <p className="mt-3 text-brand-foreground/80">
+                {offer.description}
+              </p>
+              <a
+                className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui"
+                href={AMAZI_ROUTES.offers}
+              >
+                Подробнее <ArrowRight className="size-4" />
+              </a>
             </div>
           </article>
         ))}
       </HorizontalCarousel>
       <div className="mt-8 text-center">
-        <a className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground" href={AMAZI_ROUTES.offers}>
+        <a
+          className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
+          href={AMAZI_ROUTES.offers}
+        >
           Все акции <ArrowRight className="size-4" />
         </a>
       </div>
@@ -108,8 +151,13 @@ export const HomeReviewsSection = ({
 }) => (
   <section className="px-4 py-24 sm:px-6">
     <div className="mx-auto max-w-[100rem]">
-      <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">Истории вашего отдыха</h2>
-      <p className="mt-5 text-center text-lg text-muted-ui-foreground">Общий рейтинг <strong className="text-page-foreground">4.9</strong> · <strong className="text-page-foreground">1200+ отзывов</strong></p>
+      <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
+        Истории вашего отдыха
+      </h2>
+      <p className="mt-5 text-center text-lg text-muted-ui-foreground">
+        Общий рейтинг <strong className="text-page-foreground">4.9</strong> ·{" "}
+        <strong className="text-page-foreground">1200+ отзывов</strong>
+      </p>
       <HorizontalCarousel
         className="mt-12"
         slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
@@ -119,7 +167,12 @@ export const HomeReviewsSection = ({
             className="h-full rounded-4xl bg-panel p-7"
             key={`${review.source}:${review.name}`}
           >
-            <div className="flex items-center justify-between"><span className="tracking-widest text-accent-ui">★★★★★</span><span className="rounded-full border border-line px-3 py-1 text-xs text-muted-ui-foreground">{review.source}</span></div>
+            <div className="flex items-center justify-between">
+              <span className="tracking-widest text-accent-ui">★★★★★</span>
+              <span className="rounded-full border border-line px-3 py-1 text-xs text-muted-ui-foreground">
+                {review.source}
+              </span>
+            </div>
             <p className="mt-5 leading-7">{review.text}</p>
             <p className="mt-6 font-semibold">{review.name}</p>
           </article>
@@ -146,7 +199,8 @@ export const HomeRoomsSection = ({
           </h2>
         </div>
         <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Современные интерьеры номеров и красота леса за панорамными окнами — идеальное сочетание для любого варианта отдыха.
+          Современные интерьеры номеров и красота леса за панорамными окнами —
+          идеальное сочетание для любого варианта отдыха.
         </p>
       </div>
       <HorizontalCarousel
@@ -185,9 +239,13 @@ export const HomeRoomsSection = ({
       <div className="mx-auto mt-14 max-w-5xl text-center">
         <h3 className="font-heading text-3xl font-semibold">AI-консьерж</h3>
         <p className="mt-4 text-lg leading-8 text-muted-ui-foreground">
-          Не знаете, какой номер выбрать? Подберем лучший формат отдыха по составу гостей, сценарию поездки и желаемому уровню приватности.
+          Не знаете, какой номер выбрать? Подберем лучший формат отдыха по
+          составу гостей, сценарию поездки и желаемому уровню приватности.
         </p>
-        <a className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page" href={AMAZI_ROUTES.rooms}>
+        <a
+          className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page"
+          href={AMAZI_ROUTES.rooms}
+        >
           Спросить AI
         </a>
       </div>

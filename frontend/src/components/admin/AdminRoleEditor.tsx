@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
+import { Form } from "@/components/Form";
 import {
   ADMIN_PERMISSIONS,
   type AdminPermission,
@@ -12,42 +13,59 @@ import {
 } from "@/lib/admin/useAdminSettings";
 
 const fieldClass = "w-full rounded-2xl border border-line bg-page px-4 py-3";
+type RoleFormValues = {
+  description: string;
+  name: string;
+  permissions: AdminPermission[];
+};
+
 export const AdminRoleEditor = ({ role }: { readonly role?: AdminRole }) => {
   const create = useCreateAdminRole();
   const update = useUpdateAdminRole();
-  const [name, setName] = useState(role?.name ?? "");
-  const [description, setDescription] = useState(role?.description ?? "");
-  const [permissions, setPermissions] = useState<AdminPermission[]>(
-    role?.permissions ?? [],
-  );
-  const toggle = (permission: AdminPermission) =>
-    setPermissions((current) =>
+  const form = useForm<RoleFormValues>({
+    defaultValues: {
+      description: role?.description ?? "",
+      name: role?.name ?? "",
+      permissions: role?.permissions ?? [],
+    },
+  });
+  const permissions = useWatch({
+    control: form.control,
+    name: "permissions",
+  });
+  const toggle = (permission: AdminPermission) => {
+    const current = form.getValues("permissions");
+    form.setValue(
+      "permissions",
       current.includes(permission)
         ? current.filter((item) => item !== permission)
         : [...current, permission],
     );
+  };
+
   return (
-    <form
+    <Form
       className="mt-4 grid gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const input = { description: description || null, name, permissions };
+      form={form}
+      onSubmit={(values) => {
+        const input = {
+          description: values.description || null,
+          name: values.name,
+          permissions: values.permissions,
+        };
         if (role) update.mutate({ id: role.id, ...input });
         else create.mutate(input);
       }}
     >
       <input
         className={fieldClass}
-        onChange={(event) => setName(event.target.value)}
         placeholder="Название роли"
-        required
-        value={name}
+        {...form.register("name", { required: true })}
       />
       <textarea
         className={fieldClass}
-        onChange={(event) => setDescription(event.target.value)}
         placeholder="Описание роли"
-        value={description}
+        {...form.register("description")}
       />
       <div className="grid gap-2 sm:grid-cols-2">
         {ADMIN_PERMISSIONS.map((permission) => (
@@ -70,6 +88,6 @@ export const AdminRoleEditor = ({ role }: { readonly role?: AdminRole }) => {
       >
         Сохранить роль
       </button>
-    </form>
+    </Form>
   );
 };

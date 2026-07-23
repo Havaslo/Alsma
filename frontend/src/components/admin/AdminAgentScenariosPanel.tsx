@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Bot, CirclePlus } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import type {
   AgentScenario,
   AgentTransferRule,
@@ -14,32 +16,36 @@ import {
 
 const fieldClass = "w-full rounded-2xl border border-line bg-page px-4 py-3";
 
+type ScenarioFormValues = Pick<
+  AgentScenario,
+  "enabled" | "response" | "title" | "trigger"
+>;
+
 const ScenarioEditor = ({ item }: { readonly item?: AgentScenario }) => {
   const save = useSaveAgentScenario();
-  const [title, setTitle] = useState(item?.title ?? "");
-  const [trigger, setTrigger] = useState(item?.trigger ?? "Консультации");
-  const [response, setResponse] = useState(item?.response ?? "");
-  const [enabled, setEnabled] = useState(item?.enabled ?? true);
+  const form = useForm<ScenarioFormValues>({
+    defaultValues: {
+      enabled: item?.enabled ?? true,
+      response: item?.response ?? "",
+      title: item?.title ?? "",
+      trigger: item?.trigger ?? "Консультации",
+    },
+  });
+
   return (
-    <form
+    <Form
       className="mt-4 grid gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate({ enabled, id: item?.id, response, title, trigger });
+      form={form}
+      onSubmit={(values) => {
+        save.mutate({ ...values, id: item?.id });
       }}
     >
       <input
         className={fieldClass}
-        onChange={(event) => setTitle(event.target.value)}
         placeholder="Название сценария"
-        required
-        value={title}
+        {...form.register("title", { required: true })}
       />
-      <select
-        className={fieldClass}
-        onChange={(event) => setTrigger(event.target.value)}
-        value={trigger}
-      >
+      <select className={fieldClass} {...form.register("trigger")}>
         {[
           "Консультации",
           "Бронирование",
@@ -51,18 +57,11 @@ const ScenarioEditor = ({ item }: { readonly item?: AgentScenario }) => {
       </select>
       <textarea
         className={`${fieldClass} min-h-36`}
-        onChange={(event) => setResponse(event.target.value)}
         placeholder="Текст и инструкции ответа"
-        required
-        value={response}
+        {...form.register("response", { required: true })}
       />
       <label className="flex items-center gap-2 text-sm">
-        <input
-          checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
-          type="checkbox"
-        />{" "}
-        Активен
+        <input type="checkbox" {...form.register("enabled")} /> Активен
       </label>
       <button
         className="rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
@@ -70,54 +69,51 @@ const ScenarioEditor = ({ item }: { readonly item?: AgentScenario }) => {
       >
         Сохранить сценарий
       </button>
-    </form>
+    </Form>
   );
 };
 
+type TransferRuleFormValues = Pick<
+  AgentTransferRule,
+  "condition" | "destination" | "enabled" | "title"
+>;
+
 const RuleEditor = ({ item }: { readonly item?: AgentTransferRule }) => {
   const save = useSaveAgentTransferRule();
-  const [title, setTitle] = useState(item?.title ?? "");
-  const [destination, setDestination] = useState(
-    item?.destination ?? "Менеджер бронирования",
-  );
-  const [condition, setCondition] = useState(item?.condition ?? "");
-  const [enabled, setEnabled] = useState(item?.enabled ?? true);
+  const form = useForm<TransferRuleFormValues>({
+    defaultValues: {
+      condition: item?.condition ?? "",
+      destination: item?.destination ?? "Менеджер бронирования",
+      enabled: item?.enabled ?? true,
+      title: item?.title ?? "",
+    },
+  });
+
   return (
-    <form
+    <Form
       className="mt-4 grid gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate({ condition, destination, enabled, id: item?.id, title });
+      form={form}
+      onSubmit={(values) => {
+        save.mutate({ ...values, id: item?.id });
       }}
     >
       <input
         className={fieldClass}
-        onChange={(event) => setTitle(event.target.value)}
         placeholder="Название правила"
-        required
-        value={title}
+        {...form.register("title", { required: true })}
       />
       <input
         className={fieldClass}
-        onChange={(event) => setDestination(event.target.value)}
         placeholder="Кому передать"
-        required
-        value={destination}
+        {...form.register("destination", { required: true })}
       />
       <textarea
         className={`${fieldClass} min-h-32`}
-        onChange={(event) => setCondition(event.target.value)}
         placeholder="Условия передачи"
-        required
-        value={condition}
+        {...form.register("condition", { required: true })}
       />
       <label className="flex items-center gap-2 text-sm">
-        <input
-          checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
-          type="checkbox"
-        />{" "}
-        Активно
+        <input type="checkbox" {...form.register("enabled")} /> Активно
       </label>
       <button
         className="rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
@@ -125,7 +121,7 @@ const RuleEditor = ({ item }: { readonly item?: AgentTransferRule }) => {
       >
         Сохранить правило
       </button>
-    </form>
+    </Form>
   );
 };
 

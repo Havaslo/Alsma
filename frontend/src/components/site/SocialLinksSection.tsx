@@ -8,9 +8,19 @@ import {
 
 const socialLinks = [
   ["ВКонтакте", "Новости, акции и анонсы", "https://vk.com/alsma_nnov", AtSign],
-  ["MAX", "Быстрые обновления и связь", "https://web.max.ru/158586418", MessageCircle],
+  [
+    "MAX",
+    "Быстрые обновления и связь",
+    "https://web.max.ru/158586418",
+    MessageCircle,
+  ],
   ["Telegram", "Свежие новости и публикации", "https://t.me/alsma_hotel", Send],
-  ["YouTube", "Видео, обзоры и атмосфера отеля", "https://youtube.com", Youtube],
+  [
+    "YouTube",
+    "Видео, обзоры и атмосфера отеля",
+    "https://youtube.com",
+    Youtube,
+  ],
 ] as const;
 
 type SocialLinksSectionProps = {
@@ -51,7 +61,9 @@ export const SocialLinksSection = ({
                 </span>
                 <span className="min-w-0">
                   <strong className="block font-semibold">{label}</strong>
-                  <span className="mt-1 block text-sm text-muted-ui-foreground">{hint}</span>
+                  <span className="mt-1 block text-sm text-muted-ui-foreground">
+                    {hint}
+                  </span>
                 </span>
               </span>
               <ExternalLink className="size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

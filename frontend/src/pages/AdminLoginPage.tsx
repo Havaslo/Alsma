@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoGreen from "@/assets/alsma/logo-green.svg";
+import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { adminLogin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
@@ -14,8 +15,9 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@example.com");
-  const [password, setPassword] = useState("");
+  const form = useForm({
+    defaultValues: { email: "admin@example.com", password: "" },
+  });
   const mutation = useMutation({
     mutationFn: adminLogin,
     onError: (error) =>
@@ -38,31 +40,25 @@ export const AdminLoginPage = () => {
         <p className="mt-3 text-muted-ui-foreground">
           Управление заявками, гостями и содержимым сайта.
         </p>
-        <form
+        <Form
           className="mt-7 space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            mutation.mutate({ email, password });
-          }}
+          form={form}
+          onSubmit={(values) => mutation.mutate(values)}
         >
           <label className="block text-sm font-medium">
             Электронная почта
             <input
               className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-              onChange={(event) => setEmail(event.target.value)}
-              required
               type="email"
-              value={email}
+              {...form.register("email", { required: true })}
             />
           </label>
           <label className="block text-sm font-medium">
             Пароль
             <input
               className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-              onChange={(event) => setPassword(event.target.value)}
-              required
               type="password"
-              value={password}
+              {...form.register("password", { required: true })}
             />
           </label>
           <button
@@ -73,7 +69,7 @@ export const AdminLoginPage = () => {
             {mutation.isPending && <Loader className="mr-2" size="sm" />}
             Войти
           </button>
-        </form>
+        </Form>
       </section>
     </main>
   );

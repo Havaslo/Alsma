@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { Form } from "@/components/Form";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
@@ -14,9 +16,15 @@ import { writeGuestSession } from "@/lib/auth/session";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const [channel, setChannel] = useState<"email" | "phone">("phone");
-  const [contact, setContact] = useState("");
-  const [code, setCode] = useState("");
+  const requestForm = useForm({
+    defaultValues: { channel: "phone" as "email" | "phone", contact: "" },
+  });
+  const verifyForm = useForm({ defaultValues: { code: "" } });
+  const channel = useWatch({
+    control: requestForm.control,
+    name: "channel",
+  });
+  const code = useWatch({ control: verifyForm.control, name: "code" });
   const [pending, setPending] = useState<{
     debugCode: string;
     maskedContact: string;
@@ -60,8 +68,8 @@ export const LoginPage = () => {
                   }
                   key={value}
                   onClick={() => {
-                    setChannel(value);
-                    setContact("");
+                    requestForm.setValue("channel", value);
+                    requestForm.resetField("contact");
                   }}
                   type="button"
                 >
@@ -69,26 +77,22 @@ export const LoginPage = () => {
                 </button>
               ))}
             </div>
-            <form
+            <Form
               className="mt-7 space-y-5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                requestMutation.mutate({ channel, contact });
-              }}
+              form={requestForm}
+              onSubmit={(values) => requestMutation.mutate(values)}
             >
               <label className="block text-sm font-medium">
                 {channel === "phone" ? "Номер телефона" : "Электронная почта"}
                 <input
                   className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-                  onChange={(event) => setContact(event.target.value)}
                   placeholder={
                     channel === "phone"
                       ? "+7 (___) ___-__-__"
                       : "you@example.com"
                   }
-                  required
                   type={channel === "email" ? "email" : "tel"}
-                  value={contact}
+                  {...requestForm.register("contact", { required: true })}
                 />
               </label>
               <button
@@ -101,7 +105,7 @@ export const LoginPage = () => {
                 )}
                 Получить код
               </button>
-            </form>
+            </Form>
           </>
         ) : (
           <>
@@ -121,12 +125,12 @@ export const LoginPage = () => {
               используйте{" "}
               <strong className="text-brand">{pending.debugCode}</strong>.
             </p>
-            <form
+            <Form
               className="mt-7 space-y-5"
-              onSubmit={(event) => {
-                event.preventDefault();
+              form={verifyForm}
+              onSubmit={(values) => {
                 verifyMutation.mutate({
-                  code,
+                  code: values.code,
                   pendingCodeId: pending.pendingCodeId,
                 });
               }}
@@ -136,11 +140,15 @@ export const LoginPage = () => {
                 className="w-full rounded-2xl border border-line bg-page px-5 py-4 text-center text-3xl font-semibold tracking-widest outline-none focus:border-focus"
                 inputMode="numeric"
                 maxLength={4}
-                onChange={(event) =>
-                  setCode(event.target.value.replace(/\D/g, "").slice(0, 4))
-                }
                 placeholder="0000"
-                value={code}
+                {...verifyForm.register("code", {
+                  onChange: (event) => {
+                    verifyForm.setValue(
+                      "code",
+                      String(event.target.value).replace(/\D/g, "").slice(0, 4),
+                    );
+                  },
+                })}
               />
               <button
                 className="w-full rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground disabled:opacity-60"
@@ -149,7 +157,7 @@ export const LoginPage = () => {
               >
                 Подтвердить вход
               </button>
-            </form>
+            </Form>
           </>
         )}
       </section>

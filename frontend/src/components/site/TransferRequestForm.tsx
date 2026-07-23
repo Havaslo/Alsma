@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Send } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
@@ -10,27 +11,41 @@ const fieldClassName =
 const labelClassName =
   "grid gap-2 text-sm font-semibold text-muted-ui-foreground";
 
+type TransferFormValues = {
+  comment: string;
+  date: string;
+  name: string;
+  origin: string;
+  passengers: string;
+  phone: string;
+  time: string;
+};
+
 export const TransferRequestForm = () => {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [passengers, setPassengers] = useState("1");
-  const [comment, setComment] = useState("");
   const lead = useCreateLead();
+  const form = useForm<TransferFormValues>({
+    defaultValues: {
+      comment: "",
+      date: "",
+      name: "",
+      origin: "",
+      passengers: "1",
+      phone: "",
+      time: "",
+    },
+  });
 
   return (
-    <form
+    <Form
       className="mt-8 grid gap-4 md:grid-cols-2"
-      onSubmit={(event) => {
-        event.preventDefault();
+      form={form}
+      onSubmit={(values) => {
         lead.mutate({
-          comment: `Трансфер: ${origin}; дата: ${date}; время: ${time}; пассажиров: ${passengers}. ${comment}`,
+          comment: `Трансфер: ${values.origin}; дата: ${values.date}; время: ${values.time}; пассажиров: ${values.passengers}. ${values.comment}`,
           formCode: "about-transfer",
           formTitle: "Заявка на трансфер",
-          name,
-          phone,
+          name: values.name,
+          phone: values.phone,
           sourcePage: "about",
         });
       }}
@@ -39,50 +54,40 @@ export const TransferRequestForm = () => {
         Имя *
         <input
           className={fieldClassName}
-          onChange={(event) => setName(event.target.value)}
           placeholder="Ваше имя"
-          required
-          value={name}
+          {...form.register("name", { required: true })}
         />
       </label>
       <label className={labelClassName}>
         Телефон *
         <input
           className={fieldClassName}
-          onChange={(event) => setPhone(event.target.value)}
           placeholder="+7 (___) ___-__-__"
-          required
           type="tel"
-          value={phone}
+          {...form.register("phone", { required: true })}
         />
       </label>
       <label className={labelClassName}>
         Дата *
         <input
           className={fieldClassName}
-          onChange={(event) => setDate(event.target.value)}
-          required
           type="date"
-          value={date}
+          {...form.register("date", { required: true })}
         />
       </label>
       <label className={labelClassName}>
         Время *
         <input
           className={fieldClassName}
-          onChange={(event) => setTime(event.target.value)}
-          required
           type="time"
-          value={time}
+          {...form.register("time", { required: true })}
         />
       </label>
       <label className={labelClassName}>
         Откуда *
         <select
           className={fieldClassName}
-          onChange={(event) => setOrigin(event.target.value)}
-          required
-          value={origin}
+          {...form.register("origin", { required: true })}
         >
           <option value="">Выберите место</option>
           <option value="Аэропорт Стригино">Аэропорт Стригино</option>
@@ -95,11 +100,7 @@ export const TransferRequestForm = () => {
       </label>
       <label className={labelClassName}>
         Количество пассажиров
-        <select
-          className={fieldClassName}
-          onChange={(event) => setPassengers(event.target.value)}
-          value={passengers}
-        >
+        <select className={fieldClassName} {...form.register("passengers")}>
           <option value="1">1 человек</option>
           <option value="2">2 человека</option>
           <option value="3">3 человека</option>
@@ -110,9 +111,8 @@ export const TransferRequestForm = () => {
         Комментарий
         <textarea
           className={`${fieldClassName} min-h-32`}
-          onChange={(event) => setComment(event.target.value)}
           placeholder="Например: нужен детский бустер, встреча у вокзала, поздний приезд"
-          value={comment}
+          {...form.register("comment")}
         />
       </label>
       <button
@@ -128,6 +128,6 @@ export const TransferRequestForm = () => {
           Заявка принята. Мы свяжемся с вами для подтверждения.
         </p>
       )}
-    </form>
+    </Form>
   );
 };

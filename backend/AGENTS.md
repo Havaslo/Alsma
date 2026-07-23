@@ -69,7 +69,7 @@
 
 - Keep `GET /health` lightweight and independent of optional integrations.
 - Return JSON from API routes.
-- Declare endpoints in `<feature>.routes.ts`, validate their inputs with the scaffold's
+- Declare endpoints in `<feature>.routes.ts`, validate their inputs with the project's
   `validateRequest` middleware and feature schemas, and delegate transport behavior to thin
   `<feature>.handlers.ts` handlers. Do not implement endpoint logic inline in route declarations.
 - Read validated body, params, and query values from `response.locals.input`; do not re-parse raw

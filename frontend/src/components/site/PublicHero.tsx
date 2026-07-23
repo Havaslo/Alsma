@@ -30,7 +30,9 @@ export const PublicHero = ({
       </h1>
       {badge && (
         <div className="mt-6">
-          <span className="inline-flex rounded-full bg-panel px-6 py-2.5 text-sm font-semibold tracking-widest text-brand uppercase shadow-lg">{badge}</span>
+          <span className="inline-flex rounded-full bg-panel px-6 py-2.5 text-sm font-semibold tracking-widest text-brand uppercase shadow-lg">
+            {badge}
+          </span>
         </div>
       )}
       <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85">

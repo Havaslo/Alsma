@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
+import { Form } from "@/components/Form";
 import {
   ADMIN_PERMISSIONS,
   type AdminPermission,
@@ -14,6 +15,15 @@ import {
 } from "@/lib/admin/useAdminSettings";
 
 const fieldClass = "w-full rounded-2xl border border-line bg-page px-4 py-3";
+type UserFormValues = {
+  displayName: string;
+  email: string;
+  overrides: Partial<Record<AdminPermission, boolean | null>>;
+  password: string;
+  roleId: string;
+  status: "active" | "inactive";
+};
+
 export const AdminUserEditor = ({
   currentUserId,
   roles,
@@ -26,29 +36,36 @@ export const AdminUserEditor = ({
   const create = useCreateAdminUser();
   const update = useUpdateAdminUser();
   const remove = useDeleteAdminUser();
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [password, setPassword] = useState("");
-  const [roleId, setRoleId] = useState(user?.roleId ?? "");
-  const [status, setStatus] = useState(user?.status ?? "active");
-  const [overrides, setOverrides] = useState(user?.permissionOverrides ?? {});
-  const setOverride = (permission: AdminPermission, value: string) =>
-    setOverrides((current) => ({
-      ...current,
+  const form = useForm<UserFormValues>({
+    defaultValues: {
+      displayName: user?.displayName ?? "",
+      email: user?.email ?? "",
+      overrides: user?.permissionOverrides ?? {},
+      password: "",
+      roleId: user?.roleId ?? "",
+      status: user?.status ?? "active",
+    },
+  });
+  const overrides = useWatch({ control: form.control, name: "overrides" });
+  const setOverride = (permission: AdminPermission, value: string) => {
+    form.setValue("overrides", {
+      ...form.getValues("overrides"),
       [permission]: value === "inherit" ? null : value === "allow",
-    }));
+    });
+  };
+
   return (
-    <form
+    <Form
       className="mt-4 grid gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
+      form={form}
+      onSubmit={(values) => {
         const input = {
-          displayName,
-          email,
-          password: password || undefined,
-          permissionOverrides: overrides,
-          roleId: roleId || null,
-          status,
+          displayName: values.displayName,
+          email: values.email,
+          password: values.password || undefined,
+          permissionOverrides: values.overrides,
+          roleId: values.roleId || null,
+          status: values.status,
         };
         if (user) update.mutate({ id: user.id, ...input });
         else create.mutate(input);
@@ -57,37 +74,29 @@ export const AdminUserEditor = ({
       <div className="grid gap-3 sm:grid-cols-2">
         <input
           className={fieldClass}
-          onChange={(event) => setDisplayName(event.target.value)}
           placeholder="Имя сотрудника"
-          required
-          value={displayName}
+          {...form.register("displayName", { required: true })}
         />
         <input
           className={fieldClass}
-          onChange={(event) => setEmail(event.target.value)}
           placeholder="Email"
-          required
           type="email"
-          value={email}
+          {...form.register("email", { required: true })}
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <input
           className={fieldClass}
-          minLength={8}
-          onChange={(event) => setPassword(event.target.value)}
           placeholder={
             user ? "Новый пароль (необязательно)" : "Пароль от 8 символов"
           }
-          required={!user}
           type="password"
-          value={password}
+          {...form.register("password", {
+            minLength: 8,
+            required: !user,
+          })}
         />
-        <select
-          className={fieldClass}
-          onChange={(event) => setRoleId(event.target.value)}
-          value={roleId}
-        >
+        <select className={fieldClass} {...form.register("roleId")}>
           <option value="">Без роли</option>
           {roles.map((role) => (
             <option key={role.id} value={role.id}>
@@ -95,13 +104,7 @@ export const AdminUserEditor = ({
             </option>
           ))}
         </select>
-        <select
-          className={fieldClass}
-          onChange={(event) =>
-            setStatus(event.target.value as "active" | "inactive")
-          }
-          value={status}
-        >
+        <select className={fieldClass} {...form.register("status")}>
           <option value="active">Активен</option>
           <option value="inactive">Отключён</option>
         </select>
@@ -148,6 +151,6 @@ export const AdminUserEditor = ({
           </button>
         )}
       </div>
-    </form>
+    </Form>
   );
 };

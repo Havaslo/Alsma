@@ -1,10 +1,25 @@
-# Amazi Project
+# ALSMA Hotel Platform
 
-This project contains a Vite React frontend and an Express TypeScript backend in one Git workspace.
-The applications keep independent dependencies and lockfiles.
+This workspace powers the ALSMA country hotel website, guest account, lead collection, and staff
+administration. It is an Amazi-managed product with independent React and Express applications,
+not a scaffold or component showcase.
 
-The backend includes managed project file storage for persistent uploads and generated files. See
-`backend/docs/file-storage.md` for the direct signed upload, download, and deletion flow.
+## Product capabilities
+
+- Public hotel, rooms, spa, entertainment, offers, events, news, and information pages.
+- Booking, spa, transfer, and event lead forms.
+- Guest passwordless login, profile completion, bookings, and loyalty information.
+- Role-based staff administration for leads, bookings, clients, knowledge, AI scenarios, site
+  content, users, and roles.
+- PostgreSQL persistence, uploaded site media, and managed project storage.
+
+## Architecture
+
+- `frontend/`: Vite, React, React Router, TanStack Query, React Hook Form, and Tailwind CSS.
+- `backend/`: Express, Prisma, PostgreSQL, authentication, and domain feature modules.
+- `docs/`: product integration and review notes.
+- `AMAZI_TEMPLATE.json`: the Amazi runtime compatibility baseline; it does not define product
+  ownership or turn the workspace into a template.
 
 ## Frontend
 
@@ -14,10 +29,9 @@ pnpm install
 pnpm run dev
 ```
 
-The platform manages the development server on port `5173`. Browser API requests use the relative
-`/api` base URL. In the project runtime, Vite forwards those requests to the private backend
-container. For standalone local development, `BACKEND_PROXY_TARGET` defaults to
-`http://localhost:3000`.
+The platform manages the development server on port `5173`. Browser API requests use `/api`; Vite
+forwards them to `BACKEND_PROXY_TARGET`, which defaults to `http://localhost:3000` for standalone
+development.
 
 ## Backend
 
@@ -29,36 +43,18 @@ pnpm run db:migrate
 pnpm run dev
 ```
 
-The backend listens on port `3000` by default. `GET /health` is the container liveness endpoint;
-application routes live under `/api`, starting with `GET /api/health` and `GET /api/hello`.
-`GET /api/health` checks PostgreSQL readiness and returns a safe `503` response when the database is
-unavailable. The platform supplies `DATABASE_URL`, the managed storage API URL and project token,
-starts the database, and does not publish the backend port directly. Standalone development must
-export values for `AMAZI_STORAGE_API_URL` and `AMAZI_STORAGE_PROJECT_TOKEN` that point to a compatible
-storage service before starting the backend.
+The backend listens on port `3000`. `GET /health` is the container liveness endpoint and
+`GET /api/health` checks PostgreSQL readiness. The platform supplies `DATABASE_URL`,
+`AMAZI_STORAGE_API_URL`, and `AMAZI_STORAGE_PROJECT_TOKEN`; never expose them to frontend code.
 
-The backend uses Prisma ORM with PostgreSQL. Models live in `prisma/schema.prisma`, the tracked
-migration history lives in `prisma/migrations/`, and `pnpm run db:migrate` applies pending migrations
-locally. The managed runtime waits for PostgreSQL and runs `prisma migrate deploy` before the HTTP
-server starts. After changing the schema, generate the Prisma Client and validate the schema from
-`backend/`:
+Prisma models live in `backend/prisma/schema.prisma`, with one migration per logical schema change.
+After schema changes, run:
 
 ```bash
 pnpm run db:generate
 pnpm run db:check
 ```
 
-Create the single migration for a logical schema change with `pnpm exec prisma migrate dev --name
-<change-name>`. Amend an unshipped migration instead of adding corrective migration files.
-
-The platform generates application-local `AMAZI_ENV_GENERATED.env` files and matching
-`docs/AMAZI_ENV_DOCS_GENERATED.md` documentation. Do not edit generated files or commit generated
-env values. Configure project variables through the Amazi Environment editor. Custom values are
-copied into both applications but remain unavailable to browser code because custom names cannot
-use the `VITE_` prefix. For standalone local development, export overrides in the shell as shown
-above. `AMAZI_STORAGE_API_URL` and `AMAZI_STORAGE_PROJECT_TOKEN` are platform-managed backend
-values; never expose the storage token or `DATABASE_URL` to frontend code.
-
-The platform initializes `frontend/src/AMAZI_THEME_GENERATED.css` with the creator's resolved Amazi
-theme. Project style settings always retain light and dark palettes while allowing the preferred
-theme to follow the system or stay fixed to light or dark.
+Generated environment documentation lives under each application's `docs/` directory. The platform
+also manages `frontend/src/AMAZI_THEME_GENERATED.css`; product components consume its semantic
+Tailwind tokens.

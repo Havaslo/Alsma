@@ -108,8 +108,12 @@ export const EntertainmentPage = () => {
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold text-brand">Круглый год</p>
-            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Сезонные активности</h2>
-            <p className="mt-5 text-lg text-muted-ui-foreground">Развлечения на свежем воздухе круглый год</p>
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Сезонные активности
+            </h2>
+            <p className="mt-5 text-lg text-muted-ui-foreground">
+              Развлечения на свежем воздухе круглый год
+            </p>
           </div>
           <HorizontalCarousel className="mt-10" slideClassName="basis-full">
             {seasons.map((season) => (
@@ -125,25 +129,25 @@ export const EntertainmentPage = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/35 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-8 lg:p-14">
                   <div className="max-w-3xl rounded-3xl bg-page-foreground/30 p-7 backdrop-blur-sm">
-                  <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
-                    {season.label}
-                  </span>
-                  <h3 className="mt-5 font-heading text-4xl font-semibold">
-                    {season.title}
-                  </h3>
-                  <p className="mt-3 text-brand-foreground/80">
-                    {season.description}
-                  </p>
-                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                    {season.items.map((item) => (
-                      <li
-                        className="rounded-xl bg-brand-foreground/10 px-4 py-3 backdrop-blur"
-                        key={item}
-                      >
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                    <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
+                      {season.label}
+                    </span>
+                    <h3 className="mt-5 font-heading text-4xl font-semibold">
+                      {season.title}
+                    </h3>
+                    <p className="mt-3 text-brand-foreground/80">
+                      {season.description}
+                    </p>
+                    <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                      {season.items.map((item) => (
+                        <li
+                          className="rounded-xl bg-brand-foreground/10 px-4 py-3 backdrop-blur"
+                          key={item}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </article>
@@ -154,21 +158,32 @@ export const EntertainmentPage = () => {
       <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand">Каждый день</p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Программа анимации</h2>
-          <p className="mt-5 text-lg text-muted-ui-foreground">Ежедневная развлекательная программа</p>
+          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+            Программа анимации
+          </h2>
+          <p className="mt-5 text-lg text-muted-ui-foreground">
+            Ежедневная развлекательная программа
+          </p>
         </div>
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {programs.map(([time, activity, details, age]) => (
-            <article className="flex min-h-64 flex-col rounded-3xl bg-panel p-6" key={activity}>
+            <article
+              className="flex min-h-64 flex-col rounded-3xl bg-panel p-6"
+              key={activity}
+            >
               <div className="flex items-center justify-between gap-4">
-                <span className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand">{time}</span>
+                <span className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand">
+                  {time}
+                </span>
                 <span className="text-sm text-muted-ui-foreground">{age}</span>
               </div>
               <h3 className="mt-5 font-heading text-2xl font-semibold text-brand">
                 {activity}
               </h3>
               <p className="mt-3 text-muted-ui-foreground">{details}</p>
-              <p className="mt-auto pt-5 text-sm font-medium text-accent-ui-foreground">Возраст: {age}</p>
+              <p className="mt-auto pt-5 text-sm font-medium text-accent-ui-foreground">
+                Возраст: {age}
+              </p>
             </article>
           ))}
         </div>
@@ -220,24 +235,37 @@ export const EntertainmentPage = () => {
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm font-semibold text-brand">Для активного отдыха</p>
-            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">Прокат оборудования</h2>
-            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">Берите всё необходимое для прогулок, спорта и семейных игр прямо на территории комплекса — от велосипедов и SUP-бордов до зимнего инвентаря и настольных развлечений.</p>
+            <p className="text-sm font-semibold text-brand">
+              Для активного отдыха
+            </p>
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Прокат оборудования
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+              Берите всё необходимое для прогулок, спорта и семейных игр прямо
+              на территории комплекса — от велосипедов и SUP-бордов до зимнего
+              инвентаря и настольных развлечений.
+            </p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {equipment.map((group) => (
-              <article
-                className="rounded-3xl bg-panel p-7"
-                key={group.title}
-              >
+              <article className="rounded-3xl bg-panel p-7" key={group.title}>
                 <h3 className="font-heading text-3xl font-semibold text-brand">
                   {group.title}
                 </h3>
-                <p className="mt-4 leading-7 text-muted-ui-foreground">{group.description}</p>
+                <p className="mt-4 leading-7 text-muted-ui-foreground">
+                  {group.description}
+                </p>
                 <ul className="mt-6 space-y-4">
                   {group.items.map((item) => (
-                    <li className="flex items-center gap-3 rounded-2xl bg-page px-4 py-3" key={item}>
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand"><Check className="size-4" /></span> {item}
+                    <li
+                      className="flex items-center gap-3 rounded-2xl bg-page px-4 py-3"
+                      key={item}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+                        <Check className="size-4" />
+                      </span>{" "}
+                      {item}
                     </li>
                   ))}
                 </ul>

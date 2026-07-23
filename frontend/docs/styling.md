@@ -9,7 +9,7 @@
 - Do not manage `data-theme` directly from pages or components.
 - Keep component styling in Tailwind utility classes.
 - Do not hardcode color or font values in components or page styles.
-- Reuse the styled primitives in `src/components/ui` before introducing page-specific controls.
+- Reuse the product primitives in `src/components/ui` before introducing page-specific controls.
 
 ## Visual system
 
@@ -17,6 +17,6 @@
 - Prefer subtle borders and restrained shadows over stacking multiple fully outlined containers.
 - Keep interactive controls at least 2.75rem tall and use the shared focus treatment from the existing primitives.
 - Use a consistent radius hierarchy: `rounded-xl` for controls, `rounded-2xl` for inset groups, and `rounded-3xl` for major cards and overlays.
-- Use the segmented `Tabs` style for peer views. Reserve underlines for navigation that truly belongs to the page header.
 - Preserve comfortable responsive spacing. Start with compact mobile padding and increase it at `sm` and `lg` breakpoints.
-- Keep structural navigation visually separate from the viewport edges. The default `Shell` uses floating, translucent surfaces so product content remains the primary visual layer.
+- Keep structural navigation visually separate from the viewport edges so product content remains
+  the primary visual layer.

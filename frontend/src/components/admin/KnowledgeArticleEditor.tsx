@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Save, Send } from "lucide-react";
 
+import { Form } from "@/components/Form";
 import type { KnowledgeArticle } from "@/lib/admin/knowledge-base-api";
 import {
   usePublishKnowledgeArticle,
@@ -13,42 +14,38 @@ export const KnowledgeArticleEditor = ({
 }: {
   readonly article?: KnowledgeArticle;
 }) => {
-  const [title, setTitle] = useState(article?.title ?? "");
-  const [content, setContent] = useState(article?.content ?? "");
-  const [status, setStatus] = useState<KnowledgeArticle["status"]>(
-    article?.status ?? "draft",
-  );
   const save = useSaveKnowledgeArticle();
   const publish = usePublishKnowledgeArticle();
+  const form = useForm<Pick<KnowledgeArticle, "content" | "status" | "title">>({
+    defaultValues: {
+      content: article?.content ?? "",
+      status: article?.status ?? "draft",
+      title: article?.title ?? "",
+    },
+  });
+
   return (
-    <form
+    <Form
       className="grid gap-4 rounded-3xl border border-line bg-page p-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate({ content, id: article?.id, status, title });
+      form={form}
+      onSubmit={(values) => {
+        save.mutate({ ...values, id: article?.id });
       }}
     >
       <input
         className="rounded-2xl border border-line bg-panel px-4 py-3"
-        onChange={(event) => setTitle(event.target.value)}
         placeholder="Название статьи"
-        required
-        value={title}
+        {...form.register("title", { required: true })}
       />
       <textarea
         className="min-h-56 rounded-2xl border border-line bg-panel px-4 py-3 leading-7"
-        onChange={(event) => setContent(event.target.value)}
         placeholder="Подтверждённая информация для ответов агента"
-        required
-        value={content}
+        {...form.register("content", { required: true })}
       />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <select
           className="rounded-xl border border-line bg-panel px-4 py-3"
-          onChange={(event) =>
-            setStatus(event.target.value as KnowledgeArticle["status"])
-          }
-          value={status}
+          {...form.register("status")}
         >
           <option value="draft">Черновик</option>
           <option value="published">Опубликовано</option>
@@ -72,6 +69,6 @@ export const KnowledgeArticleEditor = ({
           </button>
         </div>
       </div>
-    </form>
+    </Form>
   );
 };
