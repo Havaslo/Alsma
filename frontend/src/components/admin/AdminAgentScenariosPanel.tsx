@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { Bot, CirclePlus } from "lucide-react";
+import { CirclePlus } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import type {
@@ -127,70 +127,123 @@ const RuleEditor = ({ item }: { readonly item?: AgentTransferRule }) => {
 
 export const AdminAgentScenariosPanel = () => {
   const data = useAgentScenarios();
-  const [scenarioId, setScenarioId] = useState<string>();
-  const [ruleId, setRuleId] = useState<string>();
-  const scenario = data.data?.scenarios.find((item) => item.id === scenarioId);
-  const rule = data.data?.transferRules.find((item) => item.id === ruleId);
+  const [tab, setTab] = useState<"rules" | "scenarios">("scenarios");
+  const [showNew, setShowNew] = useState(false);
+  const scenarios = data.data?.scenarios ?? [];
+  const rules = data.data?.transferRules ?? [];
+  const activeCount =
+    scenarios.filter((item) => item.enabled).length +
+    rules.filter((item) => item.enabled).length;
+
   return (
-    <section className="mt-8 rounded-3xl border border-line bg-panel p-6">
-      <p className="flex items-center gap-2 text-sm font-semibold text-brand">
-        <Bot className="size-4" /> Сценарии AI-агента
-      </p>
-      <h2 className="mt-1 font-heading text-3xl font-semibold">
-        Ответы и передача менеджеру
-      </h2>
-      <div className="mt-6 grid gap-8 xl:grid-cols-2">
-        <div>
-          <header className="flex justify-between">
-            <h3 className="text-xl font-semibold">Сценарии ответов</h3>
+    <div className="space-y-6">
+      <section className="grid gap-5 xl:grid-cols-3">
+        {[
+          ["Сценариев ответов", scenarios.length],
+          ["Правил перевода", rules.length],
+          ["Активно сейчас", activeCount],
+        ].map(([label, value]) => (
+          <article
+            className="rounded-3xl border border-line bg-brand-foreground p-5"
+            key={label}
+          >
+            <p className="text-sm text-muted-ui-foreground">{label}</p>
+            <p className="mt-3 text-3xl font-semibold text-brand">{value}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="border-b border-line">
+        <div className="flex items-end gap-8">
+          {[
+            ["scenarios", "Сценарии ответов"],
+            ["rules", "Правила перевода"],
+          ].map(([value, label]) => (
             <button
-              className="flex items-center gap-1 text-brand"
-              onClick={() => setScenarioId(undefined)}
+              className={`border-b-2 pb-3 text-base font-semibold transition ${
+                tab === value
+                  ? "border-brand text-brand"
+                  : "border-transparent text-muted-ui-foreground"
+              }`}
+              key={value}
+              onClick={() => {
+                setTab(value as "rules" | "scenarios");
+                setShowNew(false);
+              }}
               type="button"
             >
-              <CirclePlus className="size-4" /> Новый
+              {label}
             </button>
-          </header>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.data?.scenarios.map((item) => (
-              <button
-                className="rounded-full bg-brand/10 px-3 py-2 text-sm text-brand"
-                key={item.id}
-                onClick={() => setScenarioId(item.id)}
-                type="button"
-              >
-                {item.title}
-              </button>
-            ))}
-          </div>
-          <ScenarioEditor item={scenario} key={scenario?.id ?? "new"} />
+          ))}
         </div>
-        <div>
-          <header className="flex justify-between">
-            <h3 className="text-xl font-semibold">Правила передачи</h3>
-            <button
-              className="flex items-center gap-1 text-brand"
-              onClick={() => setRuleId(undefined)}
-              type="button"
-            >
-              <CirclePlus className="size-4" /> Новое
-            </button>
-          </header>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.data?.transferRules.map((item) => (
-              <button
-                className="rounded-full bg-brand/10 px-3 py-2 text-sm text-brand"
-                key={item.id}
-                onClick={() => setRuleId(item.id)}
-                type="button"
-              >
-                {item.title}
-              </button>
-            ))}
+      </section>
+
+      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-brand">
+              {tab === "scenarios" ? "Сценарии ответов" : "Правила перевода"}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
+              {tab === "scenarios"
+                ? "Изменяйте текст ответов, тон общения и дополнительные указания для новых звонков."
+                : "Определяйте, когда звонок нужно перевести человеку, поставить в обратный звонок или оставить у агента."}
+            </p>
           </div>
-          <RuleEditor item={rule} key={rule?.id ?? "new"} />
+          <button
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+            onClick={() => setShowNew(true)}
+            type="button"
+          >
+            <CirclePlus className="size-4" />
+            {tab === "scenarios" ? "Добавить сценарий" : "Добавить правило"}
+          </button>
+        </header>
+
+        <div className="mt-6 space-y-4">
+          {showNew && (
+            <article className="rounded-3xl border border-line bg-page p-5">
+              <h3 className="text-lg font-semibold text-brand">
+                {tab === "scenarios" ? "Новый сценарий" : "Новое правило"}
+              </h3>
+              {tab === "scenarios" ? <ScenarioEditor /> : <RuleEditor />}
+            </article>
+          )}
+          {tab === "scenarios"
+            ? scenarios.map((item) => (
+                <article
+                  className="rounded-3xl border border-line bg-page p-5"
+                  key={item.id}
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold text-brand">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-ui-foreground">
+                      Применение: {item.trigger}
+                    </p>
+                  </div>
+                  <ScenarioEditor item={item} />
+                </article>
+              ))
+            : rules.map((item) => (
+                <article
+                  className="rounded-3xl border border-line bg-page p-5"
+                  key={item.id}
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold text-brand">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-ui-foreground">
+                      Получатель: {item.destination}
+                    </p>
+                  </div>
+                  <RuleEditor item={item} />
+                </article>
+              ))}
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 };

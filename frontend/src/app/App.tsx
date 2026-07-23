@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import {
@@ -24,6 +24,22 @@ const publicRoutes = new Set<string>([
   AMAZI_ROUTES.blog,
   AMAZI_ROUTES.privacy,
 ]);
+
+const documentTitles: Record<string, string> = {
+  [AMAZI_ROUTES.about]: "О нас — АЛСМА",
+  [AMAZI_ROUTES.allInclusive]: "Все включено — АЛСМА",
+  [AMAZI_ROUTES.blog]: "Блог — АЛСМА",
+  [AMAZI_ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
+  [AMAZI_ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
+  [AMAZI_ROUTES.hardwareProcedures]: "Аппаратные процедуры — АЛСМА",
+  [AMAZI_ROUTES.home]: "Отель АЛСМА",
+  [AMAZI_ROUTES.login]: "Вход в личный кабинет",
+  [AMAZI_ROUTES.news]: "Новости и события — АЛСМА",
+  [AMAZI_ROUTES.offers]: "Акции — АЛСМА",
+  [AMAZI_ROUTES.privacy]: "Политика конфиденциальности — АЛСМА",
+  [AMAZI_ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
+  [AMAZI_ROUTES.spa]: "SPA-центр — АЛСМА",
+};
 
 const AboutPage = lazy(() =>
   import("@/pages/AboutPage").then(({ AboutPage }) => ({ default: AboutPage })),
@@ -93,6 +109,15 @@ const SpaPage = lazy(() =>
 
 export const App = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    document.title =
+      documentTitles[location.pathname] ??
+      (location.pathname.startsWith("/admin")
+        ? "Админ-панель — АЛСМА"
+        : "АЛСМА");
+  }, [location.pathname]);
+
   return (
     <>
       <Suspense

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useMutation } from "@tanstack/react-query";
-import { FilePenLine, Save } from "lucide-react";
+import { Save } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
@@ -244,15 +244,13 @@ export const AdminSiteContentEditor = () => {
   const stored = content.data?.items.find((item) => item.itemKey === "hero");
 
   return (
-    <section className="mt-8 rounded-3xl border border-line bg-panel p-6">
+    <section className="rounded-3xl border border-line bg-brand-foreground p-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="flex items-center gap-2 text-sm font-semibold text-brand">
-            <FilePenLine className="size-4" /> Управление сайтом
+          <h2 className="text-3xl font-semibold">Главный блок страницы</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+            Редактируйте опубликованные страницы и их коллекции.
           </p>
-          <h2 className="mt-1 font-heading text-3xl font-semibold">
-            Главный блок страницы
-          </h2>
         </div>
         <select
           className="rounded-xl border border-line bg-page px-4 py-3"

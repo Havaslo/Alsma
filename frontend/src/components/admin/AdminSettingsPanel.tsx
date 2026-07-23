@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { CirclePlus, Settings2 } from "lucide-react";
+import { CirclePlus } from "lucide-react";
 
 import { AdminRoleEditor } from "@/components/admin/AdminRoleEditor";
 import { AdminUserEditor } from "@/components/admin/AdminUserEditor";
@@ -17,13 +17,11 @@ export const AdminSettingsPanel = ({
   const role = settings.data?.roles.find((item) => item.id === roleId);
   const user = settings.data?.users.find((item) => item.id === userId);
   return (
-    <section className="mt-8 rounded-3xl border border-line bg-panel p-6">
-      <p className="flex items-center gap-2 text-sm font-semibold text-brand">
-        <Settings2 className="size-4" /> Настройки доступа
+    <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+      <h2 className="text-3xl font-semibold">Пользователи и роли</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
+        Настройте доступ сотрудников к административным разделам.
       </p>
-      <h2 className="mt-1 font-heading text-3xl font-semibold">
-        Пользователи и роли
-      </h2>
       <div className="mt-6 grid gap-8 xl:grid-cols-2">
         <div>
           <header className="flex justify-between">

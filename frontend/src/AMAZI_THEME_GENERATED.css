@@ -29,19 +29,19 @@
 :root {
   --amazi-theme-mode: light;
   color-scheme: light !important;
-  --amazi-theme-light-color-background: #f7f4ee;
+  --amazi-theme-light-color-background: #f6f3ed;
   --amazi-theme-light-color-foreground: #262626;
   --amazi-theme-light-color-surface: #efe9dc;
   --amazi-theme-light-color-surface-foreground: #262626;
   --amazi-theme-light-color-primary: #1f4d3b;
-  --amazi-theme-light-color-primary-foreground: #f7f4ee;
+  --amazi-theme-light-color-primary-foreground: #ffffff;
   --amazi-theme-light-color-secondary: #a7b8a1;
   --amazi-theme-light-color-secondary-foreground: #173a2c;
   --amazi-theme-light-color-accent: #c8a66a;
   --amazi-theme-light-color-accent-foreground: #262626;
   --amazi-theme-light-color-muted: #ded4c7;
   --amazi-theme-light-color-muted-foreground: #6c685f;
-  --amazi-theme-light-color-border: #d3cec2;
+  --amazi-theme-light-color-border: #e5dbce;
   --amazi-theme-light-color-ring: #1f4d3b;
   --amazi-theme-light-color-danger: #dc2626;
   --amazi-theme-light-color-danger-foreground: #ffffff;

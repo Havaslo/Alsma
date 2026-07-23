@@ -53,7 +53,7 @@ export const AdminOperationsPanel = ({
   ];
 
   return (
-    <section className="mt-8">
+    <section>
       {showTabs && (
         <div className="flex flex-wrap gap-2">
           {tabs.map(({ icon: Icon, id, label }) => (
@@ -61,7 +61,7 @@ export const AdminOperationsPanel = ({
               className={
                 tab === id
                   ? "inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
-                  : "inline-flex items-center gap-2 rounded-full border border-line bg-panel px-5 py-3 font-semibold text-brand"
+                  : "inline-flex items-center gap-2 rounded-full border border-line bg-brand-foreground px-5 py-3 font-semibold text-brand"
               }
               key={id}
               onClick={() => setTab(id)}
@@ -74,7 +74,7 @@ export const AdminOperationsPanel = ({
         </div>
       )}
       <div
-        className={`${showTabs ? "mt-5" : ""} overflow-hidden rounded-3xl border border-line bg-panel`}
+        className={`${showTabs ? "mt-5" : ""} overflow-hidden rounded-3xl border border-line bg-brand-foreground`}
       >
         {tab === "bookings" && (
           <div>

@@ -16,12 +16,16 @@ export const RoomsPage = () => {
   const title = typeof hero?.title === "string" ? hero.title : page.title;
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
-  const rooms = getSiteCollection(
+  const storedRooms = getSiteCollection(
     content.data?.items,
     "cards",
     ROOM_CATEGORIES,
   );
-  const comparisonRooms = ROOM_CATEGORIES;
+  const rooms =
+    storedRooms.length >= ROOM_CATEGORIES.length
+      ? storedRooms
+      : ROOM_CATEGORIES;
+  const comparisonRooms = rooms.slice(0, 4);
   const comparison = ROOM_COMPARISON;
 
   return (

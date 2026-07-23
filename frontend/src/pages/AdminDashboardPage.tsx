@@ -1,19 +1,8 @@
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-
-import {
-  ClipboardList,
-  Database,
-  LayoutDashboard,
-  LogOut,
-  Plug,
-  Settings,
-  Sparkles,
-  UsersRound,
-} from "lucide-react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
-import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
+import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import {
@@ -21,69 +10,24 @@ import {
   type AdminOperationsTab,
 } from "@/components/admin/AdminOperationsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
+import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { Loader } from "@/components/ui/Loader";
-import type { SiteLead } from "@/lib/admin/admin-api";
 import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
-import {
-  useAdmin,
-  useAdminLeads,
-  useUpdateAdminLead,
-} from "@/lib/admin/useAdmin";
+import { useAdmin } from "@/lib/admin/useAdmin";
 import { queryClient } from "@/lib/query/query-client";
-
-const labels: Record<SiteLead["status"], string> = {
-  cancelled: "Отменена",
-  completed: "Завершена",
-  new: "Новая",
-  processing: "В работе",
-};
-const menu = [
-  {
-    icon: LayoutDashboard,
-    label: "Обзор",
-    to: AMAZI_ROUTES.adminDashboard,
-  },
-  {
-    icon: ClipboardList,
-    label: "Заявки с сайта",
-    to: AMAZI_ROUTES.adminSiteLeads,
-  },
-  {
-    icon: ClipboardList,
-    label: "Бронирования",
-    to: AMAZI_ROUTES.adminBookingRequests,
-  },
-  { icon: UsersRound, label: "Клиенты", to: AMAZI_ROUTES.adminClients },
-  {
-    icon: Sparkles,
-    label: "Сценарии агента",
-    to: AMAZI_ROUTES.adminAgentScenarios,
-  },
-  {
-    icon: Database,
-    label: "База знаний",
-    to: AMAZI_ROUTES.adminKnowledgeBase,
-  },
-  {
-    icon: Settings,
-    label: "Управление сайтом",
-    to: AMAZI_ROUTES.adminSiteManagement,
-  },
-  { icon: Plug, label: "Интеграции", to: AMAZI_ROUTES.adminIntegrations },
-  { icon: Settings, label: "Настройки", to: AMAZI_ROUTES.adminSettings },
-];
 
 export const AdminDashboardPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const admin = useAdmin();
+  const path = location.pathname;
   const permissions = admin.data?.user.permissions ?? [];
   const can = (permission: string) =>
     permissions.includes("*") || permissions.includes(permission);
-  const leads = useAdminLeads(can("leads.access"));
-  const update = useUpdateAdminLead();
+
   if (admin.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
@@ -92,7 +36,7 @@ export const AdminDashboardPage = () => {
     );
   if (!admin.data?.user)
     return <Navigate replace to={AMAZI_ROUTES.adminLogin} />;
-  const path = location.pathname;
+
   const isDashboard =
     path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
@@ -103,212 +47,44 @@ export const AdminDashboardPage = () => {
         ? "clients"
         : path.startsWith("/admin/requests")
           ? "requests"
-          : isDashboard
-            ? "tasks"
-            : null;
-  const heading = isDashboard
-    ? "Обзор"
-    : isSiteLeads
-      ? "Заявки с сайта"
-      : operationTab === "bookings"
-        ? "Бронирования"
-        : operationTab === "clients"
-          ? "Клиенты"
-          : operationTab === "requests"
-            ? "Обращения"
-            : path === AMAZI_ROUTES.adminKnowledgeBase
-              ? "База знаний"
-              : path === AMAZI_ROUTES.adminAgentScenarios
-                ? "Сценарии AI-агента"
-                : path === AMAZI_ROUTES.adminSettings
-                  ? "Настройки доступа"
-                  : path === AMAZI_ROUTES.adminIntegrations
-                    ? "Интеграции"
-                    : "Управление сайтом";
+          : null;
+
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
     writeAdminSession(null);
     queryClient.clear();
     navigate(AMAZI_ROUTES.adminLogin);
   };
+
   return (
-    <main className="flex min-h-screen bg-page text-page-foreground">
-      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-brand p-6 text-brand-foreground lg:flex">
-        <img alt="АЛСМА" className="h-11 w-40 object-contain" src={logoWhite} />
-        <nav className="mt-9 flex flex-1 flex-col gap-2">
-          {menu.map(({ icon: Icon, label, to }) => (
-            <Link
-              className={
-                path === to ||
-                (to === AMAZI_ROUTES.adminClients &&
-                  path.startsWith(AMAZI_ROUTES.adminClients))
-                  ? "flex items-center gap-3 rounded-2xl bg-brand-foreground/10 px-4 py-3 text-left font-medium"
-                  : "flex items-center gap-3 rounded-2xl px-4 py-3 text-left font-medium opacity-70 transition hover:bg-brand-foreground/5 hover:opacity-100"
-              }
-              key={label}
-              to={to}
-            >
-              <span className="grid size-9 place-items-center rounded-xl bg-brand-foreground/10">
-                <Icon className="size-5" />
-              </span>
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <button
-          className="flex items-center gap-3 rounded-2xl border border-brand-foreground/15 px-4 py-3 font-semibold"
-          onClick={logout}
-          type="button"
-        >
-          <LogOut className="size-5" />
-          Выйти
-        </button>
-      </aside>
-      <section className="min-w-0 flex-1 p-5 sm:p-8">
-        <nav className="mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-          {menu.map(({ label, to }) => (
-            <Link
-              className={
-                path === to
-                  ? "shrink-0 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
-                  : "shrink-0 rounded-full border border-line bg-panel px-4 py-2 text-sm font-semibold text-brand"
-              }
-              key={to}
-              to={to}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm font-semibold text-brand">
-              Панель управления
-            </p>
-            <h1 className="mt-1 font-heading text-4xl font-semibold">
-              {heading}
-            </h1>
-          </div>
-          <div className="rounded-2xl border border-line bg-panel px-5 py-3 text-sm">
-            <strong>{admin.data.user.displayName}</strong>
-            <span className="ml-2 text-muted-ui-foreground">
-              {admin.data.user.role}
-            </span>
-          </div>
-        </header>
-        {can("leads.access") && (isDashboard || isSiteLeads) && (
-          <>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <article className="rounded-3xl border border-line bg-panel p-5">
-                <p className="text-sm text-muted-ui-foreground">Всего заявок</p>
-                <p className="mt-2 text-3xl font-semibold text-brand">
-                  {leads.data?.pagination.totalItems ?? 0}
-                </p>
-              </article>
-              <article className="rounded-3xl border border-line bg-panel p-5">
-                <p className="text-sm text-muted-ui-foreground">Новые</p>
-                <p className="mt-2 text-3xl font-semibold text-brand">
-                  {leads.data?.items.filter((item) => item.status === "new")
-                    .length ?? 0}
-                </p>
-              </article>
-              <article className="rounded-3xl border border-line bg-panel p-5">
-                <p className="text-sm text-muted-ui-foreground">В работе</p>
-                <p className="mt-2 text-3xl font-semibold text-brand">
-                  {leads.data?.items.filter(
-                    (item) => item.status === "processing",
-                  ).length ?? 0}
-                </p>
-              </article>
-            </div>
-            <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-panel">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-4xl border-collapse text-left text-sm">
-                  <thead className="bg-muted-ui text-muted-ui-foreground">
-                    <tr>
-                      <th className="px-5 py-4">Дата</th>
-                      <th className="px-5 py-4">Форма</th>
-                      <th className="px-5 py-4">Контакт</th>
-                      <th className="px-5 py-4">Детали</th>
-                      <th className="px-5 py-4">Статус</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.data?.items.map((lead) => (
-                      <tr className="border-t border-line" key={lead.id}>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          {new Date(lead.createdAt).toLocaleDateString("ru-RU")}
-                        </td>
-                        <td className="px-5 py-4 font-medium">
-                          {lead.formTitle}
-                        </td>
-                        <td className="px-5 py-4">
-                          {lead.name || lead.phone || lead.email || "Не указан"}
-                        </td>
-                        <td className="px-5 py-4 text-muted-ui-foreground">
-                          {lead.details.checkInDate
-                            ? `${lead.details.checkInDate} — ${lead.details.checkOutDate}, ${lead.details.guestsCount} гост.`
-                            : "—"}
-                        </td>
-                        <td className="px-5 py-4">
-                          <select
-                            className="rounded-xl border border-line bg-page px-3 py-2"
-                            disabled={update.isPending}
-                            onChange={(event) =>
-                              update.mutate({
-                                leadId: lead.id,
-                                status: event.target
-                                  .value as SiteLead["status"],
-                              })
-                            }
-                            value={lead.status}
-                          >
-                            {Object.entries(labels).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {leads.isLoading && (
-                <div className="grid place-items-center p-12">
-                  <Loader className="text-brand" />
-                </div>
-              )}
-              {!leads.isLoading && !leads.data?.items.length && (
-                <p className="p-12 text-center text-muted-ui-foreground">
-                  Заявок пока нет.
-                </p>
-              )}
-            </div>
-          </>
-        )}
-        {(can("dashboard.access") || can("requests.access")) &&
-          operationTab && (
-            <AdminOperationsPanel
-              initialTab={operationTab}
-              key={operationTab}
-              showTabs={isDashboard}
-            />
-          )}
-        {path === AMAZI_ROUTES.adminKnowledgeBase &&
-          can("knowledge.manage") && <AdminKnowledgeBasePanel />}
-        {path === AMAZI_ROUTES.adminAgentScenarios &&
-          can("scenarios.access") && <AdminAgentScenariosPanel />}
-        {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
-          <AdminSettingsPanel currentUserId={admin.data.user.id} />
-        )}
-        {(path === AMAZI_ROUTES.adminSiteManagement ||
-          path.startsWith(`${AMAZI_ROUTES.adminSiteManagement}/`)) &&
-          can("site.manage") && <AdminSiteContentEditor />}
-        {path === AMAZI_ROUTES.adminIntegrations &&
-          can("integrations.access") && <AdminIntegrationsPanel />}
-      </section>
-    </main>
+    <AdminShell
+      onLogout={() => void logout()}
+      path={path}
+      user={admin.data.user}
+    >
+      {isDashboard && can("dashboard.access") && <AdminDashboardOverview />}
+      {isSiteLeads && can("leads.access") && <AdminSiteLeadsTable />}
+      {(can("dashboard.access") || can("requests.access")) && operationTab && (
+        <AdminOperationsPanel
+          initialTab={operationTab}
+          key={operationTab}
+          showTabs={false}
+        />
+      )}
+      {path === AMAZI_ROUTES.adminKnowledgeBase && can("knowledge.manage") && (
+        <AdminKnowledgeBasePanel />
+      )}
+      {path === AMAZI_ROUTES.adminAgentScenarios && can("scenarios.access") && (
+        <AdminAgentScenariosPanel />
+      )}
+      {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
+        <AdminSettingsPanel currentUserId={admin.data.user.id} />
+      )}
+      {(path === AMAZI_ROUTES.adminSiteManagement ||
+        path.startsWith(`${AMAZI_ROUTES.adminSiteManagement}/`)) &&
+        can("site.manage") && <AdminSiteContentEditor />}
+      {path === AMAZI_ROUTES.adminIntegrations &&
+        can("integrations.access") && <AdminIntegrationsPanel />}
+    </AdminShell>
   );
 };
