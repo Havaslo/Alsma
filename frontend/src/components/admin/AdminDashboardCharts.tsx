@@ -1,18 +1,18 @@
 import type { ReactNode } from "react";
 
-type ChartTone = "accent" | "brand" | "destructive" | "supporting";
+import type { DashboardAnalyticsSnapshot } from "@/components/admin/admin-dashboard-analytics";
+
+type ChartTone = "blue" | "orange" | "pink" | "purple" | "teal";
 
 const toneClasses: Record<
   ChartTone,
   { readonly fill: string; readonly text: string }
 > = {
-  accent: { fill: "bg-accent-ui", text: "text-accent-ui" },
-  brand: { fill: "bg-brand", text: "text-brand" },
-  destructive: { fill: "bg-destructive", text: "text-destructive" },
-  supporting: {
-    fill: "bg-supporting",
-    text: "text-supporting-foreground",
-  },
+  blue: { fill: "bg-dashboard-blue", text: "text-dashboard-blue" },
+  orange: { fill: "bg-dashboard-orange", text: "text-dashboard-orange" },
+  pink: { fill: "bg-dashboard-pink", text: "text-dashboard-pink" },
+  purple: { fill: "bg-dashboard-purple", text: "text-dashboard-purple" },
+  teal: { fill: "bg-dashboard-teal", text: "text-dashboard-teal" },
 };
 
 const buildChartPoints = (values: readonly number[], maximum: number) => {
@@ -155,23 +155,23 @@ const ChartCard = ({
 
 const DonutChart = () => {
   const segments = [
-    { label: "Телефон", offset: 0, tone: "brand" as const, value: "52%" },
+    { label: "Телефон", offset: 0, tone: "blue" as const, value: "52%" },
     {
       label: "Сайт",
       offset: -52,
-      tone: "accent" as const,
+      tone: "orange" as const,
       value: "23%",
     },
     {
       label: "Мессенджеры",
       offset: -75,
-      tone: "supporting" as const,
+      tone: "purple" as const,
       value: "16%",
     },
     {
       label: "Соцсети",
       offset: -91,
-      tone: "destructive" as const,
+      tone: "pink" as const,
       value: "9%",
     },
   ];
@@ -224,14 +224,15 @@ const DonutChart = () => {
   );
 };
 
-const ColumnChart = () => {
+const ColumnChart = ({ values }: { readonly values: readonly number[] }) => {
   const columns = [
-    { label: "Утро", tone: "brand" as const, value: 4 },
-    { label: "День", tone: "accent" as const, value: 7 },
-    { label: "После 14", tone: "supporting" as const, value: 10 },
-    { label: "Вечер", tone: "destructive" as const, value: 14 },
-    { label: "Поздно", tone: "brand" as const, value: 16 },
+    { label: "Утро", tone: "blue" as const, value: values[0] },
+    { label: "День", tone: "orange" as const, value: values[1] },
+    { label: "После 14", tone: "purple" as const, value: values[2] },
+    { label: "Вечер", tone: "pink" as const, value: values[3] },
+    { label: "Поздно", tone: "teal" as const, value: values[4] },
   ];
+  const maximum = Math.max(...values) * 1.08;
 
   return (
     <div className="mt-6 grid h-64 grid-cols-5 items-end gap-4 rounded-2xl border border-line px-6 pt-8 pb-4">
@@ -242,7 +243,7 @@ const ColumnChart = () => {
         >
           <div
             className={`w-10 rounded-t-xl ${toneClasses[column.tone].fill}`}
-            style={{ height: `${(column.value / 20) * 100}%` }}
+            style={{ height: `${(column.value / maximum) * 100}%` }}
           />
           <span className="text-center text-xs text-muted-ui-foreground">
             {column.label}
@@ -253,12 +254,27 @@ const ColumnChart = () => {
   );
 };
 
-const StatusBars = () => {
+const StatusBars = ({ values }: { readonly values: readonly number[] }) => {
   const rows = [
-    { change: "+14%", label: "Всего обращений", value: 84, width: "100%" },
-    { change: "+5%", label: "Текущие уточнения", value: 31, width: "74%" },
-    { change: "+2%", label: "В работе", value: 18, width: "52%" },
-    { change: "-1%", label: "Передано менеджеру", value: 6, width: "31%" },
+    {
+      change: "+14%",
+      label: "Всего обращений",
+      value: values[0],
+      width: "100%",
+    },
+    {
+      change: "+5%",
+      label: "Текущие уточнения",
+      value: values[1],
+      width: "74%",
+    },
+    { change: "+2%", label: "В работе", value: values[2], width: "52%" },
+    {
+      change: "-1%",
+      label: "Передано менеджеру",
+      value: values[3],
+      width: "31%",
+    },
   ];
 
   return (
@@ -267,14 +283,14 @@ const StatusBars = () => {
         <div key={row.label}>
           <div className="flex items-center text-sm">
             <span>{row.label}</span>
-            <strong className="ml-auto text-brand">{row.value}</strong>
+            <strong className="ml-auto text-dashboard-blue">{row.value}</strong>
             <span className="ml-3 text-xs text-muted-ui-foreground">
               {row.change}
             </span>
           </div>
           <div className="mt-2 h-8 overflow-hidden rounded-xl bg-page p-1">
             <div
-              className="flex h-full items-center rounded-lg bg-brand/75 px-3 text-xs font-semibold text-brand-foreground"
+              className="flex h-full items-center rounded-lg bg-dashboard-blue px-3 text-xs font-semibold text-brand-foreground"
               style={{ width: row.width }}
             >
               {row.label}
@@ -286,7 +302,11 @@ const StatusBars = () => {
   );
 };
 
-export const AdminDashboardCharts = () => (
+export const AdminDashboardCharts = ({
+  snapshot,
+}: {
+  readonly snapshot: DashboardAnalyticsSnapshot;
+}) => (
   <div className="mt-6 grid gap-4 xl:grid-cols-2">
     <ChartCard
       description="Звонки и сообщения по всем каналам за смену с разбивкой по времени."
@@ -294,9 +314,9 @@ export const AdminDashboardCharts = () => (
     >
       <AreaChart
         labels={["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]}
-        maximum={60}
-        tone="brand"
-        values={[12, 18, 24, 48, 54, 38, 30]}
+        maximum={snapshot.contactsMaximum}
+        tone="blue"
+        values={snapshot.contacts}
       />
     </ChartCard>
     <ChartCard
@@ -305,9 +325,9 @@ export const AdminDashboardCharts = () => (
     >
       <AreaChart
         labels={["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]}
-        maximum={40}
-        tone="supporting"
-        values={[8, 12, 18, 31, 36, 28, 22]}
+        maximum={snapshot.aiMaximum}
+        tone="purple"
+        values={snapshot.aiHandled}
       />
     </ChartCard>
     <ChartCard
@@ -319,7 +339,9 @@ export const AdminDashboardCharts = () => (
           <p className="text-sm text-muted-ui-foreground">
             Всего передано менеджеру
           </p>
-          <strong className="mt-2 block text-4xl">24</strong>
+          <strong className="mt-2 block text-4xl">
+            {snapshot.managerTotal}
+          </strong>
         </div>
         <span className="text-sm">за выбранный период</span>
       </div>
@@ -329,13 +351,13 @@ export const AdminDashboardCharts = () => (
       description="Заявки и бронирования, которые были созданы в течение выбранного периода."
       title="Создано заявок"
     >
-      <StatusBars />
+      <StatusBars values={snapshot.requestCounts} />
     </ChartCard>
     <ChartCard
       description="Динамика подтверждённых броней по времени."
       title="Создано броней"
     >
-      <ColumnChart />
+      <ColumnChart values={snapshot.bookingColumns} />
     </ChartCard>
     <ChartCard
       description="Рост суммы подтверждённых броней по времени."
@@ -343,11 +365,9 @@ export const AdminDashboardCharts = () => (
     >
       <AreaChart
         labels={["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00"]}
-        maximum={2_000_000}
-        tone="accent"
-        values={[
-          180_000, 300_000, 520_000, 820_000, 1_180_000, 1_450_000, 1_850_000,
-        ]}
+        maximum={snapshot.revenueMaximum}
+        tone="orange"
+        values={snapshot.revenue}
       />
     </ChartCard>
     <div className="xl:col-span-2">
@@ -367,9 +387,9 @@ export const AdminDashboardCharts = () => (
             "17:00",
             "18:30",
           ]}
-          maximum={18}
-          tone="brand"
-          values={[6, 8, 9, 10, 13, 16, 12, 10, 8]}
+          maximum={snapshot.incomingMaximum}
+          tone="teal"
+          values={snapshot.incomingCalls}
         />
         <div className="mt-5 rounded-2xl bg-page p-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-accent-ui-foreground uppercase">

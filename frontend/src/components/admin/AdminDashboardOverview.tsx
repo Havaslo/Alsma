@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -11,6 +12,11 @@ import {
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminDashboardCharts } from "@/components/admin/AdminDashboardCharts";
 import { AdminDashboardDetails } from "@/components/admin/AdminDashboardDetails";
+import { AdminDashboardPeriodFilter } from "@/components/admin/AdminDashboardPeriodFilter";
+import {
+  buildDashboardAnalytics,
+  initialDashboardPeriod,
+} from "@/components/admin/admin-dashboard-analytics";
 
 const kpis = [
   {
@@ -65,6 +71,8 @@ const insights = [
 ] as const;
 
 export const AdminDashboardOverview = () => {
+  const [period, setPeriod] = useState(initialDashboardPeriod);
+  const analytics = useMemo(() => buildDashboardAnalytics(period), [period]);
   const calls = [
     {
       contact: "+7 921 442-18-06",
@@ -174,27 +182,10 @@ export const AdminDashboardOverview = () => {
       </section>
 
       <section className="mt-14">
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-brand-foreground p-2">
-          {["День", "Неделя", "Месяц", "Свой период"].map((period, index) => (
-            <button
-              className={
-                index === 0
-                  ? "rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
-                  : "rounded-xl px-5 py-3 text-sm font-semibold text-muted-ui-foreground"
-              }
-              key={period}
-              type="button"
-            >
-              {period}
-            </button>
-          ))}
-          <span className="ml-auto rounded-xl border border-line px-5 py-3 text-sm text-muted-ui-foreground">
-            17 июня 2026
-          </span>
-        </div>
-        <AdminDashboardCharts />
+        <AdminDashboardPeriodFilter onChange={setPeriod} selection={period} />
+        <AdminDashboardCharts snapshot={analytics} />
       </section>
-      <AdminDashboardDetails />
+      <AdminDashboardDetails snapshot={analytics} />
     </>
   );
 };

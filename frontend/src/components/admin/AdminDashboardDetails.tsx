@@ -1,25 +1,7 @@
 import { CheckCircle2, Lightbulb, RefreshCw, XCircle } from "lucide-react";
 
+import type { DashboardAnalyticsSnapshot } from "@/components/admin/admin-dashboard-analytics";
 import { Button } from "@/components/ui/Button";
-
-const channels = [
-  { label: "Телефон", tone: "bg-brand", value: 36, width: "36%" },
-  { label: "Сайт", tone: "bg-supporting", value: 28, width: "28%" },
-  { label: "Telegram", tone: "bg-accent-ui", value: 16, width: "16%" },
-  { label: "WhatsApp", tone: "bg-destructive/75", value: 12, width: "12%" },
-  {
-    label: "Email",
-    tone: "bg-supporting-foreground",
-    value: 8,
-    width: "8%",
-  },
-] as const;
-
-const funnel = [
-  { label: "Интерес к брони", value: 18, width: "100%" },
-  { label: "Созданы заявки", value: 10, width: "56%" },
-  { label: "Подтверждены", value: 6, width: "33%" },
-] as const;
 
 const recentCalls = [
   {
@@ -60,71 +42,114 @@ const recentCalls = [
   },
 ] as const;
 
-const ChannelSummary = () => (
-  <article className="rounded-3xl border border-line bg-brand-foreground p-5">
-    <h3 className="text-2xl font-semibold">Обращения по каналам</h3>
-    <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-      Распределение входящего потока между сайтом, мессенджерами и телефонией.
-    </p>
-    <div className="mt-7 flex h-4 overflow-hidden rounded-full bg-page">
-      {channels.map((channel) => (
-        <span
-          className={channel.tone}
-          key={channel.label}
-          style={{ width: channel.width }}
-        />
-      ))}
-    </div>
-    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-      {channels.map((channel) => (
-        <div
-          className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
-          key={channel.label}
-        >
-          <span className={`size-3 rounded-full ${channel.tone}`} />
-          <span className="text-sm text-muted-ui-foreground">
-            {channel.label}
-          </span>
-          <strong className="ml-auto text-brand">{channel.value}</strong>
-        </div>
-      ))}
-    </div>
-    <p className="mt-5 text-sm leading-6 text-brand">
-      Телефон и сайт остаются главными точками входа, Telegram быстро растёт.
-    </p>
-  </article>
-);
+const ChannelSummary = ({ values }: { readonly values: readonly number[] }) => {
+  const channels = [
+    {
+      label: "Телефон",
+      tone: "bg-dashboard-teal",
+      value: values[0],
+      width: "36%",
+    },
+    {
+      label: "Сайт",
+      tone: "bg-dashboard-blue",
+      value: values[1],
+      width: "28%",
+    },
+    {
+      label: "Telegram",
+      tone: "bg-dashboard-orange",
+      value: values[2],
+      width: "16%",
+    },
+    {
+      label: "WhatsApp",
+      tone: "bg-dashboard-pink",
+      value: values[3],
+      width: "12%",
+    },
+    {
+      label: "Email",
+      tone: "bg-dashboard-purple",
+      value: values[4],
+      width: "8%",
+    },
+  ];
 
-const BookingFunnel = () => (
-  <article className="rounded-3xl border border-line bg-brand-foreground p-5">
-    <h3 className="text-2xl font-semibold">Воронка бронирования</h3>
-    <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-      Показывает, на каком этапе теряются потенциальные бронирования.
-    </p>
-    <div className="mt-7 space-y-6">
-      {funnel.map((stage, index) => (
-        <div key={stage.label}>
-          <div className="flex items-center gap-3">
-            <span className="grid size-8 place-items-center rounded-full bg-page text-sm font-semibold text-brand">
-              {index + 1}
+  return (
+    <article className="rounded-3xl border border-line bg-brand-foreground p-5">
+      <h3 className="text-2xl font-semibold">Обращения по каналам</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+        Распределение входящего потока между сайтом, мессенджерами и телефонией.
+      </p>
+      <div className="mt-7 flex h-4 overflow-hidden rounded-full bg-page">
+        {channels.map((channel) => (
+          <span
+            className={channel.tone}
+            key={channel.label}
+            style={{ width: channel.width }}
+          />
+        ))}
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {channels.map((channel) => (
+          <div
+            className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
+            key={channel.label}
+          >
+            <span className={`size-3 rounded-full ${channel.tone}`} />
+            <span className="text-sm text-muted-ui-foreground">
+              {channel.label}
             </span>
-            <span>{stage.label}</span>
-            <strong className="ml-auto">{stage.value}</strong>
+            <strong className="ml-auto text-brand">{channel.value}</strong>
           </div>
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-page">
-            <div
-              className="h-full rounded-full bg-brand/75"
-              style={{ width: stage.width }}
-            />
+        ))}
+      </div>
+      <p className="mt-5 text-sm leading-6 text-brand">
+        Телефон и сайт остаются главными точками входа, Telegram быстро растёт.
+      </p>
+    </article>
+  );
+};
+
+const BookingFunnel = ({ values }: { readonly values: readonly number[] }) => {
+  const funnel = [
+    { label: "Интерес к брони", value: values[0], width: "100%" },
+    { label: "Созданы заявки", value: values[1], width: "56%" },
+    { label: "Подтверждены", value: values[2], width: "33%" },
+  ];
+
+  return (
+    <article className="rounded-3xl border border-line bg-brand-foreground p-5">
+      <h3 className="text-2xl font-semibold">Воронка бронирования</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+        Показывает, на каком этапе теряются потенциальные бронирования.
+      </p>
+      <div className="mt-7 space-y-6">
+        {funnel.map((stage, index) => (
+          <div key={stage.label}>
+            <div className="flex items-center gap-3">
+              <span className="grid size-8 place-items-center rounded-full bg-page text-sm font-semibold text-dashboard-blue">
+                {index + 1}
+              </span>
+              <span>{stage.label}</span>
+              <strong className="ml-auto">{stage.value}</strong>
+            </div>
+            <div className="mt-3 h-3 overflow-hidden rounded-full bg-page">
+              <div
+                className="h-full rounded-full bg-dashboard-blue"
+                style={{ width: stage.width }}
+              />
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-    <p className="mt-7 text-sm leading-6">
-      Больше всего внимания менеджеров требуют звонки после создания заявки.
-    </p>
-  </article>
-);
+        ))}
+      </div>
+      <p className="mt-7 text-sm leading-6">
+        Больше всего внимания менеджеров требуют звонки после создания заявки.
+      </p>
+    </article>
+  );
+};
 
 const StatusIcon = ({ type }: { readonly type: string }) => {
   if (type === "transfer") return <RefreshCw className="size-4" />;
@@ -132,11 +157,15 @@ const StatusIcon = ({ type }: { readonly type: string }) => {
   return <CheckCircle2 className="size-4" />;
 };
 
-export const AdminDashboardDetails = () => (
+export const AdminDashboardDetails = ({
+  snapshot,
+}: {
+  readonly snapshot: DashboardAnalyticsSnapshot;
+}) => (
   <>
     <section className="mt-6 grid gap-4 xl:grid-cols-2">
-      <ChannelSummary />
-      <BookingFunnel />
+      <ChannelSummary values={snapshot.channelCounts} />
+      <BookingFunnel values={snapshot.funnelCounts} />
     </section>
 
     <section className="mt-14 rounded-3xl border border-line bg-brand-foreground p-5">
