@@ -53,8 +53,12 @@ export const RoomsPage = () => {
       <section className="bg-panel py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
-            Сравнение категорий
+            Сравнительная таблица категорий
           </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-muted-ui-foreground">
+            Быстро сравните форматы по количеству гостей, площади, видам и
+            особенностям.
+          </p>
           <div className="mt-12 overflow-x-auto rounded-3xl border border-line bg-page">
             <table className="w-full min-w-3xl text-left">
               <thead className="bg-brand/10">

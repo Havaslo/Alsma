@@ -24,22 +24,31 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
       <p className="mt-7 text-sm font-semibold tracking-wide text-muted-ui-foreground uppercase">
         Оснащение номера
       </p>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2">
         {room.amenities.map((amenity) => (
-          <li className="flex items-center gap-2" key={amenity}>
-            <Check className="size-4 text-brand" /> {amenity}
+          <li className="flex items-center gap-3" key={amenity}>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10">
+              <Check className="size-4 text-brand" />
+            </span>
+            {amenity}
           </li>
         ))}
       </ul>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-8">
-        <p className="text-2xl font-semibold">
+      <div className="mt-auto flex flex-wrap items-center gap-3 pt-8">
+        <p className="w-full text-2xl font-semibold">
           {room.price} <span className="text-base font-normal">/ ночь</span>
         </p>
         <a
-          className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-          href="tel:+78000000000"
+          className="rounded-full border border-brand/15 bg-page px-6 py-3 font-semibold text-brand"
+          href="/#booking"
         >
-          Забронировать
+          Проверить даты
+        </a>
+        <a
+          className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+          href="/#booking"
+        >
+          Перейти к бронированию
         </a>
       </div>
     </div>

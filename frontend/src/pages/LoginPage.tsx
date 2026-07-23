@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -57,6 +57,8 @@ export const LoginPage = () => {
             </h1>
             <p className="mt-3 leading-7 text-muted-ui-foreground">
               Выберите способ входа и получите четырёхзначный код подтверждения.
+              Для входа по телефону код пока выводится на экран без реальной
+              отправки SMS.
             </p>
             <div className="mt-7 grid grid-cols-2 rounded-full bg-muted-ui p-1.5">
               {(["phone", "email"] as const).map((value) => (
@@ -106,6 +108,16 @@ export const LoginPage = () => {
                 Получить код
               </button>
             </Form>
+            <p className="mt-5 text-center text-sm leading-6 text-muted-ui-foreground">
+              Входя в личный кабинет, вы соглашаетесь с{" "}
+              <Link
+                className="font-semibold text-brand"
+                to={AMAZI_ROUTES.privacy}
+              >
+                политикой конфиденциальности
+              </Link>
+              .
+            </p>
           </>
         ) : (
           <>

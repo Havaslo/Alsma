@@ -21,7 +21,8 @@ import {
   useUpdateAdminRequest,
 } from "@/lib/admin/useAdmin";
 
-type Tab = "bookings" | "clients" | "requests" | "tasks";
+/** Operation view selected by the owning admin route. */
+export type AdminOperationsTab = "bookings" | "clients" | "requests" | "tasks";
 const statuses: SiteLead["status"][] = [
   "new",
   "processing",
@@ -29,8 +30,14 @@ const statuses: SiteLead["status"][] = [
   "cancelled",
 ];
 
-export const AdminOperationsPanel = () => {
-  const [tab, setTab] = useState<Tab>("bookings");
+export const AdminOperationsPanel = ({
+  initialTab = "bookings",
+  showTabs = true,
+}: {
+  readonly initialTab?: AdminOperationsTab;
+  readonly showTabs?: boolean;
+}) => {
+  const [tab, setTab] = useState<AdminOperationsTab>(initialTab);
   const bookings = useAdminBookings();
   const clients = useAdminClients();
   const requests = useAdminRequests();
@@ -47,24 +54,28 @@ export const AdminOperationsPanel = () => {
 
   return (
     <section className="mt-8">
-      <div className="flex flex-wrap gap-2">
-        {tabs.map(({ icon: Icon, id, label }) => (
-          <button
-            className={
-              tab === id
-                ? "inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
-                : "inline-flex items-center gap-2 rounded-full border border-line bg-panel px-5 py-3 font-semibold text-brand"
-            }
-            key={id}
-            onClick={() => setTab(id)}
-            type="button"
-          >
-            <Icon className="size-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-5 overflow-hidden rounded-3xl border border-line bg-panel">
+      {showTabs && (
+        <div className="flex flex-wrap gap-2">
+          {tabs.map(({ icon: Icon, id, label }) => (
+            <button
+              className={
+                tab === id
+                  ? "inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
+                  : "inline-flex items-center gap-2 rounded-full border border-line bg-panel px-5 py-3 font-semibold text-brand"
+              }
+              key={id}
+              onClick={() => setTab(id)}
+              type="button"
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        className={`${showTabs ? "mt-5" : ""} overflow-hidden rounded-3xl border border-line bg-panel`}
+      >
         {tab === "bookings" && (
           <div>
             <AdminBookingForm />

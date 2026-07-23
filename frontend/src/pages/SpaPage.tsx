@@ -45,7 +45,7 @@ export const SpaPage = () => {
           </p>
         </div>
         <div className="mt-14 space-y-10">
-          {SPA_SPACES.slice(0, 2).map((space, index) => (
+          {SPA_SPACES.map((space, index) => (
             <article
               className="overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid lg:grid-cols-2"
               key={space.title}
@@ -140,19 +140,30 @@ export const SpaPage = () => {
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
           {WATER_PROCEDURES.map((group) => (
             <article
-              className="rounded-3xl border border-line p-7"
+              className="overflow-hidden rounded-3xl bg-panel"
               key={group.title}
             >
-              <h3 className="font-heading text-2xl font-semibold text-brand">
-                {group.title}
-              </h3>
-              <ul className="mt-6 space-y-4">
-                {group.items.map((item) => (
-                  <li className="flex gap-3" key={item}>
-                    <Check className="mt-1 size-4 shrink-0 text-brand" /> {item}
-                  </li>
-                ))}
-              </ul>
+              <img
+                alt={group.title}
+                className="h-56 w-full object-cover"
+                src={group.image}
+              />
+              <div className="p-7">
+                <h3 className="font-heading text-2xl font-semibold text-brand sm:text-3xl">
+                  {group.title}
+                </h3>
+                <ul className="mt-6 space-y-3">
+                  {group.items.map((item) => (
+                    <li
+                      className="flex gap-3 rounded-2xl bg-page px-4 py-3"
+                      key={item}
+                    >
+                      <Check className="mt-1 size-4 shrink-0 text-brand" />{" "}
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </article>
           ))}
         </div>

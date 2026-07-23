@@ -51,6 +51,16 @@ export const referenceGuestBookings = [
     userId: referenceGuestIds.alex,
   },
   {
+    checkInDate: new Date("2026-01-03T00:00:00.000Z"),
+    checkOutDate: new Date("2026-01-07T00:00:00.000Z"),
+    guestsCount: 3,
+    id: testId("304"),
+    roomName: "Family Suite",
+    status: "completed",
+    totalAmount: "126500.00",
+    userId: referenceGuestIds.alex,
+  },
+  {
     checkInDate: new Date("2026-09-04T00:00:00.000Z"),
     checkOutDate: new Date("2026-09-07T00:00:00.000Z"),
     guestsCount: 4,

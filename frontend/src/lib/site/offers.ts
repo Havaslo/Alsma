@@ -1,6 +1,8 @@
+import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
 import familyImage from "@/assets/alsma/family-holiday.png";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
 import longStayImage from "@/assets/alsma/room-4.jpg";
+import programsImage from "@/assets/alsma/spa-programs.jpg";
 import spaImage from "@/assets/alsma/spa-wellness.png";
 
 export type ActiveOffer = {
@@ -73,6 +75,8 @@ export const OFFER_EVENTS = [
     date: "18 сентября 2026",
     description:
       "Камерный вечер с сет-меню, живой музыкой и возможностью продлить отдых в отеле.",
+    image: liveMusicImage,
+    month: "Сентябрь",
     tag: "Событие",
     title: "Осенний гастровечер",
   },
@@ -80,6 +84,8 @@ export const OFFER_EVENTS = [
     date: "3–5 октября 2026",
     description:
       "Насыщенная программа с лекциями, ритуалами и релаксом в wellness-пространстве.",
+    image: programsImage,
+    month: "Октябрь",
     tag: "Wellness",
     title: "SPA-фестиваль восстановления",
   },
@@ -87,6 +93,8 @@ export const OFFER_EVENTS = [
     date: "24–25 октября 2026",
     description:
       "Активности для детей, мастер-классы, пикник и размеренный отдых для родителей.",
+    image: familyImage,
+    month: "Октябрь",
     tag: "Семьям",
     title: "Семейные выходные в лесу",
   },

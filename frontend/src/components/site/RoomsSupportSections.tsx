@@ -2,7 +2,9 @@ import { useState } from "react";
 
 import { Sparkles } from "lucide-react";
 
+import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
+import { Modal } from "@/components/ui/Modal";
 import type { RoomCategory } from "@/lib/site/rooms";
 
 export const RoomsSupportSections = ({
@@ -11,6 +13,7 @@ export const RoomsSupportSections = ({
   readonly rooms: readonly RoomCategory[];
 }) => {
   const [quizOpen, setQuizOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
 
   return (
     <>
@@ -21,12 +24,21 @@ export const RoomsSupportSections = ({
               Форматы размещения
             </p>
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-              Индивидуальные и групповые корпуса
+              Индивидуальные и групповые корпуса для разных сценариев отдыха
             </h2>
             <p className="mt-5 leading-7 text-muted-ui-foreground">
-              Подберём приватный вариант для тихого отдыха или разместим семью,
-              дружескую компанию и организованный заезд рядом.
+              Если вам важны тишина, приватность и спокойный ритм, подойдут
+              индивидуальные корпуса. Для семейных поездок, ретритов и заездов
+              компанией удобнее групповые корпуса с возможностью разместиться
+              рядом.
             </p>
+            <button
+              className="mt-8 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
+              onClick={() => setRequestOpen(true)}
+              type="button"
+            >
+              Оставить заявку
+            </button>
           </div>
           <div className="grid gap-4">
             <article className="rounded-3xl bg-page p-6">
@@ -78,6 +90,23 @@ export const RoomsSupportSections = ({
         open={quizOpen}
         rooms={rooms}
       />
+      <Modal
+        className="max-w-xl"
+        closeLabel="Закрыть форму заявки"
+        onClose={() => setRequestOpen(false)}
+        open={requestOpen}
+        title="Заявка на размещение"
+      >
+        <p className="mb-6 leading-7 text-muted-ui-foreground">
+          Оставьте контакты, и мы свяжемся с вами, чтобы подобрать подходящий
+          вариант размещения.
+        </p>
+        <LeadRequestForm
+          formCode="rooms-corpuses"
+          formTitle="Заявка на размещение по корпусам"
+          sourcePage="rooms"
+        />
+      </Modal>
     </>
   );
 };

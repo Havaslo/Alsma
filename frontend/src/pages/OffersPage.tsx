@@ -35,6 +35,16 @@ export const OffersPage = () => {
     READY_SCENARIOS,
   );
   const events = getSiteCollection(content.data?.items, "events", OFFER_EVENTS);
+  const eventMonths = [
+    {
+      events: events.slice(0, 1),
+      month: events[0]?.month ?? OFFER_EVENTS[0].month,
+    },
+    {
+      events: events.slice(1),
+      month: events[1]?.month ?? OFFER_EVENTS[1].month,
+    },
+  ].filter((group) => group.events.length > 0);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -142,28 +152,68 @@ export const OffersPage = () => {
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Мероприятия и спецпредложения по месяцам
           </h2>
+          <p className="mx-auto mt-5 max-w-4xl text-lg leading-8 text-muted-ui-foreground">
+            Это не классический календарь, а удобный список событий и
+            праздничных программ, которые помогут спланировать заезд на нужные
+            даты.
+          </p>
         </div>
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {events.map((event) => (
-            <article
-              className="rounded-3xl border border-line p-7"
-              key={event.title}
+        <div className="mt-14 space-y-5">
+          {eventMonths.map((group) => (
+            <section
+              className="rounded-4xl border border-line bg-panel p-5 sm:p-6"
+              key={group.month}
             >
-              <div className="flex items-center justify-between gap-4 text-sm text-brand">
-                <span className="flex items-center gap-2">
-                  <CalendarDays className="size-4" /> {event.date}
-                </span>
-                <span className="flex items-center gap-2">
-                  <Tag className="size-4" /> {event.tag}
+              <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
+                <h3 className="font-heading text-3xl font-semibold">
+                  {group.month}
+                </h3>
+                <span className="rounded-full bg-page px-4 py-2 text-xs font-semibold tracking-wider text-brand uppercase">
+                  {group.events.length}{" "}
+                  {group.events.length === 1 ? "событие" : "события"}
                 </span>
               </div>
-              <h3 className="mt-6 font-heading text-3xl font-semibold">
-                {event.title}
-              </h3>
-              <p className="mt-4 leading-7 text-muted-ui-foreground">
-                {event.description}
-              </p>
-            </article>
+              <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {group.events.map((event) => (
+                  <article
+                    className="overflow-hidden rounded-3xl border border-line bg-page"
+                    key={event.title}
+                  >
+                    <div className="relative aspect-square overflow-hidden">
+                      <img
+                        alt={event.title}
+                        className="size-full object-cover"
+                        src={
+                          event.image ??
+                          OFFER_EVENTS[
+                            Math.min(
+                              events.indexOf(event),
+                              OFFER_EVENTS.length - 1,
+                            )
+                          ].image
+                        }
+                      />
+                      <div className="absolute inset-x-3 top-3 flex flex-wrap gap-2">
+                        <span className="flex items-center gap-2 rounded-full bg-page/90 px-3 py-2 text-xs font-semibold text-brand backdrop-blur-sm">
+                          <CalendarDays className="size-3.5" /> {event.date}
+                        </span>
+                        <span className="flex items-center gap-2 rounded-full bg-accent-ui/90 px-3 py-2 text-xs font-semibold text-accent-ui-foreground backdrop-blur-sm">
+                          <Tag className="size-3.5" /> {event.tag}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <h4 className="font-heading text-2xl font-semibold">
+                        {event.title}
+                      </h4>
+                      <p className="mt-3 leading-7 text-muted-ui-foreground">
+                        {event.description}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
         <div className="mt-12 rounded-3xl bg-brand/10 p-8">

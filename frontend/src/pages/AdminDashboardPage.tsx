@@ -1,10 +1,13 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import {
   ClipboardList,
+  Database,
   LayoutDashboard,
   LogOut,
+  Plug,
   Settings,
+  Sparkles,
   UsersRound,
 } from "lucide-react";
 
@@ -13,7 +16,10 @@ import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
-import { AdminOperationsPanel } from "@/components/admin/AdminOperationsPanel";
+import {
+  AdminOperationsPanel,
+  type AdminOperationsTab,
+} from "@/components/admin/AdminOperationsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
 import { Loader } from "@/components/ui/Loader";
@@ -34,13 +40,43 @@ const labels: Record<SiteLead["status"], string> = {
   processing: "В работе",
 };
 const menu = [
-  { icon: LayoutDashboard, label: "Обзор" },
-  { icon: ClipboardList, label: "Заявки" },
-  { icon: UsersRound, label: "Клиенты" },
-  { icon: Settings, label: "Управление сайтом" },
+  {
+    icon: LayoutDashboard,
+    label: "Обзор",
+    to: AMAZI_ROUTES.adminDashboard,
+  },
+  {
+    icon: ClipboardList,
+    label: "Заявки с сайта",
+    to: AMAZI_ROUTES.adminSiteLeads,
+  },
+  {
+    icon: ClipboardList,
+    label: "Бронирования",
+    to: AMAZI_ROUTES.adminBookingRequests,
+  },
+  { icon: UsersRound, label: "Клиенты", to: AMAZI_ROUTES.adminClients },
+  {
+    icon: Sparkles,
+    label: "Сценарии агента",
+    to: AMAZI_ROUTES.adminAgentScenarios,
+  },
+  {
+    icon: Database,
+    label: "База знаний",
+    to: AMAZI_ROUTES.adminKnowledgeBase,
+  },
+  {
+    icon: Settings,
+    label: "Управление сайтом",
+    to: AMAZI_ROUTES.adminSiteManagement,
+  },
+  { icon: Plug, label: "Интеграции", to: AMAZI_ROUTES.adminIntegrations },
+  { icon: Settings, label: "Настройки", to: AMAZI_ROUTES.adminSettings },
 ];
 
 export const AdminDashboardPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const admin = useAdmin();
   const permissions = admin.data?.user.permissions ?? [];
@@ -56,6 +92,39 @@ export const AdminDashboardPage = () => {
     );
   if (!admin.data?.user)
     return <Navigate replace to={AMAZI_ROUTES.adminLogin} />;
+  const path = location.pathname;
+  const isDashboard =
+    path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
+  const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
+  const operationTab: AdminOperationsTab | null =
+    path === AMAZI_ROUTES.adminBookingRequests
+      ? "bookings"
+      : path.startsWith(AMAZI_ROUTES.adminClients)
+        ? "clients"
+        : path.startsWith("/admin/requests")
+          ? "requests"
+          : isDashboard
+            ? "tasks"
+            : null;
+  const heading = isDashboard
+    ? "Обзор"
+    : isSiteLeads
+      ? "Заявки с сайта"
+      : operationTab === "bookings"
+        ? "Бронирования"
+        : operationTab === "clients"
+          ? "Клиенты"
+          : operationTab === "requests"
+            ? "Обращения"
+            : path === AMAZI_ROUTES.adminKnowledgeBase
+              ? "База знаний"
+              : path === AMAZI_ROUTES.adminAgentScenarios
+                ? "Сценарии AI-агента"
+                : path === AMAZI_ROUTES.adminSettings
+                  ? "Настройки доступа"
+                  : path === AMAZI_ROUTES.adminIntegrations
+                    ? "Интеграции"
+                    : "Управление сайтом";
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
     writeAdminSession(null);
@@ -67,21 +136,23 @@ export const AdminDashboardPage = () => {
       <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-brand p-6 text-brand-foreground lg:flex">
         <img alt="АЛСМА" className="h-11 w-40 object-contain" src={logoWhite} />
         <nav className="mt-9 flex flex-1 flex-col gap-2">
-          {menu.map(({ icon: Icon, label }, index) => (
-            <button
+          {menu.map(({ icon: Icon, label, to }) => (
+            <Link
               className={
-                index === 1
+                path === to ||
+                (to === AMAZI_ROUTES.adminClients &&
+                  path.startsWith(AMAZI_ROUTES.adminClients))
                   ? "flex items-center gap-3 rounded-2xl bg-brand-foreground/10 px-4 py-3 text-left font-medium"
                   : "flex items-center gap-3 rounded-2xl px-4 py-3 text-left font-medium opacity-70 transition hover:bg-brand-foreground/5 hover:opacity-100"
               }
               key={label}
-              type="button"
+              to={to}
             >
               <span className="grid size-9 place-items-center rounded-xl bg-brand-foreground/10">
                 <Icon className="size-5" />
               </span>
               {label}
-            </button>
+            </Link>
           ))}
         </nav>
         <button
@@ -94,13 +165,28 @@ export const AdminDashboardPage = () => {
         </button>
       </aside>
       <section className="min-w-0 flex-1 p-5 sm:p-8">
+        <nav className="mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+          {menu.map(({ label, to }) => (
+            <Link
+              className={
+                path === to
+                  ? "shrink-0 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
+                  : "shrink-0 rounded-full border border-line bg-panel px-4 py-2 text-sm font-semibold text-brand"
+              }
+              key={to}
+              to={to}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
         <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-semibold text-brand">
               Панель управления
             </p>
             <h1 className="mt-1 font-heading text-4xl font-semibold">
-              Заявки с сайта
+              {heading}
             </h1>
           </div>
           <div className="rounded-2xl border border-line bg-panel px-5 py-3 text-sm">
@@ -110,7 +196,7 @@ export const AdminDashboardPage = () => {
             </span>
           </div>
         </header>
-        {can("leads.access") && (
+        {can("leads.access") && (isDashboard || isSiteLeads) && (
           <>
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <article className="rounded-3xl border border-line bg-panel p-5">
@@ -202,16 +288,26 @@ export const AdminDashboardPage = () => {
             </div>
           </>
         )}
-        {(can("dashboard.access") || can("requests.access")) && (
-          <AdminOperationsPanel />
-        )}
-        {can("knowledge.manage") && <AdminKnowledgeBasePanel />}
-        {can("scenarios.access") && <AdminAgentScenariosPanel />}
-        {can("settings.access") && (
+        {(can("dashboard.access") || can("requests.access")) &&
+          operationTab && (
+            <AdminOperationsPanel
+              initialTab={operationTab}
+              key={operationTab}
+              showTabs={isDashboard}
+            />
+          )}
+        {path === AMAZI_ROUTES.adminKnowledgeBase &&
+          can("knowledge.manage") && <AdminKnowledgeBasePanel />}
+        {path === AMAZI_ROUTES.adminAgentScenarios &&
+          can("scenarios.access") && <AdminAgentScenariosPanel />}
+        {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
           <AdminSettingsPanel currentUserId={admin.data.user.id} />
         )}
-        {can("site.manage") && <AdminSiteContentEditor />}
-        {can("integrations.access") && <AdminIntegrationsPanel />}
+        {(path === AMAZI_ROUTES.adminSiteManagement ||
+          path.startsWith(`${AMAZI_ROUTES.adminSiteManagement}/`)) &&
+          can("site.manage") && <AdminSiteContentEditor />}
+        {path === AMAZI_ROUTES.adminIntegrations &&
+          can("integrations.access") && <AdminIntegrationsPanel />}
       </section>
     </main>
   );
