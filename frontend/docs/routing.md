@@ -7,5 +7,6 @@
 - Do not hardcode application route paths in components or declare them in another file.
 - Keep wildcard and other non-navigable route patterns as separate named constants in `src/AMAZI_ROUTES.ts`.
 - `AMAZI_ROUTES` must contain only paths that the Amazi preview can offer for navigation.
+- Preserve the `initializePreviewRouteSync()` call in `src/main.tsx`; it synchronizes navigation in both directions so the Amazi preview toolbar can navigate the mounted SPA and reflect in-app route changes without exposing the preview origin.
 - Use React Router's `generatePath` with an imported `AMAZI_ROUTES` entry when constructing a dynamic URL.
 - Do not put backend `/api` endpoint paths in `AMAZI_ROUTES`.
