@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 
 import { Form } from "@/components/Form";
+import { AdminSiteCollectionEditor } from "@/components/admin/AdminSiteCollectionEditor";
 import { Loader } from "@/components/ui/Loader";
 import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES, type PublicPageKey } from "@/lib/site/public-pages";
@@ -15,7 +16,20 @@ import {
   useSaveAdminSiteContent,
 } from "@/lib/site/useSiteContent";
 
-const sections = Object.keys(PUBLIC_PAGES) as PublicPageKey[];
+const sections: PublicPageKey[] = [
+  "home",
+  "rooms",
+  "spa",
+  "entertainment",
+  "all-inclusive",
+  "offers",
+  "news",
+  "blog",
+  "celebrations",
+  "hardware-procedures",
+  "about",
+  "privacy",
+];
 
 type ContentFormProps = {
   section: PublicPageKey;
@@ -136,154 +150,63 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
   );
 };
 
-type CollectionSection = keyof typeof SITE_COLLECTIONS;
-const CollectionForm = ({
-  items,
-  section,
-}: {
-  readonly items: SiteContentItem[];
-  readonly section: CollectionSection;
-}) => {
-  const collections = SITE_COLLECTIONS[section] as Record<
-    string,
-    readonly unknown[]
-  >;
-  const keys = Object.keys(collections);
-  const firstItemKey = keys[0] ?? "items";
-  const initialStored = items.find((item) => item.itemKey === firstItemKey);
-  const form = useForm({
-    defaultValues: {
-      itemKey: firstItemKey,
-      json: JSON.stringify(
-        initialStored?.content.items ?? collections[firstItemKey] ?? [],
-        null,
-        2,
-      ),
-    },
-  });
-  const save = useSaveAdminSiteContent();
-  const selectCollection = (key: string) => {
-    form.setValue("itemKey", key);
-    const item = items.find((entry) => entry.itemKey === key);
-    form.setValue(
-      "json",
-      JSON.stringify(item?.content.items ?? collections[key] ?? [], null, 2),
-    );
-    form.clearErrors("json");
-  };
-
-  return (
-    <Form
-      className="mt-8 border-t border-line pt-6"
-      form={form}
-      onSubmit={(values) => {
-        try {
-          const parsed = JSON.parse(values.json) as unknown;
-          if (!Array.isArray(parsed)) throw new Error();
-          form.clearErrors("json");
-          save.mutate({
-            content: { items: parsed },
-            itemKey: values.itemKey,
-            position: 10,
-            section,
-            status: "published",
-            title: values.itemKey,
-          });
-        } catch {
-          form.setError("json", {
-            message: "Введите корректный JSON-массив.",
-            type: "validate",
-          });
-        }
-      }}
-    >
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h3 className="font-heading text-2xl font-semibold">
-            Коллекции страницы
-          </h3>
-          <p className="mt-1 text-sm text-muted-ui-foreground">
-            Карточки и списки публикуются сразу после сохранения.
-          </p>
-        </div>
-        <select
-          className="rounded-xl border border-line bg-page px-4 py-3"
-          {...form.register("itemKey", {
-            onChange: (event) => selectCollection(event.target.value),
-          })}
-        >
-          {keys.map((key) => (
-            <option key={key} value={key}>
-              {key}
-            </option>
-          ))}
-        </select>
-      </div>
-      <textarea
-        className="mt-4 min-h-96 w-full rounded-2xl border border-line bg-page p-4 font-mono text-sm outline-none focus:border-focus"
-        {...form.register("json")}
-      />
-      {form.formState.errors.json?.message && (
-        <p className="text-danger mt-2 text-sm">
-          {form.formState.errors.json.message}
-        </p>
-      )}
-      <button
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-        type="submit"
-      >
-        <Save className="size-4" /> Сохранить коллекцию
-      </button>
-    </Form>
-  );
-};
-
 export const AdminSiteContentEditor = () => {
-  const [section, setSection] = useState<PublicPageKey>("rooms");
+  const [section, setSection] = useState<PublicPageKey>("home");
   const content = useAdminSiteContent(section);
   const stored = content.data?.items.find((item) => item.itemKey === "hero");
 
   return (
-    <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-3xl font-semibold">Главный блок страницы</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-            Редактируйте опубликованные страницы и их коллекции.
-          </p>
+    <div className="space-y-5">
+      <nav className="flex gap-2 overflow-x-auto border-b border-line pb-3">
+        {sections.map((key) => (
+          <button
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
+              section === key
+                ? "bg-brand text-brand-foreground"
+                : "border border-line bg-brand-foreground text-brand"
+            }`}
+            key={key}
+            onClick={() => setSection(key)}
+            type="button"
+          >
+            {PUBLIC_PAGES[key].eyebrow}
+          </button>
+        ))}
+      </nav>
+
+      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-semibold text-brand">
+              {PUBLIC_PAGES[section].eyebrow}
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold">Hero-блок</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+              Редактируйте первый экран страницы: заголовок, описание и медиа.
+            </p>
+          </div>
         </div>
-        <select
-          className="rounded-xl border border-line bg-page px-4 py-3"
-          onChange={(event) => setSection(event.target.value as PublicPageKey)}
-          value={section}
-        >
-          {sections.map((key) => (
-            <option key={key} value={key}>
-              {PUBLIC_PAGES[key].eyebrow}
-            </option>
-          ))}
-        </select>
-      </div>
-      {content.isLoading ? (
-        <div className="grid place-items-center p-12">
-          <Loader className="text-brand" />
-        </div>
-      ) : (
-        <>
-          <ContentForm
-            key={`${section}:${stored?.id ?? "new"}`}
-            section={section}
-            stored={stored}
-          />
-          {section in SITE_COLLECTIONS && (
-            <CollectionForm
-              items={content.data?.items ?? []}
-              key={`collections:${section}`}
-              section={section as CollectionSection}
+        {content.isLoading ? (
+          <div className="grid place-items-center p-12">
+            <Loader className="text-brand" />
+          </div>
+        ) : (
+          <>
+            <ContentForm
+              key={`${section}:${stored?.id ?? "new"}`}
+              section={section}
+              stored={stored}
             />
-          )}
-        </>
-      )}
-    </section>
+            {section in SITE_COLLECTIONS && (
+              <AdminSiteCollectionEditor
+                items={content.data?.items ?? []}
+                key={`collections:${section}`}
+                section={section as keyof typeof SITE_COLLECTIONS}
+              />
+            )}
+          </>
+        )}
+      </section>
+    </div>
   );
 };

@@ -2,13 +2,12 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
+import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingRequestsPanel";
+import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
-import {
-  AdminOperationsPanel,
-  type AdminOperationsTab,
-} from "@/components/admin/AdminOperationsPanel";
+import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
@@ -40,14 +39,6 @@ export const AdminDashboardPage = () => {
   const isDashboard =
     path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
-  const operationTab: AdminOperationsTab | null =
-    path === AMAZI_ROUTES.adminBookingRequests
-      ? "bookings"
-      : path.startsWith(AMAZI_ROUTES.adminClients)
-        ? "clients"
-        : path.startsWith("/admin/requests")
-          ? "requests"
-          : null;
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
@@ -64,12 +55,12 @@ export const AdminDashboardPage = () => {
     >
       {isDashboard && can("dashboard.access") && <AdminDashboardOverview />}
       {isSiteLeads && can("leads.access") && <AdminSiteLeadsTable />}
-      {(can("dashboard.access") || can("requests.access")) && operationTab && (
-        <AdminOperationsPanel
-          initialTab={operationTab}
-          key={operationTab}
-          showTabs={false}
-        />
+      {path === AMAZI_ROUTES.adminBookingRequests &&
+        can("dashboard.access") && <AdminBookingRequestsPanel />}
+      {path.startsWith(AMAZI_ROUTES.adminClients) &&
+        can("dashboard.access") && <AdminClientsPanel />}
+      {path.startsWith("/admin/requests") && can("requests.access") && (
+        <AdminRequestsPanel />
       )}
       {path === AMAZI_ROUTES.adminKnowledgeBase && can("knowledge.manage") && (
         <AdminKnowledgeBasePanel />

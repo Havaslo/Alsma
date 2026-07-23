@@ -40,26 +40,35 @@ const ScenarioEditor = ({ item }: { readonly item?: AgentScenario }) => {
         save.mutate({ ...values, id: item?.id });
       }}
     >
-      <input
-        className={fieldClass}
-        placeholder="Название сценария"
-        {...form.register("title", { required: true })}
-      />
-      <select className={fieldClass} {...form.register("trigger")}>
-        {[
-          "Консультации",
-          "Бронирование",
-          "Перевод на менеджера",
-          "Запасной ответ",
-        ].map((value) => (
-          <option key={value}>{value}</option>
-        ))}
-      </select>
-      <textarea
-        className={`${fieldClass} min-h-36`}
-        placeholder="Текст и инструкции ответа"
-        {...form.register("response", { required: true })}
-      />
+      <label className="text-sm font-medium">
+        Название сценария
+        <input
+          className={`mt-2 ${fieldClass}`}
+          placeholder="Название сценария"
+          {...form.register("title", { required: true })}
+        />
+      </label>
+      <label className="text-sm font-medium">
+        Где применяется
+        <select className={`mt-2 ${fieldClass}`} {...form.register("trigger")}>
+          {[
+            "Консультации",
+            "Бронирование",
+            "Перевод на менеджера",
+            "Запасной ответ",
+          ].map((value) => (
+            <option key={value}>{value}</option>
+          ))}
+        </select>
+      </label>
+      <label className="text-sm font-medium">
+        Текст сценария
+        <textarea
+          className={`mt-2 min-h-36 ${fieldClass}`}
+          placeholder="Текст и инструкции ответа"
+          {...form.register("response", { required: true })}
+        />
+      </label>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" {...form.register("enabled")} /> Активен
       </label>
@@ -97,21 +106,30 @@ const RuleEditor = ({ item }: { readonly item?: AgentTransferRule }) => {
         save.mutate({ ...values, id: item?.id });
       }}
     >
-      <input
-        className={fieldClass}
-        placeholder="Название правила"
-        {...form.register("title", { required: true })}
-      />
-      <input
-        className={fieldClass}
-        placeholder="Кому передать"
-        {...form.register("destination", { required: true })}
-      />
-      <textarea
-        className={`${fieldClass} min-h-32`}
-        placeholder="Условия передачи"
-        {...form.register("condition", { required: true })}
-      />
+      <label className="text-sm font-medium">
+        Название правила
+        <input
+          className={`mt-2 ${fieldClass}`}
+          placeholder="Название правила"
+          {...form.register("title", { required: true })}
+        />
+      </label>
+      <label className="text-sm font-medium">
+        Кому передать
+        <input
+          className={`mt-2 ${fieldClass}`}
+          placeholder="Менеджер бронирования"
+          {...form.register("destination", { required: true })}
+        />
+      </label>
+      <label className="text-sm font-medium">
+        Условия правила
+        <textarea
+          className={`mt-2 min-h-32 ${fieldClass}`}
+          placeholder="Условия передачи"
+          {...form.register("condition", { required: true })}
+        />
+      </label>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" {...form.register("enabled")} /> Активно
       </label>
@@ -137,6 +155,14 @@ export const AdminAgentScenariosPanel = () => {
 
   return (
     <div className="space-y-6">
+      <section>
+        <h1 className="text-3xl font-semibold text-brand">Сценарии агентов</h1>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
+          Управляйте готовыми ответами и правилами перевода, чтобы агент говорил
+          в нужном тоне и вовремя подключал менеджера.
+        </p>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-3">
         {[
           ["Сценариев ответов", scenarios.length],

@@ -28,6 +28,18 @@ const publicRoutes = new Set<string>([
 const documentTitles: Record<string, string> = {
   [AMAZI_ROUTES.about]: "О нас — АЛСМА",
   [AMAZI_ROUTES.allInclusive]: "Все включено — АЛСМА",
+  [AMAZI_ROUTES.adminAgentScenarios]: "Сценарии агентов",
+  [AMAZI_ROUTES.adminBookingRequests]:
+    "Заявки на бронирование — админ-панель ALSMA",
+  [AMAZI_ROUTES.adminClients]: "Клиенты — админ-панель ALSMA",
+  [AMAZI_ROUTES.adminDashboard]: "Админ-панель ALSMA",
+  [AMAZI_ROUTES.adminIntegrations]: "Интеграции — админ-панель ALSMA",
+  [AMAZI_ROUTES.adminKnowledgeBase]: "База знаний",
+  [AMAZI_ROUTES.adminLogin]: "Вход в админ-панель — АЛСМА",
+  [AMAZI_ROUTES.adminRequests]: "Обращения — админ-панель ALSMA",
+  [AMAZI_ROUTES.adminSettings]: "Настройки",
+  [AMAZI_ROUTES.adminSiteLeads]: "Заявки сайта — админ-панель ALSMA",
+  [AMAZI_ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель ALSMA",
   [AMAZI_ROUTES.blog]: "Блог — АЛСМА",
   [AMAZI_ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
   [AMAZI_ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
@@ -113,9 +125,15 @@ export const App = () => {
   useEffect(() => {
     document.title =
       documentTitles[location.pathname] ??
-      (location.pathname.startsWith("/admin")
-        ? "Админ-панель — АЛСМА"
-        : "АЛСМА");
+      (location.pathname.startsWith(AMAZI_ROUTES.adminClients)
+        ? documentTitles[AMAZI_ROUTES.adminClients]
+        : location.pathname.startsWith(AMAZI_ROUTES.adminRequests)
+          ? documentTitles[AMAZI_ROUTES.adminRequests]
+          : location.pathname.startsWith(AMAZI_ROUTES.adminSiteManagement)
+            ? documentTitles[AMAZI_ROUTES.adminSiteManagement]
+            : location.pathname.startsWith("/admin")
+              ? "Админ-панель ALSMA"
+              : "АЛСМА");
   }, [location.pathname]);
 
   return (

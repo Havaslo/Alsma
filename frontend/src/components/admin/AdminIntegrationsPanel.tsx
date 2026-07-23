@@ -1,6 +1,6 @@
 import { MessageCircle, PhoneCall, RefreshCw } from "lucide-react";
 
-const integrations = [
+const integrationOverview = [
   {
     description: "Бронирования, доступность номеров, тарифы и передача заявок.",
     icon: RefreshCw,
@@ -8,10 +8,16 @@ const integrations = [
     title: "PMS Eptera",
   },
   {
-    description: "Уведомления о новых заявках и работа чат-агентов.",
+    description: "Канал для уведомлений, заявок и ответов чат-агента.",
     icon: MessageCircle,
     status: "Ожидает данных",
-    title: "MAX и ВКонтакте",
+    title: "MAX",
+  },
+  {
+    description: "Канал для уведомлений и сообщений сообщества.",
+    icon: MessageCircle,
+    status: "Ожидает данных",
+    title: "ВКонтакте",
   },
   {
     description: "Приём звонков, голосовые ответы и перевод на менеджера.",
@@ -19,6 +25,16 @@ const integrations = [
     status: "Нужно согласование",
     title: "Телефония",
   },
+] as const;
+
+const integrationDetails = [
+  integrationOverview[0],
+  {
+    description: "Уведомления о новых заявках и работа чат-агентов.",
+    status: "Ожидает данных",
+    title: "MAX и ВКонтакте",
+  },
+  integrationOverview[3],
 ] as const;
 
 const integrationFields = {
@@ -54,8 +70,8 @@ export const AdminIntegrationsPanel = () => (
       </p>
     </section>
 
-    <section className="grid gap-4 xl:grid-cols-3">
-      {integrations.map(({ description, icon: Icon, status, title }) => (
+    <section className="grid gap-4 xl:grid-cols-4">
+      {integrationOverview.map(({ description, icon: Icon, status, title }) => (
         <article
           className="rounded-3xl border border-line bg-brand-foreground p-5"
           key={title}
@@ -78,7 +94,7 @@ export const AdminIntegrationsPanel = () => (
 
     <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <div className="space-y-6">
-        {integrations.map(({ description, status, title }) => (
+        {integrationDetails.map(({ description, status, title }) => (
           <article
             className="rounded-3xl border border-line bg-brand-foreground p-6"
             key={`details-${title}`}
