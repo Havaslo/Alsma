@@ -5,6 +5,12 @@
 `backend/` owns the project's Express TypeScript API. Keep browser UI and client-side state in
 `frontend/`; communicate with them through HTTP contracts.
 
+## Required Guidance
+
+- Read [available environment variables](docs/AMAZI_ENV_DOCS_GENERATED.md) before reading configuration or using an integration.
+- Read `docs/libraries.md` before selecting a backend library or introducing a new infrastructure dependency.
+- Read `docs/file-storage.md` before implementing uploads, downloads, or generated persistent files.
+
 ## Architecture
 
 - Keep `src/server.ts` limited to process startup and shutdown concerns.
@@ -48,6 +54,17 @@
 - Run migrations before accepting HTTP traffic. Keep `GET /health` independent of PostgreSQL and
   use `GET /api/health` for database readiness.
 
+## File storage
+
+- Store persistent user files through `src/lib/storage/managed-storage.ts`; do not store large
+  binaries in PostgreSQL, the Git workspace, container filesystems, or base64 fields.
+- Keep `AMAZI_STORAGE_PROJECT_TOKEN` server-only. Never expose it to frontend code, logs, responses,
+  attachments, or user-configurable environment variables.
+- Let browsers upload bytes directly to signed URLs. Project backend endpoints should broker upload
+  creation and signed downloads, then persist returned object IDs in domain records.
+- Treat preview and production storage as separate environments. Do not copy stored objects into
+  clones or templates unless a product requirement explicitly defines a safe copy workflow.
+
 ## HTTP
 
 - Keep `GET /health` lightweight and independent of optional integrations.
@@ -66,17 +83,8 @@
 - The platform owns the backend development process. Do not start a duplicate server from frontend
   code or replace the configured `dev` script with a detached process.
 
-## Dependencies and Checks
+## Dependencies
 
-Use `pnpm` and keep `package.json` and `pnpm-lock.yaml` synchronized. Before completing backend
-changes, run:
-
-```text
-pnpm run typecheck
-pnpm run build
-pnpm run db:generate
-pnpm run db:check
-pnpm run format:check
-```
+Use `pnpm` and keep `package.json` and `pnpm-lock.yaml` synchronized.
 
 Never read, print, or commit secrets or local environment files.

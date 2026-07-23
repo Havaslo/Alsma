@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/lib/theme/useTheme";
 
 export const ThemeToggle = () => {
-  const { mode, projectThemeMode, setMode } = useTheme();
-
-  if (projectThemeMode !== "both") return null;
+  const { mode, setMode } = useTheme();
 
   const isDark = mode === "dark";
   const Icon = isDark ? Moon : Sun;

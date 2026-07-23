@@ -2,10 +2,9 @@
 @import "tailwindcss";
 @import "./AMAZI_THEME_GENERATED.css";
 
-/*:root {
-  --color-somecolor: ...;
-  --font-somefont: ...;
-}*/
+@theme {
+  --color-scrim: #000000;
+}
 
 @layer base {
   * {
@@ -13,17 +12,21 @@
   }
 
   html {
-    @apply bg-page;
+    @apply scroll-smooth bg-page;
   }
 
   body {
-    @apply m-0 min-w-80 bg-page font-body text-page-foreground antialiased;
+    @apply m-0 min-h-screen min-w-80 bg-page font-body text-page-foreground antialiased;
   }
 
   h1,
   h2,
   h3 {
     letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    @apply bg-brand/20 text-page-foreground;
   }
 
   button,
@@ -59,6 +62,26 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+}
+
+@utility field-control {
+  @apply min-h-11 w-full rounded-xl border border-line/70 bg-panel/80 px-3.5 py-2.5 text-sm text-panel-foreground shadow-sm shadow-page-foreground/5 transition outline-none;
+
+  &::placeholder {
+    @apply text-muted-ui-foreground;
+  }
+
+  &:focus {
+    @apply border-focus ring-4 ring-focus/10;
+  }
+
+  &:disabled {
+    @apply cursor-not-allowed bg-muted-ui text-muted-ui-foreground;
+  }
+
+  &[aria-invalid="true"] {
+    @apply border-destructive ring-2 ring-destructive/20;
+  }
 }
 
 @utility scrollbar-none {

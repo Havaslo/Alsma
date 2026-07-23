@@ -3,6 +3,9 @@
 This project contains a Vite React frontend and an Express TypeScript backend in one Git workspace.
 The applications keep independent dependencies and lockfiles.
 
+The backend includes managed project file storage for persistent uploads and generated files. See
+`backend/docs/file-storage.md` for the direct signed upload, download, and deletion flow.
+
 ## Frontend
 
 ```bash
@@ -29,8 +32,10 @@ pnpm run dev
 The backend listens on port `3000` by default. `GET /health` is the container liveness endpoint;
 application routes live under `/api`, starting with `GET /api/health` and `GET /api/hello`.
 `GET /api/health` checks PostgreSQL readiness and returns a safe `503` response when the database is
-unavailable. The platform supplies `DATABASE_URL`, starts the database, and does not publish the
-backend port directly.
+unavailable. The platform supplies `DATABASE_URL`, the managed storage API URL and project token,
+starts the database, and does not publish the backend port directly. Standalone development must
+export values for `AMAZI_STORAGE_API_URL` and `AMAZI_STORAGE_PROJECT_TOKEN` that point to a compatible
+storage service before starting the backend.
 
 The backend uses Prisma ORM with PostgreSQL. Models live in `prisma/schema.prisma`, the tracked
 migration history lives in `prisma/migrations/`, and `pnpm run db:migrate` applies pending migrations
@@ -46,12 +51,14 @@ pnpm run db:check
 Create the single migration for a logical schema change with `pnpm exec prisma migrate dev --name
 <change-name>`. Amend an unshipped migration instead of adding corrective migration files.
 
-The platform generates application-local `AMAZI_ENV_GENERATED.env` files and the matching
-`AMAZI_ENV_DOCS_GENERATED.md` documentation. Do not edit generated files or commit generated env
-values. Configure project variables through the Amazi Environment editor, which separates backend,
-secret frontend, and browser-visible `VITE_*` values. For standalone local development, export
-overrides in the shell as shown above. Never expose `DATABASE_URL` to frontend code.
+The platform generates application-local `AMAZI_ENV_GENERATED.env` files and matching
+`docs/AMAZI_ENV_DOCS_GENERATED.md` documentation. Do not edit generated files or commit generated
+env values. Configure project variables through the Amazi Environment editor. Custom values are
+copied into both applications but remain unavailable to browser code because custom names cannot
+use the `VITE_` prefix. For standalone local development, export overrides in the shell as shown
+above. `AMAZI_STORAGE_API_URL` and `AMAZI_STORAGE_PROJECT_TOKEN` are platform-managed backend
+values; never expose the storage token or `DATABASE_URL` to frontend code.
 
 The platform initializes `frontend/src/AMAZI_THEME_GENERATED.css` with the creator's resolved Amazi
-theme. Project style settings can later lock the project to light or dark, or enable both palettes
-and the included theme toggle.
+theme. Project style settings always retain light and dark palettes while allowing the preferred
+theme to follow the system or stay fixed to light or dark.

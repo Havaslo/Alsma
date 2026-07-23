@@ -10,3 +10,4 @@
 - Preserve the `initializePreviewRouteSync()` call in `src/main.tsx`; it synchronizes navigation in both directions so the Amazi preview toolbar can navigate the mounted SPA and reflect in-app route changes without exposing the preview origin.
 - Use React Router's `generatePath` with an imported `AMAZI_ROUTES` entry when constructing a dynamic URL.
 - Do not put backend `/api` endpoint paths in `AMAZI_ROUTES`.
+- Render `NotFoundPage` for the wildcard route instead of redirecting silently. Use `ErrorPage` as the reusable fatal route-level failure screen.

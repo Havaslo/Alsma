@@ -34,6 +34,27 @@ export default defineConfig(() => {
   const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "";
 
   return {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: (id: string) => {
+            if (id.includes("/node_modules/embla-carousel")) {
+              return "carousel";
+            }
+
+            if (
+              id.includes("/node_modules/framer-motion") ||
+              id.includes("/node_modules/motion-dom") ||
+              id.includes("/node_modules/motion/")
+            ) {
+              return "motion";
+            }
+
+            return undefined;
+          },
+        },
+      },
+    },
     define: {
       "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBaseUrl),
     },

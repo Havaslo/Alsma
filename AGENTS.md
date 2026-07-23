@@ -11,20 +11,11 @@ Read the nearest `AGENTS.md` before changing either application. Keep changes sc
 application that owns the behavior, and update both applications together when a feature crosses
 the HTTP boundary.
 
-## Commands
-
-Run package commands from inside the relevant application directory so Corepack reads that
-application's `packageManager` declaration:
-
-```text
-(cd frontend && pnpm run typecheck)
-(cd frontend && pnpm run build)
-(cd backend && pnpm run typecheck)
-(cd backend && pnpm run build)
-```
+## Package Ownership
 
 Each application owns its package manifest, lockfile, dependencies, and build configuration. Do not
 create a root package manifest or couple the applications through undeclared filesystem imports.
+Run package commands from inside the application that owns them.
 
 ## Template Version
 
@@ -44,18 +35,39 @@ Do not create test files, add test runners or testing dependencies, or add test 
 user explicitly asks for tests. When tests are explicitly requested, keep them focused on the
 requested behavior and colocate them with the code they cover.
 
+## File Size and Composition
+
+- Split files by responsibility: components, hooks, types, utilities, constants, services, and feature modules should not be mixed without a clear ownership reason.
+- If a file grows over 300 lines, consider splitting it into smaller focused files.
+- If a file grows over 500 lines, split it into smaller focused files before completing the task.
+
 ## Environment Variables
 
 The platform writes runtime values to the owning application's `AMAZI_ENV_GENERATED.env` and
-documents available keys in `AMAZI_ENV_DOCS_GENERATED.md`. Both files are platform-owned generated
-artifacts: do not edit them. `AMAZI_ENV_GENERATED.env` is ignored and must never be committed. Do not
-create `.env`, `.env.local`, `.env.example`, or another environment-variable manifest.
+documents available keys in `docs/AMAZI_ENV_DOCS_GENERATED.md`. Both files are platform-owned
+generated artifacts: do not edit them. `AMAZI_ENV_GENERATED.env` is ignored and must never be
+committed. Do not create `.env`, `.env.local`, `.env.example`, or another environment-variable
+manifest.
 
-Use only variables documented in `AMAZI_ENV_DOCS_GENERATED.md`. If a task needs a missing variable,
-report that requirement for configuration through the Amazi Environment editor instead of editing
-generated files. Backend variables are server-only. Frontend variables without `VITE_` are secret
-build values; use the `VITE_` prefix only when a value is intentionally safe to expose in browser
-code. Platform-managed fixed variables cannot be replaced by project variables.
+Use only variables documented in the applicable application's
+`docs/AMAZI_ENV_DOCS_GENERATED.md`. If a task needs a missing variable, report that requirement for
+configuration through the Amazi Environment editor instead of editing generated files. Custom
+variables are copied to both applications, cannot use the `VITE_` prefix, and cannot replace
+platform-managed fixed variables. Never access custom values from browser code.
+
+## Integrations
+
+`docs/AMAZI_INTEGRATIONS.md` lists the integrations connected to this project and links to their
+platform-generated `docs/integrations/{NAME}-{ID}.md` agent instructions. Read that index before
+implementing or changing integration-dependent behavior. The index and linked integration
+instruction files are platform-owned generated artifacts; do not edit them directly.
+
+## Review
+
+`docs/AMAZI_REVIEW.md` lists the review instructions for the projects in this workspace. Before
+finishing code work, read that index and follow every linked file that applies to a project you
+changed. Add future project-specific review rules as linked files under `docs/review/` instead of
+expanding this file with project-specific checks.
 
 ## HTTP Boundary
 

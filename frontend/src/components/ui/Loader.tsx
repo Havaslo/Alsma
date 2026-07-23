@@ -1,26 +1,43 @@
+import type { ComponentPropsWithoutRef } from "react";
+
+import { LoaderCircle } from "lucide-react";
+
 import { cn } from "@/lib/cn";
+
+const loaderSizes = {
+  lg: "size-8",
+  md: "size-5",
+  sm: "size-4",
+} as const;
+
+export type LoaderProps = Omit<ComponentPropsWithoutRef<"div">, "children"> & {
+  readonly label?: string;
+  readonly showLabel?: boolean;
+  readonly size?: keyof typeof loaderSizes;
+};
 
 export const Loader = ({
   className,
-  label = "Загрузка",
+  label = "Loading",
+  showLabel = false,
   size = "md",
-}: {
-  readonly className?: string;
-  readonly label?: string;
-  readonly size?: "sm" | "md" | "lg";
-}) => (
-  <span
-    aria-label={label}
-    className={cn(
-      "relative inline-grid place-items-center rounded-full",
-      size === "sm" && "size-5",
-      size === "md" && "size-8",
-      size === "lg" && "size-12",
-      className,
-    )}
-    role="status"
-  >
-    <span className="absolute inset-0 animate-spin rounded-full border-2 border-current/15 border-t-current" />
-    <span className="size-1/3 animate-pulse rounded-full bg-current" />
-  </span>
-);
+  ...props
+}: LoaderProps) => {
+  return (
+    <div
+      aria-live="polite"
+      className={cn(
+        "inline-flex items-center justify-center gap-2 text-muted-ui-foreground",
+        className,
+      )}
+      role="status"
+      {...props}
+    >
+      <LoaderCircle
+        aria-hidden="true"
+        className={cn("animate-spin", loaderSizes[size])}
+      />
+      <span className={showLabel ? "text-sm" : "sr-only"}>{label}</span>
+    </div>
+  );
+};

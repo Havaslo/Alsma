@@ -2,7 +2,7 @@ import { createContext } from "react";
 
 export const themeModes = ["light", "dark"] as const;
 
-export const projectThemeModes = ["light", "dark", "both"] as const;
+export const projectThemeModes = ["light", "dark", "system"] as const;
 
 export type ThemeMode = (typeof themeModes)[number];
 

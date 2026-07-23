@@ -1,4 +1,10 @@
-import { type ReactNode, useLayoutEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   type ProjectThemeMode,
@@ -9,7 +15,10 @@ import {
 } from "@/lib/theme/theme-context";
 
 const storageKey = "amazi-project-theme";
+const preferenceStorageKey = "amazi-project-theme-preference";
+
 const darkModeQuery = "(prefers-color-scheme: dark)";
+
 const projectThemeModeVariable = "--amazi-theme-mode";
 
 const isThemeMode = (value: string | null): value is ThemeMode => {
@@ -26,22 +35,33 @@ const getProjectThemeMode = (): ProjectThemeMode => {
     .getPropertyValue(projectThemeModeVariable)
     .trim();
 
-  // Themes generated before the marker was introduced always allowed both palettes.
-  return isProjectThemeMode(configuredMode) ? configuredMode : "both";
+  if (configuredMode === "both") return "system";
+
+  // Themes generated before the preference marker was introduced allowed both palettes.
+  return isProjectThemeMode(configuredMode) ? configuredMode : "system";
+};
+
+const getPreferredTheme = (projectThemeMode: ProjectThemeMode): ThemeMode => {
+  if (projectThemeMode !== "system") return projectThemeMode;
+
+  return window.matchMedia(darkModeQuery).matches ? "dark" : "light";
 };
 
 const getStoredTheme = (): ThemeMode => {
+  const projectThemeMode = getProjectThemeMode();
+
   try {
     const storedTheme = window.localStorage.getItem(storageKey);
+    const storedPreference = window.localStorage.getItem(preferenceStorageKey);
 
-    return isThemeMode(storedTheme)
-      ? storedTheme
-      : window.matchMedia(darkModeQuery).matches
-        ? "dark"
-        : "light";
+    if (isThemeMode(storedTheme) && storedPreference === projectThemeMode) {
+      return storedTheme;
+    }
   } catch {
-    return "light";
+    // Fall through to the project preference when storage is unavailable.
   }
+
+  return getPreferredTheme(projectThemeMode);
 };
 
 type ThemeProviderProps = {
@@ -52,7 +72,8 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [selectedMode, setSelectedMode] = useState<ThemeMode>(getStoredTheme);
   const [projectThemeMode, setProjectThemeMode] =
     useState<ProjectThemeMode>(getProjectThemeMode);
-  const mode = projectThemeMode === "both" ? selectedMode : projectThemeMode;
+  const previousProjectThemeMode = useRef(projectThemeMode);
+  const mode = selectedMode;
 
   useLayoutEffect(() => {
     let syncFrame: number | null = null;
@@ -89,17 +110,23 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   }, []);
 
   useLayoutEffect(() => {
+    if (previousProjectThemeMode.current === projectThemeMode) return;
+
+    previousProjectThemeMode.current = projectThemeMode;
+    setSelectedMode(getPreferredTheme(projectThemeMode));
+  }, [projectThemeMode]);
+
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = mode;
     root.dataset.themeMode = projectThemeMode;
     root.style.colorScheme = mode;
 
-    if (projectThemeMode === "both") {
-      try {
-        window.localStorage.setItem(storageKey, selectedMode);
-      } catch {
-        // The selected theme still applies when storage is unavailable.
-      }
+    try {
+      window.localStorage.setItem(storageKey, selectedMode);
+      window.localStorage.setItem(preferenceStorageKey, projectThemeMode);
+    } catch {
+      // The selected theme still applies when storage is unavailable.
     }
   }, [mode, projectThemeMode, selectedMode]);
 

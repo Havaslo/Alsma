@@ -17,6 +17,8 @@ const databaseUrlSchema = z
   }, "DATABASE_URL must use the postgres or postgresql protocol.");
 
 const environmentSchema = z.object({
+  AMAZI_STORAGE_API_URL: z.string().url(),
+  AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
   DATABASE_URL: databaseUrlSchema,
   NODE_ENV: z
     .enum(["development", "production", "test"])
@@ -26,6 +28,10 @@ const environmentSchema = z.object({
 
 export type AppConfig = {
   readonly databaseUrl: string;
+  readonly managedStorage: {
+    readonly apiUrl: string;
+    readonly projectToken: string;
+  };
   readonly nodeEnv: z.infer<typeof environmentSchema>["NODE_ENV"];
   readonly port: number;
 };
@@ -36,6 +42,10 @@ export const readConfig = (
   const parsed = environmentSchema.parse(environment);
   return {
     databaseUrl: parsed.DATABASE_URL,
+    managedStorage: {
+      apiUrl: parsed.AMAZI_STORAGE_API_URL,
+      projectToken: parsed.AMAZI_STORAGE_PROJECT_TOKEN,
+    },
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
   };
