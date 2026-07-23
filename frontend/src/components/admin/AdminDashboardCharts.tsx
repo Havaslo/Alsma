@@ -15,9 +15,12 @@ const toneClasses: Record<
   teal: { fill: "bg-dashboard-teal", text: "text-dashboard-teal" },
 };
 
-const buildChartPoints = (values: readonly number[], maximum: number) => {
+const buildChartPoints = (
+  values: readonly number[],
+  maximum: number,
+  right: number,
+) => {
   const left = 52;
-  const right = 700;
   const top = 18;
   const bottom = 220;
   return values.map((value, index) => ({
@@ -42,15 +45,19 @@ const AreaChart = ({
   maximum,
   tone,
   values,
+  wide = false,
 }: {
   readonly labels: readonly string[];
   readonly maximum: number;
   readonly tone: ChartTone;
   readonly values: readonly number[];
+  readonly wide?: boolean;
 }) => {
-  const points = buildChartPoints(values, maximum);
+  const chartWidth = wide ? 1_500 : 720;
+  const chartRight = chartWidth - 20;
+  const points = buildChartPoints(values, maximum, chartRight);
   const linePath = buildSmoothPath(points);
-  const areaPath = `${linePath} L 700 220 L 52 220 Z`;
+  const areaPath = `${linePath} L ${chartRight} 220 L 52 220 Z`;
 
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border border-line p-3">
@@ -58,7 +65,7 @@ const AreaChart = ({
         aria-label="График динамики"
         className={`h-64 w-full ${toneClasses[tone].text}`}
         role="img"
-        viewBox="0 0 720 260"
+        viewBox={`0 0 ${chartWidth} 260`}
       >
         {[0, 1, 2, 3, 4].map((line) => {
           const y = 18 + line * 50.5;
@@ -69,7 +76,7 @@ const AreaChart = ({
                 stroke="currentColor"
                 strokeWidth="1"
                 x1="52"
-                x2="700"
+                x2={chartRight}
                 y1={y}
                 y2={y}
               />
@@ -85,7 +92,7 @@ const AreaChart = ({
           );
         })}
         {labels.map((label, index) => {
-          const x = 52 + (index * 648) / (labels.length - 1);
+          const x = 52 + (index * (chartRight - 52)) / (labels.length - 1);
           return (
             <g className="text-line" key={label}>
               <line
@@ -390,6 +397,7 @@ export const AdminDashboardCharts = ({
           maximum={snapshot.incomingMaximum}
           tone="teal"
           values={snapshot.incomingCalls}
+          wide
         />
         <div className="mt-5 rounded-2xl bg-page p-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-accent-ui-foreground uppercase">
