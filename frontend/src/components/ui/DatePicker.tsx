@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 
@@ -22,11 +22,15 @@ export const DatePicker = ({
   ariaLabel,
   min,
   onChange,
+  panelClassName,
+  triggerClassName,
   value,
 }: {
   readonly ariaLabel: string;
   readonly min?: string;
   readonly onChange: (value: string) => void;
+  readonly panelClassName?: string;
+  readonly triggerClassName?: string;
   readonly value: string;
 }) => {
   const selectedDate = parseDate(value);
@@ -65,14 +69,23 @@ export const DatePicker = ({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={ariaLabel}
-        className="w-full rounded-xl py-1 text-left text-base font-semibold text-page-foreground outline-none"
+        className={cn(
+          "flex w-full items-center justify-between gap-3 rounded-xl py-1 text-left text-base font-semibold text-page-foreground outline-none",
+          triggerClassName,
+        )}
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        {displayFormatter.format(selectedDate)}
+        <span>{displayFormatter.format(selectedDate)}</span>
+        <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
       </button>
       {open && (
-        <div className="absolute bottom-[calc(100%+1rem)] left-1/2 z-50 w-80 -translate-x-1/2 rounded-3xl border border-line bg-panel p-4 text-panel-foreground shadow-2xl">
+        <div
+          className={cn(
+            "absolute bottom-[calc(100%+1rem)] left-1/2 z-50 w-80 -translate-x-1/2 rounded-3xl border border-line bg-panel p-4 text-panel-foreground shadow-2xl",
+            panelClassName,
+          )}
+        >
           <div className="flex items-center justify-between gap-3">
             <strong className="capitalize">
               {monthFormatter.format(month)}

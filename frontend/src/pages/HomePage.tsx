@@ -62,17 +62,18 @@ export const HomePage = () => {
           className="absolute inset-0 size-full object-cover"
           source={typeof hero?.image === "string" ? hero.image : heroImage}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/30 via-page-foreground/25 to-page-foreground/70" />
+        <div className="absolute inset-0 bg-hero-media-tint" />
+        <div className="absolute inset-0 bg-hero-highlight" />
 
         <div className="relative mx-auto flex min-h-screen max-w-[100rem] flex-col px-4 pt-5 pb-10 sm:px-6">
           <SiteHeader bookingTo="#booking" transparentAtTop />
 
           <div
-            className="flex flex-1 flex-col items-center justify-center pt-36 pb-16 text-center"
+            className="flex flex-1 flex-col items-center justify-center pt-36 pb-24 text-center"
             id="top"
           >
             <a
-              className="mb-7 inline-flex items-center gap-2 rounded-full bg-panel/90 px-5 py-2.5 text-sm font-bold text-brand"
+              className="mb-6 inline-flex items-center gap-3 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-brand uppercase transition hover:opacity-90"
               href="https://yandex.ru/maps/org/26910883729"
               rel="noreferrer"
               target="_blank"
@@ -80,12 +81,12 @@ export const HomePage = () => {
               <Star className="size-4 fill-current" />
               4.9 в Яндекс Картах
             </a>
-            <h1 className="max-w-5xl font-heading text-4xl leading-tight font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
+            <h1 className="max-w-4xl font-heading text-4xl leading-[1.02] font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
               {typeof hero?.title === "string"
                 ? hero.title
                 : "Отдых, который возвращает к себе"}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85">
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85 sm:mt-8">
               {typeof hero?.description === "string"
                 ? hero.description
                 : "Загородный отель в окружении соснового леса: уютные номера, SPA, авторская кухня и настоящее спокойствие."}

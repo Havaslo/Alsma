@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Check, ChevronDown } from "lucide-react";
+import {
+  AnimatePresence,
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+} from "motion/react";
 
 import { cn } from "@/lib/cn";
 
@@ -12,18 +19,25 @@ export type DropdownOption<T extends string | number> = {
 export const DropdownSelect = <T extends string | number>({
   ariaLabel,
   className,
+  menuClassName,
+  menuPlacement = "bottom",
   onChange,
   options,
+  triggerClassName,
   value,
 }: {
   readonly ariaLabel: string;
   readonly className?: string;
+  readonly menuClassName?: string;
+  readonly menuPlacement?: "bottom" | "top";
   readonly onChange: (value: T) => void;
   readonly options: readonly DropdownOption<T>[];
+  readonly triggerClassName?: string;
   readonly value: T;
 }) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const selected = options.find((option) => option.value === value);
 
   useEffect(() => {
@@ -41,7 +55,10 @@ export const DropdownSelect = <T extends string | number>({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
-        className="flex w-full items-center justify-between gap-3 rounded-xl py-1 text-left text-base font-semibold text-page-foreground outline-none"
+        className={cn(
+          "flex w-full items-center justify-between gap-3 rounded-xl py-1 text-left text-base font-semibold text-page-foreground outline-none",
+          triggerClassName,
+        )}
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
@@ -50,32 +67,57 @@ export const DropdownSelect = <T extends string | number>({
           className={cn("size-4 transition", open && "rotate-180")}
         />
       </button>
-      {open && (
-        <div
-          className="absolute top-[calc(100%+0.75rem)] right-0 left-0 z-50 overflow-hidden rounded-2xl border border-line bg-panel p-2 text-panel-foreground shadow-2xl"
-          role="listbox"
-        >
-          {options.map((option) => (
-            <button
-              aria-selected={option.value === value}
+      <LazyMotion features={domAnimation}>
+        <AnimatePresence>
+          {open && (
+            <m.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
               className={cn(
-                "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:bg-muted-ui/20",
-                option.value === value && "bg-brand text-brand-foreground",
+                "absolute right-0 left-0 z-50 overflow-hidden rounded-2xl border border-line bg-panel p-2 text-panel-foreground shadow-2xl",
+                menuPlacement === "top"
+                  ? "bottom-[calc(100%+0.75rem)] origin-bottom"
+                  : "top-[calc(100%+0.75rem)] origin-top",
+                menuClassName,
               )}
-              key={option.value}
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
+              exit={{
+                opacity: 0,
+                scale: 0.98,
+                y: menuPlacement === "top" ? 4 : -4,
               }}
-              role="option"
-              type="button"
+              initial={{
+                opacity: 0,
+                scale: 0.98,
+                y: menuPlacement === "top" ? 4 : -4,
+              }}
+              role="listbox"
+              transition={{
+                duration: reduceMotion ? 0 : 0.16,
+                ease: [0.16, 1, 0.3, 1],
+              }}
             >
-              {option.label}
-              {option.value === value && <Check className="size-4" />}
-            </button>
-          ))}
-        </div>
-      )}
+              {options.map((option) => (
+                <button
+                  aria-selected={option.value === value}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:bg-muted-ui/20",
+                    option.value === value && "bg-brand text-brand-foreground",
+                  )}
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  role="option"
+                  type="button"
+                >
+                  {option.label}
+                  {option.value === value && <Check className="size-4" />}
+                </button>
+              ))}
+            </m.div>
+          )}
+        </AnimatePresence>
+      </LazyMotion>
     </div>
   );
 };

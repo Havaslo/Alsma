@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { ChevronDown, Menu, UserRound, X } from "lucide-react";
 
@@ -26,14 +26,15 @@ const moreNavigation = [
 ];
 
 export const SiteHeader = ({
-  bookingTo = AMAZI_ROUTES.rooms,
+  bookingTo = `${AMAZI_ROUTES.home}#booking`,
   light = false,
-  transparentAtTop = false,
+  transparentAtTop = true,
 }: {
   readonly bookingTo?: string;
   readonly light?: boolean;
   readonly transparentAtTop?: boolean;
 }) => {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const useLightStyle = light || (transparentAtTop && scrolled);
@@ -45,13 +46,31 @@ export const SiteHeader = ({
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, [transparentAtTop]);
+
+  useEffect(() => {
+    if (location.hash !== "#booking") return;
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      document
+        .getElementById("booking")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(scrollFrame);
+  }, [location.hash, location.pathname]);
+
+  const scrollToBooking = () => {
+    if (location.pathname !== AMAZI_ROUTES.home) return;
+    document
+      .getElementById("booking")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   return (
     <header
       className={cn(
-        "fixed top-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border px-5 py-3 backdrop-blur-md",
+        "fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300",
         useLightStyle
-          ? "border-brand/10 bg-panel/90 text-brand shadow-lg"
-          : "border-brand-foreground/20 bg-page-foreground/15 text-brand-foreground",
+          ? "border-brand/10 bg-page text-brand shadow-xl"
+          : "border-brand-foreground/15 bg-brand-foreground/5 text-brand-foreground",
       )}
     >
       <Link aria-label="АЛСМА" to={AMAZI_ROUTES.home}>
@@ -61,10 +80,15 @@ export const SiteHeader = ({
           src={useLightStyle ? logoGreen : logoWhite}
         />
       </Link>
-      <nav className="hidden items-center gap-6 text-sm font-medium lg:flex">
+      <nav className="hidden items-center gap-5 text-base font-medium lg:flex xl:gap-7 xl:text-lg 2xl:gap-8">
         {navigation.map((item) => (
           <Link
-            className="transition hover:opacity-70"
+            className={cn(
+              "transition",
+              useLightStyle
+                ? "text-brand hover:text-brand/75"
+                : "text-brand-foreground/90 hover:text-brand-foreground",
+            )}
             key={item.to}
             to={item.to}
           >
@@ -73,7 +97,12 @@ export const SiteHeader = ({
         ))}
         <div className="group relative">
           <button
-            className="flex items-center gap-1 py-3 transition outline-none hover:opacity-70"
+            className={cn(
+              "flex items-center gap-1 py-3 transition outline-none",
+              useLightStyle
+                ? "text-brand hover:text-brand/75"
+                : "text-brand-foreground/90 hover:text-brand-foreground",
+            )}
             type="button"
           >
             Еще <ChevronDown className="size-4" />
@@ -94,13 +123,26 @@ export const SiteHeader = ({
       <div className="flex items-center gap-2">
         <Link
           aria-label="Личный кабинет"
-          className="hidden size-11 place-items-center rounded-full outline-none sm:grid"
+          className={cn(
+            "hidden size-12 place-items-center rounded-full border outline-none sm:grid",
+            useLightStyle
+              ? "border-brand/15 text-brand"
+              : "border-brand-foreground/15 text-brand-foreground",
+          )}
           to={AMAZI_ROUTES.account}
         >
-          <UserRound className="size-5" />
+          <span
+            className={cn(
+              "grid size-9 place-items-center rounded-full border",
+              useLightStyle ? "border-brand/15" : "border-brand-foreground/30",
+            )}
+          >
+            <UserRound className="size-5" />
+          </span>
         </Link>
         <Link
           className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
+          onClick={scrollToBooking}
           to={bookingTo}
         >
           Забронировать
@@ -122,7 +164,10 @@ export const SiteHeader = ({
           ))}
           <Link
             className="mt-2 rounded-full bg-page px-5 py-3 text-center font-semibold text-brand"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              scrollToBooking();
+            }}
             to={bookingTo}
           >
             Забронировать

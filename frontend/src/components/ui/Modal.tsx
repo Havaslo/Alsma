@@ -55,7 +55,10 @@ export const Modal = ({
 
     const previousFocus = document.activeElement as HTMLElement | null;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
     };
     const focusFrame = window.requestAnimationFrame(() =>
       closeButtonRef.current?.focus(),
@@ -101,7 +104,7 @@ export const Modal = ({
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             key="modal-backdrop"
-            onClick={(event) => {
+            onPointerDown={(event) => {
               if (event.target === event.currentTarget) onClose();
             }}
             transition={{ duration: reduceMotion ? 0 : 0.14, ease: "easeOut" }}

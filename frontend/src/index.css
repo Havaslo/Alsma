@@ -3,7 +3,21 @@
 @import "./AMAZI_THEME_GENERATED.css";
 
 @theme {
+  --blur-booking: 18px;
+  --color-booking-control: #ffffff;
+  --color-booking-line: #7a6b4e;
+  --color-booking-popover: #ffffff;
+  --color-booking-shell: #f7f4ee;
   --color-scrim: #000000;
+  --background-image-hero-highlight: radial-gradient(
+    circle at top,
+    rgb(255 255 255 / 16%),
+    transparent 28%
+  );
+  --background-image-hero-media-tint:
+    linear-gradient(rgb(16 41 31 / 20%), rgb(16 41 31 / 20%)),
+    radial-gradient(circle at top, rgb(255 255 255 / 6%), transparent 30%);
+  --shadow-booking: 0 18px 40px rgb(16 24 20 / 12%);
 }
 
 @layer base {
@@ -13,6 +27,21 @@
 
   html {
     @apply scroll-smooth bg-page;
+    scrollbar-color: var(--color-muted-foreground) var(--color-page-foreground);
+  }
+
+  html::-webkit-scrollbar {
+    width: 0.75rem;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: var(--color-page-foreground);
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: var(--color-muted-foreground);
+    border: 0.125rem solid var(--color-page-foreground);
+    border-radius: 9999px;
   }
 
   body {

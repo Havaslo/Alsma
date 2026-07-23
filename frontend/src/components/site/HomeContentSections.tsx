@@ -13,10 +13,7 @@ export const HomeRestSection = ({
 }) => (
   <section className="mx-auto max-w-[100rem] px-4 py-24 sm:px-6" id="rest">
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-sm font-bold tracking-widest text-brand uppercase">
-        Отдых в АЛСМА
-      </p>
-      <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+      <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
         Каким будет ваш идеальный отдых!
       </h2>
       <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
@@ -96,13 +93,10 @@ export const HomePromotionsSection = ({
           хочет остаться дольше.
         </p>
       </div>
-      <HorizontalCarousel
-        className="mt-12"
-        slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
-      >
+      <HorizontalCarousel className="mt-14" slideClassName="basis-auto">
         {offers.map((offer) => (
           <article
-            className="group h-full overflow-hidden rounded-4xl bg-brand text-brand-foreground"
+            className="group h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground sm:w-[340px] lg:w-[360px]"
             key={offer.title}
           >
             <div className="h-56 overflow-hidden">
@@ -154,7 +148,7 @@ export const HomeReviewsSection = ({
       <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
         Истории вашего отдыха
       </h2>
-      <p className="mt-5 text-center text-lg text-muted-ui-foreground">
+      <p className="mt-8 text-center text-lg text-muted-ui-foreground">
         Общий рейтинг <strong className="text-page-foreground">4.9</strong> ·{" "}
         <strong className="text-page-foreground">1200+ отзывов</strong>
       </p>
@@ -164,7 +158,7 @@ export const HomeReviewsSection = ({
       >
         {reviews.map((review) => (
           <article
-            className="h-full rounded-4xl bg-panel p-7"
+            className="flex min-h-[342px] flex-col rounded-4xl bg-panel p-7"
             key={`${review.source}:${review.name}`}
           >
             <div className="flex items-center justify-between">
@@ -174,7 +168,7 @@ export const HomeReviewsSection = ({
               </span>
             </div>
             <p className="mt-5 leading-7">{review.text}</p>
-            <p className="mt-6 font-semibold">{review.name}</p>
+            <p className="mt-auto pt-6 font-semibold">{review.name}</p>
           </article>
         ))}
       </HorizontalCarousel>
@@ -190,14 +184,9 @@ export const HomeRoomsSection = ({
   <section className="bg-page py-24" id="rooms">
     <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
       <div className="mx-auto max-w-4xl text-center">
-        <div>
-          <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            Проживание
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Уют, скрытый в кронах сосен
-          </h2>
-        </div>
+        <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+          Уют, скрытый в кронах сосен
+        </h2>
         <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
           Современные интерьеры номеров и красота леса за панорамными окнами —
           идеальное сочетание для любого варианта отдыха.

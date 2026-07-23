@@ -32,11 +32,11 @@ export const SocialLinksSection = ({
   description,
   title,
 }: SocialLinksSectionProps) => (
-  <section className="bg-panel/65 py-20">
+  <section className="bg-page pb-24">
     <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-      <div className="grid gap-8 rounded-4xl bg-panel px-8 py-10 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <div className="grid gap-6 rounded-4xl bg-panel px-8 py-9 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <p className="text-xs font-semibold tracking-widest text-brand uppercase">
+          <p className="text-xs font-semibold text-brand/70">
             Следите за нами в соц сетях
           </p>
           <h2 className="mt-3 font-heading text-3xl font-semibold text-brand sm:text-4xl">

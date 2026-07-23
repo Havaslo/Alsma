@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
-import { CalendarDays, Users } from "lucide-react";
-
 import { Form } from "@/components/Form";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
@@ -10,28 +8,22 @@ import { Loader } from "@/components/ui/Loader";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
 const guestOptions = [
-  { label: "1 гость", value: 1 },
-  { label: "2 гостя", value: 2 },
-  { label: "3 гостя", value: 3 },
-  { label: "4 гостя", value: 4 },
+  { label: "2 взрослых", value: 2 },
+  { label: "3 взрослых", value: 3 },
+  { label: "4 взрослых", value: 4 },
 ] as const;
 
 const BookingField = ({
   children,
-  icon: Icon,
   label,
 }: {
   readonly children: ReactNode;
-  readonly icon: typeof CalendarDays;
   readonly label: string;
 }) => (
-  <div className="rounded-2xl bg-page px-4 py-3 text-left text-xs font-semibold text-muted-ui-foreground">
-    <span className="flex items-center gap-2">
-      <Icon className="size-4" />
-      {label}
-    </span>
-    <div className="mt-2">{children}</div>
-  </div>
+  <label className="grid gap-3 text-left text-[0.72rem] leading-[1.2] font-semibold tracking-[0.02em] text-page-foreground/60">
+    <span className="px-1">{label}</span>
+    {children}
+  </label>
 );
 
 export const HomeBookingBar = () => {
@@ -50,7 +42,7 @@ export const HomeBookingBar = () => {
 
   return (
     <Form
-      className="mx-auto grid w-full max-w-5xl gap-3 rounded-3xl border border-brand-foreground/30 bg-panel/90 p-4 text-page-foreground shadow-2xl backdrop-blur sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]"
+      className="mx-auto grid w-full max-w-5xl items-end gap-4 space-y-0 rounded-4xl border border-booking-line/12 bg-booking-shell p-4 text-page-foreground shadow-booking backdrop-blur-booking sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:gap-3 lg:p-5"
       form={form}
       id="booking"
       onSubmit={(values) => {
@@ -64,54 +56,67 @@ export const HomeBookingBar = () => {
         });
       }}
     >
-      <BookingField icon={CalendarDays} label="Дата заезда">
-        <Controller
-          control={form.control}
-          name="checkInDate"
-          render={({ field }) => (
-            <DatePicker
-              ariaLabel="Дата заезда"
-              onChange={(date) => {
-                field.onChange(date);
-                if (date > form.getValues("checkOutDate")) {
-                  form.setValue("checkOutDate", date);
-                }
-              }}
-              value={field.value}
-            />
-          )}
-        />
+      <BookingField label="Дата заезда">
+        <div className="min-h-15 rounded-full border border-booking-line/20 bg-booking-control px-5 py-3.5">
+          <Controller
+            control={form.control}
+            name="checkInDate"
+            render={({ field }) => (
+              <DatePicker
+                ariaLabel="Дата заезда"
+                onChange={(date) => {
+                  field.onChange(date);
+                  if (date > form.getValues("checkOutDate")) {
+                    form.setValue("checkOutDate", date);
+                  }
+                }}
+                panelClassName="border-booking-line/20 bg-booking-popover"
+                triggerClassName="text-[0.95rem] font-medium tracking-[-0.01em]"
+                value={field.value}
+              />
+            )}
+          />
+        </div>
       </BookingField>
-      <BookingField icon={CalendarDays} label="Дата выезда">
-        <Controller
-          control={form.control}
-          name="checkOutDate"
-          render={({ field }) => (
-            <DatePicker
-              ariaLabel="Дата выезда"
-              min={checkInDate}
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
-        />
+      <BookingField label="Дата выезда">
+        <div className="min-h-15 rounded-full border border-booking-line/20 bg-booking-control px-5 py-3.5">
+          <Controller
+            control={form.control}
+            name="checkOutDate"
+            render={({ field }) => (
+              <DatePicker
+                ariaLabel="Дата выезда"
+                min={checkInDate}
+                onChange={field.onChange}
+                panelClassName="border-booking-line/20 bg-booking-popover"
+                triggerClassName="text-[0.95rem] font-medium tracking-[-0.01em]"
+                value={field.value}
+              />
+            )}
+          />
+        </div>
       </BookingField>
-      <BookingField icon={Users} label="Количество гостей">
-        <Controller
-          control={form.control}
-          name="guestsCount"
-          render={({ field }) => (
-            <DropdownSelect
-              ariaLabel="Количество гостей"
-              onChange={field.onChange}
-              options={guestOptions}
-              value={field.value}
-            />
-          )}
-        />
+      <BookingField label="Количество гостей">
+        <div className="min-h-15 rounded-full border border-booking-line/20 bg-booking-control px-5 py-3.5">
+          <Controller
+            control={form.control}
+            name="guestsCount"
+            render={({ field }) => (
+              <DropdownSelect
+                ariaLabel="Количество гостей"
+                menuClassName="border-booking-line/20 bg-booking-popover"
+                menuPlacement="top"
+                onChange={field.onChange}
+                options={guestOptions}
+                triggerClassName="text-[0.95rem] font-medium tracking-[-0.01em]"
+                value={field.value}
+              />
+            )}
+          />
+        </div>
       </BookingField>
       <button
-        className="rounded-2xl bg-brand px-8 py-4 font-semibold text-brand-foreground transition hover:bg-brand/90 disabled:opacity-60"
+        className="min-h-15 self-end rounded-full bg-brand px-8 py-5 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90 disabled:opacity-60"
         disabled={leadMutation.isPending}
         type="submit"
       >

@@ -327,6 +327,12 @@ export const HomeContactSections = () => (
               Комфорт-класс с персональной встречей, водой в салоне и маршрутом
               через самые живописные лесные дороги.
             </p>
+            <button
+              className="mt-6 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+              type="button"
+            >
+              Заказать трансфер
+            </button>
           </div>
         </div>
         <iframe
@@ -338,8 +344,8 @@ export const HomeContactSections = () => (
       </div>
     </section>
 
-    <section className="px-4 pb-24 sm:px-6">
-      <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-14 text-center text-brand-foreground">
+    <section className="px-4 pt-6 pb-24 sm:px-6">
+      <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground">
         <img
           alt=""
           className="absolute inset-0 size-full object-cover"
