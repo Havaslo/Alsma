@@ -26,10 +26,12 @@ const moreNavigation = [
 ];
 
 export const SiteHeader = ({
+  bookingLabel = "Забронировать",
   bookingTo = `${AMAZI_ROUTES.home}#booking`,
   light = false,
   transparentAtTop = true,
 }: {
+  readonly bookingLabel?: string;
   readonly bookingTo?: string;
   readonly light?: boolean;
   readonly transparentAtTop?: boolean;
@@ -145,7 +147,7 @@ export const SiteHeader = ({
           onClick={scrollToBooking}
           to={bookingTo}
         >
-          Забронировать
+          {bookingLabel}
         </Link>
         <button
           aria-label="Меню"
@@ -170,7 +172,7 @@ export const SiteHeader = ({
             }}
             to={bookingTo}
           >
-            Забронировать
+            {bookingLabel}
           </Link>
         </nav>
       )}
