@@ -1,6 +1,12 @@
 import { useForm, useWatch } from "react-hook-form";
 
 import { Form } from "@/components/Form";
+import { Button } from "@/components/ui/Button";
+import {
+  CheckboxField,
+  TextAreaField,
+  TextField,
+} from "@/components/ui/FormField";
 import {
   ADMIN_PERMISSIONS,
   type AdminPermission,
@@ -12,7 +18,6 @@ import {
   useUpdateAdminRole,
 } from "@/lib/admin/useAdminSettings";
 
-const fieldClass = "w-full rounded-2xl border border-line bg-page px-4 py-3";
 type RoleFormValues = {
   description: string;
   name: string;
@@ -23,29 +28,31 @@ export const AdminRoleEditor = ({ role }: { readonly role?: AdminRole }) => {
   const create = useCreateAdminRole();
   const update = useUpdateAdminRole();
   const form = useForm<RoleFormValues>({
-    defaultValues: {
+    values: {
       description: role?.description ?? "",
       name: role?.name ?? "",
-      permissions: role?.permissions ?? [],
+      permissions: role?.permissions.includes("*" as AdminPermission)
+        ? [...ADMIN_PERMISSIONS]
+        : (role?.permissions ?? []),
     },
   });
-  const permissions = useWatch({
-    control: form.control,
-    name: "permissions",
-  });
-  const toggle = (permission: AdminPermission) => {
+  const permissions =
+    useWatch({ control: form.control, name: "permissions" }) ?? [];
+  const pending = create.isPending || update.isPending;
+  const toggle = (permission: AdminPermission, checked: boolean) => {
     const current = form.getValues("permissions");
     form.setValue(
       "permissions",
-      current.includes(permission)
-        ? current.filter((item) => item !== permission)
-        : [...current, permission],
+      checked
+        ? [...current, permission]
+        : current.filter((item) => item !== permission),
+      { shouldDirty: true },
     );
   };
 
   return (
     <Form
-      className="mt-4 grid gap-3"
+      className="mt-5 space-y-5"
       form={form}
       onSubmit={(values) => {
         const input = {
@@ -57,37 +64,32 @@ export const AdminRoleEditor = ({ role }: { readonly role?: AdminRole }) => {
         else create.mutate(input);
       }}
     >
-      <input
-        className={fieldClass}
-        placeholder="Название роли"
-        {...form.register("name", { required: true })}
+      <TextField
+        error={form.formState.errors.name?.message}
+        label="Название роли"
+        placeholder="..."
+        {...form.register("name", { required: "Укажите название" })}
       />
-      <textarea
-        className={fieldClass}
-        placeholder="Описание роли"
+      <TextAreaField
+        label="Описание роли"
+        placeholder="..."
+        rows={3}
         {...form.register("description")}
       />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {ADMIN_PERMISSIONS.map((permission) => (
-          <label
-            className="flex items-center gap-2 rounded-xl bg-page p-3 text-sm"
+          <CheckboxField
+            checked={permissions.includes(permission)}
+            className="w-full"
             key={permission}
-          >
-            <input
-              checked={permissions.includes(permission)}
-              onChange={() => toggle(permission)}
-              type="checkbox"
-            />
-            {ADMIN_PERMISSION_LABELS[permission]}
-          </label>
+            label={ADMIN_PERMISSION_LABELS[permission]}
+            onChange={(checked) => toggle(permission, checked)}
+          />
         ))}
       </div>
-      <button
-        className="rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
-        type="submit"
-      >
-        Сохранить роль
-      </button>
+      <Button disabled={pending} type="submit">
+        {pending ? "Сохранение..." : "Сохранить роль"}
+      </Button>
     </Form>
   );
 };

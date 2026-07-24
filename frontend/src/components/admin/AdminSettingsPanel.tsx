@@ -1,11 +1,31 @@
 import { useState } from "react";
 
-import { CirclePlus, Pencil } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { AdminRoleEditor } from "@/components/admin/AdminRoleEditor";
 import { AdminUserEditor } from "@/components/admin/AdminUserEditor";
+import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
+import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Loader } from "@/components/ui/Loader";
-import { useAdminSettings } from "@/lib/admin/useAdminSettings";
+import {
+  ADMIN_PERMISSIONS,
+  type AdminPermission,
+  type AdminRole,
+  type AdminSettingsUser,
+} from "@/lib/admin/admin-settings-api";
+import {
+  useAdminSettings,
+  useDeleteAdminUser,
+} from "@/lib/admin/useAdminSettings";
+import { cn } from "@/lib/cn";
+
+type SettingsTab = "roles" | "users";
+
+const rolePermissionCount = (role: AdminRole) =>
+  role.permissions.includes("*" as AdminPermission)
+    ? ADMIN_PERMISSIONS.length
+    : role.permissions.length;
 
 export const AdminSettingsPanel = ({
   currentUserId,
@@ -13,14 +33,16 @@ export const AdminSettingsPanel = ({
   readonly currentUserId: string;
 }) => {
   const settings = useAdminSettings();
-  const [tab, setTab] = useState<"roles" | "users">("users");
+  const remove = useDeleteAdminUser();
+  const [tab, setTab] = useState<SettingsTab>("users");
   const [roleId, setRoleId] = useState<string>();
   const [userId, setUserId] = useState<string>();
-  const [editorOpen, setEditorOpen] = useState(false);
-  const role = settings.data?.roles.find((item) => item.id === roleId);
-  const user = settings.data?.users.find((item) => item.id === userId);
+  const [userEditorOpen, setUserEditorOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminSettingsUser>();
   const users = settings.data?.users ?? [];
   const roles = settings.data?.roles ?? [];
+  const role = roles.find((item) => item.id === roleId);
+  const user = users.find((item) => item.id === userId);
   const activeUsers = users.filter((item) => item.status === "active").length;
 
   if (settings.isLoading)
@@ -65,16 +87,14 @@ export const AdminSettingsPanel = ({
             ["roles", "Роли и доступы"],
           ].map(([value, label]) => (
             <button
-              className={`border-b-2 pb-3 text-sm font-semibold ${
+              className={cn(
+                "border-b-2 pb-3 text-sm font-semibold",
                 tab === value
                   ? "border-brand text-brand"
-                  : "border-transparent text-muted-ui-foreground"
-              }`}
+                  : "border-transparent text-muted-ui-foreground",
+              )}
               key={value}
-              onClick={() => {
-                setTab(value as "roles" | "users");
-                setEditorOpen(false);
-              }}
+              onClick={() => setTab(value as SettingsTab)}
               type="button"
             >
               {label}
@@ -85,139 +105,65 @@ export const AdminSettingsPanel = ({
 
       {tab === "users" && (
         <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-brand">
                 Пользователи админки
               </h2>
               <p className="mt-2 text-sm text-muted-ui-foreground">
-                Новые пользователи и редактирование открываются в модальном окне
-                редактора.
+                Новые пользователи и редактирование открываются в модальном
+                окне.
               </p>
             </div>
-            <button
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+            <Button
               onClick={() => {
                 setUserId(undefined);
-                setEditorOpen(true);
+                setUserEditorOpen(true);
               }}
-              type="button"
             >
-              <CirclePlus className="size-4" />
+              <Plus className="size-4" />
               Добавить пользователя
-            </button>
-          </div>
+            </Button>
+          </header>
 
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-line">
-            <table className="w-full min-w-4xl border-collapse text-left text-sm">
-              <thead className="bg-page text-xs font-semibold">
-                <tr>
-                  <th className="px-5 py-4">Пользователь</th>
-                  <th className="px-5 py-4">Роль</th>
-                  <th className="px-5 py-4">Статус</th>
-                  <th className="px-5 py-4">Доступы</th>
-                  <th className="px-5 py-4 text-right">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((item) => (
-                  <tr className="border-t border-line" key={item.id}>
-                    <td className="px-5 py-4">
-                      <strong className="block">{item.displayName}</strong>
-                      <span className="mt-1 block text-xs text-muted-ui-foreground">
-                        {item.email}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      {item.role?.name || "Без роли"}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-                        {item.status === "active" ? "Активен" : "Отключён"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-muted-ui-foreground">
-                      {item.role?.permissions.length ?? 0} разрешений
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-xs font-semibold text-brand"
-                        onClick={() => {
-                          setUserId(item.id);
-                          setEditorOpen(true);
-                        }}
-                        type="button"
-                      >
-                        <Pencil className="size-3" />
-                        Редактировать
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {editorOpen && (
-            <div className="mt-6 rounded-3xl border border-line bg-page p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-brand">
-                  {user ? "Редактирование пользователя" : "Новый пользователь"}
-                </h3>
-                <button
-                  className="text-sm font-semibold text-muted-ui-foreground"
-                  onClick={() => setEditorOpen(false)}
-                  type="button"
-                >
-                  Закрыть
-                </button>
-              </div>
-              <AdminUserEditor
-                currentUserId={currentUserId}
-                key={user?.id ?? "new"}
-                roles={roles}
-                user={user}
-              />
-            </div>
-          )}
+          <AdminUsersTable
+            currentUserId={currentUserId}
+            onDelete={setDeleteTarget}
+            onEdit={(item) => {
+              setUserId(item.id);
+              setUserEditorOpen(true);
+            }}
+            users={users}
+          />
         </section>
       )}
 
       {tab === "roles" && (
-        <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+        <section className="grid items-start gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
           <article className="rounded-3xl border border-line bg-brand-foreground p-6">
-            <div className="flex items-start justify-between gap-4">
+            <header className="flex items-start justify-between gap-4">
               <h2 className="text-xl font-semibold text-brand">Роли</h2>
-              <button
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-brand-foreground"
-                onClick={() => {
-                  setRoleId(undefined);
-                  setEditorOpen(true);
-                }}
-                type="button"
-              >
-                <CirclePlus className="size-4" />
+              <Button onClick={() => setRoleId(undefined)}>
+                <Plus className="size-4" />
                 Новая роль
-              </button>
-            </div>
+              </Button>
+            </header>
             <div className="mt-5 space-y-3">
               {roles.map((item) => (
                 <button
-                  className={`w-full rounded-2xl border p-4 text-left ${
+                  className={cn(
+                    "w-full rounded-2xl border p-4 text-left",
                     roleId === item.id
                       ? "border-brand bg-brand/5"
-                      : "border-line bg-page"
-                  }`}
+                      : "border-line bg-page",
+                  )}
                   key={item.id}
-                  onClick={() => {
-                    setRoleId(item.id);
-                    setEditorOpen(true);
-                  }}
+                  onClick={() => setRoleId(item.id)}
                   type="button"
                 >
-                  <strong className="block">{item.name}</strong>
+                  <strong className="block text-brand">{item.name}</strong>
                   <span className="mt-2 block text-xs text-muted-ui-foreground">
-                    {item.permissions.length} разрешений
+                    {rolePermissionCount(item)} разрешений
                   </span>
                 </button>
               ))}
@@ -231,6 +177,28 @@ export const AdminSettingsPanel = ({
           </article>
         </section>
       )}
+
+      <AdminUserEditor
+        onClose={() => setUserEditorOpen(false)}
+        open={userEditorOpen}
+        roles={roles}
+        user={user}
+      />
+      <ConfirmModal
+        confirmLabel={remove.isPending ? "Удаление..." : "Удалить пользователя"}
+        onClose={() => setDeleteTarget(undefined)}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          remove.mutate(deleteTarget.id, {
+            onSuccess: () => setDeleteTarget(undefined),
+          });
+        }}
+        open={Boolean(deleteTarget)}
+        title="Удалить пользователя?"
+      >
+        Учётная запись {deleteTarget?.displayName} будет удалена. Пользователь
+        потеряет доступ к админ-панели.
+      </ConfirmModal>
     </div>
   );
 };

@@ -1,6 +1,11 @@
-import { useForm, useWatch } from "react-hook-form";
+import { useId } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Form } from "@/components/Form";
+import { Button } from "@/components/ui/Button";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
+import { CheckboxField, TextField } from "@/components/ui/FormField";
+import { Modal } from "@/components/ui/Modal";
 import {
   ADMIN_PERMISSIONS,
   type AdminPermission,
@@ -10,11 +15,9 @@ import {
 import { ADMIN_PERMISSION_LABELS } from "@/lib/admin/admin-settings-constants";
 import {
   useCreateAdminUser,
-  useDeleteAdminUser,
   useUpdateAdminUser,
 } from "@/lib/admin/useAdminSettings";
 
-const fieldClass = "w-full rounded-2xl border border-line bg-page px-4 py-3";
 type UserFormValues = {
   displayName: string;
   email: string;
@@ -24,20 +27,33 @@ type UserFormValues = {
   status: "active" | "inactive";
 };
 
+const OVERRIDE_OPTIONS = [
+  { label: "Наследовать", value: "inherit" },
+  { label: "Включить", value: "allow" },
+  { label: "Выключить", value: "deny" },
+] as const;
+
+const permissionValue = (
+  value: boolean | null | undefined,
+): (typeof OVERRIDE_OPTIONS)[number]["value"] =>
+  value == null ? "inherit" : value ? "allow" : "deny";
+
 export const AdminUserEditor = ({
-  currentUserId,
+  onClose,
+  open,
   roles,
   user,
 }: {
-  readonly currentUserId: string;
+  readonly onClose: () => void;
+  readonly open: boolean;
   readonly roles: AdminRole[];
   readonly user?: AdminSettingsUser;
 }) => {
   const create = useCreateAdminUser();
   const update = useUpdateAdminUser();
-  const remove = useDeleteAdminUser();
+  const formId = useId();
   const form = useForm<UserFormValues>({
-    defaultValues: {
+    values: {
       displayName: user?.displayName ?? "",
       email: user?.email ?? "",
       overrides: user?.permissionOverrides ?? {},
@@ -46,111 +62,195 @@ export const AdminUserEditor = ({
       status: user?.status ?? "active",
     },
   });
-  const overrides = useWatch({ control: form.control, name: "overrides" });
-  const setOverride = (permission: AdminPermission, value: string) => {
-    form.setValue("overrides", {
-      ...form.getValues("overrides"),
-      [permission]: value === "inherit" ? null : value === "allow",
-    });
+  const overrides =
+    useWatch({ control: form.control, name: "overrides" }) ?? {};
+  const status = useWatch({ control: form.control, name: "status" });
+  const pending = create.isPending || update.isPending;
+  const roleOptions = [
+    { label: "Без роли", value: "" },
+    ...roles.map((role) => ({ label: role.name, value: role.id })),
+  ];
+
+  const setOverride = (
+    permission: AdminPermission,
+    value: (typeof OVERRIDE_OPTIONS)[number]["value"],
+  ) => {
+    form.setValue(
+      "overrides",
+      {
+        ...form.getValues("overrides"),
+        [permission]: value === "inherit" ? null : value === "allow",
+      },
+      { shouldDirty: true },
+    );
   };
 
   return (
-    <Form
-      className="mt-4 grid gap-3"
-      form={form}
-      onSubmit={(values) => {
-        const input = {
-          displayName: values.displayName,
-          email: values.email,
-          password: values.password || undefined,
-          permissionOverrides: values.overrides,
-          roleId: values.roleId || null,
-          status: values.status,
-        };
-        if (user) update.mutate({ id: user.id, ...input });
-        else create.mutate(input);
-      }}
+    <Modal
+      className="max-w-6xl"
+      closeLabel="Закрыть редактор пользователя"
+      footer={
+        <>
+          <Button onClick={onClose} variant="secondary">
+            Отмена
+          </Button>
+          <Button disabled={pending} form={formId} type="submit">
+            {pending
+              ? "Сохранение..."
+              : user
+                ? "Сохранить пользователя"
+                : "Создать пользователя"}
+          </Button>
+        </>
+      }
+      onClose={onClose}
+      open={open}
+      title={user ? "Редактирование пользователя" : "Создание пользователя"}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <input
-          className={fieldClass}
-          placeholder="Имя сотрудника"
-          {...form.register("displayName", { required: true })}
-        />
-        <input
-          className={fieldClass}
-          placeholder="Email"
-          type="email"
-          {...form.register("email", { required: true })}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <input
-          className={fieldClass}
-          placeholder={
-            user ? "Новый пароль (необязательно)" : "Пароль от 8 символов"
+      <p className="mb-6 text-sm leading-6 text-muted-ui-foreground">
+        Задайте сотруднику данные для входа, роль и при необходимости
+        индивидуальные права поверх роли.
+      </p>
+      <Form
+        className="space-y-6"
+        form={form}
+        id={formId}
+        onSubmit={(values) => {
+          const input = {
+            displayName: values.displayName,
+            email: values.email,
+            password: values.password || undefined,
+            permissionOverrides: values.overrides,
+            roleId: values.roleId || null,
+            status: values.status,
+          };
+          if (user) {
+            update.mutate({ id: user.id, ...input }, { onSuccess: onClose });
+          } else {
+            create.mutate(input, { onSuccess: onClose });
           }
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            error={form.formState.errors.displayName?.message}
+            label="Имя и фамилия"
+            placeholder="..."
+            {...form.register("displayName", {
+              minLength: { message: "Минимум 2 символа", value: 2 },
+              required: "Укажите имя",
+            })}
+          />
+          <TextField
+            error={form.formState.errors.email?.message}
+            label="Email для входа"
+            placeholder="..."
+            type="email"
+            {...form.register("email", { required: "Укажите email" })}
+          />
+        </div>
+        <TextField
+          error={form.formState.errors.password?.message}
+          label={user ? "Новый пароль" : "Пароль"}
+          placeholder="..."
           type="password"
           {...form.register("password", {
-            minLength: 8,
-            required: !user,
+            minLength: { message: "Минимум 8 символов", value: 8 },
+            required: user ? false : "Укажите пароль",
           })}
         />
-        <select className={fieldClass} {...form.register("roleId")}>
-          <option value="">Без роли</option>
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
-        <select className={fieldClass} {...form.register("status")}>
-          <option value="active">Активен</option>
-          <option value="inactive">Отключён</option>
-        </select>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {ADMIN_PERMISSIONS.map((permission) => (
-          <label
-            className="flex items-center justify-between gap-2 rounded-xl bg-page p-3 text-sm"
-            key={permission}
-          >
-            <span>{ADMIN_PERMISSION_LABELS[permission]}</span>
-            <select
-              className="rounded-lg border border-line bg-panel px-2 py-1"
-              onChange={(event) => setOverride(permission, event.target.value)}
-              value={
-                overrides[permission] == null
-                  ? "inherit"
-                  : overrides[permission]
-                    ? "allow"
-                    : "deny"
-              }
-            >
-              <option value="inherit">Из роли</option>
-              <option value="allow">Разрешить</option>
-              <option value="deny">Запретить</option>
-            </select>
-          </label>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <button
-          className="rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground"
-          type="submit"
-        >
-          Сохранить пользователя
-        </button>
-        {user && user.id !== currentUserId && (
-          <button
-            className="rounded-full border border-line px-5 py-3 font-semibold"
-            onClick={() => remove.mutate(user.id)}
-            type="button"
-          >
-            Удалить
-          </button>
+        {user && (
+          <p className="-mt-4 text-xs text-muted-ui-foreground">
+            Оставьте поле пустым, чтобы сохранить текущий пароль.
+          </p>
         )}
-      </div>
-    </Form>
+
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
+          <section className="space-y-5 rounded-2xl border border-line bg-page p-5">
+            <h3 className="text-base font-semibold text-brand">
+              Статус и роль
+            </h3>
+            <label className="block text-sm font-medium">
+              <span>Роль</span>
+              <span className="mt-2 block rounded-xl border border-line bg-brand-foreground px-4 py-2.5">
+                <Controller
+                  control={form.control}
+                  name="roleId"
+                  render={({ field }) => (
+                    <DropdownSelect
+                      ariaLabel="Роль пользователя"
+                      onChange={field.onChange}
+                      options={roleOptions}
+                      value={field.value}
+                    />
+                  )}
+                />
+              </span>
+            </label>
+            <CheckboxField
+              checked={status === "active"}
+              className="w-full"
+              label="Пользователь активен и может входить в админку"
+              onChange={(checked) =>
+                form.setValue("status", checked ? "active" : "inactive", {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </section>
+
+          <section className="rounded-2xl border border-line bg-page p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-brand">
+                  Персональные права поверх роли
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+                  Оставьте «Наследовать», если нужен набор прав из выбранной
+                  роли.
+                </p>
+              </div>
+              <Button
+                onClick={() =>
+                  form.setValue("overrides", {}, { shouldDirty: true })
+                }
+                variant="secondary"
+              >
+                Сбросить
+              </Button>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {ADMIN_PERMISSIONS.map((permission) => {
+                const selected = permissionValue(overrides[permission]);
+                return (
+                  <article
+                    className="rounded-2xl border border-line bg-brand-foreground p-4"
+                    key={permission}
+                  >
+                    <h4 className="min-h-10 text-sm font-semibold text-brand">
+                      {ADMIN_PERMISSION_LABELS[permission]}
+                    </h4>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {OVERRIDE_OPTIONS.map((option) => (
+                        <Button
+                          className="min-h-9 px-3 py-1.5 text-xs"
+                          key={option.value}
+                          onClick={() => setOverride(permission, option.value)}
+                          variant={
+                            selected === option.value ? "primary" : "secondary"
+                          }
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      </Form>
+    </Modal>
   );
 };

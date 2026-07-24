@@ -22,13 +22,16 @@ export const createSaveAdminUserHandler =
     const { body, params } = response.locals.input;
     response.json({
       user: update
-        ? await service.updateUser(params.id, body)
+        ? await service.updateUser(params.id, body, response.locals.admin.id)
         : await service.createUser(body),
     });
   };
 export const createDeleteAdminUserHandler =
   (service: AdminSettingsService): RequestHandler =>
   async (_request, response) => {
-    await service.deleteUser(response.locals.input.params.id);
+    await service.deleteUser(
+      response.locals.input.params.id,
+      response.locals.admin.id,
+    );
     response.status(204).end();
   };

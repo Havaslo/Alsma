@@ -18,6 +18,7 @@ import { createAdminSettingsRepository } from "./admin-settings.repository.js";
 import {
   adminRoleBodySchema,
   adminUserBodySchema,
+  createAdminUserBodySchema,
   entityIdParamsSchema,
 } from "./admin-settings.schemas.js";
 import { createAdminSettingsService } from "./admin-settings.service.js";
@@ -49,7 +50,7 @@ export const createAdminSettingsRouter = (database: Database): Router => {
   );
   router.post(
     "/users",
-    validateRequest({ body: adminUserBodySchema }),
+    validateRequest({ body: createAdminUserBodySchema }),
     createSaveAdminUserHandler(service, false),
   );
   router.put(
