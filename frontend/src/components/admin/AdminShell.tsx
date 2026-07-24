@@ -6,7 +6,6 @@ import {
   BookOpen,
   Cable,
   CalendarCheck,
-  ChevronDown,
   Gauge,
   LogOut,
   MessagesSquare,
@@ -18,6 +17,8 @@ import {
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import { AdminSiteNavigationMenu } from "@/components/admin/AdminSiteNavigationMenu";
+import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import type { AdminUser } from "@/lib/admin/admin-api";
 import { cn } from "@/lib/cn";
 
@@ -97,7 +98,7 @@ const adminPageTitle = (path: string): string => {
   if (path === AMAZI_ROUTES.adminAgentScenarios) return "Сценарии агентов";
   if (path === AMAZI_ROUTES.adminSettings) return "Настройки";
   if (path === AMAZI_ROUTES.adminIntegrations) return "Интеграции";
-  return "Управление сайтом";
+  return getAdminSiteTitle(path);
 };
 
 export const AdminShell = ({
@@ -130,6 +131,14 @@ export const AdminShell = ({
         <nav className="mt-8 scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {navigation.map(({ active, icon: Icon, label, to }) => {
             const selected = active(path);
+            if (to === AMAZI_ROUTES.adminSiteManagement)
+              return (
+                <AdminSiteNavigationMenu
+                  key={label}
+                  path={path}
+                  selected={selected}
+                />
+              );
             return (
               <Link
                 className={cn(
@@ -152,9 +161,6 @@ export const AdminShell = ({
                   <Icon className="size-5" />
                 </span>
                 <span className="leading-5">{label}</span>
-                {label === "Управление сайтом" && (
-                  <ChevronDown className="ml-auto size-4" />
-                )}
               </Link>
             );
           })}

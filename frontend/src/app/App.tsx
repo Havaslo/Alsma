@@ -181,6 +181,12 @@ export const App = () => {
             element={<AdminDashboardPage />}
             path={AMAZI_ROUTES.adminDashboard}
           />
+          <Route
+            element={
+              <Navigate replace to={AMAZI_ROUTES.adminSiteManagementHome} />
+            }
+            path={AMAZI_ROUTES.adminSiteManagement}
+          />
           {AMAZI_ADMIN_DASHBOARD_ROUTES.map((path) => (
             <Route element={<AdminDashboardPage />} key={path} path={path} />
           ))}

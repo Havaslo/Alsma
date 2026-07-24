@@ -10,7 +10,6 @@ import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePa
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { AdminSiteContentEditor } from "@/components/admin/AdminSiteContentEditor";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
@@ -71,9 +70,6 @@ export const AdminDashboardPage = () => {
       {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={admin.data.user.id} />
       )}
-      {(path === AMAZI_ROUTES.adminSiteManagement ||
-        path.startsWith(`${AMAZI_ROUTES.adminSiteManagement}/`)) &&
-        can("site.manage") && <AdminSiteContentEditor />}
       {path === AMAZI_ROUTES.adminIntegrations &&
         can("integrations.access") && <AdminIntegrationsPanel />}
     </AdminShell>
