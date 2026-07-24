@@ -1,4 +1,9 @@
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import {
+  Navigate,
+  matchPath,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
@@ -11,6 +16,7 @@ import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPane
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminNewsEditor } from "@/components/admin/AdminNewsEditor";
 import { AdminOffersEditor } from "@/components/admin/AdminOffersEditor";
+import { AdminRequestDetail } from "@/components/admin/AdminRequestDetail";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminRoomsEditor } from "@/components/admin/AdminRoomsEditor";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
@@ -46,6 +52,7 @@ export const AdminDashboardPage = () => {
     path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
   const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
+  const requestMatch = matchPath(AMAZI_ROUTES.adminRequest, path);
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
@@ -66,8 +73,11 @@ export const AdminDashboardPage = () => {
         can("dashboard.access") && <AdminBookingRequestsPanel />}
       {path.startsWith(AMAZI_ROUTES.adminClients) &&
         can("dashboard.access") && <AdminClientsPanel />}
-      {path.startsWith("/admin/requests") && can("requests.access") && (
+      {path === AMAZI_ROUTES.adminRequests && can("requests.access") && (
         <AdminRequestsPanel />
+      )}
+      {requestMatch?.params.requestId && can("requests.access") && (
+        <AdminRequestDetail requestId={requestMatch.params.requestId} />
       )}
       {path === AMAZI_ROUTES.adminKnowledgeBase && can("knowledge.manage") && (
         <AdminKnowledgeBasePanel />

@@ -93,7 +93,9 @@ const adminPageTitle = (path: string): string => {
   if (path === AMAZI_ROUTES.adminBookingRequests)
     return "Заявки на бронирование";
   if (path.startsWith(AMAZI_ROUTES.adminClients)) return "Клиенты";
-  if (path.startsWith("/admin/requests")) return "Обращения";
+  if (path === AMAZI_ROUTES.adminRequests) return "Обращения";
+  if (path.startsWith(`${AMAZI_ROUTES.adminRequests}/`))
+    return `Обращение #${path.split("/").at(-1)}`;
   if (path === AMAZI_ROUTES.adminKnowledgeBase) return "База знаний";
   if (path === AMAZI_ROUTES.adminAgentScenarios) return "Сценарии агентов";
   if (path === AMAZI_ROUTES.adminSettings) return "Настройки";
