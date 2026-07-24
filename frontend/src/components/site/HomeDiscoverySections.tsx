@@ -78,14 +78,14 @@ const entertainment = [
 ] as const;
 
 const mapMarkers = [
-  { label: "Спортивная площадка", position: "top-[26%] left-[43%]" },
+  { label: "Спортивная площадка", position: "top-[26%] left-[38%]" },
   { label: "SPA-комплекс", position: "top-[51%] left-[60%]" },
   { label: "Ресторан", position: "top-[45%] left-[71%]" },
   { label: "Главный корпус", position: "top-[42%] left-[80%]" },
   { label: "Парковка", position: "top-[42%] left-[90%]" },
-  { label: "Коттедж у реки", position: "top-[68%] left-[9%]" },
-  { label: "Лесной коттедж", position: "top-[71%] left-[18%]" },
-  { label: "Семейный коттедж", position: "top-[67%] left-[29%]" },
+  { label: "Коттедж у реки", position: "top-[62%] left-[9%]" },
+  { label: "Лесной коттедж", position: "top-[64%] left-[18%]" },
+  { label: "Семейный коттедж", position: "top-[61%] left-[29%]" },
   { label: "Банный дом", position: "top-[93%] left-[61%]" },
   { label: "Летний павильон", position: "top-[91%] left-[69%]" },
   { label: "Пляж", position: "top-[87%] left-[83%]" },
