@@ -348,7 +348,7 @@ INSERT INTO "admin_roles" (
     '12607395-b2fb-4ad9-8160-c17b9688dc6c',
     'Administrator',
     'Full local development access',
-    '["*"]'::JSONB,
+    ARRAY['*']::TEXT[],
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 ) ON CONFLICT ("name") DO NOTHING;
