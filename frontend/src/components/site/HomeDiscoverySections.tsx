@@ -78,17 +78,21 @@ const entertainment = [
 ] as const;
 
 const mapMarkers = [
-  { label: "Волейбольное поле", position: "top-[31%] left-[38%]" },
-  { label: "Главный корпус", position: "top-[53%] left-[59%]" },
-  { label: "SPA-комплекс", position: "top-[47%] left-[70%]" },
-  { label: "Ресторан", position: "top-[44%] left-[78%]" },
-  { label: "Парковка", position: "top-[42%] left-[88%]" },
-  { label: "Коттеджи", position: "top-[70%] left-[30%]" },
-  { label: "Пляж", position: "top-[83%] left-[82%]" },
+  { label: "Спортивная площадка", position: "top-[26%] left-[43%]" },
+  { label: "SPA-комплекс", position: "top-[51%] left-[60%]" },
+  { label: "Ресторан", position: "top-[45%] left-[71%]" },
+  { label: "Главный корпус", position: "top-[42%] left-[80%]" },
+  { label: "Парковка", position: "top-[42%] left-[90%]" },
+  { label: "Коттедж у реки", position: "top-[68%] left-[9%]" },
+  { label: "Лесной коттедж", position: "top-[71%] left-[18%]" },
+  { label: "Семейный коттедж", position: "top-[67%] left-[29%]" },
+  { label: "Банный дом", position: "top-[93%] left-[61%]" },
+  { label: "Летний павильон", position: "top-[91%] left-[69%]" },
+  { label: "Пляж", position: "top-[87%] left-[83%]" },
 ] as const;
 
 const HomeMapSection = () => {
-  const [selectedMarker, setSelectedMarker] = useState(0);
+  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
 
   return (
     <section className="hidden bg-brand py-24 text-brand-foreground md:block">
@@ -108,24 +112,28 @@ const HomeMapSection = () => {
                 aria-label={marker.label}
                 className={`absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-page bg-supporting shadow-lg transition hover:scale-110 ${marker.position}`}
                 key={marker.label}
-                onClick={() => setSelectedMarker(index)}
+                onClick={() =>
+                  setSelectedMarker(selectedMarker === index ? null : index)
+                }
                 type="button"
               />
             ))}
-            <div
-              className={`absolute -translate-x-1/2 -translate-y-full pb-5 ${mapMarkers[selectedMarker].position}`}
-            >
-              <div className="w-52 rounded-3xl border-8 border-page bg-page p-2 text-center text-page-foreground shadow-xl">
-                <img
-                  alt=""
-                  className="h-36 w-full rounded-2xl object-cover"
-                  src={spaceImage}
-                />
-                <p className="px-2 pt-3 pb-1 font-semibold">
-                  {mapMarkers[selectedMarker].label}
-                </p>
+            {selectedMarker !== null && (
+              <div
+                className={`absolute -translate-x-1/2 -translate-y-full pb-5 ${mapMarkers[selectedMarker].position}`}
+              >
+                <div className="w-52 rounded-3xl border-8 border-page bg-page p-2 text-center text-page-foreground shadow-xl">
+                  <img
+                    alt=""
+                    className="h-36 w-full rounded-2xl object-cover"
+                    src={spaceImage}
+                  />
+                  <p className="px-2 pt-3 pb-1 font-semibold">
+                    {mapMarkers[selectedMarker].label}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

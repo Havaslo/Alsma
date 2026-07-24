@@ -3,10 +3,12 @@ import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Gift, LogOut, Mail, Phone, Printer } from "lucide-react";
+import { LogOut, Mail, Phone } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { Form } from "@/components/Form";
+import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
+import { AccountLoyaltySection } from "@/components/account/AccountLoyaltySection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
@@ -25,6 +27,7 @@ export const AccountPage = () => {
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: GUEST_PROFILE_QUERY_KEY }),
   });
+
   if (auth.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
@@ -63,19 +66,21 @@ export const AccountPage = () => {
         </section>
       </main>
     );
+
   const logout = async () => {
     await logoutGuest().catch(() => undefined);
     writeGuestSession(null);
     queryClient.clear();
     navigate(AMAZI_ROUTES.home);
   };
+
   return (
     <main className="min-h-screen bg-page px-4 pt-32 pb-20">
       <SiteHeader light />
       <div className="mx-auto max-w-7xl">
-        <section className="flex flex-col justify-between gap-6 rounded-4xl border border-line bg-panel p-7 shadow-xl sm:flex-row sm:items-center">
+        <section className="flex flex-col justify-between gap-6 rounded-4xl border border-line bg-panel p-7 sm:flex-row sm:items-center">
           <div className="flex items-center gap-5">
-            <div className="grid size-20 place-items-center rounded-full bg-brand text-3xl font-semibold text-brand-foreground">
+            <div className="grid size-20 place-items-center rounded-full bg-page text-3xl font-semibold text-brand">
               {guest.fullName?.[0]}
             </div>
             <div>
@@ -108,134 +113,28 @@ export const AccountPage = () => {
           </button>
         </section>
         <nav className="mt-10 flex flex-wrap gap-3">
-          <button
-            className={
-              section === "bookings"
-                ? "rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-                : "rounded-full border border-line bg-panel px-6 py-3 font-semibold text-brand"
-            }
-            onClick={() => setSection("bookings")}
-            type="button"
-          >
-            История бронирований
-          </button>
-          <button
-            className={
-              section === "loyalty"
-                ? "rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-                : "rounded-full border border-line bg-panel px-6 py-3 font-semibold text-brand"
-            }
-            onClick={() => setSection("loyalty")}
-            type="button"
-          >
-            Бонусы и скидки
-          </button>
+          {[
+            ["bookings", "История бронирований"],
+            ["loyalty", "Бонусы и скидки"],
+          ].map(([value, label]) => (
+            <button
+              className={
+                section === value
+                  ? "rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+                  : "rounded-full border border-line bg-panel px-6 py-3 font-semibold text-brand"
+              }
+              key={value}
+              onClick={() => setSection(value as "bookings" | "loyalty")}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
         </nav>
         {section === "bookings" ? (
-          <section className="mt-8">
-            <div className="flex items-center gap-3">
-              <CalendarDays className="size-7 text-brand" />
-              <h2 className="font-heading text-3xl font-semibold text-brand">
-                История бронирований
-              </h2>
-            </div>
-            <div className="mt-6 space-y-5">
-              {guest.bookings.map((booking) => (
-                <article
-                  className="rounded-4xl border border-line bg-panel p-6 sm:p-8"
-                  key={booking.id}
-                >
-                  <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-                    <div>
-                      <h3 className="text-xl font-semibold text-brand">
-                        {booking.roomName}
-                      </h3>
-                      <p className="mt-2 text-sm text-muted-ui-foreground">
-                        Номер брони: {booking.id.slice(0, 8).toUpperCase()}
-                      </p>
-                    </div>
-                    <button
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-page px-5 py-3 font-semibold text-brand"
-                      onClick={() => window.print()}
-                      type="button"
-                    >
-                      <Printer className="size-4" /> Распечатать
-                    </button>
-                  </div>
-                  <dl className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                        Заезд
-                      </dt>
-                      <dd className="mt-2 font-semibold">
-                        {new Date(booking.checkInDate).toLocaleDateString(
-                          "ru-RU",
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                        Выезд
-                      </dt>
-                      <dd className="mt-2 font-semibold">
-                        {new Date(booking.checkOutDate).toLocaleDateString(
-                          "ru-RU",
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                        Гости
-                      </dt>
-                      <dd className="mt-2 font-semibold">
-                        {booking.guestsCount} гост.
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                        Итоговая цена
-                      </dt>
-                      <dd className="mt-2 font-semibold text-brand">
-                        {booking.totalAmount
-                          ? `${Number(booking.totalAmount).toLocaleString("ru-RU")} ₽`
-                          : "По запросу"}
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="mt-7 w-fit rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand">
-                    {booking.status}
-                  </p>
-                </article>
-              ))}
-              {!guest.bookings.length && (
-                <div className="rounded-3xl bg-panel p-8 text-muted-ui-foreground">
-                  Активных бронирований пока нет.
-                </div>
-              )}
-            </div>
-          </section>
+          <AccountBookingsSection bookings={guest.bookings} />
         ) : (
-          <section className="mt-8 max-w-2xl">
-            <article className="rounded-3xl border border-line bg-panel p-6">
-              <Gift className="size-8 text-brand" />
-              <h2 className="mt-4 font-heading text-2xl font-semibold text-brand">
-                Программа лояльности
-              </h2>
-              <p className="mt-3 leading-7 text-muted-ui-foreground">
-                Накапливайте ночи и получайте персональные привилегии для
-                следующего отдыха.
-              </p>
-              <div className="mt-6 rounded-2xl bg-brand p-5 text-brand-foreground">
-                <p className="text-sm opacity-70">Текущий уровень</p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {guest.bonusProgram?.level ?? "Standard"}
-                </p>
-                <p className="mt-2 text-sm opacity-80">
-                  {guest.bonusProgram?.balance ?? 0} бонусов
-                </p>
-              </div>
-            </article>
-          </section>
+          <AccountLoyaltySection bonusProgram={guest.bonusProgram} />
         )}
       </div>
     </main>

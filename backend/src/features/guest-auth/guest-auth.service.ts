@@ -85,6 +85,7 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
       ? await repository.findUserByEmail(email)
       : await repository.findUserByPhone(phone);
     user ??= await repository.createUser({ email, phone });
+    user = (await repository.provisionDemoProfile(user.id)) ?? user;
     const code = String(randomInt(0, 10_000)).padStart(4, "0");
     const record = await repository.createCode({
       codeHash: hash(code),
