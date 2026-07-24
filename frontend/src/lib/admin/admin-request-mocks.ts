@@ -28,6 +28,7 @@ export type MockRequestDetails = {
   readonly collected: readonly { label: string; value: string }[];
   readonly deadline: string;
   readonly managerTask: string;
+  readonly managerLabel?: string;
   readonly outcome: string;
   readonly transcript: readonly MockTranscriptMessage[];
 };
@@ -166,6 +167,47 @@ export const MOCK_REQUEST_DETAILS: Readonly<
       {
         author: "manager",
         text: "Зафиксировала, подготовлю расчёт и отправлю на почту.",
+      },
+    ],
+  },
+  "2": {
+    client: [
+      { label: "Имя", value: "Ирина" },
+      { label: "Телефон", value: "+7 (911) 320-44-19" },
+      { label: "Канал", value: "WhatsApp" },
+      { label: "Намерение", value: "Уточнение по SPA-программе" },
+      { label: "Статус", value: "В работе" },
+      { label: "Срок", value: "—" },
+      { label: "Дата создания", value: "19.06.2026 06:53" },
+    ],
+    collected: [
+      { label: "Заезд", value: "03.07.2026" },
+      { label: "Выезд", value: "06.07.2026" },
+      { label: "Кол-во взрослых", value: "1" },
+      { label: "Кол-во детей", value: "0" },
+      { label: "Тип номера", value: "SPA-люкс" },
+      {
+        label: "Доп. услуги",
+        value: "Массаж, термальная зона, консультация врача",
+      },
+    ],
+    deadline: "—",
+    managerLabel: "ALSMA",
+    managerTask: "Проверить свободные слоты у SPA-команды",
+    outcome: "Ожидает подтверждения свободных слотов от команды SPA",
+    transcript: [
+      {
+        author: "guest",
+        text: "Здравствуйте! Подскажите, что входит в программу восстановления?",
+      },
+      {
+        author: "manager",
+        text: "Добрый день! Уточняю для вас состав программы и доступные слоты.",
+      },
+      { author: "guest", text: "Меня интересуют даты с 3 по 6 июля." },
+      {
+        author: "manager",
+        text: "Принято, вернусь с подтверждением после проверки у SPA-команды.",
       },
     ],
   },

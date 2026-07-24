@@ -127,7 +127,9 @@ export const AdminRequestDetail = ({
                 key={`${message.author}-${index}`}
               >
                 <p className="text-xs font-semibold tracking-wider text-muted-ui-foreground uppercase">
-                  {message.author === "manager" ? "Менеджер" : "Гость"}
+                  {message.author === "manager"
+                    ? (details.managerLabel ?? "Менеджер")
+                    : "Гость"}
                 </p>
                 <p className="mt-3 leading-7">{message.text}</p>
               </article>

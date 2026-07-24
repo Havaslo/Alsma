@@ -1,103 +1,88 @@
-import { useForm } from "react-hook-form";
+import { type Control, Controller, useForm, useWatch } from "react-hook-form";
 
 import { Form } from "@/components/Form";
-import { useCreateAdminBooking } from "@/lib/admin/useAdmin";
+import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
+import { TextAreaField, TextField } from "@/components/ui/FormField";
+import {
+  BOOKING_FORM_SOURCE_OPTIONS,
+  type MockBookingDraft,
+} from "@/lib/admin/admin-booking-mocks";
 
-const fieldClass =
-  "mt-2 w-full rounded-2xl border border-line bg-brand-foreground px-4 py-3";
-
-type BookingFormValues = {
-  checkInDate: string;
-  checkOutDate: string;
-  email: string;
-  guestName: string;
-  guestsCount: number;
-  phone: string;
-  roomName: string;
+const getCurrentDate = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 export const AdminBookingForm = ({
   onCancel,
+  onCreate,
 }: {
-  readonly onCancel?: () => void;
+  readonly onCancel: () => void;
+  readonly onCreate: (values: MockBookingDraft) => void;
 }) => {
-  const create = useCreateAdminBooking();
-  const form = useForm<BookingFormValues>({
+  const form = useForm<MockBookingDraft>({
     defaultValues: {
-      checkInDate: "",
-      checkOutDate: "",
+      checkInDate: getCurrentDate(),
+      checkOutDate: getCurrentDate(),
       email: "",
       guestName: "",
       guestsCount: 2,
+      note: "",
       phone: "",
       roomName: "",
+      source: "ai-agent",
     },
+  });
+  const checkInDate = useWatch({
+    control: form.control,
+    name: "checkInDate",
   });
 
   return (
-    <Form
-      className="grid gap-4 rounded-3xl border border-line bg-page p-6 md:grid-cols-2 xl:grid-cols-4"
-      form={form}
-      onSubmit={(values) => {
-        create.mutate(
-          { ...values, email: values.email || null },
-          { onSuccess: onCancel },
-        );
-      }}
-    >
-      <label className="text-sm font-medium">
-        Имя гостя
-        <input
-          className={fieldClass}
-          placeholder="Например, Анна Петрова"
+    <Form className="space-y-5" form={form} onSubmit={onCreate}>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <TextField
+          label="Имя гостя"
+          placeholder="..."
           {...form.register("guestName", { required: true })}
         />
-      </label>
-      <label className="text-sm font-medium">
-        Телефон
-        <input
-          className={fieldClass}
-          placeholder="+7 999 000-00-00"
+        <TextField
+          label="Телефон"
+          placeholder="..."
           {...form.register("phone", { required: true })}
         />
-      </label>
-      <label className="text-sm font-medium">
-        Email
-        <input
-          className={fieldClass}
-          placeholder="guest@example.com"
+        <TextField
+          label="Email"
+          placeholder="..."
           type="email"
           {...form.register("email")}
         />
-      </label>
-      <label className="text-sm font-medium">
-        Категория номера
-        <input
-          className={fieldClass}
-          placeholder="Полулюкс"
+        <TextField
+          label="Категория номера"
+          placeholder="..."
           {...form.register("roomName", { required: true })}
         />
-      </label>
-      <label className="text-sm font-medium">
-        Заезд
-        <input
-          className={fieldClass}
-          type="date"
-          {...form.register("checkInDate", { required: true })}
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <DateField
+          ariaLabel="Дата заезда"
+          control={form.control}
+          label="Заезд"
+          name="checkInDate"
         />
-      </label>
-      <label className="text-sm font-medium">
-        Выезд
-        <input
-          className={fieldClass}
-          type="date"
-          {...form.register("checkOutDate", { required: true })}
+        <DateField
+          ariaLabel="Дата выезда"
+          control={form.control}
+          label="Выезд"
+          min={checkInDate}
+          name="checkOutDate"
         />
-      </label>
-      <label className="text-sm font-medium">
-        Количество гостей
-        <input
-          className={fieldClass}
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <TextField
+          label="Количество гостей"
           max={20}
           min={1}
           type="number"
@@ -107,25 +92,67 @@ export const AdminBookingForm = ({
             valueAsNumber: true,
           })}
         />
-      </label>
-      <div className="flex items-end gap-3">
-        {onCancel && (
-          <button
-            className="rounded-full border border-line px-5 py-3 text-sm font-semibold"
-            onClick={onCancel}
-            type="button"
-          >
-            Отмена
-          </button>
-        )}
-        <button
-          className="flex-1 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
-          disabled={create.isPending}
-          type="submit"
-        >
-          Создать заявку
-        </button>
+        <label className="block text-sm font-medium text-panel-foreground">
+          <span>Источник</span>
+          <span className="mt-2 block rounded-xl border border-line bg-page px-4 py-2.5">
+            <Controller
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <DropdownSelect
+                  ariaLabel="Источник заявки"
+                  onChange={field.onChange}
+                  options={BOOKING_FORM_SOURCE_OPTIONS}
+                  value={field.value}
+                />
+              )}
+            />
+          </span>
+        </label>
+      </div>
+      <TextAreaField
+        label="Комментарий"
+        placeholder="..."
+        {...form.register("note")}
+      />
+      <div className="flex justify-end gap-3">
+        <Button onClick={onCancel} variant="secondary">
+          Отмена
+        </Button>
+        <Button type="submit">Создать заявку</Button>
       </div>
     </Form>
   );
 };
+
+const DateField = ({
+  ariaLabel,
+  control,
+  label,
+  min,
+  name,
+}: {
+  readonly ariaLabel: string;
+  readonly control: Control<MockBookingDraft>;
+  readonly label: string;
+  readonly min?: string;
+  readonly name: "checkInDate" | "checkOutDate";
+}) => (
+  <label className="block text-sm font-medium text-panel-foreground">
+    <span>{label}</span>
+    <span className="mt-2 block rounded-xl border border-line bg-page px-4 py-2.5">
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <DatePicker
+            ariaLabel={ariaLabel}
+            min={min}
+            onChange={field.onChange}
+            value={field.value}
+          />
+        )}
+      />
+    </span>
+  </label>
+);
