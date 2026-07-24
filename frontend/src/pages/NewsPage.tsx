@@ -17,6 +17,7 @@ const filters = [
   ["arrivals", "Тематические заезды"],
   ["wellness", "Wellness-программы"],
   ["events", "Мероприятия"],
+  ["archive", "Архив"],
 ] as const;
 
 const upcomingEvents = [
@@ -56,19 +57,25 @@ export const NewsPage = () => {
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const newsItems = [
+  const allNewsItems = [
     ...getSiteCollection<EditorialItem>(
       content.data?.items,
       "items",
       NEWS_ITEMS,
     ),
   ]
-    .filter((item) => item.isActive !== false && item.isArchived !== true)
+    .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
-  const items =
-    filter === "all"
-      ? newsItems
-      : newsItems.filter((item) => item.category === filter);
+  const activeNewsItems = allNewsItems.filter(
+    (item) => item.isArchived !== true,
+  );
+  const items = (
+    filter === "archive"
+      ? allNewsItems.filter((item) => item.isArchived === true)
+      : filter === "all"
+        ? activeNewsItems
+        : activeNewsItems.filter((item) => item.category === filter)
+  ).slice(0, 3);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -85,14 +92,21 @@ export const NewsPage = () => {
           typeof hero?.title === "string" ? hero.title : "Новости и события"
         }
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
-        <div className="text-center">
+      <section
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        id="details"
+      >
+        <div className="mx-auto max-w-4xl text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Лента обновлений
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Новости отеля
           </h2>
+          <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+            Следите за ближайшими программами, тематическими заездами и
+            специальными форматами отдыха.
+          </p>
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           {filters.map(([value, label]) => (
@@ -108,12 +122,17 @@ export const NewsPage = () => {
         </div>
         <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <EditorialCard item={item} key={item.title} />
+            <EditorialCard item={item} key={item.title} variant="news" />
           ))}
         </div>
+        {items.length === 0 && (
+          <div className="mt-12 rounded-4xl border border-line bg-page px-6 py-16 text-center text-muted-ui-foreground">
+            В этом разделе пока нет публикаций.
+          </div>
+        )}
       </section>
-      <section className="bg-panel/70 py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <section className="bg-page py-24">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Ближайшие форматы
@@ -153,7 +172,7 @@ export const NewsPage = () => {
                     {event.description}
                   </p>
                   <a
-                    className="mt-7 inline-flex w-fit rounded-full border border-brand px-6 py-3 font-semibold text-brand"
+                    className="mt-7 inline-flex w-fit self-end rounded-full border border-brand px-6 py-3 font-semibold text-brand lg:mt-auto"
                     href={event.href}
                     rel="noreferrer"
                     target="_blank"
