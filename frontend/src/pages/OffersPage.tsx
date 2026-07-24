@@ -29,6 +29,12 @@ const getOfferMonth = (value: string) => {
   return `${month.charAt(0).toUpperCase()}${month.slice(1)}`;
 };
 
+const scenarioCtaLabels = [
+  "Подробнее",
+  "Забронировать",
+  "Выбрать программу",
+] as const;
+
 export const OffersPage = () => {
   const page = PUBLIC_PAGES.offers;
   const content = usePublishedSiteContent("offers");
@@ -100,7 +106,10 @@ export const OffersPage = () => {
         image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={title}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+      <section
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        id="details"
+      >
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Актуальные акции
@@ -108,40 +117,44 @@ export const OffersPage = () => {
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Все действующие предложения
           </h2>
+          <p className="mx-auto mt-4 max-w-3xl text-muted-ui-foreground">
+            Эти акции показываются и на главной странице, чтобы гости сразу
+            увидели самые выгодные условия.
+          </p>
         </div>
-        <div className="mt-12 grid gap-7 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {offers.map((offer) => (
             <article
-              className="group flex overflow-hidden rounded-4xl bg-brand text-brand-foreground"
+              className="group flex overflow-hidden rounded-3xl bg-brand text-brand-foreground"
               key={offer.title}
             >
               <div className="flex min-h-full flex-col">
-                <div className="h-56 overflow-hidden">
+                <div className="aspect-[4/3] overflow-hidden">
                   <img
                     alt={offer.title}
                     className="size-full object-cover transition duration-500 group-hover:scale-105"
                     src={offer.image}
                   />
                 </div>
-                <div className="flex flex-1 flex-col p-7">
+                <div className="flex flex-1 flex-col p-6">
                   <span className="w-fit rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
                     {offer.tag}
                   </span>
-                  <h3 className="mt-4 font-heading text-3xl font-semibold">
+                  <h3 className="mt-4 font-heading text-2xl font-semibold">
                     {offer.title}
                   </h3>
-                  <p className="mt-4 leading-7 text-brand-foreground/80">
+                  <p className="mt-3 leading-7 text-brand-foreground/80">
                     {offer.description}
                   </p>
                   {offer.buttonLink ? (
                     <a
-                      className="mt-6 font-semibold text-accent-ui"
+                      className="mt-auto pt-6 font-semibold text-accent-ui"
                       href={offer.buttonLink}
                     >
                       Подробнее ↗
                     </a>
                   ) : (
-                    <span className="mt-6 font-semibold text-accent-ui">
+                    <span className="mt-auto pt-6 font-semibold text-accent-ui">
                       Подробнее ↗
                     </span>
                   )}
@@ -152,7 +165,7 @@ export const OffersPage = () => {
         </div>
       </section>
       <section className="bg-panel py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Пакетные предложения
@@ -160,23 +173,27 @@ export const OffersPage = () => {
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
               Готовые сценарии отдыха
             </h2>
+            <p className="mx-auto mt-4 max-w-3xl text-muted-ui-foreground">
+              Подберите программу с проживанием, процедурами и дополнительными
+              впечатлениями в одном предложении.
+            </p>
           </div>
           <div className="mt-12 grid gap-8 xl:grid-cols-2">
-            {scenarios.map((scenario) => (
+            {scenarios.map((scenario, index) => (
               <article
-                className="overflow-hidden rounded-4xl bg-page"
+                className="overflow-hidden rounded-3xl bg-brand-foreground"
                 key={scenario.title}
               >
                 <img
                   alt={scenario.title}
-                  className="h-80 w-full object-cover"
+                  className="aspect-video w-full object-cover"
                   src={scenario.image}
                 />
-                <div className="flex flex-col p-8 sm:p-10">
-                  <h3 className="font-heading text-4xl font-semibold">
+                <div className="flex flex-col p-7 sm:p-8">
+                  <h3 className="font-heading text-3xl font-semibold">
                     {scenario.title}
                   </h3>
-                  <p className="mt-5 leading-7 text-muted-ui-foreground">
+                  <p className="mt-4 leading-7 text-muted-ui-foreground">
                     {scenario.description}
                   </p>
                   <div className="mt-6 flex flex-wrap gap-2">
@@ -189,24 +206,31 @@ export const OffersPage = () => {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-auto pt-8 text-2xl font-semibold text-brand">
-                    {scenario.price}
-                  </p>
-                  {scenario.buttonText && scenario.buttonLink && (
+                  <div className="mt-8 flex flex-wrap items-end justify-between gap-5">
+                    <div>
+                      <p className="text-sm text-muted-ui-foreground">
+                        Стоимость программы
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-brand">
+                        {scenario.price}
+                      </p>
+                    </div>
                     <a
-                      className="mt-6 w-fit rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
-                      href={scenario.buttonLink}
+                      className="inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                      href={scenario.buttonLink || "/#booking"}
                     >
-                      {scenario.buttonText}
+                      {scenario.buttonText ||
+                        scenarioCtaLabels[index] ||
+                        "Подробнее"}
                     </a>
-                  )}
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Календарь акций
@@ -278,18 +302,22 @@ export const OffersPage = () => {
             </section>
           ))}
         </div>
-        <div className="mt-12 rounded-3xl bg-brand/10 p-8">
+        <div className="mt-12 rounded-3xl bg-panel p-8">
           <h3 className="font-heading text-3xl font-semibold text-brand">
             Общие условия акций
           </h3>
-          <ul className="mt-6 grid gap-4 md:grid-cols-2">
+          <ul className="mt-6 grid gap-3">
             {[
-              "Предложения действуют при наличии свободных мест",
-              "Скидки и специальные тарифы не суммируются",
-              "Состав программы уточняется при бронировании",
-              "Даты проведения могут быть скорректированы",
+              "Акции действуют при бронировании через официальный сайт или ресепшен отеля.",
+              "Количество номеров по акционным ценам ограничено.",
+              "Скидки не суммируются с другими предложениями.",
+              "Для участия в мастер-классах и экскурсиях необходима предварительная запись.",
+              "Актуальные даты и условия уточняйте на сайте отеля или у менеджеров.",
             ].map((item) => (
-              <li className="flex gap-3" key={item}>
+              <li
+                className="flex gap-3 rounded-2xl bg-brand-foreground px-5 py-4"
+                key={item}
+              >
                 <Check className="mt-1 size-4 shrink-0 text-brand" /> {item}
               </li>
             ))}
