@@ -77,7 +77,10 @@ export const AccountLoyaltySection = ({
       </h3>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {benefits.map(({ description, icon: Icon, title }) => (
-          <div className="rounded-3xl border border-line p-5" key={title}>
+          <div
+            className="rounded-3xl border border-line bg-page p-5"
+            key={title}
+          >
             <div className="grid size-12 place-items-center rounded-full bg-page text-brand">
               <Icon className="size-5" />
             </div>
