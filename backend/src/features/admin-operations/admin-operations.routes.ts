@@ -12,6 +12,7 @@ import {
   createBookingHandler,
   createCompleteTaskHandler,
   createDeleteClientHandler,
+  createGetClientHandler,
   createListBookingsHandler,
   createListClientsHandler,
   createListRequestsHandler,
@@ -39,31 +40,39 @@ export const createAdminOperationsRouter = (database: Database): Router => {
       createAdminAuthService(createAdminAuthRepository(database)),
     ),
   );
-  router.use(
-    createRequireAdminPermission("dashboard.access", "requests.access"),
-  );
   router.get(
     "/bookings",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListBookingsHandler(repository),
   );
   router.post(
     "/bookings",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({ body: createBookingBodySchema }),
     createBookingHandler(repository),
   );
   router.post(
     "/bookings/:recordId/mark-paid",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({ params: recordParamsSchema }),
     createMarkBookingPaidHandler(repository),
   );
   router.get(
     "/clients",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListClientsHandler(repository),
   );
+  router.get(
+    "/clients/:recordId",
+    createRequireAdminPermission("dashboard.access"),
+    validateRequest({ params: recordParamsSchema }),
+    createGetClientHandler(repository),
+  );
   router.put(
     "/clients/:recordId/bonus",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({
       body: updateBonusBodySchema,
       params: recordParamsSchema,
@@ -72,6 +81,7 @@ export const createAdminOperationsRouter = (database: Database): Router => {
   );
   router.put(
     "/clients/:recordId",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({
       body: updateClientBodySchema,
       params: recordParamsSchema,
@@ -80,16 +90,19 @@ export const createAdminOperationsRouter = (database: Database): Router => {
   );
   router.delete(
     "/clients/:recordId",
+    createRequireAdminPermission("dashboard.access"),
     validateRequest({ params: recordParamsSchema }),
     createDeleteClientHandler(repository),
   );
   router.get(
     "/requests",
+    createRequireAdminPermission("requests.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListRequestsHandler(repository),
   );
   router.patch(
     "/requests/:recordId",
+    createRequireAdminPermission("requests.access"),
     validateRequest({
       body: updateRequestStatusBodySchema,
       params: recordParamsSchema,
@@ -98,11 +111,13 @@ export const createAdminOperationsRouter = (database: Database): Router => {
   );
   router.get(
     "/manager-tasks",
+    createRequireAdminPermission("dashboard.access", "requests.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListTasksHandler(repository),
   );
   router.post(
     "/manager-tasks/:recordId/complete",
+    createRequireAdminPermission("dashboard.access", "requests.access"),
     validateRequest({ params: recordParamsSchema }),
     createCompleteTaskHandler(repository),
   );

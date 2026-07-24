@@ -3,23 +3,38 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 import { AdminClientRow } from "@/components/admin/AdminClientRow";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { Loader } from "@/components/ui/Loader";
 import { useAdminClients } from "@/lib/admin/useAdmin";
+
+type ActivityFilter = "all" | "with-bookings" | "without-bookings";
+const ACTIVITY_OPTIONS = [
+  { label: "Все клиенты", value: "all" },
+  { label: "Есть брони", value: "with-bookings" },
+  { label: "Без броней", value: "without-bookings" },
+] as const;
 
 export const AdminClientsPanel = () => {
   const clients = useAdminClients();
   const [search, setSearch] = useState("");
+  const [activity, setActivity] = useState<ActivityFilter>("all");
   const items = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("ru-RU");
-    if (!term) return clients.data?.items ?? [];
-    return (clients.data?.items ?? []).filter((item) =>
-      [item.fullName, item.phone, item.email]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("ru-RU")
-        .includes(term),
-    );
-  }, [clients.data?.items, search]);
+    return (clients.data?.items ?? []).filter((item) => {
+      const matchesSearch =
+        !term ||
+        [item.fullName, item.phone, item.email]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("ru-RU")
+          .includes(term);
+      const matchesActivity =
+        activity === "all" ||
+        (activity === "with-bookings" && item._count.bookings > 0) ||
+        (activity === "without-bookings" && item._count.bookings === 0);
+      return matchesSearch && matchesActivity;
+    });
+  }, [activity, clients.data?.items, search]);
 
   return (
     <div className="space-y-5">
@@ -31,25 +46,39 @@ export const AdminClientsPanel = () => {
           клиента, чтобы открыть подробности.
         </p>
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_14rem]">
-          <label className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
-            <Search className="size-4 text-muted-ui-foreground" />
-            <input
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Имя, телефон или почта"
-              value={search}
+          <label>
+            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
+              Поиск
+            </span>
+            <span className="flex min-h-12 items-center gap-3 rounded-2xl border border-line bg-page px-4">
+              <Search className="size-4 text-muted-ui-foreground" />
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="..."
+                value={search}
+              />
+            </span>
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
+              Активность
+            </span>
+            <DropdownSelect<ActivityFilter>
+              ariaLabel="Фильтр клиентов по активности"
+              onChange={setActivity}
+              options={ACTIVITY_OPTIONS}
+              triggerClassName="min-h-12 rounded-2xl border border-line bg-page px-4 text-sm"
+              value={activity}
             />
           </label>
-          <div className="rounded-2xl border border-line px-4 py-3 text-sm text-muted-ui-foreground">
-            Всего клиентов:{" "}
-            <strong className="text-page-foreground">
-              {clients.data?.pagination.totalItems ?? 0}
-            </strong>
-          </div>
         </div>
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
+        <div className="border-b border-line px-5 py-4 text-sm font-semibold">
+          Всего клиентов: {items.length}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-5xl border-collapse text-left text-sm">
             <thead className="bg-page text-xs font-semibold">

@@ -8,6 +8,7 @@ import {
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
 import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingRequestsPanel";
+import { AdminClientDetail } from "@/components/admin/AdminClientDetail";
 import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
 import { AdminEntertainmentEditor } from "@/components/admin/AdminEntertainmentEditor";
@@ -53,6 +54,7 @@ export const AdminDashboardPage = () => {
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
   const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
   const requestMatch = matchPath(AMAZI_ROUTES.adminRequest, path);
+  const clientMatch = matchPath(AMAZI_ROUTES.adminClient, path);
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
@@ -71,8 +73,12 @@ export const AdminDashboardPage = () => {
       {isSiteLeads && can("leads.access") && <AdminSiteLeadsTable />}
       {path === AMAZI_ROUTES.adminBookingRequests &&
         can("dashboard.access") && <AdminBookingRequestsPanel />}
-      {path.startsWith(AMAZI_ROUTES.adminClients) &&
-        can("dashboard.access") && <AdminClientsPanel />}
+      {path === AMAZI_ROUTES.adminClients && can("dashboard.access") && (
+        <AdminClientsPanel />
+      )}
+      {clientMatch?.params.clientId && can("dashboard.access") && (
+        <AdminClientDetail clientId={clientMatch.params.clientId} />
+      )}
       {path === AMAZI_ROUTES.adminRequests && can("requests.access") && (
         <AdminRequestsPanel />
       )}

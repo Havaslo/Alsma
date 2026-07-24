@@ -6,6 +6,7 @@ import {
   deleteAdminClient,
   loadAdmin,
   loadAdminBookings,
+  loadAdminClient,
   loadAdminClients,
   loadAdminLeads,
   loadAdminRequests,
@@ -43,6 +44,12 @@ export const useAdminBookings = () =>
 export const useAdminClients = () =>
   useApiQuery([...ADMIN_OPERATIONS_QUERY_KEY, "clients"], (signal) =>
     loadAdminClients(signal),
+  );
+export const useAdminClient = (recordId: string) =>
+  useApiQuery(
+    [...ADMIN_OPERATIONS_QUERY_KEY, "clients", recordId],
+    (signal) => loadAdminClient(recordId, signal),
+    { enabled: Boolean(recordId) },
   );
 export const useAdminRequests = () =>
   useApiQuery([...ADMIN_OPERATIONS_QUERY_KEY, "requests"], (signal) =>

@@ -36,10 +36,25 @@ export type BookingRequest = {
 export type AdminClient = {
   readonly _count: { bookings: number };
   readonly bonusProgram: { balance: number; level: string } | null;
+  readonly createdAt: string;
   readonly fullName: string | null;
   readonly email: string | null;
   readonly id: string;
   readonly phone: string;
+  readonly updatedAt: string;
+};
+export type AdminClientBooking = {
+  readonly checkInDate: string;
+  readonly checkOutDate: string;
+  readonly createdAt: string;
+  readonly guestsCount: number;
+  readonly id: string;
+  readonly roomName: string;
+  readonly status: string;
+  readonly totalAmount: string | null;
+};
+export type AdminClientDetail = AdminClient & {
+  readonly bookings: AdminClientBooking[];
 };
 export type AdminRequest = {
   readonly category: string;
@@ -114,6 +129,11 @@ export const loadAdminClients = (signal?: AbortSignal) =>
   apiClient.get<Page<AdminClient>>("/admin/clients", {
     headers: headers(),
     params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const loadAdminClient = (recordId: string, signal?: AbortSignal) =>
+  apiClient.get<{ client: AdminClientDetail }>(`/admin/clients/${recordId}`, {
+    headers: headers(),
     signal,
   });
 export const loadAdminRequests = (signal?: AbortSignal) =>

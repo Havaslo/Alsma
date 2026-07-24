@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
+import { HttpError } from "../../lib/http/http-error.js";
 import { createPaginatedResponse } from "../../lib/http/pagination.js";
 import type { AdminOperationsRepository } from "./admin-operations.repository.js";
 import type {
@@ -38,6 +39,17 @@ export const createBookingHandler =
 export const createListClientsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listClients);
+export const createGetClientHandler =
+  (repository: AdminOperationsRepository): RequestHandler =>
+  async (_request, response) => {
+    const client = await repository.getClient(
+      (response.locals.input.params as RecordParams).recordId,
+    );
+    if (!client) {
+      throw new HttpError(404, "CLIENT_NOT_FOUND", "Клиент не найден.");
+    }
+    response.json({ client });
+  };
 export const createListRequestsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listRequests);

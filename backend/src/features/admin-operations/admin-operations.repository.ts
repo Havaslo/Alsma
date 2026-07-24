@@ -38,6 +38,15 @@ export const createAdminOperationsRepository = (database: Database) => ({
     ]);
     return { items, total };
   },
+  getClient: (recordId: string) =>
+    database.client.guestUser.findUnique({
+      include: {
+        bonusProgram: true,
+        bookings: { orderBy: { checkInDate: "desc" } },
+        _count: { select: { bookings: true } },
+      },
+      where: { id: recordId },
+    }),
   listRequests: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([
