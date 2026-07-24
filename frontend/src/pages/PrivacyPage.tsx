@@ -4,8 +4,8 @@ import { PRIVACY_SECTIONS } from "@/lib/site/privacy-policy";
 export const PrivacyPage = () => (
   <main className="min-h-screen bg-page text-page-foreground">
     <SiteHeader light transparentAtTop={false} />
-    <section className="mx-auto max-w-4xl px-5 pt-36 pb-20 sm:px-8 sm:pt-40">
-      <article className="rounded-4xl bg-panel px-6 py-10 shadow-xl sm:px-10 sm:py-12 lg:px-14 lg:py-14">
+    <section className="mx-auto max-w-5xl px-5 pt-40 pb-20 sm:px-8 sm:pt-44">
+      <article className="rounded-4xl bg-brand-foreground px-6 py-10 shadow-lg sm:px-10 sm:py-12 lg:px-14 lg:py-14">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           Документ
         </p>
