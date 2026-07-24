@@ -86,9 +86,9 @@ const mapMarkers = [
   { label: "Коттедж у реки", position: "top-[62%] left-[9%]" },
   { label: "Лесной коттедж", position: "top-[64%] left-[18%]" },
   { label: "Семейный коттедж", position: "top-[61%] left-[29%]" },
-  { label: "Банный дом", position: "top-[93%] left-[61%]" },
-  { label: "Летний павильон", position: "top-[91%] left-[69%]" },
-  { label: "Пляж", position: "top-[87%] left-[83%]" },
+  { label: "Банный дом", position: "top-[75%] left-[56%]" },
+  { label: "Летний павильон", position: "top-[73%] left-[66%]" },
+  { label: "Пляж", position: "top-[71%] left-[80%]" },
 ] as const;
 
 const HomeMapSection = () => {
