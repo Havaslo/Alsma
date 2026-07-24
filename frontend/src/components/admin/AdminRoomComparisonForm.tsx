@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 
 import { Plus, Save, Trash2 } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { CheckboxField, TextField } from "@/components/ui/FormField";
 import { getRoomId } from "@/lib/site/rooms";
 import {
@@ -19,6 +21,10 @@ export const AdminRoomComparisonForm = ({
 }: {
   readonly items?: SiteContentItem[];
 }) => {
+  const [rowToDelete, setRowToDelete] = useState<{
+    index: number;
+    label: string;
+  }>();
   const rooms = getRoomCards(items);
   const save = useSaveAdminSiteContent();
   const form = useForm<RoomComparisonFormValues>({
@@ -144,21 +150,12 @@ export const AdminRoomComparisonForm = ({
               <tbody>
                 {rows.fields.map((row, rowIndex) => (
                   <tr className="border-t border-line align-top" key={row.id}>
-                    <td className="min-w-56 space-y-3 p-4">
+                    <td className="min-w-56 p-4">
                       <TextField
                         label="Название параметра"
                         {...form.register(`rows.${rowIndex}.label`, {
                           required: "Введите параметр.",
                         })}
-                      />
-                      <CheckboxField
-                        checked={values.rows?.[rowIndex]?.isActive ?? false}
-                        label="Показывать строку"
-                        onChange={(checked) =>
-                          form.setValue(`rows.${rowIndex}.isActive`, checked, {
-                            shouldDirty: true,
-                          })
-                        }
                       />
                     </td>
                     {selectedRooms.map((room, roomIndex) => {
@@ -167,7 +164,7 @@ export const AdminRoomComparisonForm = ({
                         <td className="min-w-64 p-4" key={roomId}>
                           <TextField
                             label={room.title}
-                            placeholder="Введите значение"
+                            placeholder="..."
                             {...form.register(
                               `rows.${rowIndex}.values.${roomId}`,
                             )}
@@ -175,10 +172,27 @@ export const AdminRoomComparisonForm = ({
                         </td>
                       );
                     })}
-                    <td className="p-4">
+                    <td className="min-w-56 space-y-3 p-4">
+                      <CheckboxField
+                        checked={values.rows?.[rowIndex]?.isActive ?? false}
+                        className="w-full"
+                        label="Показывать строку"
+                        onChange={(checked) =>
+                          form.setValue(`rows.${rowIndex}.isActive`, checked, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
                       <Button
-                        className="text-destructive"
-                        onClick={() => rows.remove(rowIndex)}
+                        className="w-full text-destructive"
+                        onClick={() =>
+                          setRowToDelete({
+                            index: rowIndex,
+                            label:
+                              values.rows?.[rowIndex]?.label ||
+                              `Строка ${rowIndex + 1}`,
+                          })
+                        }
                         variant="secondary"
                       >
                         <Trash2 className="size-4" />
@@ -192,6 +206,19 @@ export const AdminRoomComparisonForm = ({
           </div>
         )}
       </section>
+      <ConfirmModal
+        confirmLabel="Удалить строку"
+        onClose={() => setRowToDelete(undefined)}
+        onConfirm={() => {
+          if (rowToDelete) rows.remove(rowToDelete.index);
+          setRowToDelete(undefined);
+        }}
+        open={Boolean(rowToDelete)}
+        title="Удалить строку сравнения?"
+      >
+        Строка «{rowToDelete?.label}» будет удалена из редактора. Чтобы
+        применить изменение на сайте, сохраните таблицу.
+      </ConfirmModal>
     </Form>
   );
 };

@@ -50,7 +50,7 @@ export const AdminRoomCardFields = ({
         <TextField
           error={errors?.price?.message}
           label="Цена / цена от"
-          placeholder="от 17 500 ₽"
+          placeholder="..."
           {...form.register(`items.${index}.price`, {
             required: "Введите цену.",
           })}
@@ -112,7 +112,7 @@ export const AdminRoomCardFields = ({
       <div className="mt-5">
         <TextField
           label="Особенности номера"
-          placeholder="3 этаж, лифта нет, без балкона"
+          placeholder="..."
           {...form.register(`items.${index}.features`)}
         />
         <p className="mt-2 text-xs text-muted-ui-foreground">
@@ -122,7 +122,7 @@ export const AdminRoomCardFields = ({
       <div className="mt-5">
         <TextField
           label="Оснащение номера"
-          placeholder="Wi-Fi, телевизор, чайная станция"
+          placeholder="..."
           {...form.register(`items.${index}.amenities`)}
         />
         <p className="mt-2 text-xs text-muted-ui-foreground">
