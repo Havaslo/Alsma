@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import { Users } from "lucide-react";
-
 import heroImage from "@/assets/alsma/spa-river-aerial.jpg";
 import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { PublicHero } from "@/components/site/PublicHero";
@@ -34,7 +32,10 @@ export const CelebrationsPage = () => {
         image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={title}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+      <section
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        id="details"
+      >
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Форматы мероприятий
@@ -50,7 +51,7 @@ export const CelebrationsPage = () => {
         <div className="mt-12 grid gap-7 lg:grid-cols-3">
           {EVENT_FORMATS.map((event) => (
             <article
-              className="overflow-hidden rounded-4xl bg-panel"
+              className="overflow-hidden rounded-4xl border border-line bg-page"
               key={event.title}
             >
               <img
@@ -62,8 +63,8 @@ export const CelebrationsPage = () => {
                 <h3 className="font-heading text-3xl font-semibold text-brand">
                   {event.title}
                 </h3>
-                <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand">
-                  <Users className="size-4" /> {event.capacity}
+                <p className="mt-4 inline-flex rounded-full bg-supporting/30 px-4 py-2 text-sm font-semibold text-brand">
+                  {event.capacity}
                 </p>
                 <p className="mt-5 leading-7 text-muted-ui-foreground">
                   {event.description}
@@ -71,7 +72,7 @@ export const CelebrationsPage = () => {
                 <div className="mt-6 flex flex-wrap gap-3">
                   {event.details.map((detail) => (
                     <span
-                      className="rounded-full bg-page px-4 py-2 text-sm font-medium"
+                      className="rounded-full bg-panel px-4 py-2 text-sm font-medium"
                       key={detail}
                     >
                       {detail}
@@ -83,7 +84,7 @@ export const CelebrationsPage = () => {
           ))}
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 pb-24 sm:px-8">
+      <section className="mx-auto max-w-screen-2xl px-5 pb-24 sm:px-8">
         <div className="relative overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground sm:px-10">
           <img
             alt=""
@@ -91,7 +92,7 @@ export const CelebrationsPage = () => {
             className="absolute inset-0 size-full object-cover"
             src={heroImage}
           />
-          <div className="absolute inset-0 bg-page-foreground/70" />
+          <div className="absolute inset-0 bg-page-foreground/60" />
           <div className="relative mx-auto max-w-4xl">
             <p className="text-sm font-semibold tracking-widest uppercase opacity-75">
               Обсудим ваш формат
@@ -115,8 +116,8 @@ export const CelebrationsPage = () => {
         </div>
       </section>
       <section className="bg-panel py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="text-center">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+          <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Галерея атмосферы
             </p>
@@ -131,7 +132,7 @@ export const CelebrationsPage = () => {
           <div className="mt-12 grid gap-7 md:grid-cols-3">
             {EVENT_GALLERY.map((item) => (
               <article
-                className="overflow-hidden rounded-3xl bg-page"
+                className="overflow-hidden rounded-3xl border border-line bg-page"
                 key={item.title}
               >
                 <img
