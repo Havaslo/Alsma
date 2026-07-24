@@ -38,39 +38,37 @@ export const SiteOfferPopup = () => {
   if (!banner || visiblePath !== location.pathname) return null;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-page-foreground/55 p-4 backdrop-blur-sm">
-      <article className="relative grid max-w-3xl overflow-hidden rounded-3xl bg-panel shadow-2xl md:grid-cols-2">
-        <button
-          aria-label="Закрыть предложение"
-          className="absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full bg-panel/90 text-page-foreground"
-          onClick={() => setVisiblePath(undefined)}
-          type="button"
+    <article className="fixed right-4 bottom-4 left-4 z-50 max-w-md overflow-hidden rounded-3xl border border-line/50 bg-panel shadow-2xl sm:right-auto sm:bottom-6 sm:left-6 sm:w-full">
+      <button
+        aria-label="Закрыть предложение"
+        className="absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full bg-panel/95 text-page-foreground shadow-sm transition hover:bg-panel"
+        onClick={() => setVisiblePath(undefined)}
+        type="button"
+      >
+        <X className="size-5" />
+      </button>
+      <img
+        alt=""
+        className="h-48 w-full object-cover sm:h-52"
+        src={banner.image}
+      />
+      <div className="p-6 sm:p-7">
+        <p className="text-xs font-bold tracking-widest text-brand uppercase">
+          {banner.badge}
+        </p>
+        <h2 className="mt-3 font-heading text-3xl leading-none font-semibold">
+          {banner.title}
+        </h2>
+        <p className="mt-4 line-clamp-3 leading-6 text-muted-ui-foreground">
+          {banner.description}
+        </p>
+        <a
+          className="mt-5 inline-flex rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+          href={banner.buttonHref}
         >
-          <X className="size-5" />
-        </button>
-        <img
-          alt=""
-          className="size-full h-64 object-cover md:h-full"
-          src={banner.image}
-        />
-        <div className="p-8 md:p-10">
-          <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            {banner.badge}
-          </p>
-          <h2 className="mt-4 font-heading text-3xl font-semibold">
-            {banner.title}
-          </h2>
-          <p className="mt-4 leading-7 text-muted-ui-foreground">
-            {banner.description}
-          </p>
-          <a
-            className="mt-7 inline-flex rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-            href={banner.buttonHref}
-          >
-            {banner.buttonLabel}
-          </a>
-        </div>
-      </article>
-    </div>
+          {banner.buttonLabel}
+        </a>
+      </div>
+    </article>
   );
 };
