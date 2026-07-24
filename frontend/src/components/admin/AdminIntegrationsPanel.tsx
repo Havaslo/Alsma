@@ -1,180 +1,129 @@
-import { MessageCircle, PhoneCall, RefreshCw } from "lucide-react";
+import { useState } from "react";
 
-const integrationOverview = [
-  {
-    description: "Бронирования, доступность номеров, тарифы и передача заявок.",
-    icon: RefreshCw,
-    status: "Не подключено",
-    title: "PMS Eptera",
-  },
-  {
-    description: "Канал для уведомлений, заявок и ответов чат-агента.",
-    icon: MessageCircle,
-    status: "Ожидает данных",
-    title: "MAX",
-  },
-  {
-    description: "Канал для уведомлений и сообщений сообщества.",
-    icon: MessageCircle,
-    status: "Ожидает данных",
-    title: "ВКонтакте",
-  },
-  {
-    description: "Приём звонков, голосовые ответы и перевод на менеджера.",
-    icon: PhoneCall,
-    status: "Нужно согласование",
-    title: "Телефония",
-  },
-] as const;
+import { AdminIntegrationFormSection } from "@/components/admin/AdminIntegrationFormSection";
+import {
+  INTEGRATION_STATUS_LABELS,
+  MOCK_INTEGRATION_FLOW,
+  MOCK_INTEGRATION_OVERVIEW,
+  MOCK_INTEGRATION_REQUIREMENTS,
+  MOCK_INTEGRATION_SECTIONS,
+} from "@/lib/admin/admin-integration-mocks";
+import { cn } from "@/lib/cn";
 
-const integrationDetails = [
-  integrationOverview[0],
-  {
-    description: "Уведомления о новых заявках и работа чат-агентов.",
-    status: "Ожидает данных",
-    title: "MAX и ВКонтакте",
-  },
-  integrationOverview[3],
-] as const;
-
-const integrationFields = {
-  "MAX и ВКонтакте": [
-    "Токен сообщества MAX",
-    "ID чата MAX",
-    "Токен сообщества ВКонтакте",
-    "ID сообщества ВКонтакте",
-  ],
-  "PMS Eptera": ["Адрес API", "Логин", "Пароль", "ID объекта"],
-  Телефония: [
-    "Провайдер телефонии",
-    "SIP-адрес",
-    "Номер для входящих звонков",
-    "Номер менеджера",
-  ],
+const STATUS_TONES = {
+  "approval-required": "bg-muted-ui text-muted-ui-foreground",
+  "awaiting-data": "bg-supporting/25 text-accent-ui-foreground",
+  "not-connected": "bg-supporting/25 text-accent-ui-foreground",
 } as const;
 
-const flowSteps = [
-  "Гость оставляет заявку на сайте, пишет в чат или звонит.",
-  "AI-агент уточняет детали и использует данные из базы знаний.",
-  "Заявка синхронизируется с PMS и появляется у менеджера.",
-  "Сложный вопрос переводится человеку вместе с историей диалога.",
-] as const;
+const initialCheckboxValues = Object.fromEntries(
+  MOCK_INTEGRATION_SECTIONS.flatMap(
+    (section) =>
+      section.checkboxes?.map((checkbox) => [checkbox.id, checkbox.checked]) ??
+      [],
+  ),
+);
 
-export const AdminIntegrationsPanel = () => (
-  <div className="space-y-6">
-    <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-      <h2 className="text-3xl font-semibold">Интеграции</h2>
-      <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-        Здесь можно подготовить подключение PMS Eptera, каналов MAX и ВКонтакте,
-        а также телефонии для чат- и голосовых AI-агентов.
-      </p>
-    </section>
+export const AdminIntegrationsPanel = () => {
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [checkboxValues, setCheckboxValues] = useState<Record<string, boolean>>(
+    () => initialCheckboxValues,
+  );
 
-    <section className="grid gap-4 xl:grid-cols-4">
-      {integrationOverview.map(({ description, icon: Icon, status, title }) => (
-        <article
-          className="rounded-3xl border border-line bg-brand-foreground p-5"
-          key={title}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-brand/10 text-brand">
-              <Icon className="size-5" />
-            </span>
-            <span className="rounded-full bg-muted-ui px-3 py-1 text-xs text-muted-ui-foreground">
-              {status}
-            </span>
-          </div>
-          <h3 className="mt-4 text-lg font-semibold text-brand">{title}</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-            {description}
-          </p>
-        </article>
-      ))}
-    </section>
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+        <h1 className="text-3xl font-semibold">Интеграции</h1>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
+          Здесь можно подготовить подключение PMS Eptera, каналов MAX и
+          ВКонтакте, а также телефонии для чат- и голосовых AI-агентов.
+        </p>
+      </section>
 
-    <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-6">
-        {integrationDetails.map(({ description, status, title }) => (
+      <section className="grid gap-4 xl:grid-cols-4">
+        {MOCK_INTEGRATION_OVERVIEW.map(({ description, status, title }) => (
           <article
-            className="rounded-3xl border border-line bg-brand-foreground p-6"
-            key={`details-${title}`}
+            className="rounded-3xl border border-line bg-brand-foreground p-5"
+            key={title}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-brand">{title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-                  {description}
-                </p>
-              </div>
-              <span className="rounded-full bg-muted-ui px-3 py-1 text-xs text-muted-ui-foreground">
-                {status}
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-base font-semibold text-brand">{title}</h2>
+              <span
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold",
+                  STATUS_TONES[status],
+                )}
+              >
+                {INTEGRATION_STATUS_LABELS[status]}
               </span>
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {integrationFields[title].map((field) => (
-                <label className="block" key={field}>
-                  <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-                    {field}
-                  </span>
-                  <input
-                    className="w-full rounded-2xl border border-line bg-brand-foreground px-4 py-3"
-                    placeholder="Будет заполнено при подключении"
-                    type="text"
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="mt-6 rounded-2xl border border-line bg-page p-4 text-sm leading-6 text-muted-ui-foreground">
-              Параметры сохранятся после согласования безопасного способа
-              подключения и проверки доступа.
-            </div>
+            <p className="mt-4 text-sm leading-6 text-muted-ui-foreground">
+              {description}
+            </p>
           </article>
         ))}
-      </div>
+      </section>
 
-      <div className="space-y-6">
-        <article className="rounded-3xl border border-line bg-brand-foreground p-6">
-          <h2 className="text-lg font-semibold text-brand">
-            Как это будет работать
-          </h2>
-          <div className="mt-5 space-y-4">
-            {flowSteps.map((step, index) => (
-              <div
-                className="flex gap-4 rounded-2xl border border-line bg-page p-4"
-                key={step}
-              >
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
-                  {index + 1}
-                </span>
-                <p className="text-sm leading-6 text-muted-ui-foreground">
-                  {step}
-                </p>
-              </div>
-            ))}
-          </div>
-        </article>
+      <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
+        <div className="space-y-6">
+          {MOCK_INTEGRATION_SECTIONS.map((section) => (
+            <AdminIntegrationFormSection
+              checkboxValues={checkboxValues}
+              fieldValues={fieldValues}
+              key={section.id}
+              onCheckboxChange={(id, checked) =>
+                setCheckboxValues((current) => ({
+                  ...current,
+                  [id]: checked,
+                }))
+              }
+              onFieldChange={(id, value) =>
+                setFieldValues((current) => ({ ...current, [id]: value }))
+              }
+              section={section}
+            />
+          ))}
+        </div>
 
-        <article className="rounded-3xl border border-line bg-brand-foreground p-6">
-          <h2 className="text-lg font-semibold text-brand">
-            Что понадобится от вас
-          </h2>
-          <div className="mt-5 space-y-3">
-            {[
-              "Доступ к PMS Eptera и данные объекта.",
-              "Токены и идентификаторы подключаемых сообществ.",
-              "Данные по телефонии, SIP или доступному API.",
-              "Контакты менеджеров и правила перевода обращений.",
-            ].map((item) => (
-              <div
-                className="rounded-2xl border border-line bg-page px-4 py-4 text-sm leading-6 text-muted-ui-foreground"
-                key={item}
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        </article>
-      </div>
-    </section>
-  </div>
-);
+        <aside className="space-y-6">
+          <article className="rounded-3xl border border-line bg-brand-foreground p-6">
+            <h2 className="text-lg font-semibold text-brand">
+              Как это будет работать
+            </h2>
+            <div className="mt-5 space-y-4">
+              {MOCK_INTEGRATION_FLOW.map((step, index) => (
+                <div
+                  className="flex gap-4 rounded-2xl border border-line bg-page p-4"
+                  key={step}
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm leading-6 text-muted-ui-foreground">
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-3xl border border-line bg-brand-foreground p-6">
+            <h2 className="text-lg font-semibold text-brand">
+              Что понадобится от вас
+            </h2>
+            <div className="mt-5 space-y-3">
+              {MOCK_INTEGRATION_REQUIREMENTS.map((item) => (
+                <div
+                  className="rounded-2xl border border-line bg-page p-4 text-sm leading-6 text-muted-ui-foreground"
+                  key={item}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </article>
+        </aside>
+      </section>
+    </div>
+  );
+};
