@@ -19,6 +19,7 @@ export type HomeRestCard = {
 export type HomeReview = {
   readonly image?: string;
   readonly imageName?: string;
+  readonly images?: readonly string[];
   readonly isActive?: boolean;
   readonly name: string;
   readonly sortOrder?: number;

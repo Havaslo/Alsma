@@ -21,20 +21,20 @@ export const HomeRestSection = ({
         гастрономию и первозданность реликтового леса.
       </p>
     </div>
-    <HorizontalCarousel className="mt-14">
+    <HorizontalCarousel className="mt-12">
       {cards.map((card) => (
         <article
           className="group grid h-full overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid-cols-[0.9fr_1.1fr]"
           key={card.title}
         >
-          <div className="order-2 flex flex-col justify-center p-8 sm:p-10 lg:order-1 lg:p-12">
-            <h3 className="font-heading text-4xl font-semibold sm:text-5xl">
+          <div className="order-2 flex flex-col p-8 sm:p-10 lg:order-1">
+            <h3 className="font-heading text-4xl font-semibold">
               {card.title}
             </h3>
-            <p className="mt-5 leading-8 text-muted-ui-foreground">
+            <p className="mt-4 leading-7 text-muted-ui-foreground">
               {card.description}
             </p>
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap gap-2">
               {card.tags.map((tag) => (
                 <span
                   className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand"
@@ -44,7 +44,7 @@ export const HomeRestSection = ({
                 </span>
               ))}
             </div>
-            <div className="mt-10 flex items-end justify-between gap-4">
+            <div className="mt-auto flex items-end justify-between gap-4 pt-8">
               <div>
                 <span className="text-sm text-muted-ui-foreground">
                   Стоимость программы
@@ -95,8 +95,9 @@ export const HomePromotionsSection = ({
       </div>
       <HorizontalCarousel className="mt-14" slideClassName="basis-auto">
         {offers.map((offer) => (
-          <article
-            className="group h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground sm:w-[340px] lg:w-[360px]"
+          <a
+            className="group block h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground transition outline-none hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-focus/30 sm:w-[340px] lg:w-[360px]"
+            href={offer.buttonLink || AMAZI_ROUTES.offers}
             key={offer.title}
           >
             <div className="h-56 overflow-hidden">
@@ -116,14 +117,11 @@ export const HomePromotionsSection = ({
               <p className="mt-3 text-brand-foreground/80">
                 {offer.description}
               </p>
-              <a
-                className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui"
-                href={AMAZI_ROUTES.offers}
-              >
+              <span className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui">
                 Подробнее <ArrowRight className="size-4" />
-              </a>
+              </span>
             </div>
-          </article>
+          </a>
         ))}
       </HorizontalCarousel>
       <div className="mt-8 text-center">
@@ -168,14 +166,26 @@ export const HomeReviewsSection = ({
               </span>
             </div>
             <p className="mt-5 leading-7">{review.text}</p>
-            <div className="mt-auto flex items-center gap-3 pt-6">
-              {review.image && (
-                <img
-                  alt=""
-                  className="size-10 rounded-full object-cover"
-                  src={review.image}
-                />
-              )}
+            {(review.images?.length || review.image) && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {[
+                  ...(review.images ?? []),
+                  ...(review.image ? [review.image] : []),
+                ]
+                  .filter(
+                    (image, index, images) => images.indexOf(image) === index,
+                  )
+                  .map((image, index) => (
+                    <img
+                      alt={`Фото к отзыву ${review.name} ${index + 1}`}
+                      className="size-16 rounded-2xl object-cover"
+                      key={image}
+                      src={image}
+                    />
+                  ))}
+              </div>
+            )}
+            <div className="mt-auto pt-6">
               <p className="font-semibold">{review.name}</p>
             </div>
           </article>
@@ -207,7 +217,7 @@ export const HomeRoomsSection = ({
       >
         {rooms.map((room) => (
           <article
-            className="h-full overflow-hidden rounded-4xl bg-page shadow-lg"
+            className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel"
             key={room.title}
           >
             <img
@@ -215,7 +225,7 @@ export const HomeRoomsSection = ({
               className="h-64 w-full object-cover"
               src={room.image}
             />
-            <div className="p-6">
+            <div className="flex flex-1 flex-col p-6">
               <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand">
                 <span>{room.area}</span>
                 <span>·</span>
@@ -227,7 +237,7 @@ export const HomeRoomsSection = ({
               <p className="mt-3 line-clamp-3 leading-7 text-muted-ui-foreground">
                 {room.description}
               </p>
-              <p className="mt-5 text-lg font-semibold text-brand">
+              <p className="mt-auto pt-5 text-lg font-semibold text-brand">
                 {room.price} / ночь
               </p>
               <a

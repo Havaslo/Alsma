@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import { ArrowRight } from "lucide-react";
-
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import corporateImage from "@/assets/alsma/corporate-checkins.webp";
 import entertainmentKids from "@/assets/alsma/entertainment-kids.jpg";
@@ -270,10 +268,10 @@ export const HomeExperienceSections = () => (
                   {description}
                 </p>
                 <a
-                  className="mt-auto inline-flex w-fit items-center gap-2 pt-6 font-semibold text-brand"
+                  className="mt-auto inline-flex w-fit rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
                   href={AMAZI_ROUTES.entertainment}
                 >
-                  Подробнее <ArrowRight className="size-4" />
+                  Подробнее
                 </a>
               </div>
             </article>
@@ -337,7 +335,7 @@ export const HomeContactSections = () => (
         </div>
         <iframe
           allowFullScreen
-          className="min-h-130 w-full rounded-4xl border-0"
+          className="h-full min-h-130 w-full rounded-4xl border-0"
           src="https://yandex.ru/map-widget/v1/?ll=44.113128%2C56.537617&z=16"
           title="Яндекс Карта с отметкой отеля АЛСМА"
         />
@@ -351,7 +349,7 @@ export const HomeContactSections = () => (
           className="absolute inset-0 size-full object-cover"
           src={ctaImage}
         />
-        <div className="absolute inset-0 bg-brand/80" />
+        <div className="absolute inset-0 bg-brand/65" />
         <div className="relative">
           <p className="text-xs font-semibold tracking-widest uppercase opacity-75">
             Поможем выбрать формат отдыха
