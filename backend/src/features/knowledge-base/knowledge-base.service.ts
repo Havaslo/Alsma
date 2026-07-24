@@ -85,7 +85,13 @@ export const createKnowledgeBaseService = (
         : matches.map(({ chunk }) => chunk.content).join("\n\n")
       : "Точной информации по этому вопросу в базе знаний сейчас нет. Передайте вопрос менеджеру, чтобы получить подтверждённый ответ.";
     const sources = [...new Set(matches.map(({ chunk }) => chunk.articleId))];
-    await repository.logQuery(input.question, answer, sources);
+    await repository.logQuery(
+      input.channel,
+      input.question,
+      answer,
+      sources,
+      answered ? "answered" : "no_answer",
+    );
     return {
       answer,
       status: answered ? "answered" : "no_answer",

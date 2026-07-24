@@ -230,6 +230,11 @@ model SiteContent {
 model KnowledgeArticle {
   id          String           @id @default(uuid()) @db.Uuid
   title       String
+  slug        String           @default("")
+  summary     String           @default("")
+  category    String           @default("")
+  tags        String[]         @default([])
+  channels    String[]         @default(["text", "voice"])
   content     String
   status      ContentStatus    @default(draft)
   publishedAt DateTime?        @map("published_at") @db.Timestamptz(3)
@@ -256,6 +261,7 @@ model AgentRule {
   id        String   @id @default(uuid()) @db.Uuid
   title     String
   content   String
+  channels  String[] @default(["text", "voice"])
   enabled   Boolean  @default(true)
   priority  Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -290,8 +296,10 @@ model AgentTransferRule {
 
 model KnowledgeQueryLog {
   id        String   @id @default(uuid()) @db.Uuid
+  channel   String   @default("text")
   query     String
   answer    String?
+  status    String   @default("answered")
   sources   Json     @default("[]")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 

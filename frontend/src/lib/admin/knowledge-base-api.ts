@@ -3,15 +3,21 @@ import { apiClient } from "@/lib/api/api-client";
 
 export type KnowledgeArticle = {
   readonly _count: { chunks: number };
+  readonly category: string;
+  readonly channels: Array<"text" | "voice">;
   readonly content: string;
   readonly createdAt: string;
   readonly id: string;
   readonly publishedAt: string | null;
+  readonly slug: string;
   readonly status: "archived" | "draft" | "published";
+  readonly summary: string;
+  readonly tags: string[];
   readonly title: string;
   readonly updatedAt: string;
 };
 export type KnowledgeRule = {
+  readonly channels: Array<"text" | "voice">;
   readonly content: string;
   readonly enabled: boolean;
   readonly id: string;
@@ -21,10 +27,12 @@ export type KnowledgeRule = {
 };
 export type KnowledgeLog = {
   readonly answer: string | null;
+  readonly channel: "text" | "voice";
   readonly createdAt: string;
   readonly id: string;
   readonly query: string;
   readonly sources: string[];
+  readonly status: "answered" | "no_answer";
 };
 export type KnowledgePageData = {
   readonly articles: KnowledgeArticle[];
@@ -33,11 +41,18 @@ export type KnowledgePageData = {
 };
 export type KnowledgeArticleInput = Pick<
   KnowledgeArticle,
-  "content" | "status" | "title"
+  | "category"
+  | "channels"
+  | "content"
+  | "slug"
+  | "status"
+  | "summary"
+  | "tags"
+  | "title"
 > & { readonly id?: string };
 export type KnowledgeRuleInput = Pick<
   KnowledgeRule,
-  "content" | "enabled" | "priority" | "title"
+  "channels" | "content" | "enabled" | "priority" | "title"
 > & { readonly id?: string };
 
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
