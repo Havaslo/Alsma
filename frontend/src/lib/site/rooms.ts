@@ -19,10 +19,51 @@ export type RoomCategory = {
   readonly beds: string;
   readonly capacity: string;
   readonly description: string;
+  readonly features?: readonly string[];
+  readonly gallery?: readonly string[];
+  readonly homeButtonHref?: string;
+  readonly homeButtonLabel?: string;
+  readonly id?: string;
   readonly image: string;
+  readonly imageNames?: readonly string[];
+  readonly isActive?: boolean;
   readonly price: string;
+  readonly showOnHomepage?: boolean;
+  readonly sortOrder?: number;
   readonly title: string;
 };
+
+export type RoomComparisonContent = {
+  readonly items: readonly RoomComparisonRow[];
+  readonly selectedRoomIds: readonly string[];
+};
+
+export type RoomComparisonRow = {
+  readonly isActive?: boolean;
+  readonly label: string;
+  readonly sortOrder?: number;
+  readonly values: Readonly<Record<string, string>> | readonly string[];
+};
+
+export const isRoomComparisonValuesArray = (
+  values: RoomComparisonRow["values"],
+): values is readonly string[] => Array.isArray(values);
+
+export const getRoomComparisonValue = (
+  values: RoomComparisonRow["values"],
+  roomId: string,
+  index: number,
+) =>
+  isRoomComparisonValuesArray(values)
+    ? (values[index] ?? "")
+    : (values[roomId] ?? "");
+
+export const getRoomId = (room: RoomCategory, index: number) =>
+  room.id ??
+  `${room.title
+    .toLocaleLowerCase("ru")
+    .replace(/[^a-zа-яё0-9]+/gi, "-")
+    .replace(/^-|-$/g, "")}-${index + 1}`;
 
 const standardAmenities = [
   "Wi-Fi",

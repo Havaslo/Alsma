@@ -2,9 +2,9 @@ import { PublicHero } from "@/components/site/PublicHero";
 import { RoomCard } from "@/components/site/RoomCard";
 import { RoomsSupportSections } from "@/components/site/RoomsSupportSections";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { getSiteCollection } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
-import { ROOM_CATEGORIES, ROOM_COMPARISON } from "@/lib/site/rooms";
+import { getRoomComparisonValue, getRoomId } from "@/lib/site/rooms";
+import { getRoomCards, getRoomComparison } from "@/lib/site/rooms-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const RoomsPage = () => {
@@ -16,17 +16,16 @@ export const RoomsPage = () => {
   const title = typeof hero?.title === "string" ? hero.title : page.title;
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
-  const storedRooms = getSiteCollection(
-    content.data?.items,
-    "cards",
-    ROOM_CATEGORIES,
-  );
-  const rooms =
-    storedRooms.length >= ROOM_CATEGORIES.length
-      ? storedRooms
-      : ROOM_CATEGORIES;
-  const comparisonRooms = rooms.slice(0, 4);
-  const comparison = ROOM_COMPARISON;
+  const rooms = getRoomCards(content.data?.items)
+    .filter((room) => room.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const comparisonContent = getRoomComparison(content.data?.items, rooms);
+  const comparisonRooms = comparisonContent.selectedRoomIds
+    .map((roomId) => rooms.find((room) => room.id === roomId))
+    .filter((room) => room !== undefined);
+  const comparison = comparisonContent.items
+    .filter((row) => row.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -49,8 +48,8 @@ export const RoomsPage = () => {
           </p>
         </div>
         <div className="mt-14 space-y-10">
-          {rooms.map((room) => (
-            <RoomCard key={room.title} room={room} />
+          {rooms.map((room, index) => (
+            <RoomCard key={getRoomId(room, index)} room={room} />
           ))}
         </div>
       </section>
@@ -79,14 +78,19 @@ export const RoomsPage = () => {
                 {comparison.map((row) => (
                   <tr className="border-t border-line" key={row.label}>
                     <th className="p-5 text-brand">{row.label}</th>
-                    {row.values.map((value, index) => (
-                      <td
-                        className="p-5"
-                        key={`${row.label}:${comparisonRooms[index]?.title ?? index}`}
-                      >
-                        {value}
-                      </td>
-                    ))}
+                    {comparisonRooms.map((room, index) => {
+                      const roomId = getRoomId(room, index);
+                      const value = getRoomComparisonValue(
+                        row.values,
+                        roomId,
+                        index,
+                      );
+                      return (
+                        <td className="p-5" key={`${row.label}:${roomId}`}>
+                          {value}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

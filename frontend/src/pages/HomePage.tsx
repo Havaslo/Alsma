@@ -47,11 +47,19 @@ export const HomePage = () => {
   )
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const hasStoredRoomCards = roomsContent.data?.items.some(
+    (item) => item.itemKey === "cards" && Array.isArray(item.content.items),
+  );
   const rooms = getSiteCollection<RoomCategory>(
     roomsContent.data?.items,
     "cards",
     HOME_ROOM_CATEGORIES,
-  );
+  )
+    .filter(
+      (room) =>
+        room.isActive !== false && (room.showOnHomepage ?? !hasStoredRoomCards),
+    )
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const offers = getSiteCollection<ActiveOffer>(
     offersContent.data?.items,
     "proposals",

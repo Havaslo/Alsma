@@ -4,11 +4,22 @@ import type { RoomCategory } from "@/lib/site/rooms";
 
 export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
   <article className="overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid lg:grid-cols-2">
-    <img
-      alt={room.title}
-      className="aspect-square size-full object-cover"
-      src={room.image}
-    />
+    <div className="grid min-h-80 grid-cols-2 gap-1 overflow-hidden">
+      {(room.gallery?.length ? room.gallery : [room.image])
+        .slice(0, 3)
+        .map((image, index) => (
+          <img
+            alt={`${room.title}, фото ${index + 1}`}
+            className={
+              index === 0
+                ? "row-span-2 size-full min-h-80 object-cover"
+                : "size-full min-h-40 object-cover"
+            }
+            key={`${image}:${index}`}
+            src={image}
+          />
+        ))}
+    </div>
     <div className="flex flex-col p-7 sm:p-10">
       <div className="flex flex-wrap gap-2 text-sm font-semibold text-brand">
         <span className="rounded-full bg-brand/10 px-3 py-2">{room.area}</span>
@@ -21,6 +32,18 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
       <p className="mt-4 leading-7 text-muted-ui-foreground">
         {room.description}
       </p>
+      {room.features && room.features.length > 0 && (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {room.features.map((feature) => (
+            <span
+              className="rounded-full border border-line px-3 py-1.5 text-sm text-muted-ui-foreground"
+              key={feature}
+            >
+              {feature}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="mt-7 text-sm font-semibold tracking-wide text-muted-ui-foreground uppercase">
         Оснащение номера
       </p>

@@ -230,6 +230,12 @@ export const HomeRoomsSection = ({
               <p className="mt-5 text-lg font-semibold text-brand">
                 {room.price} / ночь
               </p>
+              <a
+                className="mt-5 inline-flex rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                href={room.homeButtonHref ?? AMAZI_ROUTES.rooms}
+              >
+                {room.homeButtonLabel ?? "Подробнее"}
+              </a>
             </div>
           </article>
         ))}

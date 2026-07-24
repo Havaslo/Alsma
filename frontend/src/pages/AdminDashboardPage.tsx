@@ -9,6 +9,7 @@ import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
+import { AdminRoomsEditor } from "@/components/admin/AdminRoomsEditor";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
@@ -77,8 +78,12 @@ export const AdminDashboardPage = () => {
       {path === AMAZI_ROUTES.adminSiteManagementHome && can("site.manage") && (
         <AdminHomeEditor />
       )}
+      {path === AMAZI_ROUTES.adminSiteManagementRooms && can("site.manage") && (
+        <AdminRoomsEditor />
+      )}
       {isSiteManagement &&
         path !== AMAZI_ROUTES.adminSiteManagementHome &&
+        path !== AMAZI_ROUTES.adminSiteManagementRooms &&
         can("site.manage") && (
           <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
         )}
