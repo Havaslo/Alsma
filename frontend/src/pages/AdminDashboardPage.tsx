@@ -5,6 +5,7 @@ import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenarios
 import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingRequestsPanel";
 import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
+import { AdminEntertainmentEditor } from "@/components/admin/AdminEntertainmentEditor";
 import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
@@ -81,9 +82,12 @@ export const AdminDashboardPage = () => {
       {path === AMAZI_ROUTES.adminSiteManagementRooms && can("site.manage") && (
         <AdminRoomsEditor />
       )}
+      {path === AMAZI_ROUTES.adminSiteManagementEntertainment &&
+        can("site.manage") && <AdminEntertainmentEditor />}
       {isSiteManagement &&
         path !== AMAZI_ROUTES.adminSiteManagementHome &&
         path !== AMAZI_ROUTES.adminSiteManagementRooms &&
+        path !== AMAZI_ROUTES.adminSiteManagementEntertainment &&
         can("site.manage") && (
           <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
         )}

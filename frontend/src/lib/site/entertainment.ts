@@ -8,6 +8,49 @@ import winterImage from "@/assets/alsma/season-winter.jpg";
 import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
 import sportsImage from "@/assets/alsma/sports-ground.jpg";
 
+export type AnimationProgram = {
+  readonly age: string;
+  readonly description: string;
+  readonly isActive?: boolean;
+  readonly sortOrder?: number;
+  readonly time: string;
+  readonly title: string;
+};
+
+export type EquipmentCard = {
+  readonly description: string;
+  readonly isActive?: boolean;
+  readonly items: readonly EquipmentItem[];
+  readonly sortOrder?: number;
+  readonly title: string;
+};
+
+export type EquipmentItem = {
+  readonly availability: "included" | "paid";
+  readonly label: string;
+};
+
+export type KidsService = {
+  readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly price: string;
+  readonly sortOrder?: number;
+  readonly tags: readonly string[];
+  readonly title: string;
+};
+
+export type SeasonalActivity = {
+  readonly description: string;
+  readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly items: readonly string[];
+  readonly label: string;
+  readonly sortOrder?: number;
+  readonly title: string;
+};
+
 export const ACTIVE_ZONES = [
   {
     description:
@@ -39,7 +82,7 @@ export const ACTIVE_ZONES = [
   },
 ] as const;
 
-export const SEASONS = [
+export const SEASONS: readonly SeasonalActivity[] = [
   {
     description:
       "Полноценный отдых на свежем воздухе с водой, прогулками и семейными сценариями.",
@@ -68,36 +111,46 @@ export const SEASONS = [
   },
 ] as const;
 
-export const ANIMATION_PROGRAM = [
-  [
-    "09:00–10:00",
-    "Йога на рассвете",
-    "Хатха-йога на террасе с видом на лес",
-    "Взрослые",
-  ],
-  [
-    "Днём",
-    "Детский квест",
-    "Приключенческие задания на территории",
-    "Дети 5–12 лет",
-  ],
-  [
-    "Днём",
-    "Мастер-класс",
-    "Роспись по дереву, керамика и валяние",
-    "Все возрасты",
-  ],
-  ["Днём", "Спортивные игры", "Боулинг, бадминтон и пленэрбол", "От 8 лет"],
-  ["Вечером", "Детская дискотека", "Танцы, конкурсы и игры", "Дети 3–12 лет"],
-  [
-    "Вечером",
-    "Вечерняя программа",
-    "Живая музыка, караоке и кино",
-    "Все возрасты",
-  ],
-] as const;
+export const ANIMATION_PROGRAM: readonly AnimationProgram[] = [
+  {
+    age: "Взрослые",
+    description: "Хатха-йога на террасе с видом на лес",
+    time: "09:00–10:00",
+    title: "Йога на рассвете",
+  },
+  {
+    age: "Дети 5–12 лет",
+    description: "Приключенческие задания на территории",
+    time: "Днём",
+    title: "Детский квест",
+  },
+  {
+    age: "Все возрасты",
+    description: "Роспись по дереву, керамика и валяние",
+    time: "Днём",
+    title: "Мастер-класс",
+  },
+  {
+    age: "От 8 лет",
+    description: "Боулинг, бадминтон и пленэрбол",
+    time: "Днём",
+    title: "Спортивные игры",
+  },
+  {
+    age: "Дети 3–12 лет",
+    description: "Танцы, конкурсы и игры",
+    time: "Вечером",
+    title: "Детская дискотека",
+  },
+  {
+    age: "Все возрасты",
+    description: "Живая музыка, караоке и кино",
+    time: "Вечером",
+    title: "Вечерняя программа",
+  },
+];
 
-export const EQUIPMENT = [
+export const EQUIPMENT: readonly EquipmentCard[] = [
   {
     description:
       "Инвентарь для активных прогулок и отдыха у воды в тёплый сезон.",
@@ -106,24 +159,28 @@ export const EQUIPMENT = [
       "SUP-борды",
       "Каяки",
       "Палки для ходьбы",
-    ],
+    ].map((label) => ({ availability: "included" as const, label })),
     title: "Летний спорт",
   },
   {
     description:
       "Снаряжение для снежных прогулок и зимних развлечений всей семьёй.",
-    items: ["Беговые лыжи", "Классические санки", "Ватрушки", "Снегоступы"],
+    items: ["Беговые лыжи", "Классические санки", "Ватрушки", "Снегоступы"].map(
+      (label) => ({ availability: "included" as const, label }),
+    ),
     title: "Зимний спорт",
   },
   {
     description:
       "Всё для дружеских матчей, настольных игр и спокойного досуга на природе.",
-    items: ["Настольные игры", "Мячи", "Бадминтон", "Рыболовные снасти"],
+    items: ["Настольные игры", "Мячи", "Бадминтон", "Рыболовные снасти"].map(
+      (label) => ({ availability: "included" as const, label }),
+    ),
     title: "Игры и развлечения",
   },
 ] as const;
 
-export const KIDS_SERVICES = [
+export const KIDS_SERVICES: readonly KidsService[] = [
   {
     image: kidsAnimationImage,
     price: "от 15 000 ₽",

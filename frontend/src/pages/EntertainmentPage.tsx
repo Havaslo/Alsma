@@ -8,10 +8,15 @@ import { getSiteCollection } from "@/lib/site/content-collections";
 import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
+  type AnimationProgram,
   EQUIPMENT,
+  type EquipmentCard,
   KIDS_SERVICES,
+  type KidsService,
   SEASONS,
+  type SeasonalActivity,
 } from "@/lib/site/entertainment";
+import { normalizeAnimationProgram } from "@/lib/site/entertainment-content";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -30,26 +35,35 @@ export const EntertainmentPage = () => {
     "active-zones",
     ACTIVE_ZONES,
   );
-  const seasons = getSiteCollection(
+  const seasons = getSiteCollection<SeasonalActivity>(
     content.data?.items,
     "seasonal-slides",
     SEASONS,
-  );
-  const programs = getSiteCollection(
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const programs = getSiteCollection<AnimationProgram | readonly string[]>(
     content.data?.items,
     "animation-programs",
     ANIMATION_PROGRAM,
-  );
-  const equipment = getSiteCollection(
+  )
+    .map(normalizeAnimationProgram)
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const equipment = getSiteCollection<EquipmentCard>(
     content.data?.items,
     "equipment-cards",
     EQUIPMENT,
-  );
-  const kidsServices = getSiteCollection(
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const kidsServices = getSiteCollection<KidsService>(
     content.data?.items,
     "kids-services",
     KIDS_SERVICES,
-  );
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -166,23 +180,27 @@ export const EntertainmentPage = () => {
           </p>
         </div>
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {programs.map(([time, activity, details, age]) => (
+          {programs.map((program) => (
             <article
               className="flex min-h-64 flex-col rounded-3xl bg-panel p-6"
-              key={activity}
+              key={program.title}
             >
               <div className="flex items-center justify-between gap-4">
                 <span className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand">
-                  {time}
+                  {program.time}
                 </span>
-                <span className="text-sm text-muted-ui-foreground">{age}</span>
+                <span className="text-sm text-muted-ui-foreground">
+                  {program.age}
+                </span>
               </div>
               <h3 className="mt-5 font-heading text-2xl font-semibold text-brand">
-                {activity}
+                {program.title}
               </h3>
-              <p className="mt-3 text-muted-ui-foreground">{details}</p>
+              <p className="mt-3 text-muted-ui-foreground">
+                {program.description}
+              </p>
               <p className="mt-auto pt-5 text-sm font-medium text-accent-ui-foreground">
-                Возраст: {age}
+                Возраст: {program.age}
               </p>
             </article>
           ))}
@@ -260,12 +278,17 @@ export const EntertainmentPage = () => {
                   {group.items.map((item) => (
                     <li
                       className="flex items-center gap-3 rounded-2xl bg-page px-4 py-3"
-                      key={item}
+                      key={item.label}
                     >
                       <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
                         <Check className="size-4" />
                       </span>{" "}
-                      {item}
+                      <span className="flex-1">{item.label}</span>
+                      <span className="text-xs font-semibold text-brand">
+                        {item.availability === "paid"
+                          ? "Платно"
+                          : "Всё включено"}
+                      </span>
                     </li>
                   ))}
                 </ul>
