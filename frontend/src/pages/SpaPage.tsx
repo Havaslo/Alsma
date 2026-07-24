@@ -44,28 +44,28 @@ export const SpaPage = () => {
             Современные пространства для комфорта, релаксации и восстановления.
           </p>
         </div>
-        <div className="mt-14 space-y-10">
-          {SPA_SPACES.map((space, index) => (
+        <div className="mt-14 grid gap-6 lg:grid-cols-2">
+          {SPA_SPACES.map((space) => (
             <article
-              className="overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid lg:grid-cols-2"
+              className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel"
               key={space.title}
             >
               <img
                 alt={space.title}
-                className={`aspect-[4/3] size-full object-cover ${index % 2 ? "lg:order-2" : ""}`}
+                className="aspect-[16/9] w-full object-cover"
                 src={space.image}
               />
-              <div className="flex flex-col p-8 sm:p-12">
+              <div className="flex flex-1 flex-col p-7 sm:p-8">
                 <p className="text-sm font-semibold tracking-widest text-brand uppercase">
                   SPA-пространство
                 </p>
-                <h3 className="mt-4 font-heading text-4xl font-semibold">
+                <h3 className="mt-3 font-heading text-3xl font-semibold sm:text-4xl">
                   {space.title}
                 </h3>
-                <p className="mt-5 leading-7 text-muted-ui-foreground">
+                <p className="mt-4 leading-7 text-muted-ui-foreground">
                   {space.description}
                 </p>
-                <ul className="mt-7 space-y-3">
+                <ul className="mt-6 space-y-3">
                   {space.features.map((feature) => (
                     <li className="flex gap-3" key={feature}>
                       <Check className="mt-1 size-4 shrink-0 text-brand" />{" "}
@@ -73,12 +73,14 @@ export const SpaPage = () => {
                     </li>
                   ))}
                 </ul>
-                <a
-                  className="mt-8 inline-flex w-fit items-center justify-center rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-brand-foreground"
-                  href="#spa-cta"
-                >
-                  Записаться
-                </a>
+                <div className="mt-auto pt-8">
+                  <a
+                    className="inline-flex w-fit items-center justify-center rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-brand-foreground"
+                    href="#spa-cta"
+                  >
+                    Записаться
+                  </a>
+                </div>
               </div>
             </article>
           ))}
@@ -171,15 +173,20 @@ export const SpaPage = () => {
       <SpaCeremoniesSection />
       <SpaCompanySection />
       <SpaPromotionsSection />
-      <section className="bg-brand py-20 text-brand-foreground" id="spa-cta">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Готовы к перезагрузке?
-          </h2>
-          <p className="mt-4 mb-8 text-lg text-brand-foreground/75">
-            Оставьте контакты — специалист поможет подобрать процедуру и время.
-          </p>
-          <SpaRequestForm />
+      <section className="px-5 py-20 sm:px-8" id="spa-cta">
+        <div className="mx-auto max-w-7xl rounded-4xl bg-panel px-7 py-9 sm:px-10 lg:px-12">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <div>
+              <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+                Готовы к перезагрузке?
+              </h2>
+              <p className="mt-4 text-lg text-muted-ui-foreground">
+                Оставьте контакты — специалист поможет подобрать процедуру и
+                время.
+              </p>
+            </div>
+            <SpaRequestForm />
+          </div>
         </div>
       </section>
       <SpaInformationSections />

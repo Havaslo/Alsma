@@ -5,5 +5,6 @@ export const SpaRequestForm = () => (
     formCode="spa-request"
     formTitle="Запись на SPA-процедуру"
     sourcePage="spa"
+    variant="panel"
   />
 );
