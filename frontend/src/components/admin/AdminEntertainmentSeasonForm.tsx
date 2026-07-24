@@ -87,9 +87,27 @@ export const AdminEntertainmentSeasonForm = ({
           className="rounded-3xl border border-line bg-brand-foreground p-6"
           key={card.id}
         >
-          <div className="flex justify-end">
+          <div className="mb-5 grid gap-4 sm:grid-cols-3 sm:items-end">
+            <TextField
+              label="Порядок"
+              min={0}
+              type="number"
+              {...form.register(`items.${index}.sortOrder`, {
+                valueAsNumber: true,
+              })}
+            />
+            <CheckboxField
+              checked={values[index]?.isActive ?? false}
+              className="w-full"
+              label="Показывать баннер"
+              onChange={(checked) =>
+                form.setValue(`items.${index}.isActive`, checked, {
+                  shouldDirty: true,
+                })
+              }
+            />
             <Button
-              className="text-destructive"
+              className="w-full text-destructive"
               onClick={() => setDeleteIndex(index)}
               variant="secondary"
             >
@@ -139,25 +157,6 @@ export const AdminEntertainmentSeasonForm = ({
                 {...form.register(`items.${index}.items.${pointIndex}`)}
               />
             ))}
-          </div>
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <TextField
-              label="Порядок"
-              min={0}
-              type="number"
-              {...form.register(`items.${index}.sortOrder`, {
-                valueAsNumber: true,
-              })}
-            />
-            <CheckboxField
-              checked={values[index]?.isActive ?? false}
-              label="Показывать баннер"
-              onChange={(checked) =>
-                form.setValue(`items.${index}.isActive`, checked, {
-                  shouldDirty: true,
-                })
-              }
-            />
           </div>
         </article>
       ))}
