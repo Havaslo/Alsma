@@ -87,21 +87,7 @@ export const AdminEntertainmentEquipmentForm = ({
             className="rounded-3xl border border-line bg-brand-foreground p-6"
             key={card.id}
           >
-            <div className="flex justify-end">
-              <Button
-                className="text-destructive"
-                onClick={() => setDeleteIndex(index)}
-                variant="secondary"
-              >
-                <Trash2 className="size-4" /> Удалить
-              </Button>
-            </div>
-            <div className="grid gap-5 lg:grid-cols-2">
-              <TextField
-                label="Название карточки"
-                placeholder="..."
-                {...form.register(`items.${index}.title`, { required: true })}
-              />
+            <div className="mb-5 grid gap-4 sm:grid-cols-3 sm:items-end">
               <TextField
                 label="Порядок"
                 min={0}
@@ -109,6 +95,30 @@ export const AdminEntertainmentEquipmentForm = ({
                 {...form.register(`items.${index}.sortOrder`, {
                   valueAsNumber: true,
                 })}
+              />
+              <CheckboxField
+                checked={values[index]?.isActive ?? false}
+                className="w-full"
+                label="Показывать карточку"
+                onChange={(checked) =>
+                  form.setValue(`items.${index}.isActive`, checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+              <Button
+                className="w-full text-destructive"
+                onClick={() => setDeleteIndex(index)}
+                variant="secondary"
+              >
+                <Trash2 className="size-4" /> Удалить
+              </Button>
+            </div>
+            <div>
+              <TextField
+                label="Название карточки"
+                placeholder="..."
+                {...form.register(`items.${index}.title`, { required: true })}
               />
             </div>
             <div className="mt-5">
@@ -174,17 +184,6 @@ export const AdminEntertainmentEquipmentForm = ({
               >
                 <Plus className="size-4" /> Добавить пункт
               </Button>
-            </div>
-            <div className="mt-5">
-              <CheckboxField
-                checked={values[index]?.isActive ?? false}
-                label="Показывать карточку"
-                onChange={(checked) =>
-                  form.setValue(`items.${index}.isActive`, checked, {
-                    shouldDirty: true,
-                  })
-                }
-              />
             </div>
           </article>
         );

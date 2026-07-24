@@ -86,9 +86,27 @@ export const AdminEntertainmentAnimationForm = ({
           className="rounded-3xl border border-line bg-brand-foreground p-6"
           key={card.id}
         >
-          <div className="flex justify-end">
+          <div className="mb-5 grid gap-4 sm:grid-cols-3 sm:items-end">
+            <TextField
+              label="Порядок"
+              min={0}
+              type="number"
+              {...form.register(`items.${index}.sortOrder`, {
+                valueAsNumber: true,
+              })}
+            />
+            <CheckboxField
+              checked={values[index]?.isActive ?? false}
+              className="w-full"
+              label="Показывать карточку"
+              onChange={(checked) =>
+                form.setValue(`items.${index}.isActive`, checked, {
+                  shouldDirty: true,
+                })
+              }
+            />
             <Button
-              className="text-destructive"
+              className="w-full text-destructive"
               onClick={() => setDeleteIndex(index)}
               variant="secondary"
             >
@@ -114,30 +132,11 @@ export const AdminEntertainmentAnimationForm = ({
               {...form.register(`items.${index}.description`)}
             />
           </div>
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="mt-5">
             <TextField
               label="Возраст"
               placeholder="..."
               {...form.register(`items.${index}.age`)}
-            />
-            <TextField
-              label="Порядок"
-              min={0}
-              type="number"
-              {...form.register(`items.${index}.sortOrder`, {
-                valueAsNumber: true,
-              })}
-            />
-          </div>
-          <div className="mt-5">
-            <CheckboxField
-              checked={values[index]?.isActive ?? false}
-              label="Показывать карточку"
-              onChange={(checked) =>
-                form.setValue(`items.${index}.isActive`, checked, {
-                  shouldDirty: true,
-                })
-              }
             />
           </div>
         </article>
