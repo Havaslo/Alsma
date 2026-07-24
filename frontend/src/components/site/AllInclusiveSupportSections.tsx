@@ -22,7 +22,7 @@ const animationFormats = [
 
 export const AllInclusiveAnimationSection = () => (
   <section className="bg-panel py-24">
-    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           Программа отдыха
@@ -59,7 +59,7 @@ export const AllInclusiveAnimationSection = () => (
 
 export const AllInclusiveFinalSection = () => (
   <section className="px-5 py-24 sm:px-8">
-    <div className="relative mx-auto max-w-7xl overflow-hidden rounded-4xl px-6 py-16 text-center text-brand-foreground sm:px-12 sm:py-20">
+    <div className="relative mx-auto max-w-screen-2xl overflow-hidden rounded-4xl px-6 py-16 text-center text-brand-foreground sm:px-12 sm:py-20">
       <img
         alt="Отдых в АЛСМА"
         className="absolute inset-0 size-full object-cover"
