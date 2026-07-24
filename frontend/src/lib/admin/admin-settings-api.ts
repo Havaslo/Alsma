@@ -3,7 +3,9 @@ import { apiClient } from "@/lib/api/api-client";
 
 export const ADMIN_PERMISSIONS = [
   "content.delete",
+  "site.access",
   "site.manage",
+  "knowledge.access",
   "knowledge.manage",
   "dashboard.access",
   "requests.access",

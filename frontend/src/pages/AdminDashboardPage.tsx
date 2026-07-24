@@ -85,35 +85,35 @@ export const AdminDashboardPage = () => {
       {requestMatch?.params.requestId && can("requests.access") && (
         <AdminRequestDetail requestId={requestMatch.params.requestId} />
       )}
-      {path === AMAZI_ROUTES.adminKnowledgeBase && can("knowledge.manage") && (
-        <AdminKnowledgeBasePanel />
-      )}
+      {path === AMAZI_ROUTES.adminKnowledgeBase &&
+        (can("knowledge.access") || can("knowledge.manage")) && (
+          <AdminKnowledgeBasePanel />
+        )}
       {path === AMAZI_ROUTES.adminAgentScenarios && can("scenarios.access") && (
         <AdminAgentScenariosPanel />
       )}
       {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={admin.data.user.id} />
       )}
-      {path === AMAZI_ROUTES.adminSiteManagementHome && can("site.manage") && (
-        <AdminHomeEditor />
-      )}
-      {path === AMAZI_ROUTES.adminSiteManagementRooms && can("site.manage") && (
-        <AdminRoomsEditor />
-      )}
+      {path === AMAZI_ROUTES.adminSiteManagementHome &&
+        (can("site.access") || can("site.manage")) && <AdminHomeEditor />}
+      {path === AMAZI_ROUTES.adminSiteManagementRooms &&
+        (can("site.access") || can("site.manage")) && <AdminRoomsEditor />}
       {path === AMAZI_ROUTES.adminSiteManagementEntertainment &&
-        can("site.manage") && <AdminEntertainmentEditor />}
+        (can("site.access") || can("site.manage")) && (
+          <AdminEntertainmentEditor />
+        )}
       {path === AMAZI_ROUTES.adminSiteManagementOffers &&
-        can("site.manage") && <AdminOffersEditor />}
-      {path === AMAZI_ROUTES.adminSiteManagementNews && can("site.manage") && (
-        <AdminNewsEditor />
-      )}
+        (can("site.access") || can("site.manage")) && <AdminOffersEditor />}
+      {path === AMAZI_ROUTES.adminSiteManagementNews &&
+        (can("site.access") || can("site.manage")) && <AdminNewsEditor />}
       {isSiteManagement &&
         path !== AMAZI_ROUTES.adminSiteManagementHome &&
         path !== AMAZI_ROUTES.adminSiteManagementRooms &&
         path !== AMAZI_ROUTES.adminSiteManagementEntertainment &&
         path !== AMAZI_ROUTES.adminSiteManagementOffers &&
         path !== AMAZI_ROUTES.adminSiteManagementNews &&
-        can("site.manage") && (
+        (can("site.access") || can("site.manage")) && (
           <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
         )}
       {path === AMAZI_ROUTES.adminIntegrations &&

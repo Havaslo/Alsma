@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const adminPermissions = [
   "content.delete",
+  "site.access",
   "site.manage",
+  "knowledge.access",
   "knowledge.manage",
   "dashboard.access",
   "requests.access",

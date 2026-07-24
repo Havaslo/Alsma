@@ -34,7 +34,7 @@ export const createSiteContentRouter = (database: Database): Router => {
   router.get(
     "/admin/:section",
     requireAdmin,
-    createRequireAdminPermission("site.manage"),
+    createRequireAdminPermission("site.access", "site.manage"),
     validateRequest({ params: siteSectionParamsSchema }),
     createListAdminContentHandler(repository),
   );

@@ -3,16 +3,15 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { AdminRoleEditor } from "@/components/admin/AdminRoleEditor";
+import { AdminRolesTable } from "@/components/admin/AdminRolesTable";
 import { AdminUserEditor } from "@/components/admin/AdminUserEditor";
 import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Loader } from "@/components/ui/Loader";
-import {
-  ADMIN_PERMISSIONS,
-  type AdminPermission,
-  type AdminRole,
-  type AdminSettingsUser,
+import type {
+  AdminRole,
+  AdminSettingsUser,
 } from "@/lib/admin/admin-settings-api";
 import {
   useAdminSettings,
@@ -21,11 +20,6 @@ import {
 import { cn } from "@/lib/cn";
 
 type SettingsTab = "roles" | "users";
-
-const rolePermissionCount = (role: AdminRole) =>
-  role.permissions.includes("*" as AdminPermission)
-    ? ADMIN_PERMISSIONS.length
-    : role.permissions.length;
 
 export const AdminSettingsPanel = ({
   currentUserId,
@@ -36,6 +30,7 @@ export const AdminSettingsPanel = ({
   const remove = useDeleteAdminUser();
   const [tab, setTab] = useState<SettingsTab>("users");
   const [roleId, setRoleId] = useState<string>();
+  const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   const [userId, setUserId] = useState<string>();
   const [userEditorOpen, setUserEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminSettingsUser>();
@@ -139,45 +134,42 @@ export const AdminSettingsPanel = ({
       )}
 
       {tab === "roles" && (
-        <section className="grid items-start gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
-          <article className="rounded-3xl border border-line bg-brand-foreground p-6">
-            <header className="flex items-start justify-between gap-4">
-              <h2 className="text-xl font-semibold text-brand">Роли</h2>
-              <Button onClick={() => setRoleId(undefined)}>
-                <Plus className="size-4" />
-                Новая роль
-              </Button>
-            </header>
-            <div className="mt-5 space-y-3">
-              {roles.map((item) => (
-                <button
-                  className={cn(
-                    "w-full rounded-2xl border p-4 text-left",
-                    roleId === item.id
-                      ? "border-brand bg-brand/5"
-                      : "border-line bg-page",
-                  )}
-                  key={item.id}
-                  onClick={() => setRoleId(item.id)}
-                  type="button"
-                >
-                  <strong className="block text-brand">{item.name}</strong>
-                  <span className="mt-2 block text-xs text-muted-ui-foreground">
-                    {rolePermissionCount(item)} разрешений
-                  </span>
-                </button>
-              ))}
+        <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-brand">
+                Роли и доступы
+              </h2>
+              <p className="mt-2 text-sm text-muted-ui-foreground">
+                Роли настраиваются и редактируются в модальном окне.
+              </p>
             </div>
-          </article>
-          <article className="rounded-3xl border border-line bg-brand-foreground p-6">
-            <h2 className="text-xl font-semibold text-brand">
-              {role ? "Редактор роли" : "Новая роль"}
-            </h2>
-            <AdminRoleEditor key={role?.id ?? "new"} role={role} />
-          </article>
+            <Button
+              onClick={() => {
+                setRoleId(undefined);
+                setRoleEditorOpen(true);
+              }}
+            >
+              <Plus className="size-4" />
+              Добавить роль
+            </Button>
+          </header>
+          <AdminRolesTable
+            onEdit={(item: AdminRole) => {
+              setRoleId(item.id);
+              setRoleEditorOpen(true);
+            }}
+            roles={roles}
+          />
         </section>
       )}
 
+      <AdminRoleEditor
+        key={role?.id ?? "new"}
+        onClose={() => setRoleEditorOpen(false)}
+        open={roleEditorOpen}
+        role={role}
+      />
       <AdminUserEditor
         onClose={() => setUserEditorOpen(false)}
         open={userEditorOpen}

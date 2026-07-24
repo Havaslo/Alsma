@@ -34,25 +34,32 @@ export const createKnowledgeBaseRouter = (database: Database): Router => {
   );
 
   router.use(requireAdmin);
-  router.use(createRequireAdminPermission("knowledge.manage"));
-  router.get("/", createGetKnowledgeBaseHandler(service));
+  router.get(
+    "/",
+    createRequireAdminPermission("knowledge.access", "knowledge.manage"),
+    createGetKnowledgeBaseHandler(service),
+  );
   router.post(
     "/articles",
+    createRequireAdminPermission("knowledge.manage"),
     validateRequest({ body: knowledgeArticleBodySchema }),
     createSaveKnowledgeArticleHandler(service),
   );
   router.post(
     "/articles/:articleId/publish",
+    createRequireAdminPermission("knowledge.manage"),
     validateRequest({ params: knowledgeArticleParamsSchema }),
     createPublishKnowledgeArticleHandler(service),
   );
   router.post(
     "/rules",
+    createRequireAdminPermission("knowledge.manage"),
     validateRequest({ body: knowledgeRuleBodySchema }),
     createSaveKnowledgeRuleHandler(service),
   );
   router.post(
     "/answer",
+    createRequireAdminPermission("knowledge.access", "knowledge.manage"),
     validateRequest({ body: knowledgeAnswerBodySchema }),
     createAnswerKnowledgeHandler(service),
   );
