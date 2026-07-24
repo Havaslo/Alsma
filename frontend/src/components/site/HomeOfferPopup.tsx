@@ -21,14 +21,16 @@ export const SiteOfferPopup = () => {
   );
   const banner = banners.find(
     (item) =>
-      item.pagePaths.length === 0 || item.pagePaths.includes(location.pathname),
+      item.isActive !== false &&
+      (item.pagePaths.length === 0 ||
+        item.pagePaths.includes(location.pathname)),
   );
 
   useEffect(() => {
     if (!banner) return undefined;
     const timer = window.setTimeout(
       () => setVisiblePath(location.pathname),
-      Math.max(banner.displayDelaySeconds, 15) * 1_000,
+      Math.max(banner.displayDelaySeconds, 0) * 1_000,
     );
     return () => window.clearTimeout(timer);
   }, [banner, location.pathname]);

@@ -65,11 +65,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
   });
   const upload = useMutation({
     mutationFn: uploadSiteMedia,
-    onSuccess: ({ data }) => {
-      const mediaUrl = new URL(data.file.url, window.location.origin);
-      mediaUrl.searchParams.set("contentType", data.file.contentType);
-      form.setValue("image", `${mediaUrl.pathname}${mediaUrl.search}`);
-    },
+    onSuccess: (asset) => form.setValue("image", asset.url),
   });
 
   return (

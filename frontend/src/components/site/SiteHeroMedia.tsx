@@ -17,10 +17,12 @@ const isVideoSource = (source: string) => {
 export const SiteHeroMedia = ({
   alt = "",
   className,
+  poster,
   source,
 }: {
   readonly alt?: string;
   readonly className: string;
+  readonly poster?: string;
   readonly source: string;
 }) =>
   isVideoSource(source) ? (
@@ -31,6 +33,7 @@ export const SiteHeroMedia = ({
       loop
       muted
       playsInline
+      poster={poster || undefined}
       src={source}
     />
   ) : (

@@ -37,12 +37,16 @@ export const HomePage = () => {
     content.data?.items,
     "ideal-rest",
     HOME_REST_CARDS,
-  );
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const reviews = getSiteCollection<HomeReview>(
     content.data?.items,
     "reviews",
     HOME_REVIEWS,
-  );
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const rooms = getSiteCollection<RoomCategory>(
     roomsContent.data?.items,
     "cards",
@@ -60,7 +64,16 @@ export const HomePage = () => {
         <SiteHeroMedia
           alt="Загородный отель АЛСМА"
           className="absolute inset-0 size-full object-cover"
-          source={typeof hero?.image === "string" ? hero.image : heroImage}
+          poster={
+            typeof hero?.posterUrl === "string" ? hero.posterUrl : undefined
+          }
+          source={
+            typeof hero?.mediaUrl === "string"
+              ? hero.mediaUrl
+              : typeof hero?.image === "string"
+                ? hero.image
+                : heroImage
+          }
         />
         <div className="absolute inset-0 bg-hero-media-tint" />
         <div className="absolute inset-0 bg-hero-highlight" />

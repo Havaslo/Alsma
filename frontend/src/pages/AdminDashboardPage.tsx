@@ -5,6 +5,7 @@ import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenarios
 import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingRequestsPanel";
 import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
+import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
@@ -73,9 +74,14 @@ export const AdminDashboardPage = () => {
       {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={admin.data.user.id} />
       )}
-      {isSiteManagement && can("site.manage") && (
-        <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
+      {path === AMAZI_ROUTES.adminSiteManagementHome && can("site.manage") && (
+        <AdminHomeEditor />
       )}
+      {isSiteManagement &&
+        path !== AMAZI_ROUTES.adminSiteManagementHome &&
+        can("site.manage") && (
+          <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
+        )}
       {path === AMAZI_ROUTES.adminIntegrations &&
         can("integrations.access") && <AdminIntegrationsPanel />}
     </AdminShell>

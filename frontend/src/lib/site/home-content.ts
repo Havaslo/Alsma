@@ -8,13 +8,20 @@ export type HomeRestCard = {
   readonly description: string;
   readonly href?: string;
   readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
   readonly price: string;
+  readonly sortOrder?: number;
   readonly tags: readonly string[];
   readonly title: string;
 };
 
 export type HomeReview = {
+  readonly image?: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
   readonly name: string;
+  readonly sortOrder?: number;
   readonly source: string;
   readonly text: string;
 };
@@ -26,7 +33,10 @@ export type HomePopupBanner = {
   readonly description: string;
   readonly displayDelaySeconds: number;
   readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
   readonly pagePaths: readonly string[];
+  readonly sortOrder?: number;
   readonly title: string;
 };
 

@@ -168,7 +168,16 @@ export const HomeReviewsSection = ({
               </span>
             </div>
             <p className="mt-5 leading-7">{review.text}</p>
-            <p className="mt-auto pt-6 font-semibold">{review.name}</p>
+            <div className="mt-auto flex items-center gap-3 pt-6">
+              {review.image && (
+                <img
+                  alt=""
+                  className="size-10 rounded-full object-cover"
+                  src={review.image}
+                />
+              )}
+              <p className="font-semibold">{review.name}</p>
+            </div>
           </article>
         ))}
       </HorizontalCarousel>

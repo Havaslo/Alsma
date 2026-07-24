@@ -12,13 +12,25 @@ import { createMediaRouter } from "./features/media/media.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
 import type { Database } from "./lib/database/database.js";
+import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
 
 type CreateApiRouterOptions = {
   readonly database: Database;
+  readonly managedStorage: {
+    readonly createUpload: (input: {
+      readonly contentType: string;
+      readonly name: string;
+      readonly sizeBytes: number;
+    }) => Promise<ManagedStorageUpload>;
+    readonly getDownload: (
+      objectId: string,
+    ) => Promise<{ readonly downloadUrl: string }>;
+  };
 };
 
 export const createApiRouter = ({
   database,
+  managedStorage,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
 
@@ -30,7 +42,7 @@ export const createApiRouter = ({
   router.use("/auth", createGuestAuthRouter(database));
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
-  router.use("/media", createMediaRouter(database));
+  router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
 
