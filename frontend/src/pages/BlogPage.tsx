@@ -41,19 +41,26 @@ export const BlogPage = () => {
         image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={typeof hero?.title === "string" ? hero.title : "Блог"}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
-        <div className="text-center">
+      <section
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        id="details"
+      >
+        <div className="mx-auto max-w-4xl text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Журнал впечатлений
           </p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Статьи о красивом и спокойном отдыхе
           </h2>
+          <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+            Выбирайте тему, читайте истории и сохраняйте идеи для следующей
+            поездки в АЛСМА.
+          </p>
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           {filters.map(([value, label]) => (
             <button
-              className={`rounded-full border px-5 py-3 font-semibold ${filter === value ? "border-brand bg-brand text-brand-foreground" : "border-line bg-panel"}`}
+              className={`rounded-full border px-5 py-3 font-semibold ${filter === value ? "border-brand bg-brand text-brand-foreground" : "border-line bg-page"}`}
               key={value}
               onClick={() => setFilter(value)}
               type="button"
@@ -64,7 +71,7 @@ export const BlogPage = () => {
         </div>
         <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <EditorialCard item={item} key={item.title} />
+            <EditorialCard item={item} key={item.title} variant="blog" />
           ))}
         </div>
       </section>
