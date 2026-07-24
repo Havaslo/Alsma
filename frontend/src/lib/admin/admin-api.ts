@@ -13,13 +13,16 @@ export type SiteLead = {
   readonly details: {
     checkInDate?: string;
     checkOutDate?: string;
+    comment?: string;
     guestsCount?: number;
   };
   readonly email: string | null;
+  readonly formCode: string;
   readonly formTitle: string;
   readonly id: string;
   readonly name: string | null;
   readonly phone: string | null;
+  readonly sourcePage: string;
   readonly status: "cancelled" | "completed" | "new" | "processing";
 };
 export type BookingRequest = {

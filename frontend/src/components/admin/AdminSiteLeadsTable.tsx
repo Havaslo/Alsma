@@ -1,49 +1,83 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
-import { Search } from "lucide-react";
-
+import { AdminSiteLeadModal } from "@/components/admin/AdminSiteLeadModal";
+import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
+import {
+  formatLeadDate,
+  getLeadDetailsSummary,
+  getLeadPageLabel,
+} from "@/components/admin/admin-site-leads";
+import { Button } from "@/components/ui/Button";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
+import { TextField } from "@/components/ui/FormField";
 import { Loader } from "@/components/ui/Loader";
 import type { SiteLead } from "@/lib/admin/admin-api";
 import { ADMIN_STATUS_OPTIONS } from "@/lib/admin/admin-status";
-import { useAdminLeads, useUpdateAdminLead } from "@/lib/admin/useAdmin";
+import { useAdminLeads } from "@/lib/admin/useAdmin";
 
-const allStatusOptions = [
+type FilterValue = string | "all";
+const ALL_STATUS_OPTIONS = [
   { label: "Все статусы", value: "all" },
   ...ADMIN_STATUS_OPTIONS,
 ] as const;
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
-
 export const AdminSiteLeadsTable = () => {
   const leads = useAdminLeads();
-  const update = useUpdateAdminLead();
+  const [selectedLead, setSelectedLead] = useState<SiteLead | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState<FilterValue>("all");
+  const [form, setForm] = useState<FilterValue>("all");
   const [status, setStatus] = useState<SiteLead["status"] | "all">("all");
+  const [applied, setApplied] = useState({ form, page, search, status });
+  const sourceItems = useMemo(
+    () => leads.data?.items ?? [],
+    [leads.data?.items],
+  );
+  const pageOptions = useMemo(
+    () => [
+      { label: "Все страницы", value: "all" },
+      ...Array.from(new Set(sourceItems.map((lead) => lead.sourcePage))).map(
+        (value) => ({ label: getLeadPageLabel(value), value }),
+      ),
+    ],
+    [sourceItems],
+  );
+  const formOptions = useMemo(
+    () => [
+      { label: "Все формы", value: "all" },
+      ...Array.from(
+        new Map(
+          sourceItems.map((lead) => [
+            lead.formCode,
+            { label: lead.formTitle, value: lead.formCode },
+          ]),
+        ).values(),
+      ),
+    ],
+    [sourceItems],
+  );
   const items = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase("ru-RU");
-    return (leads.data?.items ?? []).filter((lead) => {
-      const matchesStatus = status === "all" || lead.status === status;
+    const term = applied.search.trim().toLocaleLowerCase("ru-RU");
+    return sourceItems.filter((lead) => {
       const haystack = [
         lead.name,
         lead.phone,
         lead.email,
         lead.formTitle,
+        lead.sourcePage,
         JSON.stringify(lead.details),
       ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("ru-RU");
-      return matchesStatus && (!term || haystack.includes(term));
+      return (
+        (applied.status === "all" || lead.status === applied.status) &&
+        (applied.page === "all" || lead.sourcePage === applied.page) &&
+        (applied.form === "all" || lead.formCode === applied.form) &&
+        (!term || haystack.includes(term))
+      );
     });
-  }, [leads.data?.items, search, status]);
+  }, [applied, sourceItems]);
 
   return (
     <div className="space-y-5">
@@ -52,8 +86,8 @@ export const AdminSiteLeadsTable = () => {
           <div>
             <h1 className="text-3xl font-semibold">Заявки сайта</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
-              Все обращения, отправленные с форм сайта: бронирование, SPA,
-              трансфер и другие сценарии.
+              Обращения из форм сайта: бронирование, SPA, трансфер и другие
+              сценарии.
             </p>
           </div>
           <span className="text-sm text-muted-ui-foreground">
@@ -65,38 +99,46 @@ export const AdminSiteLeadsTable = () => {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-line bg-brand-foreground p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_14rem_auto]">
-          <label className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
-            <Search className="size-4 text-muted-ui-foreground" />
-            <input
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Имя, телефон, почта, детали"
-              value={search}
-            />
-          </label>
-          <DropdownSelect<SiteLead["status"] | "all">
-            ariaLabel="Фильтр по статусу"
-            onChange={setStatus}
-            options={allStatusOptions}
-            triggerClassName="h-full rounded-2xl border border-line px-4 py-3 text-sm"
-            value={status}
-          />
-          <button
-            className="rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
-            onClick={() => {
-              setSearch("");
-              setStatus("all");
-            }}
-            type="button"
-          >
-            Сбросить
-          </button>
-        </div>
-      </section>
-
       <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
+        <div className="grid gap-4 border-b border-line p-5 xl:grid-cols-[minmax(16rem,1fr)_14rem_16rem_14rem_auto] xl:items-end">
+          <TextField
+            label="Поиск"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="..."
+            value={search}
+          />
+          <Filter label="Страница">
+            <DropdownSelect
+              ariaLabel="Фильтр по странице"
+              onChange={setPage}
+              options={pageOptions}
+              triggerClassName="field-control min-h-12 text-sm"
+              value={page}
+            />
+          </Filter>
+          <Filter label="Форма">
+            <DropdownSelect
+              ariaLabel="Фильтр по форме"
+              onChange={setForm}
+              options={formOptions}
+              triggerClassName="field-control min-h-12 text-sm"
+              value={form}
+            />
+          </Filter>
+          <Filter label="Статус">
+            <DropdownSelect<SiteLead["status"] | "all">
+              ariaLabel="Фильтр по статусу"
+              onChange={setStatus}
+              options={ALL_STATUS_OPTIONS}
+              triggerClassName="field-control min-h-12 text-sm"
+              value={status}
+            />
+          </Filter>
+          <Button onClick={() => setApplied({ form, page, search, status })}>
+            Применить
+          </Button>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-6xl border-collapse text-left text-sm">
             <thead className="bg-page text-xs font-semibold">
@@ -111,9 +153,21 @@ export const AdminSiteLeadsTable = () => {
             </thead>
             <tbody>
               {items.map((lead) => (
-                <tr className="border-t border-line align-top" key={lead.id}>
+                <tr
+                  className="cursor-pointer border-t border-line align-top transition hover:bg-muted-ui/20 focus-visible:bg-muted-ui/20 focus-visible:outline-none"
+                  key={lead.id}
+                  onClick={() => setSelectedLead(lead)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedLead(lead);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
                   <td className="px-5 py-4">
-                    <strong className="block">
+                    <strong className="block text-brand">
                       {lead.name || "Без имени"}
                     </strong>
                     <span className="mt-1 block text-xs text-muted-ui-foreground">
@@ -121,36 +175,26 @@ export const AdminSiteLeadsTable = () => {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <strong className="block">{lead.formTitle}</strong>
+                    <strong className="block">
+                      {getLeadPageLabel(lead.sourcePage)}
+                    </strong>
                     <span className="mt-1 block text-xs text-muted-ui-foreground">
-                      Форма сайта
+                      {lead.formTitle}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-muted-ui-foreground">
-                    {lead.formTitle
-                      .toLocaleLowerCase("ru-RU")
-                      .includes("трансфер")
-                      ? "Указан в заявке"
+                    {lead.formCode.includes("transfer")
+                      ? lead.details.comment || "Указан в заявке"
                       : "—"}
                   </td>
-                  <td className="px-5 py-4 text-muted-ui-foreground">
-                    {lead.details.checkInDate
-                      ? `${lead.details.checkInDate} — ${lead.details.checkOutDate}, ${lead.details.guestsCount ?? "—"} гост.`
-                      : "Заявка отправлена без дополнительных параметров"}
+                  <td className="max-w-md px-5 py-4 text-muted-ui-foreground">
+                    {getLeadDetailsSummary(lead)}
                   </td>
-                  <td className="w-44 px-5 py-4">
-                    <DropdownSelect<SiteLead["status"]>
-                      ariaLabel={`Статус заявки ${lead.formTitle}`}
-                      onChange={(nextStatus) =>
-                        update.mutate({ leadId: lead.id, status: nextStatus })
-                      }
-                      options={ADMIN_STATUS_OPTIONS}
-                      triggerClassName="rounded-xl px-0 py-0 text-xs"
-                      value={lead.status}
-                    />
+                  <td className="px-5 py-4">
+                    <AdminStatusBadge status={lead.status} />
                   </td>
                   <td className="px-5 py-4 whitespace-nowrap text-muted-ui-foreground">
-                    {formatDate(lead.createdAt)}
+                    {formatLeadDate(lead.createdAt)}
                   </td>
                 </tr>
               ))}
@@ -168,6 +212,25 @@ export const AdminSiteLeadsTable = () => {
           </p>
         )}
       </section>
+      {selectedLead && (
+        <AdminSiteLeadModal
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+        />
+      )}
     </div>
   );
 };
+
+const Filter = ({
+  children,
+  label,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+}) => (
+  <label>
+    <span className="mb-2 block text-sm font-medium">{label}</span>
+    {children}
+  </label>
+);
