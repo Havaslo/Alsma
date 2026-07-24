@@ -9,6 +9,7 @@ import { AdminEntertainmentEditor } from "@/components/admin/AdminEntertainmentE
 import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
+import { AdminNewsEditor } from "@/components/admin/AdminNewsEditor";
 import { AdminOffersEditor } from "@/components/admin/AdminOffersEditor";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminRoomsEditor } from "@/components/admin/AdminRoomsEditor";
@@ -87,11 +88,15 @@ export const AdminDashboardPage = () => {
         can("site.manage") && <AdminEntertainmentEditor />}
       {path === AMAZI_ROUTES.adminSiteManagementOffers &&
         can("site.manage") && <AdminOffersEditor />}
+      {path === AMAZI_ROUTES.adminSiteManagementNews && can("site.manage") && (
+        <AdminNewsEditor />
+      )}
       {isSiteManagement &&
         path !== AMAZI_ROUTES.adminSiteManagementHome &&
         path !== AMAZI_ROUTES.adminSiteManagementRooms &&
         path !== AMAZI_ROUTES.adminSiteManagementEntertainment &&
         path !== AMAZI_ROUTES.adminSiteManagementOffers &&
+        path !== AMAZI_ROUTES.adminSiteManagementNews &&
         can("site.manage") && (
           <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
         )}

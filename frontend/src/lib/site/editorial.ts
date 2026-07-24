@@ -8,12 +8,23 @@ import programsImage from "@/assets/alsma/spa-programs.jpg";
 import riverImage from "@/assets/alsma/spa-river-aerial.jpg";
 import wellnessImage from "@/assets/alsma/spa-wellness.png";
 
+export type NewsCategory = "arrivals" | "events" | "wellness";
+export type EditorialCategory = NewsCategory | "guide" | "stories" | "tips";
+
 export type EditorialItem = {
-  readonly category: string;
+  readonly buttonLink?: string;
+  readonly buttonText?: string;
+  readonly category: EditorialCategory;
   readonly date: string;
+  readonly dateValue?: string;
   readonly description: string;
   readonly details: string;
   readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly isArchived?: boolean;
+  readonly remainingPlaces?: string;
+  readonly sortOrder?: number;
   readonly tags: readonly string[];
   readonly title: string;
 };
@@ -22,6 +33,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "wellness",
     date: "18 сентября 2026",
+    dateValue: "2026-09-18",
     description:
       "Трёхдневная программа с диагностикой, гидротермальной зоной и авторскими ритуалами.",
     details:
@@ -33,6 +45,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "arrivals",
     date: "2 сентября 2026",
+    dateValue: "2026-09-02",
     description:
       "Программа для родителей и детей с анимацией, мастер-классами и пикником у реки.",
     details:
@@ -44,6 +57,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "events",
     date: "27 августа 2026",
+    dateValue: "2026-08-27",
     description:
       "Камерное событие с сет-меню от шефа, сопровождением и загородной атмосферой.",
     details:
@@ -55,6 +69,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "wellness",
     date: "14 августа 2026",
+    dateValue: "2026-08-14",
     description:
       "Романтический формат с парными ритуалами, поздним выездом и wellness-зоной.",
     details:
@@ -66,6 +81,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "arrivals",
     date: "5 августа 2026",
+    dateValue: "2026-08-05",
     description:
       "Прогулки, SUP, веломаршруты, банный ритуал и вечер на воздухе.",
     details:
@@ -77,6 +93,7 @@ export const NEWS_ITEMS: readonly EditorialItem[] = [
   {
     category: "wellness",
     date: "21 июля 2026",
+    dateValue: "2026-07-21",
     description:
       "Однодневная программа с лекцией, SPA-практиками, массажем и лёгким меню.",
     details:

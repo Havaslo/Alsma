@@ -1,0 +1,272 @@
+import { useState } from "react";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+
+import { Plus, Save, Trash2 } from "lucide-react";
+
+import { Form } from "@/components/Form";
+import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
+import {
+  CheckboxField,
+  TextAreaField,
+  TextField,
+} from "@/components/ui/FormField";
+import { Loader } from "@/components/ui/Loader";
+import { MediaUploadField } from "@/components/ui/MediaUploadField";
+import {
+  NEWS_CATEGORY_OPTIONS,
+  type NewsItemForm,
+  formatNewsDate,
+  getCurrentDateValue,
+  getNewsDefaults,
+} from "@/lib/site/news-content";
+import {
+  useAdminSiteContent,
+  useSaveAdminSiteContent,
+} from "@/lib/site/useSiteContent";
+
+type FormValues = { items: NewsItemForm[] };
+
+export const AdminNewsEditor = () => {
+  const [deleteIndex, setDeleteIndex] = useState<number>();
+  const content = useAdminSiteContent("news");
+  const save = useSaveAdminSiteContent();
+  const form = useForm<FormValues>({
+    values: content.data ? getNewsDefaults(content.data.items) : undefined,
+  });
+  const cards = useFieldArray({ control: form.control, name: "items" });
+  const values = useWatch({ control: form.control, name: "items" });
+
+  if (content.isLoading)
+    return (
+      <div className="grid min-h-[60vh] place-items-center">
+        <Loader className="text-brand" label="Загрузка редактора" size="lg" />
+      </div>
+    );
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <p className="text-sm font-semibold tracking-wide text-muted-ui-foreground uppercase">
+          Управление сайтом
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold text-brand">Новости</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+          Редактируйте карточки новостей и управляйте публикациями.
+        </p>
+      </section>
+      <Form
+        form={form}
+        onSubmit={(formValues) =>
+          save.mutate({
+            content: {
+              items: formValues.items
+                .map((item) => ({
+                  ...item,
+                  date: formatNewsDate(item.dateValue),
+                  tags: [item.tag, item.remainingPlaces].filter(Boolean),
+                }))
+                .sort((left, right) => left.sortOrder - right.sortOrder),
+            },
+            itemKey: "items",
+            position: 1,
+            section: "news",
+            status: "published",
+            title: "Новости",
+          })
+        }
+      >
+        <header className="flex flex-col justify-between gap-4 rounded-3xl border border-line bg-brand-foreground p-6 sm:flex-row">
+          <div>
+            <h2 className="text-lg font-semibold text-brand">Новости</h2>
+            <p className="mt-1 text-sm text-muted-ui-foreground">
+              Карточки новостей, активные публикации и архив.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() =>
+                cards.append({
+                  buttonLink: "",
+                  buttonText: "",
+                  category: "wellness",
+                  dateValue: getCurrentDateValue(),
+                  description: "",
+                  details: "",
+                  image: "",
+                  imageName: "",
+                  isActive: true,
+                  isArchived: false,
+                  remainingPlaces: "",
+                  sortOrder: cards.fields.length,
+                  tag: "",
+                  title: "",
+                })
+              }
+              variant="secondary"
+            >
+              <Plus className="size-4" /> Добавить новость
+            </Button>
+            <Button disabled={save.isPending} type="submit">
+              <Save className="size-4" /> Сохранить новости
+            </Button>
+          </div>
+        </header>
+        {cards.fields.map((card, index) => (
+          <article
+            className="rounded-3xl border border-line bg-brand-foreground p-6"
+            key={card.id}
+          >
+            <div className="mb-5 grid gap-4 sm:grid-cols-3 sm:items-end">
+              <TextField
+                label="Порядок"
+                min={0}
+                type="number"
+                {...form.register(`items.${index}.sortOrder`, {
+                  valueAsNumber: true,
+                })}
+              />
+              <CheckboxField
+                checked={values[index]?.isActive ?? false}
+                className="w-full"
+                label="Показывать новость"
+                onChange={(checked) =>
+                  form.setValue(`items.${index}.isActive`, checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+              <Button
+                className="w-full text-destructive"
+                onClick={() => setDeleteIndex(index)}
+                variant="secondary"
+              >
+                <Trash2 className="size-4" /> Удалить
+              </Button>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <TextField
+                label="Заголовок"
+                placeholder="..."
+                {...form.register(`items.${index}.title`, { required: true })}
+              />
+              <TextField
+                label="Тег"
+                placeholder="..."
+                {...form.register(`items.${index}.tag`)}
+              />
+            </div>
+            <div className="mt-5">
+              <TextAreaField
+                label="Описание в карточке"
+                placeholder="..."
+                {...form.register(`items.${index}.description`)}
+              />
+            </div>
+            <div className="mt-5">
+              <TextAreaField
+                label="Описание в открытой новости"
+                placeholder="..."
+                rows={6}
+                {...form.register(`items.${index}.details`)}
+              />
+            </div>
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+              <TextField
+                label="Количество оставшихся мест"
+                placeholder="..."
+                {...form.register(`items.${index}.remainingPlaces`)}
+              />
+              <TextField
+                label="Ссылка для кнопки"
+                placeholder="..."
+                {...form.register(`items.${index}.buttonLink`)}
+              />
+            </div>
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+              <label className="block text-sm font-medium text-panel-foreground">
+                <span>Тема новости</span>
+                <span className="mt-2 block rounded-xl border border-line bg-page px-4 py-2.5">
+                  <Controller
+                    control={form.control}
+                    name={`items.${index}.category`}
+                    render={({ field }) => (
+                      <DropdownSelect
+                        ariaLabel={`Тема новости ${index + 1}`}
+                        onChange={field.onChange}
+                        options={NEWS_CATEGORY_OPTIONS}
+                        value={field.value}
+                      />
+                    )}
+                  />
+                </span>
+              </label>
+              <label className="block text-sm font-medium text-panel-foreground">
+                <span>Дата новости</span>
+                <span className="mt-2 block rounded-xl border border-line bg-page px-4 py-2.5">
+                  <Controller
+                    control={form.control}
+                    name={`items.${index}.dateValue`}
+                    render={({ field }) => (
+                      <DatePicker
+                        ariaLabel={`Дата новости ${index + 1}`}
+                        onChange={field.onChange}
+                        value={field.value}
+                      />
+                    )}
+                  />
+                </span>
+              </label>
+            </div>
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+              <TextField
+                label="Текст кнопки"
+                placeholder="..."
+                {...form.register(`items.${index}.buttonText`)}
+              />
+              <CheckboxField
+                checked={values[index]?.isArchived ?? false}
+                className="w-full self-end"
+                label="Отправить в архив"
+                onChange={(checked) =>
+                  form.setValue(`items.${index}.isArchived`, checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            </div>
+            <div className="mt-5">
+              <MediaUploadField
+                currentName={values[index]?.imageName}
+                currentUrl={values[index]?.image}
+                label="Загрузить изображение"
+                onUploaded={(asset) => {
+                  form.setValue(`items.${index}.image`, asset.url, {
+                    shouldDirty: true,
+                  });
+                  form.setValue(`items.${index}.imageName`, asset.fileName, {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+            </div>
+          </article>
+        ))}
+        <ConfirmModal
+          confirmLabel="Удалить новость"
+          onClose={() => setDeleteIndex(undefined)}
+          onConfirm={() => {
+            if (deleteIndex !== undefined) cards.remove(deleteIndex);
+            setDeleteIndex(undefined);
+          }}
+          open={deleteIndex !== undefined}
+          title="Удалить новость?"
+        >
+          Карточка будет удалена после сохранения новостей.
+        </ConfirmModal>
+      </Form>
+    </div>
+  );
+};

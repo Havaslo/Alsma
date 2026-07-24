@@ -31,12 +31,20 @@ export const EditorialCard = ({ item }: { readonly item: EditorialItem }) => (
       </p>
       <details className="group mt-auto pt-6">
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-brand">
-          Подробнее{" "}
+          {item.buttonText || "Подробнее"}{" "}
           <ChevronDown className="size-4 transition group-open:rotate-180" />
         </summary>
         <p className="mt-4 border-t border-line pt-4 leading-7">
           {item.details}
         </p>
+        {item.buttonLink && (
+          <a
+            className="mt-4 inline-flex rounded-full border border-brand px-5 py-2.5 font-semibold text-brand"
+            href={item.buttonLink}
+          >
+            Перейти
+          </a>
+        )}
       </details>
     </div>
   </article>

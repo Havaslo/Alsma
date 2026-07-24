@@ -8,7 +8,7 @@ import { EditorialCard } from "@/components/site/EditorialCard";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { getSiteCollection } from "@/lib/site/content-collections";
-import { NEWS_ITEMS } from "@/lib/site/editorial";
+import { type EditorialItem, NEWS_ITEMS } from "@/lib/site/editorial";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -56,7 +56,15 @@ export const NewsPage = () => {
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const newsItems = getSiteCollection(content.data?.items, "items", NEWS_ITEMS);
+  const newsItems = [
+    ...getSiteCollection<EditorialItem>(
+      content.data?.items,
+      "items",
+      NEWS_ITEMS,
+    ),
+  ]
+    .filter((item) => item.isActive !== false && item.isArchived !== true)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const items =
     filter === "all"
       ? newsItems
