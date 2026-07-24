@@ -6,8 +6,40 @@ import programsImage from "@/assets/alsma/spa-programs.jpg";
 import spaImage from "@/assets/alsma/spa-wellness.png";
 
 export type ActiveOffer = {
+  readonly buttonLink?: string;
   readonly description: string;
   readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly sortOrder?: number;
+  readonly tag: string;
+  readonly title: string;
+};
+
+export type ReadyScenario = {
+  readonly buttonLink?: string;
+  readonly buttonText?: string;
+  readonly description: string;
+  readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly price: string;
+  readonly sortOrder?: number;
+  readonly tags: readonly string[];
+  readonly title: string;
+};
+
+export type OfferEvent = {
+  readonly date: string;
+  readonly description: string;
+  readonly endDate?: string;
+  readonly image: string;
+  readonly imageName?: string;
+  readonly isActive?: boolean;
+  readonly items?: readonly string[];
+  readonly month: string;
+  readonly sortOrder?: number;
+  readonly startDate?: string;
   readonly tag: string;
   readonly title: string;
 };
@@ -43,7 +75,7 @@ export const ACTIVE_OFFERS: readonly ActiveOffer[] = [
   },
 ] as const;
 
-export const READY_SCENARIOS = [
+export const READY_SCENARIOS: readonly ReadyScenario[] = [
   {
     description:
       "Диагностика, термальная зона и SPA-ритуалы для глубокой перезагрузки.",
@@ -70,13 +102,15 @@ export const READY_SCENARIOS = [
   },
 ] as const;
 
-export const OFFER_EVENTS = [
+export const OFFER_EVENTS: readonly OfferEvent[] = [
   {
     date: "18 сентября 2026",
     description:
       "Камерный вечер с сет-меню, живой музыкой и возможностью продлить отдых в отеле.",
+    endDate: "2026-09-18",
     image: liveMusicImage,
     month: "Сентябрь",
+    startDate: "2026-09-18",
     tag: "Событие",
     title: "Осенний гастровечер",
   },
@@ -84,8 +118,10 @@ export const OFFER_EVENTS = [
     date: "3–5 октября 2026",
     description:
       "Насыщенная программа с лекциями, ритуалами и релаксом в wellness-пространстве.",
+    endDate: "2026-10-05",
     image: programsImage,
     month: "Октябрь",
+    startDate: "2026-10-03",
     tag: "Wellness",
     title: "SPA-фестиваль восстановления",
   },
@@ -93,8 +129,10 @@ export const OFFER_EVENTS = [
     date: "24–25 октября 2026",
     description:
       "Активности для детей, мастер-классы, пикник и размеренный отдых для родителей.",
+    endDate: "2026-10-25",
     image: familyImage,
     month: "Октябрь",
+    startDate: "2026-10-24",
     tag: "Семьям",
     title: "Семейные выходные в лесу",
   },

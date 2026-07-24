@@ -6,11 +6,28 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { getSiteCollection } from "@/lib/site/content-collections";
 import {
   ACTIVE_OFFERS,
+  type ActiveOffer,
   OFFER_EVENTS,
+  type OfferEvent,
   READY_SCENARIOS,
+  type ReadyScenario,
 } from "@/lib/site/offers";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
+
+const formatOfferDate = (value: string) =>
+  new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+const getOfferMonth = (value: string) => {
+  const month = new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU", {
+    month: "long",
+  });
+  return `${month.charAt(0).toUpperCase()}${month.slice(1)}`;
+};
 
 export const OffersPage = () => {
   const page = PUBLIC_PAGES.offers;
@@ -24,17 +41,45 @@ export const OffersPage = () => {
       : "Акции для отдыха в любой сезон";
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
-  const offers = getSiteCollection(
-    content.data?.items,
-    "proposals",
-    ACTIVE_OFFERS,
-  );
-  const scenarios = getSiteCollection(
-    content.data?.items,
-    "ready-scenarios",
-    READY_SCENARIOS,
-  );
-  const events = getSiteCollection(content.data?.items, "events", OFFER_EVENTS);
+  const offers = [
+    ...getSiteCollection<ActiveOffer>(
+      content.data?.items,
+      "proposals",
+      ACTIVE_OFFERS,
+    ),
+  ]
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const scenarios = [
+    ...getSiteCollection<ReadyScenario>(
+      content.data?.items,
+      "ready-scenarios",
+      READY_SCENARIOS,
+    ),
+  ]
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const events = [
+    ...getSiteCollection<OfferEvent>(
+      content.data?.items,
+      "events",
+      OFFER_EVENTS,
+    ),
+  ]
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
+    .map((item) => ({
+      ...item,
+      date: item.startDate
+        ? [
+            formatOfferDate(item.startDate),
+            item.endDate ? formatOfferDate(item.endDate) : "",
+          ]
+            .filter(Boolean)
+            .join(" — ")
+        : item.date,
+      month: item.startDate ? getOfferMonth(item.startDate) : item.month,
+    }));
   const eventMonths = [
     {
       events: events.slice(0, 1),
@@ -88,9 +133,18 @@ export const OffersPage = () => {
                   <p className="mt-4 leading-7 text-brand-foreground/80">
                     {offer.description}
                   </p>
-                  <span className="mt-6 font-semibold text-accent-ui">
-                    Подробнее ↗
-                  </span>
+                  {offer.buttonLink ? (
+                    <a
+                      className="mt-6 font-semibold text-accent-ui"
+                      href={offer.buttonLink}
+                    >
+                      Подробнее ↗
+                    </a>
+                  ) : (
+                    <span className="mt-6 font-semibold text-accent-ui">
+                      Подробнее ↗
+                    </span>
+                  )}
                 </div>
               </div>
             </article>
@@ -138,6 +192,14 @@ export const OffersPage = () => {
                   <p className="mt-auto pt-8 text-2xl font-semibold text-brand">
                     {scenario.price}
                   </p>
+                  {scenario.buttonText && scenario.buttonLink && (
+                    <a
+                      className="mt-6 w-fit rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                      href={scenario.buttonLink}
+                    >
+                      {scenario.buttonText}
+                    </a>
+                  )}
                 </div>
               </article>
             ))}
