@@ -11,6 +11,8 @@ import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
+import { AdminSitePlaceholder } from "@/components/admin/AdminSitePlaceholder";
+import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
@@ -38,6 +40,7 @@ export const AdminDashboardPage = () => {
   const isDashboard =
     path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
+  const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
@@ -69,6 +72,9 @@ export const AdminDashboardPage = () => {
       )}
       {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={admin.data.user.id} />
+      )}
+      {isSiteManagement && can("site.manage") && (
+        <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
       )}
       {path === AMAZI_ROUTES.adminIntegrations &&
         can("integrations.access") && <AdminIntegrationsPanel />}
