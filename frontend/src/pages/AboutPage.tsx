@@ -27,6 +27,14 @@ import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 const advantageIcons = [Waves, Utensils, Droplets, House, Trees, CalendarDays];
+const advantageIconTones = [
+  "bg-brand/10 text-brand",
+  "bg-accent-ui/20 text-accent-ui-foreground",
+  "bg-supporting/30 text-brand",
+  "bg-muted-ui text-brand",
+  "bg-brand/10 text-brand",
+  "bg-destructive/10 text-destructive",
+];
 
 export const AboutPage = () => {
   const page = PUBLIC_PAGES.about;
@@ -49,7 +57,7 @@ export const AboutPage = () => {
       />
 
       <section
-        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto text-center">
@@ -66,12 +74,16 @@ export const AboutPage = () => {
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {HOTEL_ADVANTAGES.map((item, index) => {
             const Icon = advantageIcons[index] ?? BedDouble;
+            const iconTone =
+              advantageIconTones[index] ?? "bg-brand/10 text-brand";
             return (
               <article
                 className="rounded-3xl bg-brand-foreground p-7"
                 key={item.title}
               >
-                <span className="grid size-16 place-items-center rounded-3xl bg-supporting/25 text-brand">
+                <span
+                  className={`grid size-16 place-items-center rounded-3xl ${iconTone}`}
+                >
                   <Icon className="size-8" />
                 </span>
                 <h3 className="mt-6 font-heading text-2xl font-semibold">
@@ -86,8 +98,8 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      <section className="bg-panel py-24">
-        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
+      <section className="px-5 py-24 sm:px-8">
+        <div className="mx-auto max-w-screen-2xl rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
               Контакты и расположение
@@ -98,7 +110,7 @@ export const AboutPage = () => {
             </p>
           </div>
           <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_1.35fr]">
-            <div className="rounded-4xl bg-page p-8 sm:p-10">
+            <div className="rounded-4xl bg-brand-foreground p-8 sm:p-10">
               <h3 className="font-heading text-3xl font-semibold">Контакты</h3>
               <p className="mt-3 text-muted-ui-foreground">
                 Свяжитесь с нами по вопросам бронирования, заездов, размещения и
@@ -142,7 +154,7 @@ export const AboutPage = () => {
               </div>
             </div>
             <iframe
-              className="size-full min-h-[35rem] rounded-4xl border-0"
+              className="size-full min-h-[32rem] rounded-4xl border-0"
               src="https://yandex.ru/map-widget/v1/?rtext=56.535555%2C44.114214~56.355104%2C43.924790&rtt=auto"
               title="Отель АЛСМА на карте"
             />
@@ -155,8 +167,8 @@ export const AboutPage = () => {
         title="Узнавайте первыми о новых акциях, событиях и красивых моментах отдыха в АЛСМА"
       />
 
-      <section className="bg-panel py-24">
-        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
+      <section className="px-5 py-24 sm:px-8">
+        <div className="mx-auto max-w-screen-2xl rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
             Трансфер до отеля
           </h2>
@@ -166,7 +178,7 @@ export const AboutPage = () => {
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {TRANSFER_OPTIONS.map((option) => (
               <article
-                className="flex min-h-72 flex-col rounded-3xl bg-page p-7"
+                className="flex min-h-64 flex-col rounded-3xl bg-brand-foreground p-7"
                 key={option.title}
               >
                 <h3 className="font-heading text-3xl font-semibold text-brand">
@@ -205,7 +217,7 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Для вашего удобства
