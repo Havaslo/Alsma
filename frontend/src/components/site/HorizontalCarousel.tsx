@@ -14,12 +14,14 @@ import { cn } from "@/lib/cn";
 type HorizontalCarouselProps = {
   children: ReactNode;
   className?: string;
+  controlsInside?: boolean;
   slideClassName?: string;
 };
 
 export const HorizontalCarousel = ({
   children,
   className,
+  controlsInside = false,
   slideClassName,
 }: HorizontalCarouselProps) => {
   const slides = Children.toArray(children);
@@ -53,14 +55,22 @@ export const HorizontalCarousel = ({
     <div className={cn("relative", className)}>
       <button
         aria-label="Предыдущий слайд"
-        className="absolute top-1/2 left-0 z-10 hidden size-12 -translate-y-1/2 place-items-center rounded-full border border-brand/25 bg-panel/90 text-brand backdrop-blur transition hover:bg-panel disabled:cursor-default disabled:opacity-35 lg:grid"
+        className={cn(
+          "absolute top-1/2 z-10 hidden size-12 -translate-y-1/2 place-items-center rounded-full border border-brand/25 backdrop-blur transition disabled:cursor-default disabled:opacity-35 lg:grid",
+          controlsInside
+            ? "left-4 bg-brand/90 text-brand-foreground hover:bg-brand"
+            : "left-0 bg-panel/90 text-brand hover:bg-panel",
+        )}
         disabled={!canScrollPrev}
         onClick={() => emblaApi?.scrollPrev()}
         type="button"
       >
         <ChevronLeft className="size-5" />
       </button>
-      <div className="overflow-hidden lg:mx-16" ref={viewportRef}>
+      <div
+        className={cn("overflow-hidden", !controlsInside && "lg:mx-16")}
+        ref={viewportRef}
+      >
         <div className="-mr-6 flex touch-pan-y">
           {slides.map((slide, index) => (
             <div
@@ -77,7 +87,12 @@ export const HorizontalCarousel = ({
       </div>
       <button
         aria-label="Следующий слайд"
-        className="absolute top-1/2 right-0 z-10 hidden size-12 -translate-y-1/2 place-items-center rounded-full border border-brand/25 bg-panel/90 text-brand backdrop-blur transition hover:bg-panel disabled:cursor-default disabled:opacity-35 lg:grid"
+        className={cn(
+          "absolute top-1/2 z-10 hidden size-12 -translate-y-1/2 place-items-center rounded-full border border-brand/25 backdrop-blur transition disabled:cursor-default disabled:opacity-35 lg:grid",
+          controlsInside
+            ? "right-4 bg-brand/90 text-brand-foreground hover:bg-brand"
+            : "right-0 bg-panel/90 text-brand hover:bg-panel",
+        )}
         disabled={!canScrollNext}
         onClick={() => emblaApi?.scrollNext()}
         type="button"
@@ -85,7 +100,13 @@ export const HorizontalCarousel = ({
         <ChevronRight className="size-5" />
       </button>
       {slides.length > 1 && (
-        <div className="mt-8 flex justify-center gap-3">
+        <div
+          className={cn(
+            "mt-8 flex justify-center gap-3",
+            controlsInside &&
+              "absolute bottom-4 left-1/2 z-10 mt-0 -translate-x-1/2",
+          )}
+        >
           {slides.map((_, index) => (
             <button
               aria-label={`Перейти к слайду ${index + 1}`}

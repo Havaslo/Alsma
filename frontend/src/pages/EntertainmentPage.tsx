@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, RussianRuble } from "lucide-react";
 
 import entertainmentHeroImage from "@/assets/alsma/spa-forest-walk.jpg";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
@@ -76,7 +76,10 @@ export const EntertainmentPage = () => {
         }
         title={title}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+      <section
+        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        id="details"
+      >
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             На территории комплекса
@@ -88,12 +91,12 @@ export const EntertainmentPage = () => {
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {zones.map((zone) => (
             <article
-              className="overflow-hidden rounded-4xl bg-panel"
+              className="overflow-hidden rounded-4xl bg-brand-foreground"
               key={zone.title}
             >
               <img
                 alt={zone.title}
-                className="h-64 w-full object-cover"
+                className="h-56 w-full object-cover"
                 src={zone.image}
               />
               <div className="p-7">
@@ -118,8 +121,8 @@ export const EntertainmentPage = () => {
           ))}
         </div>
       </section>
-      <section className="bg-panel/60 py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <section className="py-20">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold text-brand">Круглый год</p>
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
@@ -129,7 +132,11 @@ export const EntertainmentPage = () => {
               Развлечения на свежем воздухе круглый год
             </p>
           </div>
-          <HorizontalCarousel className="mt-10" slideClassName="basis-full">
+          <HorizontalCarousel
+            className="mt-10"
+            controlsInside
+            slideClassName="basis-full"
+          >
             {seasons.map((season) => (
               <article
                 className="relative min-h-[44rem] overflow-hidden rounded-4xl text-brand-foreground"
@@ -169,7 +176,7 @@ export const EntertainmentPage = () => {
           </HorizontalCarousel>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
+      <section className="mx-auto max-w-screen-2xl px-5 py-20 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand">Каждый день</p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
@@ -182,7 +189,7 @@ export const EntertainmentPage = () => {
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {programs.map((program) => (
             <article
-              className="flex min-h-64 flex-col rounded-3xl bg-panel p-6"
+              className="flex min-h-56 flex-col rounded-3xl bg-panel p-6"
               key={program.title}
             >
               <div className="flex items-center justify-between gap-4">
@@ -207,7 +214,7 @@ export const EntertainmentPage = () => {
         </div>
       </section>
       <section className="bg-panel py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Для семей с детьми
@@ -219,7 +226,7 @@ export const EntertainmentPage = () => {
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {kidsServices.map((service) => (
               <article
-                className="flex h-full flex-col overflow-hidden rounded-3xl bg-page"
+                className="flex h-full flex-col overflow-hidden rounded-3xl bg-brand-foreground"
                 key={service.title}
               >
                 <img
@@ -251,7 +258,7 @@ export const EntertainmentPage = () => {
         </div>
       </section>
       <section className="py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold text-brand">
               Для активного отдыха
@@ -267,21 +274,31 @@ export const EntertainmentPage = () => {
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {equipment.map((group) => (
-              <article className="rounded-3xl bg-panel p-7" key={group.title}>
+              <article
+                className="rounded-3xl bg-brand-foreground p-7"
+                key={group.title}
+              >
                 <h3 className="font-heading text-3xl font-semibold text-brand">
                   {group.title}
                 </h3>
-                <p className="mt-4 leading-7 text-muted-ui-foreground">
-                  {group.description}
-                </p>
                 <ul className="mt-6 space-y-4">
                   {group.items.map((item) => (
                     <li
-                      className="flex items-center gap-3 rounded-2xl bg-page px-4 py-3"
+                      className="flex items-center gap-3 rounded-2xl bg-panel px-4 py-3"
                       key={item.label}
                     >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
-                        <Check className="size-4" />
+                      <span
+                        className={
+                          item.availability === "paid"
+                            ? "grid size-9 shrink-0 place-items-center rounded-full bg-accent-ui/20 text-accent-ui-foreground"
+                            : "grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand"
+                        }
+                      >
+                        {item.availability === "paid" ? (
+                          <RussianRuble className="size-4" />
+                        ) : (
+                          <Check className="size-4" />
+                        )}
                       </span>{" "}
                       <span className="flex-1">{item.label}</span>
                       <span className="text-xs font-semibold text-brand">
@@ -294,6 +311,20 @@ export const EntertainmentPage = () => {
                 </ul>
               </article>
             ))}
+          </div>
+          <div className="mt-8 flex flex-wrap gap-6 rounded-3xl bg-panel px-6 py-5 text-sm text-muted-ui-foreground">
+            <span className="flex items-center gap-3">
+              <span className="grid size-8 place-items-center rounded-full bg-accent-ui/20 text-accent-ui-foreground">
+                <RussianRuble className="size-4" />
+              </span>
+              Платная услуга
+            </span>
+            <span className="flex items-center gap-3">
+              <span className="grid size-8 place-items-center rounded-full bg-brand/10 text-brand">
+                <Check className="size-4" />
+              </span>
+              Входит в «Всё включено»
+            </span>
           </div>
         </div>
       </section>
