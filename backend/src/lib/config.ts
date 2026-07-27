@@ -24,6 +24,7 @@ const environmentSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  OPENAI_API_KEY: z.string().min(1).optional(),
 });
 
 export type AppConfig = {
@@ -34,6 +35,7 @@ export type AppConfig = {
   };
   readonly nodeEnv: z.infer<typeof environmentSchema>["NODE_ENV"];
   readonly port: number;
+  readonly openaiApiKey?: string;
 };
 
 export const readConfig = (
@@ -48,5 +50,6 @@ export const readConfig = (
     },
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
+    openaiApiKey: parsed.OPENAI_API_KEY,
   };
 };

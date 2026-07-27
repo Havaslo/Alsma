@@ -10,6 +10,7 @@ import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
+  readonly openaiApiKey?: string;
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: {
@@ -28,6 +29,7 @@ export const createApp = ({
   database,
   logger,
   managedStorage,
+  openaiApiKey,
 }: CreateAppOptions): Express => {
   const app = express();
 
@@ -47,7 +49,7 @@ export const createApp = ({
   app.get("/health", (_request, response) => {
     response.json({ status: "ok" });
   });
-  app.use("/api", createApiRouter({ database, managedStorage }));
+  app.use("/api", createApiRouter({ database, managedStorage, openaiApiKey }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

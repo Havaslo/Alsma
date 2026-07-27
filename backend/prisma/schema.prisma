@@ -46,18 +46,18 @@ model AdminRole {
 }
 
 model AdminUser {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  displayName  String        @map("display_name")
-  passwordHash String        @map("password_hash")
-  status       UserStatus    @default(active)
-  permissionOverrides Json   @default("{}") @map("permission_overrides")
-  roleId       String?       @map("role_id") @db.Uuid
-  role         AdminRole?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  sessions     AdminSession[]
-  tasks        ManagerTask[] @relation("TaskAssignee")
+  id                  String         @id @default(uuid()) @db.Uuid
+  email               String         @unique
+  displayName         String         @map("display_name")
+  passwordHash        String         @map("password_hash")
+  status              UserStatus     @default(active)
+  permissionOverrides Json           @default("{}") @map("permission_overrides")
+  roleId              String?        @map("role_id") @db.Uuid
+  role                AdminRole?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions            AdminSession[]
+  tasks               ManagerTask[]  @relation("TaskAssignee")
 
   @@map("admin_users")
 }
@@ -75,28 +75,28 @@ model AdminSession {
 }
 
 model GuestUser {
-  id             String         @id @default(uuid()) @db.Uuid
-  phone          String         @unique
-  fullName       String?        @map("full_name")
-  email          String?
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  loginCodes     GuestLoginCode[]
-  bonusProgram   GuestBonusProgram?
-  bookings       GuestBooking[]
+  id           String             @id @default(uuid()) @db.Uuid
+  phone        String             @unique
+  fullName     String?            @map("full_name")
+  email        String?
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  loginCodes   GuestLoginCode[]
+  bonusProgram GuestBonusProgram?
+  bookings     GuestBooking[]
 
   @@map("guest_users")
 }
 
 model GuestLoginCode {
-  id         String    @id @default(uuid()) @db.Uuid
+  id         String     @id @default(uuid()) @db.Uuid
   phone      String
-  codeHash   String    @map("code_hash")
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
-  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
-  userId     String?   @map("user_id") @db.Uuid
+  codeHash   String     @map("code_hash")
+  expiresAt  DateTime   @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime?  @map("consumed_at") @db.Timestamptz(3)
+  userId     String?    @map("user_id") @db.Uuid
   user       GuestUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([phone, expiresAt])
   @@map("guest_login_codes")
@@ -130,17 +130,17 @@ model GuestBooking {
 }
 
 model SiteLead {
-  id          String     @id @default(uuid()) @db.Uuid
-  sourcePage  String     @map("source_page")
-  formCode    String     @map("form_code")
-  formTitle   String     @map("form_title")
-  name        String?
-  phone       String?
-  email       String?
-  details     Json       @default("{}")
-  status      LeadStatus @default(new)
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id         String     @id @default(uuid()) @db.Uuid
+  sourcePage String     @map("source_page")
+  formCode   String     @map("form_code")
+  formTitle  String     @map("form_title")
+  name       String?
+  phone      String?
+  email      String?
+  details    Json       @default("{}")
+  status     LeadStatus @default(new)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([status, createdAt])
   @@map("site_leads")
@@ -182,30 +182,30 @@ model AdminRequest {
 }
 
 model ManagerTask {
-  id          String      @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid()) @db.Uuid
   title       String
   description String?
-  status      String      @default("pending")
-  priority    String      @default("normal")
-  assigneeId  String?     @map("assignee_id") @db.Uuid
-  assignee    AdminUser?  @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  dueAt       DateTime?   @map("due_at") @db.Timestamptz(3)
-  completedAt DateTime?   @map("completed_at") @db.Timestamptz(3)
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status      String     @default("pending")
+  priority    String     @default("normal")
+  assigneeId  String?    @map("assignee_id") @db.Uuid
+  assignee    AdminUser? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  dueAt       DateTime?  @map("due_at") @db.Timestamptz(3)
+  completedAt DateTime?  @map("completed_at") @db.Timestamptz(3)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([assigneeId, status])
   @@map("manager_tasks")
 }
 
 model UploadedFile {
-  id           String   @id @default(uuid()) @db.Uuid
-  fileName     String   @map("file_name")
-  contentType  String   @map("content_type")
-  sizeBytes    Int      @map("size_bytes")
-  content      Bytes
-  category     String
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id          String   @id @default(uuid()) @db.Uuid
+  fileName    String   @map("file_name")
+  contentType String   @map("content_type")
+  sizeBytes   Int      @map("size_bytes")
+  content     Bytes
+  category    String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([category, createdAt])
   @@map("uploaded_files")
@@ -246,10 +246,10 @@ model KnowledgeArticle {
 }
 
 model KnowledgeChunk {
-  id         String           @id @default(uuid()) @db.Uuid
-  articleId  String           @map("article_id") @db.Uuid
-  article    KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  chunkIndex Int              @map("chunk_index")
+  id         String                   @id @default(uuid()) @db.Uuid
+  articleId  String                   @map("article_id") @db.Uuid
+  article    KnowledgeArticle         @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  chunkIndex Int                      @map("chunk_index")
   content    String
   searchText Unsupported("tsvector")? @map("search_text")
 
@@ -271,13 +271,13 @@ model AgentRule {
 }
 
 model AgentScenario {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  trigger     String
-  response    String
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  trigger   String
+  response  String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("agent_scenarios")
 }
@@ -305,4 +305,27 @@ model KnowledgeQueryLog {
 
   @@index([createdAt])
   @@map("knowledge_query_logs")
+}
+
+model VoiceCall {
+  id             String    @id @default(uuid()) @db.Uuid
+  provider       String    @default("t2")
+  providerCallId String?   @unique @map("provider_call_id")
+  callerPhone    String?   @map("caller_phone")
+  status         String    @default("active")
+  outcome        String?
+  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(3)
+  durationSec    Int?      @map("duration_sec")
+  transcript     Json      @default("[]")
+  summary        String?
+  intent         String?
+  extracted      Json      @default("{}")
+  recordingUrl   String?   @map("recording_url")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([callerPhone, createdAt])
+  @@map("voice_calls")
 }

@@ -20,7 +20,12 @@ const start = async (): Promise<void> => {
     throw error;
   }
 
-  const app = createApp({ database, logger, managedStorage });
+  const app = createApp({
+    database,
+    logger,
+    managedStorage,
+    openaiApiKey: config.openaiApiKey,
+  });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
   });
