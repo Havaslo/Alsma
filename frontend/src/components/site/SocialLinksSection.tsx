@@ -1,10 +1,4 @@
-import {
-  AtSign,
-  ExternalLink,
-  MessageCircle,
-  Send,
-  Youtube,
-} from "lucide-react";
+import { AtSign, ExternalLink, MessageCircle } from "lucide-react";
 
 const socialLinks = [
   ["ВКонтакте", "Новости, акции и анонсы", "https://vk.com/alsma_nnov", AtSign],
@@ -13,13 +7,6 @@ const socialLinks = [
     "Быстрые обновления и связь",
     "https://web.max.ru/158586418",
     MessageCircle,
-  ],
-  ["Telegram", "Свежие новости и публикации", "https://t.me/alsma_hotel", Send],
-  [
-    "YouTube",
-    "Видео, обзоры и атмосфера отеля",
-    "https://youtube.com",
-    Youtube,
   ],
 ] as const;
 
