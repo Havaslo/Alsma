@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 
+import { useRouterState } from "@tanstack/react-router";
 import { X } from "lucide-react";
 
 import { getSiteCollection } from "@/lib/site/content-collections";
@@ -12,7 +12,7 @@ import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const SiteOfferPopup = () => {
   const [visiblePath, setVisiblePath] = useState<string>();
-  const location = useLocation();
+  const location = useRouterState({ select: (state) => state.location });
   const content = usePublishedSiteContent("home");
   const banners = getSiteCollection<HomePopupBanner>(
     content.data?.items,

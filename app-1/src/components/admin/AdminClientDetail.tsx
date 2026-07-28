@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { useNavigate } from "@tanstack/react-router";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
@@ -90,7 +90,7 @@ export const AdminClientDetail = ({
         <h1 className="text-2xl font-semibold">Клиент не найден</h1>
         <Button
           className="mt-5"
-          onClick={() => navigate(AMAZI_ROUTES.adminClients)}
+          onClick={() => navigate({ to: AMAZI_ROUTES.adminClients })}
         >
           Вернуться к клиентам
         </Button>
@@ -229,7 +229,7 @@ export const AdminClientDetail = ({
         onClose={() => setDeleteOpen(false)}
         onConfirm={() =>
           remove.mutate(client.id, {
-            onSuccess: () => navigate(AMAZI_ROUTES.adminClients),
+            onSuccess: () => navigate({ to: AMAZI_ROUTES.adminClients }),
           })
         }
         open={deleteOpen}

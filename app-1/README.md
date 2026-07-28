@@ -1,7 +1,8 @@
 # ALSMA Frontend
 
 The frontend serves the public ALSMA hotel website, guest account, and staff administration. It
-uses Vite, React, TypeScript, React Router, TanStack Query, React Hook Form, and Tailwind CSS.
+uses Vite, React, TypeScript, TanStack Router file-based routing, TanStack Query, React Hook Form,
+and Tailwind CSS.
 
 ## Commands
 
@@ -15,6 +16,7 @@ pnpm run build
 
 ## Product structure
 
+- `src/routes`: TanStack Router file-based route declarations; `src/routeTree.gen.ts` is generated.
 - `src/pages`: route-level composition.
 - `src/components/site`: public website sections and lead forms.
 - `src/components/admin`: staff workflows and editors.

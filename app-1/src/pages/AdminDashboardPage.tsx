@@ -1,9 +1,9 @@
 import {
   Navigate,
-  matchPath,
-  useLocation,
   useNavigate,
-} from "react-router-dom";
+  useParams,
+  useRouterState,
+} from "@tanstack/react-router";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
@@ -32,10 +32,10 @@ import { useAdmin } from "@/lib/admin/useAdmin";
 import { queryClient } from "@/lib/query/query-client";
 
 export const AdminDashboardPage = () => {
-  const location = useLocation();
+  const path = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
+  const params = useParams({ strict: false });
   const admin = useAdmin();
-  const path = location.pathname;
   const permissions = admin.data?.user.permissions ?? [];
   const can = (permission: string) =>
     permissions.includes("*") || permissions.includes(permission);
@@ -53,14 +53,12 @@ export const AdminDashboardPage = () => {
     path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
   const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
   const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
-  const requestMatch = matchPath(AMAZI_ROUTES.adminRequest, path);
-  const clientMatch = matchPath(AMAZI_ROUTES.adminClient, path);
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
     writeAdminSession(null);
     queryClient.clear();
-    navigate(AMAZI_ROUTES.adminLogin);
+    navigate({ to: AMAZI_ROUTES.adminLogin });
   };
 
   return (
@@ -76,14 +74,14 @@ export const AdminDashboardPage = () => {
       {path === AMAZI_ROUTES.adminClients && can("dashboard.access") && (
         <AdminClientsPanel />
       )}
-      {clientMatch?.params.clientId && can("dashboard.access") && (
-        <AdminClientDetail clientId={clientMatch.params.clientId} />
+      {params.clientId && can("dashboard.access") && (
+        <AdminClientDetail clientId={params.clientId} />
       )}
       {path === AMAZI_ROUTES.adminRequests && can("requests.access") && (
         <AdminRequestsPanel />
       )}
-      {requestMatch?.params.requestId && can("requests.access") && (
-        <AdminRequestDetail requestId={requestMatch.params.requestId} />
+      {params.requestId && can("requests.access") && (
+        <AdminRequestDetail requestId={params.requestId} />
       )}
       {path === AMAZI_ROUTES.adminKnowledgeBase &&
         (can("knowledge.access") || can("knowledge.manage")) && (

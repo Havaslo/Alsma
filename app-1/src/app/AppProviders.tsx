@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { BrowserRouter } from "react-router-dom";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
@@ -18,13 +17,11 @@ const AppToaster = () => {
   return <Toaster richColors theme={mode} />;
 };
 
-export const AppProviders = ({ children }: AppProvidersProps) => {
-  return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>{children}</BrowserRouter>
-        <AppToaster />
-      </QueryClientProvider>
-    </ThemeProvider>
-  );
-};
+export const AppProviders = ({ children }: AppProvidersProps) => (
+  <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <AppToaster />
+    </QueryClientProvider>
+  </ThemeProvider>
+);

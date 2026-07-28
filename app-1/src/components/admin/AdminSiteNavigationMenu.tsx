@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 
+import { Link } from "@tanstack/react-router";
 import { ChevronDown, PanelTop } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";

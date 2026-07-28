@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ export const AdminLoginPage = () => {
       toast.error(getApiErrorMessage(error, "Не удалось войти.")),
     onSuccess: ({ data }) => {
       writeAdminSession(data.token);
-      navigate(AMAZI_ROUTES.adminDashboard);
+      navigate({ to: AMAZI_ROUTES.adminDashboard });
     },
   });
   return (

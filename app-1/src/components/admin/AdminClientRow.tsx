@@ -1,16 +1,16 @@
-import { generatePath, useNavigate } from "react-router-dom";
-
+import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import type { AdminClient } from "@/lib/admin/admin-api";
+import { buildRoute } from "@/lib/navigation";
 
 const getClientRoute = (clientId: string) =>
-  generatePath(AMAZI_ROUTES.adminClient, { clientId });
+  buildRoute(AMAZI_ROUTES.adminClient, { clientId });
 
 export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
   const navigate = useNavigate();
-  const openClient = () => navigate(getClientRoute(item.id));
+  const openClient = () => navigate({ to: getClientRoute(item.id) });
 
   return (
     <tr

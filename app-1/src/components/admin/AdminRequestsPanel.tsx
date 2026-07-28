@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
-import { generatePath, useNavigate } from "react-router-dom";
 
+import { useNavigate } from "@tanstack/react-router";
 import { AudioLines, Eye, Search } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
@@ -18,6 +18,7 @@ import {
   REQUEST_TYPE_OPTIONS,
 } from "@/lib/admin/admin-request-mocks";
 import { cn } from "@/lib/cn";
+import { buildRoute } from "@/lib/navigation";
 
 type ChannelFilter = MockRequest["channel"] | "all";
 type StatusFilter = MockRequest["status"] | "all";
@@ -183,11 +184,11 @@ export const AdminRequestsPanel = () => {
                       <Button
                         className="px-3"
                         onClick={() =>
-                          navigate(
-                            generatePath(AMAZI_ROUTES.adminRequest, {
+                          navigate({
+                            to: buildRoute(AMAZI_ROUTES.adminRequest, {
                               requestId: item.id,
                             }),
-                          )
+                          })
                         }
                         variant="secondary"
                       >

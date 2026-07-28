@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Navigate, useNavigate } from "react-router-dom";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
@@ -71,7 +71,7 @@ export const AccountPage = () => {
     await logoutGuest().catch(() => undefined);
     writeGuestSession(null);
     queryClient.clear();
-    navigate(AMAZI_ROUTES.home);
+    navigate({ to: AMAZI_ROUTES.home });
   };
 
   return (

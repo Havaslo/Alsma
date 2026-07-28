@@ -10,43 +10,565 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SplatRouteImport } from './routes/$'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AllInclusiveRouteImport } from './routes/all-inclusive'
+import { Route as BlogRouteImport } from './routes/blog'
+import { Route as CelebrationsRouteImport } from './routes/celebrations'
+import { Route as EntertainmentRouteImport } from './routes/entertainment'
+import { Route as HardwareProceduresRouteImport } from './routes/hardware-procedures'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as NewsRouteImport } from './routes/news'
+import { Route as OffersRouteImport } from './routes/offers'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RoomsRouteImport } from './routes/rooms'
+import { Route as SpaRouteImport } from './routes/spa'
+import { Route as AccountSetupNameRouteImport } from './routes/account/setup-name'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAgentScenariosRouteImport } from './routes/admin/agent-scenarios'
+import { Route as AdminBookingRequestsRouteImport } from './routes/admin/booking-requests'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
+import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge-base'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminSiteLeadsRouteImport } from './routes/admin/site-leads'
+import { Route as AdminClientsIndexRouteImport } from './routes/admin/clients/index'
+import { Route as AdminClientsClientIdRouteImport } from './routes/admin/clients/$clientId'
+import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
+import { Route as AdminRequestsRequestIdRouteImport } from './routes/admin/requests/$requestId'
+import { Route as AdminSiteManagementIndexRouteImport } from './routes/admin/site-management/index'
+import { Route as AdminSiteManagementSectionIdRouteImport } from './routes/admin/site-management/$sectionId'
+import { Route as AdminSiteManagementAboutRouteImport } from './routes/admin/site-management/about'
+import { Route as AdminSiteManagementAllInclusiveRouteImport } from './routes/admin/site-management/all-inclusive'
+import { Route as AdminSiteManagementBlogRouteImport } from './routes/admin/site-management/blog'
+import { Route as AdminSiteManagementCelebrationsRouteImport } from './routes/admin/site-management/celebrations'
+import { Route as AdminSiteManagementEntertainmentRouteImport } from './routes/admin/site-management/entertainment'
+import { Route as AdminSiteManagementGeneralRouteImport } from './routes/admin/site-management/general'
+import { Route as AdminSiteManagementHomeRouteImport } from './routes/admin/site-management/home'
+import { Route as AdminSiteManagementNewsRouteImport } from './routes/admin/site-management/news'
+import { Route as AdminSiteManagementOffersRouteImport } from './routes/admin/site-management/offers'
+import { Route as AdminSiteManagementRoomsRouteImport } from './routes/admin/site-management/rooms'
+import { Route as AdminSiteManagementSpaRouteImport } from './routes/admin/site-management/spa'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SplatRoute = SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AllInclusiveRoute = AllInclusiveRouteImport.update({
+  id: '/all-inclusive',
+  path: '/all-inclusive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CelebrationsRoute = CelebrationsRouteImport.update({
+  id: '/celebrations',
+  path: '/celebrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntertainmentRoute = EntertainmentRouteImport.update({
+  id: '/entertainment',
+  path: '/entertainment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HardwareProceduresRoute = HardwareProceduresRouteImport.update({
+  id: '/hardware-procedures',
+  path: '/hardware-procedures',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OffersRoute = OffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomsRoute = RoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpaRoute = SpaRouteImport.update({
+  id: '/spa',
+  path: '/spa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountSetupNameRoute = AccountSetupNameRouteImport.update({
+  id: '/setup-name',
+  path: '/setup-name',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAgentScenariosRoute = AdminAgentScenariosRouteImport.update({
+  id: '/admin/agent-scenarios',
+  path: '/admin/agent-scenarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminBookingRequestsRoute = AdminBookingRequestsRouteImport.update({
+  id: '/admin/booking-requests',
+  path: '/admin/booking-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
+  id: '/admin/integrations',
+  path: '/admin/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminKnowledgeBaseRoute = AdminKnowledgeBaseRouteImport.update({
+  id: '/admin/knowledge-base',
+  path: '/admin/knowledge-base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSiteLeadsRoute = AdminSiteLeadsRouteImport.update({
+  id: '/admin/site-leads',
+  path: '/admin/site-leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminClientsIndexRoute = AdminClientsIndexRouteImport.update({
+  id: '/admin/clients/',
+  path: '/admin/clients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminClientsClientIdRoute = AdminClientsClientIdRouteImport.update({
+  id: '/admin/clients/$clientId',
+  path: '/admin/clients/$clientId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRequestsIndexRoute = AdminRequestsIndexRouteImport.update({
+  id: '/admin/requests/',
+  path: '/admin/requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRequestsRequestIdRoute = AdminRequestsRequestIdRouteImport.update({
+  id: '/admin/requests/$requestId',
+  path: '/admin/requests/$requestId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSiteManagementIndexRoute =
+  AdminSiteManagementIndexRouteImport.update({
+    id: '/admin/site-management/',
+    path: '/admin/site-management/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementSectionIdRoute =
+  AdminSiteManagementSectionIdRouteImport.update({
+    id: '/admin/site-management/$sectionId',
+    path: '/admin/site-management/$sectionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementAboutRoute =
+  AdminSiteManagementAboutRouteImport.update({
+    id: '/admin/site-management/about',
+    path: '/admin/site-management/about',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementAllInclusiveRoute =
+  AdminSiteManagementAllInclusiveRouteImport.update({
+    id: '/admin/site-management/all-inclusive',
+    path: '/admin/site-management/all-inclusive',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementBlogRoute = AdminSiteManagementBlogRouteImport.update({
+  id: '/admin/site-management/blog',
+  path: '/admin/site-management/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSiteManagementCelebrationsRoute =
+  AdminSiteManagementCelebrationsRouteImport.update({
+    id: '/admin/site-management/celebrations',
+    path: '/admin/site-management/celebrations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementEntertainmentRoute =
+  AdminSiteManagementEntertainmentRouteImport.update({
+    id: '/admin/site-management/entertainment',
+    path: '/admin/site-management/entertainment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementGeneralRoute =
+  AdminSiteManagementGeneralRouteImport.update({
+    id: '/admin/site-management/general',
+    path: '/admin/site-management/general',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementHomeRoute = AdminSiteManagementHomeRouteImport.update({
+  id: '/admin/site-management/home',
+  path: '/admin/site-management/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSiteManagementNewsRoute = AdminSiteManagementNewsRouteImport.update({
+  id: '/admin/site-management/news',
+  path: '/admin/site-management/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSiteManagementOffersRoute =
+  AdminSiteManagementOffersRouteImport.update({
+    id: '/admin/site-management/offers',
+    path: '/admin/site-management/offers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementRoomsRoute =
+  AdminSiteManagementRoomsRouteImport.update({
+    id: '/admin/site-management/rooms',
+    path: '/admin/site-management/rooms',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminSiteManagementSpaRoute = AdminSiteManagementSpaRouteImport.update({
+  id: '/admin/site-management/spa',
+  path: '/admin/site-management/spa',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRouteWithChildren
+  '/all-inclusive': typeof AllInclusiveRoute
+  '/blog': typeof BlogRoute
+  '/celebrations': typeof CelebrationsRoute
+  '/entertainment': typeof EntertainmentRoute
+  '/hardware-procedures': typeof HardwareProceduresRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
+  '/offers': typeof OffersRoute
+  '/privacy': typeof PrivacyRoute
+  '/rooms': typeof RoomsRoute
+  '/spa': typeof SpaRoute
+  '/account/setup-name': typeof AccountSetupNameRoute
+  '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
+  '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
+  '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
+  '/admin/site-management/$sectionId': typeof AdminSiteManagementSectionIdRoute
+  '/admin/site-management/about': typeof AdminSiteManagementAboutRoute
+  '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
+  '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
+  '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
+  '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
+  '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
+  '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
+  '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
+  '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/clients/': typeof AdminClientsIndexRoute
+  '/admin/requests/': typeof AdminRequestsIndexRoute
+  '/admin/site-management/': typeof AdminSiteManagementIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRouteWithChildren
+  '/all-inclusive': typeof AllInclusiveRoute
+  '/blog': typeof BlogRoute
+  '/celebrations': typeof CelebrationsRoute
+  '/entertainment': typeof EntertainmentRoute
+  '/hardware-procedures': typeof HardwareProceduresRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
+  '/offers': typeof OffersRoute
+  '/privacy': typeof PrivacyRoute
+  '/rooms': typeof RoomsRoute
+  '/spa': typeof SpaRoute
+  '/account/setup-name': typeof AccountSetupNameRoute
+  '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
+  '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
+  '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
+  '/admin/site-management/$sectionId': typeof AdminSiteManagementSectionIdRoute
+  '/admin/site-management/about': typeof AdminSiteManagementAboutRoute
+  '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
+  '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
+  '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
+  '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
+  '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
+  '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
+  '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
+  '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/clients': typeof AdminClientsIndexRoute
+  '/admin/requests': typeof AdminRequestsIndexRoute
+  '/admin/site-management': typeof AdminSiteManagementIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRouteWithChildren
+  '/all-inclusive': typeof AllInclusiveRoute
+  '/blog': typeof BlogRoute
+  '/celebrations': typeof CelebrationsRoute
+  '/entertainment': typeof EntertainmentRoute
+  '/hardware-procedures': typeof HardwareProceduresRoute
+  '/login': typeof LoginRoute
+  '/news': typeof NewsRoute
+  '/offers': typeof OffersRoute
+  '/privacy': typeof PrivacyRoute
+  '/rooms': typeof RoomsRoute
+  '/spa': typeof SpaRoute
+  '/account/setup-name': typeof AccountSetupNameRoute
+  '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
+  '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integrations': typeof AdminIntegrationsRoute
+  '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
+  '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
+  '/admin/site-management/$sectionId': typeof AdminSiteManagementSectionIdRoute
+  '/admin/site-management/about': typeof AdminSiteManagementAboutRoute
+  '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
+  '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
+  '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
+  '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
+  '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
+  '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
+  '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
+  '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/clients/': typeof AdminClientsIndexRoute
+  '/admin/requests/': typeof AdminRequestsIndexRoute
+  '/admin/site-management/': typeof AdminSiteManagementIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/account'
+    | '/all-inclusive'
+    | '/blog'
+    | '/celebrations'
+    | '/entertainment'
+    | '/hardware-procedures'
+    | '/login'
+    | '/news'
+    | '/offers'
+    | '/privacy'
+    | '/rooms'
+    | '/spa'
+    | '/account/setup-name'
+    | '/admin/agent-scenarios'
+    | '/admin/booking-requests'
+    | '/admin/dashboard'
+    | '/admin/integrations'
+    | '/admin/knowledge-base'
+    | '/admin/login'
+    | '/admin/settings'
+    | '/admin/site-leads'
+    | '/admin/'
+    | '/admin/clients/$clientId'
+    | '/admin/requests/$requestId'
+    | '/admin/site-management/$sectionId'
+    | '/admin/site-management/about'
+    | '/admin/site-management/all-inclusive'
+    | '/admin/site-management/blog'
+    | '/admin/site-management/celebrations'
+    | '/admin/site-management/entertainment'
+    | '/admin/site-management/general'
+    | '/admin/site-management/home'
+    | '/admin/site-management/news'
+    | '/admin/site-management/offers'
+    | '/admin/site-management/rooms'
+    | '/admin/site-management/spa'
+    | '/admin/clients/'
+    | '/admin/requests/'
+    | '/admin/site-management/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$'
-  id: '__root__' | '/' | '/$'
+  to:
+    | '/'
+    | '/about'
+    | '/account'
+    | '/all-inclusive'
+    | '/blog'
+    | '/celebrations'
+    | '/entertainment'
+    | '/hardware-procedures'
+    | '/login'
+    | '/news'
+    | '/offers'
+    | '/privacy'
+    | '/rooms'
+    | '/spa'
+    | '/account/setup-name'
+    | '/admin/agent-scenarios'
+    | '/admin/booking-requests'
+    | '/admin/dashboard'
+    | '/admin/integrations'
+    | '/admin/knowledge-base'
+    | '/admin/login'
+    | '/admin/settings'
+    | '/admin/site-leads'
+    | '/admin'
+    | '/admin/clients/$clientId'
+    | '/admin/requests/$requestId'
+    | '/admin/site-management/$sectionId'
+    | '/admin/site-management/about'
+    | '/admin/site-management/all-inclusive'
+    | '/admin/site-management/blog'
+    | '/admin/site-management/celebrations'
+    | '/admin/site-management/entertainment'
+    | '/admin/site-management/general'
+    | '/admin/site-management/home'
+    | '/admin/site-management/news'
+    | '/admin/site-management/offers'
+    | '/admin/site-management/rooms'
+    | '/admin/site-management/spa'
+    | '/admin/clients'
+    | '/admin/requests'
+    | '/admin/site-management'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/account'
+    | '/all-inclusive'
+    | '/blog'
+    | '/celebrations'
+    | '/entertainment'
+    | '/hardware-procedures'
+    | '/login'
+    | '/news'
+    | '/offers'
+    | '/privacy'
+    | '/rooms'
+    | '/spa'
+    | '/account/setup-name'
+    | '/admin/agent-scenarios'
+    | '/admin/booking-requests'
+    | '/admin/dashboard'
+    | '/admin/integrations'
+    | '/admin/knowledge-base'
+    | '/admin/login'
+    | '/admin/settings'
+    | '/admin/site-leads'
+    | '/admin/'
+    | '/admin/clients/$clientId'
+    | '/admin/requests/$requestId'
+    | '/admin/site-management/$sectionId'
+    | '/admin/site-management/about'
+    | '/admin/site-management/all-inclusive'
+    | '/admin/site-management/blog'
+    | '/admin/site-management/celebrations'
+    | '/admin/site-management/entertainment'
+    | '/admin/site-management/general'
+    | '/admin/site-management/home'
+    | '/admin/site-management/news'
+    | '/admin/site-management/offers'
+    | '/admin/site-management/rooms'
+    | '/admin/site-management/spa'
+    | '/admin/clients/'
+    | '/admin/requests/'
+    | '/admin/site-management/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SplatRoute: typeof SplatRoute
+  AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRouteWithChildren
+  AllInclusiveRoute: typeof AllInclusiveRoute
+  BlogRoute: typeof BlogRoute
+  CelebrationsRoute: typeof CelebrationsRoute
+  EntertainmentRoute: typeof EntertainmentRoute
+  HardwareProceduresRoute: typeof HardwareProceduresRoute
+  LoginRoute: typeof LoginRoute
+  NewsRoute: typeof NewsRoute
+  OffersRoute: typeof OffersRoute
+  PrivacyRoute: typeof PrivacyRoute
+  RoomsRoute: typeof RoomsRoute
+  SpaRoute: typeof SpaRoute
+  AdminAgentScenariosRoute: typeof AdminAgentScenariosRoute
+  AdminBookingRequestsRoute: typeof AdminBookingRequestsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminIntegrationsRoute: typeof AdminIntegrationsRoute
+  AdminKnowledgeBaseRoute: typeof AdminKnowledgeBaseRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminClientsClientIdRoute: typeof AdminClientsClientIdRoute
+  AdminRequestsRequestIdRoute: typeof AdminRequestsRequestIdRoute
+  AdminSiteManagementSectionIdRoute: typeof AdminSiteManagementSectionIdRoute
+  AdminSiteManagementAboutRoute: typeof AdminSiteManagementAboutRoute
+  AdminSiteManagementAllInclusiveRoute: typeof AdminSiteManagementAllInclusiveRoute
+  AdminSiteManagementBlogRoute: typeof AdminSiteManagementBlogRoute
+  AdminSiteManagementCelebrationsRoute: typeof AdminSiteManagementCelebrationsRoute
+  AdminSiteManagementEntertainmentRoute: typeof AdminSiteManagementEntertainmentRoute
+  AdminSiteManagementGeneralRoute: typeof AdminSiteManagementGeneralRoute
+  AdminSiteManagementHomeRoute: typeof AdminSiteManagementHomeRoute
+  AdminSiteManagementNewsRoute: typeof AdminSiteManagementNewsRoute
+  AdminSiteManagementOffersRoute: typeof AdminSiteManagementOffersRoute
+  AdminSiteManagementRoomsRoute: typeof AdminSiteManagementRoomsRoute
+  AdminSiteManagementSpaRoute: typeof AdminSiteManagementSpaRoute
+  AdminClientsIndexRoute: typeof AdminClientsIndexRoute
+  AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
+  AdminSiteManagementIndexRoute: typeof AdminSiteManagementIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,19 +580,341 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$': {
-      id: '/$'
-      path: '/$'
-      fullPath: '/$'
-      preLoaderRoute: typeof SplatRouteImport
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/all-inclusive': {
+      id: '/all-inclusive'
+      path: '/all-inclusive'
+      fullPath: '/all-inclusive'
+      preLoaderRoute: typeof AllInclusiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/celebrations': {
+      id: '/celebrations'
+      path: '/celebrations'
+      fullPath: '/celebrations'
+      preLoaderRoute: typeof CelebrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entertainment': {
+      id: '/entertainment'
+      path: '/entertainment'
+      fullPath: '/entertainment'
+      preLoaderRoute: typeof EntertainmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hardware-procedures': {
+      id: '/hardware-procedures'
+      path: '/hardware-procedures'
+      fullPath: '/hardware-procedures'
+      preLoaderRoute: typeof HardwareProceduresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offers': {
+      id: '/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof OffersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rooms': {
+      id: '/rooms'
+      path: '/rooms'
+      fullPath: '/rooms'
+      preLoaderRoute: typeof RoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spa': {
+      id: '/spa'
+      path: '/spa'
+      fullPath: '/spa'
+      preLoaderRoute: typeof SpaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/setup-name': {
+      id: '/account/setup-name'
+      path: '/setup-name'
+      fullPath: '/account/setup-name'
+      preLoaderRoute: typeof AccountSetupNameRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/agent-scenarios': {
+      id: '/admin/agent-scenarios'
+      path: '/admin/agent-scenarios'
+      fullPath: '/admin/agent-scenarios'
+      preLoaderRoute: typeof AdminAgentScenariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/booking-requests': {
+      id: '/admin/booking-requests'
+      path: '/admin/booking-requests'
+      fullPath: '/admin/booking-requests'
+      preLoaderRoute: typeof AdminBookingRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/integrations': {
+      id: '/admin/integrations'
+      path: '/admin/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AdminIntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/knowledge-base': {
+      id: '/admin/knowledge-base'
+      path: '/admin/knowledge-base'
+      fullPath: '/admin/knowledge-base'
+      preLoaderRoute: typeof AdminKnowledgeBaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-leads': {
+      id: '/admin/site-leads'
+      path: '/admin/site-leads'
+      fullPath: '/admin/site-leads'
+      preLoaderRoute: typeof AdminSiteLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/clients/': {
+      id: '/admin/clients/'
+      path: '/admin/clients'
+      fullPath: '/admin/clients/'
+      preLoaderRoute: typeof AdminClientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/clients/$clientId': {
+      id: '/admin/clients/$clientId'
+      path: '/admin/clients/$clientId'
+      fullPath: '/admin/clients/$clientId'
+      preLoaderRoute: typeof AdminClientsClientIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/requests/': {
+      id: '/admin/requests/'
+      path: '/admin/requests'
+      fullPath: '/admin/requests/'
+      preLoaderRoute: typeof AdminRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/requests/$requestId': {
+      id: '/admin/requests/$requestId'
+      path: '/admin/requests/$requestId'
+      fullPath: '/admin/requests/$requestId'
+      preLoaderRoute: typeof AdminRequestsRequestIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/': {
+      id: '/admin/site-management/'
+      path: '/admin/site-management'
+      fullPath: '/admin/site-management/'
+      preLoaderRoute: typeof AdminSiteManagementIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/$sectionId': {
+      id: '/admin/site-management/$sectionId'
+      path: '/admin/site-management/$sectionId'
+      fullPath: '/admin/site-management/$sectionId'
+      preLoaderRoute: typeof AdminSiteManagementSectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/about': {
+      id: '/admin/site-management/about'
+      path: '/admin/site-management/about'
+      fullPath: '/admin/site-management/about'
+      preLoaderRoute: typeof AdminSiteManagementAboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/all-inclusive': {
+      id: '/admin/site-management/all-inclusive'
+      path: '/admin/site-management/all-inclusive'
+      fullPath: '/admin/site-management/all-inclusive'
+      preLoaderRoute: typeof AdminSiteManagementAllInclusiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/blog': {
+      id: '/admin/site-management/blog'
+      path: '/admin/site-management/blog'
+      fullPath: '/admin/site-management/blog'
+      preLoaderRoute: typeof AdminSiteManagementBlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/celebrations': {
+      id: '/admin/site-management/celebrations'
+      path: '/admin/site-management/celebrations'
+      fullPath: '/admin/site-management/celebrations'
+      preLoaderRoute: typeof AdminSiteManagementCelebrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/entertainment': {
+      id: '/admin/site-management/entertainment'
+      path: '/admin/site-management/entertainment'
+      fullPath: '/admin/site-management/entertainment'
+      preLoaderRoute: typeof AdminSiteManagementEntertainmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/general': {
+      id: '/admin/site-management/general'
+      path: '/admin/site-management/general'
+      fullPath: '/admin/site-management/general'
+      preLoaderRoute: typeof AdminSiteManagementGeneralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/home': {
+      id: '/admin/site-management/home'
+      path: '/admin/site-management/home'
+      fullPath: '/admin/site-management/home'
+      preLoaderRoute: typeof AdminSiteManagementHomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/news': {
+      id: '/admin/site-management/news'
+      path: '/admin/site-management/news'
+      fullPath: '/admin/site-management/news'
+      preLoaderRoute: typeof AdminSiteManagementNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/offers': {
+      id: '/admin/site-management/offers'
+      path: '/admin/site-management/offers'
+      fullPath: '/admin/site-management/offers'
+      preLoaderRoute: typeof AdminSiteManagementOffersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/rooms': {
+      id: '/admin/site-management/rooms'
+      path: '/admin/site-management/rooms'
+      fullPath: '/admin/site-management/rooms'
+      preLoaderRoute: typeof AdminSiteManagementRoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/site-management/spa': {
+      id: '/admin/site-management/spa'
+      path: '/admin/site-management/spa'
+      fullPath: '/admin/site-management/spa'
+      preLoaderRoute: typeof AdminSiteManagementSpaRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
+interface AccountRouteChildren {
+  AccountSetupNameRoute: typeof AccountSetupNameRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountSetupNameRoute: AccountSetupNameRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SplatRoute: SplatRoute,
+  AboutRoute: AboutRoute,
+  AccountRoute: AccountRouteWithChildren,
+  AllInclusiveRoute: AllInclusiveRoute,
+  BlogRoute: BlogRoute,
+  CelebrationsRoute: CelebrationsRoute,
+  EntertainmentRoute: EntertainmentRoute,
+  HardwareProceduresRoute: HardwareProceduresRoute,
+  LoginRoute: LoginRoute,
+  NewsRoute: NewsRoute,
+  OffersRoute: OffersRoute,
+  PrivacyRoute: PrivacyRoute,
+  RoomsRoute: RoomsRoute,
+  SpaRoute: SpaRoute,
+  AdminAgentScenariosRoute: AdminAgentScenariosRoute,
+  AdminBookingRequestsRoute: AdminBookingRequestsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminIntegrationsRoute: AdminIntegrationsRoute,
+  AdminKnowledgeBaseRoute: AdminKnowledgeBaseRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminSiteLeadsRoute: AdminSiteLeadsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+  AdminClientsClientIdRoute: AdminClientsClientIdRoute,
+  AdminRequestsRequestIdRoute: AdminRequestsRequestIdRoute,
+  AdminSiteManagementSectionIdRoute: AdminSiteManagementSectionIdRoute,
+  AdminSiteManagementAboutRoute: AdminSiteManagementAboutRoute,
+  AdminSiteManagementAllInclusiveRoute: AdminSiteManagementAllInclusiveRoute,
+  AdminSiteManagementBlogRoute: AdminSiteManagementBlogRoute,
+  AdminSiteManagementCelebrationsRoute: AdminSiteManagementCelebrationsRoute,
+  AdminSiteManagementEntertainmentRoute: AdminSiteManagementEntertainmentRoute,
+  AdminSiteManagementGeneralRoute: AdminSiteManagementGeneralRoute,
+  AdminSiteManagementHomeRoute: AdminSiteManagementHomeRoute,
+  AdminSiteManagementNewsRoute: AdminSiteManagementNewsRoute,
+  AdminSiteManagementOffersRoute: AdminSiteManagementOffersRoute,
+  AdminSiteManagementRoomsRoute: AdminSiteManagementRoomsRoute,
+  AdminSiteManagementSpaRoute: AdminSiteManagementSpaRoute,
+  AdminClientsIndexRoute: AdminClientsIndexRoute,
+  AdminRequestsIndexRoute: AdminRequestsIndexRoute,
+  AdminSiteManagementIndexRoute: AdminSiteManagementIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

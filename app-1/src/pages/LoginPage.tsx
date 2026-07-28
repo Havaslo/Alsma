@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
 
 import { useMutation } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,7 +42,7 @@ export const LoginPage = () => {
       toast.error(getApiErrorMessage(error, "Не удалось подтвердить код.")),
     onSuccess: ({ data }) => {
       writeGuestSession(data.token);
-      navigate(AMAZI_ROUTES.account);
+      navigate({ to: AMAZI_ROUTES.account });
     },
   });
 

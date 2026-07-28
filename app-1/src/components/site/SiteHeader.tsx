@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 
+import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Menu, UserRound, X } from "lucide-react";
 
 import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
@@ -36,7 +36,7 @@ export const SiteHeader = ({
   readonly light?: boolean;
   readonly transparentAtTop?: boolean;
 }) => {
-  const location = useLocation();
+  const location = useRouterState({ select: (state) => state.location });
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const useLightStyle = light || (transparentAtTop && scrolled);

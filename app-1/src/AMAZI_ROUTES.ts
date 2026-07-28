@@ -1,4 +1,4 @@
-/** User-facing paths consumed by both React Router and the Amazi preview navigation. */
+/** User-facing paths consumed by the TanStack Router app and Amazi preview navigation. */
 export const AMAZI_ROUTES = {
   account: "/account",
   accountSetupName: "/account/setup-name",
@@ -43,7 +43,7 @@ export const AMAZI_ROUTES = {
   spa: "/spa",
 } as const;
 
-/** Legacy admin paths rendered by the consolidated dashboard. */
+/** Consolidated admin paths rendered by the dashboard page. */
 export const AMAZI_ADMIN_DASHBOARD_ROUTES = [
   AMAZI_ROUTES.admin,
   AMAZI_ROUTES.adminAgentScenarios,
@@ -69,6 +69,3 @@ export const AMAZI_ADMIN_DASHBOARD_ROUTES = [
   AMAZI_ROUTES.adminSiteManagementSection,
   AMAZI_ROUTES.adminSiteManagementSpa,
 ] as const;
-
-/** Non-navigable fallback kept outside the preview route catalog. */
-export const AMAZI_FALLBACK_ROUTE = "*" as const;
