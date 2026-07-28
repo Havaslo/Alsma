@@ -14,7 +14,7 @@ Read the document that owns the area you are about to change before editing file
 - [Data requests and forms](docs/data-and-api.md)
 - [Routing](docs/routing.md)
 - [Project structure, dependencies, and assets](docs/project-structure.md)
-- [Available environment variables](docs/AMAZI_ENV_DOCS_GENERATED.md) when the task reads configuration or uses an integration
+- Amazi Environment and Integrations settings when the task reads configuration or uses an integration
 
 Read every applicable document when a task crosses multiple areas.
 

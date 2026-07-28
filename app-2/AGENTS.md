@@ -7,7 +7,7 @@
 
 ## Required Guidance
 
-- Read [available environment variables](docs/AMAZI_ENV_DOCS_GENERATED.md) before reading configuration or using an integration.
+- Use the Amazi Environment and Integrations settings before reading configuration or using an integration.
 - Read `docs/libraries.md` before selecting a backend library or introducing a new infrastructure dependency.
 - Read `docs/file-storage.md` before implementing uploads, downloads, or generated persistent files.
 
