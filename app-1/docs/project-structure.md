@@ -1,6 +1,8 @@
-# ALSMA Frontend Structure
+# ALSMA Browser Application Structure
 
 - `src/app`: provider and router assembly.
+- `src/routes`: TanStack Router file routes. Compatibility routes currently hand off to the
+  retained React Router screens while they are migrated incrementally.
 - `src/pages`: route-level screens; pages compose features and do not own reusable controls.
 - `src/components/site`: public hotel sections, navigation, cards, and lead forms.
 - `src/components/admin`: staff dashboards, editors, and operational workflows.

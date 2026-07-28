@@ -2,8 +2,8 @@
 
 ## Role
 
-`backend/` owns the project's Express TypeScript API. Keep browser UI and client-side state in
-`frontend/`; communicate with them through HTTP contracts.
+`app-2/` owns the project's Express TypeScript API. Keep browser UI and client-side state in
+`app-1/`; communicate with them through HTTP contracts.
 
 ## Required Guidance
 

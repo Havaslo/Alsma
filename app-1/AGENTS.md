@@ -2,7 +2,7 @@
 
 ## Role
 
-Build the ALSMA frontend by extending its existing Vite React architecture and product components.
+Build the ALSMA browser application by extending its existing Vite React architecture and product components.
 Do not introduce a second application architecture.
 
 ## Required Guidance
@@ -30,5 +30,6 @@ Read every applicable document when a task crosses multiple areas.
   accessibility; page and feature code must consume the styled primitive.
 - Use `DateInput` for user-facing date selection. Do not render `input type="date"` or rely on the
   browser's native date-picker UI in pages and features.
-- Keep frontend requests on the relative `/api` boundary.
+- Keep browser requests on the relative `/api` boundary. Amazi supplies app-2 through the
+  `BACKEND_PROXY_TARGET` application reference.
 - Do not edit platform-generated environment or theme files except through their documented Amazi workflows.

@@ -4,8 +4,8 @@
 
 This project contains two independent applications in one Git workspace:
 
-- `frontend/` owns the Vite React browser application.
-- `backend/` owns the Express TypeScript HTTP API.
+- `app-1/` owns the Vite React browser application and its TanStack Router entrypoint.
+- `app-2/` owns the Express TypeScript HTTP API.
 
 Read the nearest `AGENTS.md` before changing either application. Keep changes scoped to the
 application that owns the behavior, and update both applications together when a feature crosses
@@ -19,15 +19,15 @@ Run package commands from inside the application that owns them.
 
 ## Template Version
 
-`AMAZI_TEMPLATE.json` records the version of the complete frontend and backend scaffold copied into
+`AMAZI_TEMPLATE.json` records the version of the complete app-1 and app-2 scaffold copied into
 this workspace. Treat it as platform-owned provenance metadata: do not modify it during normal
 project work unless the task explicitly upgrades the scaffold.
 
 Platform scaffold maintainers must bump `templateVersion` once for each logical scaffold release.
 Use SemVer with a patch bump for narrow fixes, a minor bump for new capabilities or structural
 changes, and a major bump for intentionally incompatible scaffold changes. The template version is
-independent from the root Amazi workspace version and the package versions in `frontend/` and
-`backend/`.
+independent from the root Amazi workspace version and the package versions in `app-1/` and
+`app-2/`.
 
 ## Tests
 
@@ -64,23 +64,24 @@ instruction files are platform-owned generated artifacts; do not edit them direc
 
 ## Review
 
-`docs/AMAZI_REVIEW.md` lists the review instructions for the projects in this workspace. Before
-finishing code work, read that index and follow every linked file that applies to a project you
+`docs/AMAZI_REVIEW.md` lists the review instructions for the applications in this workspace. Before
+finishing code work, read that index and follow every linked file that applies to an application you
 changed. Add future project-specific review rules as linked files under `docs/review/` instead of
 expanding this file with project-specific checks.
 
 ## HTTP Boundary
 
-Browser requests to the project backend use the relative `/api` base URL. Keep frontend requests in
-the shared frontend API client and implement their server behavior in `backend/`. Do not hardcode
-container names, internal ports, or deployment hostnames in project code.
+Browser requests to app-2 use the relative `/api` base URL. Keep requests in app-1's shared API
+client and implement their server behavior in `app-2/`. Amazi supplies the app-2 internal address
+through `BACKEND_PROXY_TARGET`; do not hardcode container names, ports, or deployment hostnames.
 
 ## Database Boundary
 
-PostgreSQL application code belongs exclusively to `backend/`. The runtime supplies
+PostgreSQL application code belongs exclusively to `app-2/`. The retained legacy database remains
+operator-managed until it is migrated to an explicit application-owned database service. The runtime supplies
 `DATABASE_URL` to server-side database processes; never expose it through a `VITE_*` variable or
 send it to the browser. Keep the Prisma schema, generated migration history, and database commands
-in the backend application and run them from that directory.
+in app-2 and run them from that directory.
 
 ## Git and Generated Files
 
