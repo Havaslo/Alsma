@@ -1,6 +1,27 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
-@import "./AMAZI_THEME_GENERATED.css";
+
+@theme inline {
+  --color-page: #f6f3ed;
+  --color-page-foreground: #262626;
+  --color-panel: #efe9dc;
+  --color-panel-foreground: #262626;
+  --color-brand: #1f4d3b;
+  --color-brand-foreground: #ffffff;
+  --color-supporting: #a7b8a1;
+  --color-supporting-foreground: #173a2c;
+  --color-accent-ui: #c8a66a;
+  --color-accent-ui-foreground: #262626;
+  --color-muted-ui: #ded4c7;
+  --color-muted-ui-foreground: #6c685f;
+  --color-line: #e5dbce;
+  --color-focus: #1f4d3b;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --font-heading: "Playfair Display", Georgia, serif;
+  --font-body: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-code: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
 
 @theme {
   --blur-booking: 18px;
@@ -29,47 +50,39 @@
   * {
     @apply border-line;
   }
-
   html {
     @apply scroll-smooth bg-page;
-    scrollbar-color: var(--color-muted-foreground) var(--color-page-foreground);
+    scrollbar-color: var(--color-muted-ui-foreground)
+      var(--color-page-foreground);
   }
-
   html::-webkit-scrollbar {
     width: 0.75rem;
   }
-
   html::-webkit-scrollbar-track {
     background: var(--color-page-foreground);
   }
-
   html::-webkit-scrollbar-thumb {
-    background: var(--color-muted-foreground);
+    background: var(--color-muted-ui-foreground);
     border: 0.125rem solid var(--color-page-foreground);
     border-radius: 9999px;
   }
-
   body {
     @apply m-0 min-h-screen min-w-80 bg-page font-body text-page-foreground antialiased;
   }
-
   h1,
   h2,
   h3 {
     letter-spacing: -0.02em;
   }
-
   ::selection {
     @apply bg-brand/20 text-page-foreground;
   }
-
   button,
   input,
   textarea,
   select {
     font: inherit;
   }
-
   a[href],
   button:not(:disabled),
   input[type="button"]:not(:disabled),
@@ -83,7 +96,6 @@
   [role="button"]:not([aria-disabled="true"]) {
     @apply cursor-pointer;
   }
-
   :disabled,
   [aria-disabled="true"] {
     @apply cursor-not-allowed;
@@ -94,25 +106,17 @@
   color-scheme: light;
 }
 
-[data-theme="dark"] {
-  color-scheme: dark;
-}
-
 @utility field-control {
   @apply min-h-11 w-full rounded-xl border border-line/70 bg-panel/80 px-3.5 py-2.5 text-sm text-panel-foreground shadow-sm shadow-page-foreground/5 transition outline-none;
-
   &::placeholder {
     @apply text-muted-ui-foreground;
   }
-
   &:focus {
     @apply border-focus ring-4 ring-focus/10;
   }
-
   &:disabled {
     @apply cursor-not-allowed bg-muted-ui text-muted-ui-foreground;
   }
-
   &[aria-invalid="true"] {
     @apply border-destructive ring-2 ring-destructive/20;
   }
@@ -121,7 +125,6 @@
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-
   &::-webkit-scrollbar {
     display: none;
   }

@@ -11,7 +11,7 @@
 - `src/lib/admin`, `auth`, `leads`, and `site`: domain contracts, API calls, and query hooks.
 - `src/lib/api` and `query`: transport and server-state infrastructure.
 - `src/assets/alsma`: product media and brand assets.
-- `src/AMAZI_ROUTES.ts`: the only frontend route catalog.
+- `src/route-constants.ts`: the only frontend route catalog.
 
 Split a module when it owns unrelated domain behavior or approaches 300 lines. Add a component only
 when a product route or feature consumes it; do not retain placeholder files or showcase-only

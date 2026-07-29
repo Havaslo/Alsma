@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import {
   MOCK_REQUESTS,
   MOCK_REQUEST_DETAILS,
@@ -9,6 +8,7 @@ import {
   REQUEST_STATUS_LABELS,
 } from "@/lib/admin/admin-request-mocks";
 import { cn } from "@/lib/cn";
+import { ROUTES } from "@/route-constants";
 
 const fallbackDetails = (requestId: string): MockRequestDetails => {
   const request = MOCK_REQUESTS.find((item) => item.id === requestId);
@@ -63,7 +63,7 @@ export const AdminRequestDetail = ({
         <h1 className="text-2xl font-semibold">Обращение не найдено</h1>
         <Link
           className="mt-5 inline-flex items-center gap-2 font-semibold text-brand"
-          to={AMAZI_ROUTES.adminRequests}
+          to={ROUTES.adminRequests}
         >
           <ArrowLeft className="size-4" /> Вернуться к обращениям
         </Link>
@@ -74,7 +74,7 @@ export const AdminRequestDetail = ({
     <div className="space-y-5">
       <Link
         className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-brand-foreground px-4 text-sm font-semibold text-brand"
-        to={AMAZI_ROUTES.adminRequests}
+        to={ROUTES.adminRequests}
       >
         <ArrowLeft className="size-4" /> Назад к обращениям
       </Link>

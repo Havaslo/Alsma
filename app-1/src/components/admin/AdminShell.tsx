@@ -15,91 +15,89 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminSiteNavigationMenu } from "@/components/admin/AdminSiteNavigationMenu";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import type { AdminUser } from "@/lib/admin/admin-api";
 import { cn } from "@/lib/cn";
+import { ROUTES } from "@/route-constants";
 
 const navigation = [
   {
     active: (path: string) =>
-      path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard,
+      path === ROUTES.admin || path === ROUTES.adminDashboard,
     icon: Gauge,
     label: "Дашборд",
-    to: AMAZI_ROUTES.adminDashboard,
+    to: ROUTES.adminDashboard,
   },
   {
-    active: (path: string) => path.startsWith(AMAZI_ROUTES.adminSiteManagement),
+    active: (path: string) => path.startsWith(ROUTES.adminSiteManagement),
     icon: PanelTop,
     label: "Управление сайтом",
-    to: AMAZI_ROUTES.adminSiteManagement,
+    to: ROUTES.adminSiteManagement,
   },
   {
     active: (path: string) => path.startsWith("/admin/requests"),
     icon: MessagesSquare,
     label: "Обращения",
-    to: AMAZI_ROUTES.adminRequests,
+    to: ROUTES.adminRequests,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminBookingRequests,
+    active: (path: string) => path === ROUTES.adminBookingRequests,
     icon: CalendarCheck,
     label: "Заявки на бронирование",
-    to: AMAZI_ROUTES.adminBookingRequests,
+    to: ROUTES.adminBookingRequests,
   },
   {
-    active: (path: string) => path.startsWith(AMAZI_ROUTES.adminClients),
+    active: (path: string) => path.startsWith(ROUTES.adminClients),
     icon: UsersRound,
     label: "Клиенты",
-    to: AMAZI_ROUTES.adminClients,
+    to: ROUTES.adminClients,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminSiteLeads,
+    active: (path: string) => path === ROUTES.adminSiteLeads,
     icon: PanelTop,
     label: "Заявки сайта",
-    to: AMAZI_ROUTES.adminSiteLeads,
+    to: ROUTES.adminSiteLeads,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminAgentScenarios,
+    active: (path: string) => path === ROUTES.adminAgentScenarios,
     icon: Sparkles,
     label: "Сценарии агентов",
-    to: AMAZI_ROUTES.adminAgentScenarios,
+    to: ROUTES.adminAgentScenarios,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminKnowledgeBase,
+    active: (path: string) => path === ROUTES.adminKnowledgeBase,
     icon: BookOpen,
     label: "База знаний",
-    to: AMAZI_ROUTES.adminKnowledgeBase,
+    to: ROUTES.adminKnowledgeBase,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminSettings,
+    active: (path: string) => path === ROUTES.adminSettings,
     icon: Settings,
     label: "Настройки",
-    to: AMAZI_ROUTES.adminSettings,
+    to: ROUTES.adminSettings,
   },
   {
-    active: (path: string) => path === AMAZI_ROUTES.adminIntegrations,
+    active: (path: string) => path === ROUTES.adminIntegrations,
     icon: Cable,
     label: "Интеграции",
-    to: AMAZI_ROUTES.adminIntegrations,
+    to: ROUTES.adminIntegrations,
   },
 ] as const;
 
 const adminPageTitle = (path: string): string => {
-  if (path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard)
-    return "Дашборд";
-  if (path === AMAZI_ROUTES.adminSiteLeads) return "Заявки сайта";
-  if (path === AMAZI_ROUTES.adminBookingRequests)
-    return "Заявки на бронирование";
-  if (path.startsWith(AMAZI_ROUTES.adminClients)) return "Клиенты";
-  if (path === AMAZI_ROUTES.adminRequests) return "Обращения";
-  if (path.startsWith(`${AMAZI_ROUTES.adminRequests}/`))
+  if (path === ROUTES.admin || path === ROUTES.adminDashboard) return "Дашборд";
+  if (path === ROUTES.adminSiteLeads) return "Заявки сайта";
+  if (path === ROUTES.adminBookingRequests) return "Заявки на бронирование";
+  if (path.startsWith(ROUTES.adminClients)) return "Клиенты";
+  if (path === ROUTES.adminRequests) return "Обращения";
+  if (path.startsWith(`${ROUTES.adminRequests}/`))
     return `Обращение #${path.split("/").at(-1)}`;
-  if (path === AMAZI_ROUTES.adminKnowledgeBase) return "База знаний";
-  if (path === AMAZI_ROUTES.adminAgentScenarios) return "Сценарии агентов";
-  if (path === AMAZI_ROUTES.adminSettings) return "Настройки";
-  if (path === AMAZI_ROUTES.adminIntegrations) return "Интеграции";
+  if (path === ROUTES.adminKnowledgeBase) return "База знаний";
+  if (path === ROUTES.adminAgentScenarios) return "Сценарии агентов";
+  if (path === ROUTES.adminSettings) return "Настройки";
+  if (path === ROUTES.adminIntegrations) return "Интеграции";
   return getAdminSiteTitle(path);
 };
 
@@ -119,11 +117,7 @@ export const AdminShell = ({
   return (
     <main className="flex min-h-screen bg-page text-page-foreground">
       <aside className="sticky top-0 hidden h-screen w-68 shrink-0 flex-col overflow-hidden bg-brand px-5 py-6 text-brand-foreground lg:flex">
-        <Link
-          aria-label="АЛСМА"
-          className="block h-10 w-36"
-          to={AMAZI_ROUTES.home}
-        >
+        <Link aria-label="АЛСМА" className="block h-10 w-36" to={ROUTES.home}>
           <img
             alt="АЛСМА"
             className="h-full w-full object-contain object-left"
@@ -133,7 +127,7 @@ export const AdminShell = ({
         <nav className="mt-8 scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {navigation.map(({ active, icon: Icon, label, to }) => {
             const selected = active(path);
-            if (to === AMAZI_ROUTES.adminSiteManagement)
+            if (to === ROUTES.adminSiteManagement)
               return (
                 <AdminSiteNavigationMenu
                   key={label}

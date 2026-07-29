@@ -5,7 +5,6 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminAgentScenariosPanel } from "@/components/admin/AdminAgentScenariosPanel";
 import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingRequestsPanel";
 import { AdminClientDetail } from "@/components/admin/AdminClientDetail";
@@ -30,6 +29,7 @@ import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import { useAdmin } from "@/lib/admin/useAdmin";
 import { queryClient } from "@/lib/query/query-client";
+import { ROUTES } from "@/route-constants";
 
 export const AdminDashboardPage = () => {
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -46,19 +46,17 @@ export const AdminDashboardPage = () => {
         <Loader className="text-brand" size="lg" />
       </main>
     );
-  if (!admin.data?.user)
-    return <Navigate replace to={AMAZI_ROUTES.adminLogin} />;
+  if (!admin.data?.user) return <Navigate replace to={ROUTES.adminLogin} />;
 
-  const isDashboard =
-    path === AMAZI_ROUTES.admin || path === AMAZI_ROUTES.adminDashboard;
-  const isSiteLeads = path === AMAZI_ROUTES.adminSiteLeads;
-  const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
+  const isDashboard = path === ROUTES.admin || path === ROUTES.adminDashboard;
+  const isSiteLeads = path === ROUTES.adminSiteLeads;
+  const isSiteManagement = path.startsWith(ROUTES.adminSiteManagement);
 
   const logout = async () => {
     await logoutAdmin().catch(() => undefined);
     writeAdminSession(null);
     queryClient.clear();
-    navigate({ to: AMAZI_ROUTES.adminLogin });
+    navigate({ to: ROUTES.adminLogin });
   };
 
   return (
@@ -69,53 +67,55 @@ export const AdminDashboardPage = () => {
     >
       {isDashboard && can("dashboard.access") && <AdminDashboardOverview />}
       {isSiteLeads && can("leads.access") && <AdminSiteLeadsTable />}
-      {path === AMAZI_ROUTES.adminBookingRequests &&
-        can("dashboard.access") && <AdminBookingRequestsPanel />}
-      {path === AMAZI_ROUTES.adminClients && can("dashboard.access") && (
+      {path === ROUTES.adminBookingRequests && can("dashboard.access") && (
+        <AdminBookingRequestsPanel />
+      )}
+      {path === ROUTES.adminClients && can("dashboard.access") && (
         <AdminClientsPanel />
       )}
       {params.clientId && can("dashboard.access") && (
         <AdminClientDetail clientId={params.clientId} />
       )}
-      {path === AMAZI_ROUTES.adminRequests && can("requests.access") && (
+      {path === ROUTES.adminRequests && can("requests.access") && (
         <AdminRequestsPanel />
       )}
       {params.requestId && can("requests.access") && (
         <AdminRequestDetail requestId={params.requestId} />
       )}
-      {path === AMAZI_ROUTES.adminKnowledgeBase &&
+      {path === ROUTES.adminKnowledgeBase &&
         (can("knowledge.access") || can("knowledge.manage")) && (
           <AdminKnowledgeBasePanel />
         )}
-      {path === AMAZI_ROUTES.adminAgentScenarios && can("scenarios.access") && (
+      {path === ROUTES.adminAgentScenarios && can("scenarios.access") && (
         <AdminAgentScenariosPanel />
       )}
-      {path === AMAZI_ROUTES.adminSettings && can("settings.access") && (
+      {path === ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={admin.data.user.id} />
       )}
-      {path === AMAZI_ROUTES.adminSiteManagementHome &&
+      {path === ROUTES.adminSiteManagementHome &&
         (can("site.access") || can("site.manage")) && <AdminHomeEditor />}
-      {path === AMAZI_ROUTES.adminSiteManagementRooms &&
+      {path === ROUTES.adminSiteManagementRooms &&
         (can("site.access") || can("site.manage")) && <AdminRoomsEditor />}
-      {path === AMAZI_ROUTES.adminSiteManagementEntertainment &&
+      {path === ROUTES.adminSiteManagementEntertainment &&
         (can("site.access") || can("site.manage")) && (
           <AdminEntertainmentEditor />
         )}
-      {path === AMAZI_ROUTES.adminSiteManagementOffers &&
+      {path === ROUTES.adminSiteManagementOffers &&
         (can("site.access") || can("site.manage")) && <AdminOffersEditor />}
-      {path === AMAZI_ROUTES.adminSiteManagementNews &&
+      {path === ROUTES.adminSiteManagementNews &&
         (can("site.access") || can("site.manage")) && <AdminNewsEditor />}
       {isSiteManagement &&
-        path !== AMAZI_ROUTES.adminSiteManagementHome &&
-        path !== AMAZI_ROUTES.adminSiteManagementRooms &&
-        path !== AMAZI_ROUTES.adminSiteManagementEntertainment &&
-        path !== AMAZI_ROUTES.adminSiteManagementOffers &&
-        path !== AMAZI_ROUTES.adminSiteManagementNews &&
+        path !== ROUTES.adminSiteManagementHome &&
+        path !== ROUTES.adminSiteManagementRooms &&
+        path !== ROUTES.adminSiteManagementEntertainment &&
+        path !== ROUTES.adminSiteManagementOffers &&
+        path !== ROUTES.adminSiteManagementNews &&
         (can("site.access") || can("site.manage")) && (
           <AdminSitePlaceholder title={getAdminSiteTitle(path)} />
         )}
-      {path === AMAZI_ROUTES.adminIntegrations &&
-        can("integrations.access") && <AdminIntegrationsPanel />}
+      {path === ROUTES.adminIntegrations && can("integrations.access") && (
+        <AdminIntegrationsPanel />
+      )}
     </AdminShell>
   );
 };

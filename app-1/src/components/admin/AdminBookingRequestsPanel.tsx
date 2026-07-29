@@ -3,7 +3,6 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { CirclePlus, Search } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminBookingForm } from "@/components/admin/AdminBookingForm";
 import { AdminBookingRequestsTable } from "@/components/admin/AdminBookingRequestsTable";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +19,7 @@ import {
   type MockBookingStatus,
 } from "@/lib/admin/admin-booking-mocks";
 import { buildRoute } from "@/lib/navigation";
+import { ROUTES } from "@/route-constants";
 
 type SourceFilter = MockBookingSource | "all";
 type StatusFilter = MockBookingStatus | "all";
@@ -136,7 +136,7 @@ export const AdminBookingRequestsPanel = () => {
         }
         onOpen={(requestId) =>
           navigate({
-            to: buildRoute(AMAZI_ROUTES.adminRequest, { requestId }),
+            to: buildRoute(ROUTES.adminRequest, { requestId }),
           })
         }
       />

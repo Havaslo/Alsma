@@ -1,49 +1,49 @@
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { ROUTES } from "@/route-constants";
 
 export const adminSiteNavigation = [
   {
     label: "Главная",
-    to: AMAZI_ROUTES.adminSiteManagementHome,
+    to: ROUTES.adminSiteManagementHome,
   },
   {
     label: "Проживание",
-    to: AMAZI_ROUTES.adminSiteManagementRooms,
+    to: ROUTES.adminSiteManagementRooms,
   },
   {
     label: "SPA",
-    to: AMAZI_ROUTES.adminSiteManagementSpa,
+    to: ROUTES.adminSiteManagementSpa,
   },
   {
     label: "Развлечения",
-    to: AMAZI_ROUTES.adminSiteManagementEntertainment,
+    to: ROUTES.adminSiteManagementEntertainment,
   },
   {
     label: "Акции",
-    to: AMAZI_ROUTES.adminSiteManagementOffers,
+    to: ROUTES.adminSiteManagementOffers,
   },
   {
     label: "Новости",
-    to: AMAZI_ROUTES.adminSiteManagementNews,
+    to: ROUTES.adminSiteManagementNews,
   },
   {
     label: "Блог",
-    to: AMAZI_ROUTES.adminSiteManagementBlog,
+    to: ROUTES.adminSiteManagementBlog,
   },
   {
     label: "Торжества",
-    to: AMAZI_ROUTES.adminSiteManagementCelebrations,
+    to: ROUTES.adminSiteManagementCelebrations,
   },
   {
     label: "Все включено",
-    to: AMAZI_ROUTES.adminSiteManagementAllInclusive,
+    to: ROUTES.adminSiteManagementAllInclusive,
   },
   {
     label: "О нас",
-    to: AMAZI_ROUTES.adminSiteManagementAbout,
+    to: ROUTES.adminSiteManagementAbout,
   },
   {
     label: "Общее",
-    to: AMAZI_ROUTES.adminSiteManagementGeneral,
+    to: ROUTES.adminSiteManagementGeneral,
   },
 ] as const;
 

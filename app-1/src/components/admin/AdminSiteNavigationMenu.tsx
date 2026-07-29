@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, PanelTop } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { adminSiteNavigation } from "@/components/admin/admin-site-navigation";
 import { cn } from "@/lib/cn";
+import { ROUTES } from "@/route-constants";
 
 export const AdminSiteNavigationMenu = ({
   path,
@@ -14,7 +14,7 @@ export const AdminSiteNavigationMenu = ({
   readonly path: string;
   readonly selected: boolean;
 }) => {
-  const isSiteManagement = path.startsWith(AMAZI_ROUTES.adminSiteManagement);
+  const isSiteManagement = path.startsWith(ROUTES.adminSiteManagement);
   const [menuOverride, setMenuOverride] = useState<{
     readonly open: boolean;
     readonly path: string;

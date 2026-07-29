@@ -1,10 +1,10 @@
 import { ArrowRight } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
 import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
+import { ROUTES } from "@/route-constants";
 
 export const HomeRestSection = ({
   cards,
@@ -97,7 +97,7 @@ export const HomePromotionsSection = ({
         {offers.map((offer) => (
           <a
             className="group block h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground transition outline-none hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-focus/30 sm:w-[340px] lg:w-[360px]"
-            href={offer.buttonLink || AMAZI_ROUTES.offers}
+            href={offer.buttonLink || ROUTES.offers}
             key={offer.title}
           >
             <div className="h-56 overflow-hidden">
@@ -127,7 +127,7 @@ export const HomePromotionsSection = ({
       <div className="mt-8 text-center">
         <a
           className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
-          href={AMAZI_ROUTES.offers}
+          href={ROUTES.offers}
         >
           Все акции <ArrowRight className="size-4" />
         </a>
@@ -242,7 +242,7 @@ export const HomeRoomsSection = ({
               </p>
               <a
                 className="mt-5 inline-flex rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
-                href={room.homeButtonHref ?? AMAZI_ROUTES.rooms}
+                href={room.homeButtonHref ?? ROUTES.rooms}
               >
                 {room.homeButtonLabel ?? "Подробнее"}
               </a>
@@ -258,7 +258,7 @@ export const HomeRoomsSection = ({
         </p>
         <a
           className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page"
-          href={AMAZI_ROUTES.rooms}
+          href={ROUTES.rooms}
         >
           Спросить AI
         </a>

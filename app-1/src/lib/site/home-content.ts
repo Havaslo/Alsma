@@ -1,8 +1,8 @@
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import familyImage from "@/assets/alsma/family-holiday.png";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
 import summerImage from "@/assets/alsma/season-summer.jpg";
 import wellnessImage from "@/assets/alsma/spa-wellness.png";
+import { ROUTES } from "@/route-constants";
 
 export type HomeRestCard = {
   readonly description: string;
@@ -61,7 +61,7 @@ export const HOME_REST_CARDS: readonly HomeRestCard[] = [
   {
     description:
       "Просторное размещение, лесные прогулки, меню для всей семьи и мягкий ритм загородного отдыха без лишней суеты.",
-    href: AMAZI_ROUTES.allInclusive,
+    href: ROUTES.allInclusive,
     image: familyImage,
     price: "от 45 000 ₽",
     tags: ["Семейный отдых", "Прогулки", "Детское меню"],
@@ -70,7 +70,7 @@ export const HOME_REST_CARDS: readonly HomeRestCard[] = [
   {
     description:
       "Выезды для команд с проживанием, банкетом, локациями для встреч и программой отдыха на природе.",
-    href: AMAZI_ROUTES.celebrations,
+    href: ROUTES.celebrations,
     image: summerImage,
     price: "по запросу",
     tags: ["15–150 гостей", "Тимбилдинг", "Банкет и SPA"],
@@ -124,13 +124,13 @@ export const HOME_REVIEWS: readonly HomeReview[] = [
 export const HOME_POPUP_BANNERS: readonly HomePopupBanner[] = [
   {
     badge: "Спецпредложение",
-    buttonHref: AMAZI_ROUTES.offers,
+    buttonHref: ROUTES.offers,
     buttonLabel: "Узнать подробнее",
     description:
       "Забронируйте отдых заранее и получите SPA-ритуал или wellness-привилегию на выбор.",
     displayDelaySeconds: 3,
     image: romanticImage,
-    pagePaths: [AMAZI_ROUTES.home],
+    pagePaths: [ROUTES.home],
     title: "Раннее бронирование со SPA-бонусом",
   },
 ];

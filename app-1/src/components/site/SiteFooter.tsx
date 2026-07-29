@@ -1,20 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import { Mail, MapPin, Phone } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import { ROUTES } from "@/route-constants";
 
 const navigation = [
-  ["Номера", AMAZI_ROUTES.rooms],
-  ["SPA", AMAZI_ROUTES.spa],
-  ["Новости", AMAZI_ROUTES.news],
-  ["Блог", AMAZI_ROUTES.blog],
-  ["Аппаратные процедуры", AMAZI_ROUTES.hardwareProcedures],
-  ["Развлечения и анимация", AMAZI_ROUTES.entertainment],
-  ["Торжества и корпоративный отдых", AMAZI_ROUTES.celebrations],
-  ["Всё включено", AMAZI_ROUTES.allInclusive],
-  ["Акции", AMAZI_ROUTES.offers],
-  ["О нас", AMAZI_ROUTES.about],
+  ["Номера", ROUTES.rooms],
+  ["SPA", ROUTES.spa],
+  ["Новости", ROUTES.news],
+  ["Блог", ROUTES.blog],
+  ["Аппаратные процедуры", ROUTES.hardwareProcedures],
+  ["Развлечения и анимация", ROUTES.entertainment],
+  ["Торжества и корпоративный отдых", ROUTES.celebrations],
+  ["Всё включено", ROUTES.allInclusive],
+  ["Акции", ROUTES.offers],
+  ["О нас", ROUTES.about],
 ] as const;
 
 const contacts = [
@@ -28,7 +28,7 @@ export const SiteFooter = () => (
   <footer className="bg-brand py-16 text-brand-foreground">
     <div className="mx-auto grid max-w-[100rem] gap-10 px-5 sm:px-8 lg:grid-cols-[1.1fr_1fr_0.9fr_1.2fr]">
       <div>
-        <Link aria-label="АЛСМА" to={AMAZI_ROUTES.home}>
+        <Link aria-label="АЛСМА" to={ROUTES.home}>
           <img
             alt="АЛСМА"
             className="h-11 w-40 object-contain"
@@ -78,7 +78,7 @@ export const SiteFooter = () => (
           >
             Telegram ↗
           </a>
-          <Link className="block" to={AMAZI_ROUTES.privacy}>
+          <Link className="block" to={ROUTES.privacy}>
             Политика конфиденциальности
           </Link>
         </div>

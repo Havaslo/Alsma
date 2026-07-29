@@ -7,52 +7,51 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AppProviders } from "@/app/AppProviders";
 import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { ROUTES } from "@/route-constants";
 
 const publicRoutes = new Set<string>([
-  AMAZI_ROUTES.home,
-  AMAZI_ROUTES.rooms,
-  AMAZI_ROUTES.spa,
-  AMAZI_ROUTES.entertainment,
-  AMAZI_ROUTES.allInclusive,
-  AMAZI_ROUTES.offers,
-  AMAZI_ROUTES.about,
-  AMAZI_ROUTES.hardwareProcedures,
-  AMAZI_ROUTES.celebrations,
-  AMAZI_ROUTES.news,
-  AMAZI_ROUTES.blog,
-  AMAZI_ROUTES.privacy,
+  ROUTES.home,
+  ROUTES.rooms,
+  ROUTES.spa,
+  ROUTES.entertainment,
+  ROUTES.allInclusive,
+  ROUTES.offers,
+  ROUTES.about,
+  ROUTES.hardwareProcedures,
+  ROUTES.celebrations,
+  ROUTES.news,
+  ROUTES.blog,
+  ROUTES.privacy,
 ]);
 
 const documentTitles: Record<string, string> = {
-  [AMAZI_ROUTES.about]: "О нас — АЛСМА",
-  [AMAZI_ROUTES.allInclusive]: "Все включено — АЛСМА",
-  [AMAZI_ROUTES.adminAgentScenarios]: "Сценарии агентов",
-  [AMAZI_ROUTES.adminBookingRequests]:
-    "Заявки на бронирование — админ-панель ALSMA",
-  [AMAZI_ROUTES.adminClients]: "Клиенты — админ-панель ALSMA",
-  [AMAZI_ROUTES.adminDashboard]: "Админ-панель ALSMA",
-  [AMAZI_ROUTES.adminIntegrations]: "Интеграции — админ-панель ALSMA",
-  [AMAZI_ROUTES.adminKnowledgeBase]: "База знаний",
-  [AMAZI_ROUTES.adminLogin]: "Вход в админ-панель — АЛСМА",
-  [AMAZI_ROUTES.adminRequests]: "Обращения — админ-панель ALSMA",
-  [AMAZI_ROUTES.adminSettings]: "Настройки",
-  [AMAZI_ROUTES.adminSiteLeads]: "Заявки сайта — админ-панель ALSMA",
-  [AMAZI_ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель ALSMA",
-  [AMAZI_ROUTES.blog]: "Блог — АЛСМА",
-  [AMAZI_ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
-  [AMAZI_ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
-  [AMAZI_ROUTES.hardwareProcedures]: "Аппаратные процедуры — АЛСМА",
-  [AMAZI_ROUTES.home]: "Отель АЛСМА",
-  [AMAZI_ROUTES.login]: "Вход в личный кабинет",
-  [AMAZI_ROUTES.news]: "Новости и события — АЛСМА",
-  [AMAZI_ROUTES.offers]: "Акции — АЛСМА",
-  [AMAZI_ROUTES.privacy]: "Политика конфиденциальности — АЛСМА",
-  [AMAZI_ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
-  [AMAZI_ROUTES.spa]: "SPA-центр — АЛСМА",
+  [ROUTES.about]: "О нас — АЛСМА",
+  [ROUTES.allInclusive]: "Все включено — АЛСМА",
+  [ROUTES.adminAgentScenarios]: "Сценарии агентов",
+  [ROUTES.adminBookingRequests]: "Заявки на бронирование — админ-панель ALSMA",
+  [ROUTES.adminClients]: "Клиенты — админ-панель ALSMA",
+  [ROUTES.adminDashboard]: "Админ-панель ALSMA",
+  [ROUTES.adminIntegrations]: "Интеграции — админ-панель ALSMA",
+  [ROUTES.adminKnowledgeBase]: "База знаний",
+  [ROUTES.adminLogin]: "Вход в админ-панель — АЛСМА",
+  [ROUTES.adminRequests]: "Обращения — админ-панель ALSMA",
+  [ROUTES.adminSettings]: "Настройки",
+  [ROUTES.adminSiteLeads]: "Заявки сайта — админ-панель ALSMA",
+  [ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель ALSMA",
+  [ROUTES.blog]: "Блог — АЛСМА",
+  [ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
+  [ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
+  [ROUTES.hardwareProcedures]: "Аппаратные процедуры — АЛСМА",
+  [ROUTES.home]: "Отель АЛСМА",
+  [ROUTES.login]: "Вход в личный кабинет",
+  [ROUTES.news]: "Новости и события — АЛСМА",
+  [ROUTES.offers]: "Акции — АЛСМА",
+  [ROUTES.privacy]: "Политика конфиденциальности — АЛСМА",
+  [ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
+  [ROUTES.spa]: "SPA-центр — АЛСМА",
 };
 
 const RootLayout = () => {
@@ -97,5 +96,5 @@ const RootError = ({ error }: { error: Error }) => (
 export const Route = createRootRoute({
   component: RootLayout,
   errorComponent: RootError,
-  notFoundComponent: () => <Navigate replace to={AMAZI_ROUTES.home} />,
+  notFoundComponent: () => <Navigate replace to={ROUTES.home} />,
 });

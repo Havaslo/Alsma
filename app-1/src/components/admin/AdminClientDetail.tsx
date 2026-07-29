@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Pencil, Trash2 } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminClientBonusModal } from "@/components/admin/AdminClientBonusModal";
 import { AdminClientEditModal } from "@/components/admin/AdminClientEditModal";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +10,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Loader } from "@/components/ui/Loader";
 import type { AdminClientBooking } from "@/lib/admin/admin-api";
 import { useAdminClient, useDeleteAdminClient } from "@/lib/admin/useAdmin";
+import { ROUTES } from "@/route-constants";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("ru-RU").format(new Date(value));
@@ -90,7 +90,7 @@ export const AdminClientDetail = ({
         <h1 className="text-2xl font-semibold">Клиент не найден</h1>
         <Button
           className="mt-5"
-          onClick={() => navigate({ to: AMAZI_ROUTES.adminClients })}
+          onClick={() => navigate({ to: ROUTES.adminClients })}
         >
           Вернуться к клиентам
         </Button>
@@ -229,7 +229,7 @@ export const AdminClientDetail = ({
         onClose={() => setDeleteOpen(false)}
         onConfirm={() =>
           remove.mutate(client.id, {
-            onSuccess: () => navigate({ to: AMAZI_ROUTES.adminClients }),
+            onSuccess: () => navigate({ to: ROUTES.adminClients }),
           })
         }
         open={deleteOpen}

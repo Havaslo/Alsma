@@ -3,7 +3,6 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AudioLines, Eye, Search } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { Button } from "@/components/ui/Button";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { Modal } from "@/components/ui/Modal";
@@ -19,6 +18,7 @@ import {
 } from "@/lib/admin/admin-request-mocks";
 import { cn } from "@/lib/cn";
 import { buildRoute } from "@/lib/navigation";
+import { ROUTES } from "@/route-constants";
 
 type ChannelFilter = MockRequest["channel"] | "all";
 type StatusFilter = MockRequest["status"] | "all";
@@ -185,7 +185,7 @@ export const AdminRequestsPanel = () => {
                         className="px-3"
                         onClick={() =>
                           navigate({
-                            to: buildRoute(AMAZI_ROUTES.adminRequest, {
+                            to: buildRoute(ROUTES.adminRequest, {
                               requestId: item.id,
                             }),
                           })

@@ -1,9 +1,7 @@
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
+import { ROUTES } from "@/route-constants";
 
 export const Route = createFileRoute("/admin/site-management/")({
-  component: () => (
-    <Navigate replace to={AMAZI_ROUTES.adminSiteManagementHome} />
-  ),
+  component: () => <Navigate replace to={ROUTES.adminSiteManagementHome} />,
 });

@@ -1,12 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import type { AdminClient } from "@/lib/admin/admin-api";
 import { buildRoute } from "@/lib/navigation";
+import { ROUTES } from "@/route-constants";
 
 const getClientRoute = (clientId: string) =>
-  buildRoute(AMAZI_ROUTES.adminClient, { clientId });
+  buildRoute(ROUTES.adminClient, { clientId });
 
 export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
   const navigate = useNavigate();

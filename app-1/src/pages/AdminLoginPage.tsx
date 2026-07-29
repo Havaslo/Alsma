@@ -5,13 +5,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoGreen from "@/assets/alsma/logo-green.svg";
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { adminLogin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { ROUTES } from "@/route-constants";
 
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export const AdminLoginPage = () => {
       toast.error(getApiErrorMessage(error, "Не удалось войти.")),
     onSuccess: ({ data }) => {
       writeAdminSession(data.token);
-      navigate({ to: AMAZI_ROUTES.adminDashboard });
+      navigate({ to: ROUTES.adminDashboard });
     },
   });
   return (

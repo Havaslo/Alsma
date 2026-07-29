@@ -1,9 +1,9 @@
 import { ArrowRight } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import ctaImage from "@/assets/alsma/all-inclusive-cta.jpg";
 import kidsImage from "@/assets/alsma/entertainment-kids.jpg";
 import musicImage from "@/assets/alsma/entertainment-music.jpg";
+import { ROUTES } from "@/route-constants";
 
 const animationFormats = [
   {
@@ -80,7 +80,7 @@ export const AllInclusiveFinalSection = () => (
         </p>
         <a
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold"
-          href={AMAZI_ROUTES.rooms}
+          href={ROUTES.rooms}
         >
           Узнать подробнее <ArrowRight className="size-4" />
         </a>

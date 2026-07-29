@@ -23,7 +23,7 @@ pnpm run build
 - `src/components/ui`: product-used interaction primitives.
 - `src/components/Form.tsx`: the typed React Hook Form submit boundary.
 - `src/lib`: API clients, query hooks, sessions, and domain data.
-- `src/AMAZI_ROUTES.ts`: the route registry shared with Amazi preview navigation.
+- `src/route-constants.ts`: the route registry shared with Amazi preview navigation.
 
 Keep server state in TanStack Query and use local React state only for transient UI interaction.
 All submit flows use React Hook Form.

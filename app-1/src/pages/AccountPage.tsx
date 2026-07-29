@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { Form } from "@/components/Form";
 import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
 import { AccountLoyaltySection } from "@/components/account/AccountLoyaltySection";
@@ -14,6 +13,7 @@ import { Loader } from "@/components/ui/Loader";
 import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
 import { GUEST_PROFILE_QUERY_KEY, useGuestAuth } from "@/lib/auth/useGuestAuth";
+import { ROUTES } from "@/route-constants";
 
 export const AccountPage = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ export const AccountPage = () => {
         <Loader className="text-brand" size="lg" />
       </main>
     );
-  if (!guest) return <Navigate replace to={AMAZI_ROUTES.login} />;
+  if (!guest) return <Navigate replace to={ROUTES.login} />;
   if (guest.requiresNameCompletion)
     return (
       <main className="min-h-screen bg-page px-4 pt-32">
@@ -71,7 +71,7 @@ export const AccountPage = () => {
     await logoutGuest().catch(() => undefined);
     writeGuestSession(null);
     queryClient.clear();
-    navigate({ to: AMAZI_ROUTES.home });
+    navigate({ to: ROUTES.home });
   };
 
   return (

@@ -9,7 +9,6 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { AdminDashboardCharts } from "@/components/admin/AdminDashboardCharts";
 import { AdminDashboardDetails } from "@/components/admin/AdminDashboardDetails";
 import { AdminDashboardPeriodFilter } from "@/components/admin/AdminDashboardPeriodFilter";
@@ -17,6 +16,7 @@ import {
   buildDashboardAnalytics,
   initialDashboardPeriod,
 } from "@/components/admin/admin-dashboard-analytics";
+import { ROUTES } from "@/route-constants";
 
 const kpis = [
   {
@@ -142,7 +142,7 @@ export const AdminDashboardOverview = () => {
               <p className="mt-4 text-sm leading-6">{call.title}</p>
               <Link
                 className="mt-4 inline-flex rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground"
-                to={AMAZI_ROUTES.adminRequests}
+                to={ROUTES.adminRequests}
               >
                 Перейти к карточке обращения
               </Link>

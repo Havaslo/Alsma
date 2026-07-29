@@ -6,13 +6,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import { Form } from "@/components/Form";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { requestLoginCode, verifyLoginCode } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
+import { ROUTES } from "@/route-constants";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export const LoginPage = () => {
       toast.error(getApiErrorMessage(error, "Не удалось подтвердить код.")),
     onSuccess: ({ data }) => {
       writeGuestSession(data.token);
-      navigate({ to: AMAZI_ROUTES.account });
+      navigate({ to: ROUTES.account });
     },
   });
 
@@ -110,10 +110,7 @@ export const LoginPage = () => {
             </Form>
             <p className="mt-5 text-center text-sm leading-6 text-muted-ui-foreground">
               Входя в личный кабинет, вы соглашаетесь с{" "}
-              <Link
-                className="font-semibold text-brand"
-                to={AMAZI_ROUTES.privacy}
-              >
+              <Link className="font-semibold text-brand" to={ROUTES.privacy}>
                 политикой конфиденциальности
               </Link>
               .

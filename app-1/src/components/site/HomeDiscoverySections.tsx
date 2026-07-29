@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import corporateImage from "@/assets/alsma/corporate-checkins.webp";
 import entertainmentKids from "@/assets/alsma/entertainment-kids.jpg";
 import entertainmentMusic from "@/assets/alsma/entertainment-music.jpg";
@@ -14,6 +13,7 @@ import spaBath from "@/assets/alsma/spa-bath-v2.jpg";
 import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
 import spaQuantum from "@/assets/alsma/spa-quantum-v2.jpg";
 import spaceImage from "@/assets/alsma/space-top-view.png";
+import { ROUTES } from "@/route-constants";
 
 const spaCards = [
   [
@@ -38,19 +38,19 @@ const features = [
     "Величественная природа",
     ["Реликтовый лес", "Слияние двух рек", "Минеральная вода"],
     natureImage,
-    AMAZI_ROUTES.about,
+    ROUTES.about,
   ],
   [
     "Ресторан / кухня",
     ["Шведский стол", "Гастрономические истории"],
     restaurantImage,
-    AMAZI_ROUTES.allInclusive,
+    ROUTES.allInclusive,
   ],
   [
     "Анимация",
     ["Активная анимационная программа"],
     animationImage,
-    AMAZI_ROUTES.entertainment,
+    ROUTES.entertainment,
   ],
 ] as const;
 
@@ -179,7 +179,7 @@ export const HomeExperienceSections = () => (
         <div className="mt-12 text-center">
           <a
             className="inline-flex rounded-full bg-brand px-8 py-4 text-sm font-semibold text-brand-foreground"
-            href={AMAZI_ROUTES.spa}
+            href={ROUTES.spa}
           >
             Посмотреть все процедуры
           </a>
@@ -238,7 +238,7 @@ export const HomeExperienceSections = () => (
             </p>
             <a
               className="mt-8 inline-flex w-fit rounded-full bg-brand px-7 py-4 text-sm font-semibold text-brand-foreground"
-              href={AMAZI_ROUTES.celebrations}
+              href={ROUTES.celebrations}
             >
               Подробнее
             </a>
@@ -277,7 +277,7 @@ export const HomeExperienceSections = () => (
                 </p>
                 <a
                   className="mt-auto inline-flex w-fit rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
-                  href={AMAZI_ROUTES.entertainment}
+                  href={ROUTES.entertainment}
                 >
                   Подробнее
                 </a>

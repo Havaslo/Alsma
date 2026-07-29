@@ -3,31 +3,31 @@ import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Menu, UserRound, X } from "lucide-react";
 
-import { AMAZI_ROUTES } from "@/AMAZI_ROUTES";
 import logoGreen from "@/assets/alsma/logo-green.svg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import { cn } from "@/lib/cn";
+import { ROUTES } from "@/route-constants";
 
 const navigation = [
-  { label: "Проживание", to: AMAZI_ROUTES.rooms },
-  { label: "SPA", to: AMAZI_ROUTES.spa },
-  { label: "Развлечения", to: AMAZI_ROUTES.entertainment },
-  { label: "Все включено", to: AMAZI_ROUTES.allInclusive },
-  { label: "О нас", to: AMAZI_ROUTES.about },
-  { label: "Акции", to: AMAZI_ROUTES.offers },
+  { label: "Проживание", to: ROUTES.rooms },
+  { label: "SPA", to: ROUTES.spa },
+  { label: "Развлечения", to: ROUTES.entertainment },
+  { label: "Все включено", to: ROUTES.allInclusive },
+  { label: "О нас", to: ROUTES.about },
+  { label: "Акции", to: ROUTES.offers },
 ];
 
 const moreNavigation = [
-  { label: "Аппаратные процедуры", to: AMAZI_ROUTES.hardwareProcedures },
-  { label: "Новости", to: AMAZI_ROUTES.news },
-  { label: "Блог", to: AMAZI_ROUTES.blog },
-  { label: "Торжества и корпоративный отдых", to: AMAZI_ROUTES.celebrations },
-  { label: "Политика конфиденциальности", to: AMAZI_ROUTES.privacy },
+  { label: "Аппаратные процедуры", to: ROUTES.hardwareProcedures },
+  { label: "Новости", to: ROUTES.news },
+  { label: "Блог", to: ROUTES.blog },
+  { label: "Торжества и корпоративный отдых", to: ROUTES.celebrations },
+  { label: "Политика конфиденциальности", to: ROUTES.privacy },
 ];
 
 export const SiteHeader = ({
   bookingLabel = "Забронировать",
-  bookingTo = `${AMAZI_ROUTES.home}#booking`,
+  bookingTo = `${ROUTES.home}#booking`,
   light = false,
   transparentAtTop = true,
 }: {
@@ -61,7 +61,7 @@ export const SiteHeader = ({
   }, [location.hash, location.pathname]);
 
   const scrollToBooking = () => {
-    if (location.pathname !== AMAZI_ROUTES.home) return;
+    if (location.pathname !== ROUTES.home) return;
     document
       .getElementById("booking")
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -75,7 +75,7 @@ export const SiteHeader = ({
           : "border-brand-foreground/15 bg-brand-foreground/5 text-brand-foreground",
       )}
     >
-      <Link aria-label="АЛСМА" to={AMAZI_ROUTES.home}>
+      <Link aria-label="АЛСМА" to={ROUTES.home}>
         <img
           alt="АЛСМА"
           className="h-10 w-36 object-contain"
@@ -131,7 +131,7 @@ export const SiteHeader = ({
               ? "border-brand/15 text-brand"
               : "border-brand-foreground/15 text-brand-foreground",
           )}
-          to={AMAZI_ROUTES.account}
+          to={ROUTES.account}
         >
           <span
             className={cn(
