@@ -417,7 +417,7 @@ const HomeInquiryModal = ({
 
   return (
     <Modal
-      className="max-w-3xl rounded-4xl bg-booking-shell"
+      className="max-w-2xl rounded-4xl bg-booking-shell"
       closeLabel="Закрыть форму заявки"
       headerClassName="items-start px-6 py-8 sm:px-10 sm:py-9"
       headerContent={
@@ -425,7 +425,7 @@ const HomeInquiryModal = ({
           <p className="text-sm font-semibold tracking-wide text-brand/60">
             Заявка на отдых
           </p>
-          <h2 className="mt-4 max-w-2xl font-heading text-4xl leading-[1.08] font-semibold sm:text-5xl">
+          <h2 className="mt-4 max-w-2xl font-heading text-3xl leading-[1.08] font-semibold sm:text-4xl">
             Забронировать или узнать подробнее
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-ui-foreground">
