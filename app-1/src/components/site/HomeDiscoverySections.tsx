@@ -404,14 +404,15 @@ export const HomeContactSections = () => {
         </div>
       </section>
       <Modal
-        className="max-w-5xl rounded-4xl bg-brand-foreground"
+        className="max-w-4xl rounded-4xl bg-brand-foreground"
         closeLabel="Закрыть форму заказа трансфера"
         headerClassName="border-b-0 px-6 pt-7 pb-0 sm:px-10 sm:pt-10"
         onClose={() => setTransferOpen(false)}
         open={transferOpen}
         title="Заказать трансфер"
+        titleClassName="font-heading text-3xl font-semibold"
       >
-        <div className="text-center">
+        <div className="text-left">
           <p className="text-muted-ui-foreground">
             Оставьте заявку, если хотите заранее согласовать поездку и удобное
             время встречи.
