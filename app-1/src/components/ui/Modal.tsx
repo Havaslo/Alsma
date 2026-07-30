@@ -28,6 +28,8 @@ export type ModalProps = Omit<
   readonly closeLabel?: string;
   /** Optional action row rendered below the scrollable body. */
   readonly footer?: ReactNode;
+  readonly headerContent?: ReactNode;
+  readonly headerClassName?: string;
   readonly onClose: () => void;
   readonly titleClassName?: string;
   /** Keep Modal mounted and toggle this value so exit animation can finish. */
@@ -40,6 +42,8 @@ export const Modal = ({
   className,
   closeLabel = "Close",
   footer,
+  headerClassName,
+  headerContent,
   onClose,
   onKeyDown,
   open,
@@ -130,16 +134,30 @@ export const Modal = ({
               }}
               {...props}
             >
-              <header className="flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5">
-                <h2
-                  className={cn(
-                    "m-0 font-heading text-xl font-semibold",
-                    titleClassName,
-                  )}
-                  id={titleId}
-                >
-                  {title}
-                </h2>
+              <header
+                className={cn(
+                  "flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5",
+                  headerClassName,
+                )}
+              >
+                {headerContent ? (
+                  <div className="min-w-0">
+                    <h2 className="sr-only" id={titleId}>
+                      {title}
+                    </h2>
+                    {headerContent}
+                  </div>
+                ) : (
+                  <h2
+                    className={cn(
+                      "m-0 font-heading text-xl font-semibold",
+                      titleClassName,
+                    )}
+                    id={titleId}
+                  >
+                    {title}
+                  </h2>
+                )}
                 <Button
                   aria-label={closeLabel}
                   className="size-10 shrink-0 p-0"

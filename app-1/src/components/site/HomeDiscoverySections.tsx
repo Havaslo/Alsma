@@ -413,28 +413,34 @@ const HomeInquiryModal = ({
     defaultValues: { comment: "", email: "", phone: "" },
   });
   const inputClassName =
-    "min-h-15 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10";
+    "min-h-16 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10";
 
   return (
     <Modal
       className="max-w-3xl rounded-4xl bg-booking-shell"
       closeLabel="Закрыть форму заявки"
+      headerClassName="items-start px-6 py-8 sm:px-10 sm:py-9"
+      headerContent={
+        <>
+          <p className="text-sm font-semibold tracking-wide text-brand/60">
+            Заявка на отдых
+          </p>
+          <h2 className="mt-4 max-w-2xl font-heading text-4xl leading-[1.08] font-semibold sm:text-5xl">
+            Забронировать или узнать подробнее
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-ui-foreground">
+            Оставьте контакты, и мы свяжемся с вами, чтобы помочь с
+            бронированием и рассказать подробнее о проживании, SPA и услугах
+            отеля.
+          </p>
+        </>
+      }
       onClose={onClose}
       open={open}
       title="Забронировать или узнать подробнее"
-      titleClassName="text-3xl sm:text-4xl"
     >
-      <div className="pt-1">
-        <p className="text-sm font-semibold tracking-wide text-brand/60">
-          Заявка на отдых
-        </p>
-        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Оставьте контакты, и мы свяжемся с вами, чтобы помочь с бронированием
-          и рассказать подробнее о проживании, SPA и услугах отеля.
-        </p>
-      </div>
       <Form
-        className="mt-8 space-y-5"
+        className="space-y-6"
         form={form}
         onSubmit={(values) => {
           lead.mutate(
