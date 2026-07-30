@@ -24,7 +24,7 @@ export const HomeRestSection = ({
     <HorizontalCarousel className="mt-12">
       {cards.map((card) => (
         <article
-          className="group grid h-full overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid-cols-[0.9fr_1.1fr]"
+          className="group grid h-full overflow-hidden rounded-4xl bg-panel lg:grid-cols-[0.9fr_1.1fr]"
           key={card.title}
         >
           <div className="order-2 flex flex-col p-8 sm:p-10 lg:order-1">
