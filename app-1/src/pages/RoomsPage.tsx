@@ -31,7 +31,7 @@ export const RoomsPage = () => {
     <main className="min-h-screen bg-page text-page-foreground">
       <SiteHeader />
       <PublicHero
-        badge="Более 80-ти номеров"
+        badge="Более 80 номеров"
         description={description}
         eyebrow="Номера и коттеджи"
         image={typeof hero?.image === "string" ? hero.image : page.heroImage}
