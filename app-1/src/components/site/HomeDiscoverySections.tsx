@@ -48,13 +48,13 @@ const features = [
   [
     "Ресторан / кухня",
     ["Шведский стол", "Гастрономические истории"],
-    restaurantImage,
+    animationImage,
     ROUTES.allInclusive,
   ],
   [
     "Анимация",
     ["Активная анимационная программа"],
-    animationImage,
+    restaurantImage,
     ROUTES.entertainment,
   ],
 ] as const;
