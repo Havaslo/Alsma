@@ -29,6 +29,7 @@ export type ModalProps = Omit<
   /** Optional action row rendered below the scrollable body. */
   readonly footer?: ReactNode;
   readonly onClose: () => void;
+  readonly titleClassName?: string;
   /** Keep Modal mounted and toggle this value so exit animation can finish. */
   readonly open: boolean;
   readonly title: string;
@@ -43,6 +44,7 @@ export const Modal = ({
   onKeyDown,
   open,
   title,
+  titleClassName,
   ...props
 }: ModalProps) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -130,7 +132,10 @@ export const Modal = ({
             >
               <header className="flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5">
                 <h2
-                  className="m-0 font-heading text-xl font-semibold"
+                  className={cn(
+                    "m-0 font-heading text-xl font-semibold",
+                    titleClassName,
+                  )}
                   id={titleId}
                 >
                   {title}

@@ -413,17 +413,18 @@ const HomeInquiryModal = ({
     defaultValues: { comment: "", email: "", phone: "" },
   });
   const inputClassName =
-    "min-h-15 w-full rounded-2xl border border-line bg-page px-5 py-4 text-page-foreground outline-none placeholder:text-muted-ui-foreground focus:border-brand focus:ring-4 focus:ring-focus/10";
+    "min-h-15 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10";
 
   return (
     <Modal
-      className="max-w-3xl rounded-4xl"
+      className="max-w-3xl rounded-4xl bg-booking-shell"
       closeLabel="Закрыть форму заявки"
       onClose={onClose}
       open={open}
       title="Забронировать или узнать подробнее"
+      titleClassName="text-3xl sm:text-4xl"
     >
-      <div className="-mt-2">
+      <div className="pt-1">
         <p className="text-sm font-semibold tracking-wide text-brand/60">
           Заявка на отдых
         </p>
@@ -470,7 +471,7 @@ const HomeInquiryModal = ({
         <label className="block text-sm font-medium">
           <span className="mb-3 block">Комментарий</span>
           <textarea
-            className="min-h-36 w-full rounded-2xl border border-line bg-page px-5 py-4 text-page-foreground outline-none placeholder:text-muted-ui-foreground focus:border-brand focus:ring-4 focus:ring-focus/10"
+            className="min-h-36 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10"
             placeholder="Напишите, хотите ли вы забронировать номер или узнать подробнее об услугах"
             {...form.register("comment")}
           />
