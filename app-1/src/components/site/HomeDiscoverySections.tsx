@@ -96,55 +96,39 @@ const mapMarkers = [
   { label: "Пляж", position: "top-[71%] left-[80%]" },
 ] as const;
 
-const HomeMapSection = () => {
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
-
-  return (
-    <section className="hidden bg-brand py-24 text-brand-foreground md:block">
-      <div className="mx-auto max-w-[100rem] px-6">
-        <h2 className="mb-10 text-center font-heading text-4xl font-semibold sm:text-5xl">
-          Пространство тишины с видом сверху
-        </h2>
-        <div className="rounded-4xl border border-supporting p-5">
-          <div className="relative overflow-hidden rounded-3xl">
-            <img
-              alt="Пространство тишины с видом сверху"
-              className="w-full"
-              src={spaceImage}
-            />
-            {mapMarkers.map((marker, index) => (
+const HomeMapSection = () => (
+  <section className="hidden bg-brand py-24 text-brand-foreground md:block">
+    <div className="mx-auto max-w-[100rem] px-6">
+      <h2 className="mb-10 text-center font-heading text-4xl font-semibold sm:text-5xl">
+        Пространство тишины с видом сверху
+      </h2>
+      <div className="rounded-4xl border border-supporting p-5">
+        <div className="relative overflow-hidden rounded-3xl">
+          <img
+            alt="Пространство тишины с видом сверху"
+            className="w-full"
+            src={spaceImage}
+          />
+          {mapMarkers.map((marker) => (
+            <div
+              className={`group absolute -translate-x-1/2 -translate-y-1/2 ${marker.position}`}
+              key={marker.label}
+            >
               <button
                 aria-label={marker.label}
-                className={`absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-page bg-supporting shadow-lg transition hover:scale-110 ${marker.position}`}
-                key={marker.label}
-                onClick={() =>
-                  setSelectedMarker(selectedMarker === index ? null : index)
-                }
+                className="grid size-8 place-items-center rounded-full border-4 border-page bg-supporting shadow-lg transition hover:scale-110 focus-visible:scale-110"
                 type="button"
               />
-            ))}
-            {selectedMarker !== null && (
-              <div
-                className={`absolute -translate-x-1/2 -translate-y-full pb-5 ${mapMarkers[selectedMarker].position}`}
-              >
-                <div className="w-52 rounded-3xl border-8 border-page bg-page p-2 text-center text-page-foreground shadow-xl">
-                  <img
-                    alt=""
-                    className="h-36 w-full rounded-2xl object-cover"
-                    src={spaceImage}
-                  />
-                  <p className="px-2 pt-3 pb-1 font-semibold">
-                    {mapMarkers[selectedMarker].label}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+              <span className="pointer-events-none absolute bottom-full left-1/2 mb-3 -translate-x-1/2 rounded-xl bg-page px-4 py-2 text-sm font-semibold whitespace-nowrap text-page-foreground opacity-0 shadow-xl transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                {marker.label}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export const HomeExperienceSections = () => (
   <>
