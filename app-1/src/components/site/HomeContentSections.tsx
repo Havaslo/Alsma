@@ -144,7 +144,7 @@ export const HomeReviewsSection = ({
 }: {
   readonly reviews: readonly HomeReview[];
 }) => (
-  <section className="px-4 py-16 sm:px-6">
+  <section className="px-4 py-8 sm:px-6">
     <div className="mx-auto max-w-[100rem]">
       <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
         Истории вашего отдыха
