@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import corporateImage from "@/assets/alsma/corporate-hall.webp";
-import entertainmentKids from "@/assets/alsma/entertainment-kids.jpg";
+import entertainmentAnimation from "@/assets/alsma/entertainment-animation.webp";
 import entertainmentMusic from "@/assets/alsma/entertainment-music.jpg";
-import entertainmentRental from "@/assets/alsma/entertainment-rental.jpg";
-import entertainmentThemed from "@/assets/alsma/entertainment-themed.jpg";
+import entertainmentRental from "@/assets/alsma/entertainment-rental-new.webp";
+import entertainmentThemed from "@/assets/alsma/entertainment-themed-new.webp";
 import animationImage from "@/assets/alsma/feature-animation.png";
 import natureImage from "@/assets/alsma/feature-nature.png";
 import restaurantImage from "@/assets/alsma/feature-restaurant.png";
@@ -63,7 +63,7 @@ const entertainment = [
   [
     "Анимация для детей и взрослых",
     "Насыщенная программа активностей для всей семьи: игры, мастер-классы и вечерние события",
-    entertainmentKids,
+    entertainmentAnimation,
   ],
   [
     "Тематические заезды",
