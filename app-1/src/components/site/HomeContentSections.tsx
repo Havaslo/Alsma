@@ -1,6 +1,9 @@
+import { useState } from "react";
+
 import { ArrowRight } from "lucide-react";
 
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
+import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
 import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
@@ -199,70 +202,80 @@ export const HomeRoomsSection = ({
   rooms,
 }: {
   readonly rooms: readonly RoomCategory[];
-}) => (
-  <section className="bg-page py-24" id="rooms">
-    <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
-      <div className="mx-auto max-w-4xl text-center">
-        <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-          Уют, скрытый в кронах сосен
-        </h2>
-        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Современные интерьеры номеров и красота леса за панорамными окнами —
-          идеальное сочетание для любого варианта отдыха.
-        </p>
-      </div>
-      <HorizontalCarousel
-        className="mt-12"
-        slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
-      >
-        {rooms.map((room) => (
-          <article
-            className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel"
-            key={room.title}
-          >
-            <img
-              alt={room.title}
-              className="h-64 w-full object-cover"
-              src={room.image}
-            />
-            <div className="flex flex-1 flex-col p-6">
-              <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand">
-                <span>{room.area}</span>
-                <span>·</span>
-                <span>{room.capacity}</span>
-              </div>
-              <h3 className="mt-3 font-heading text-3xl font-semibold">
-                {room.title}
-              </h3>
-              <p className="mt-3 line-clamp-3 leading-7 text-muted-ui-foreground">
-                {room.description}
-              </p>
-              <p className="mt-auto pt-5 text-lg font-semibold text-brand">
-                {room.price} / ночь
-              </p>
-              <a
-                className="mt-5 inline-flex justify-center rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
-                href={room.homeButtonHref ?? ROUTES.rooms}
-              >
-                {room.homeButtonLabel ?? "Подробнее"}
-              </a>
-            </div>
-          </article>
-        ))}
-      </HorizontalCarousel>
-      <div className="mx-auto mt-14 max-w-5xl text-center">
-        <h3 className="font-heading text-3xl font-semibold">AI-консьерж</h3>
-        <p className="mt-4 text-lg leading-8 text-muted-ui-foreground">
-          Не знаете, какой номер выбрать? Подберем лучший формат отдыха по
-          составу гостей, сценарию поездки и желаемому уровню приватности.
-        </p>
-        <a
-          className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page"
-          href={ROUTES.rooms}
+}) => {
+  const [quizOpen, setQuizOpen] = useState(false);
+
+  return (
+    <section className="bg-page py-24" id="rooms">
+      <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+            Уют, скрытый в кронах сосен
+          </h2>
+          <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+            Современные интерьеры номеров и красота леса за панорамными окнами —
+            идеальное сочетание для любого варианта отдыха.
+          </p>
+        </div>
+        <HorizontalCarousel
+          className="mt-12"
+          slideClassName="basis-5/6 sm:basis-1/2 lg:basis-1/3 2xl:basis-1/4"
         >
-          Спросить AI
-        </a>
+          {rooms.map((room) => (
+            <article
+              className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel"
+              key={room.title}
+            >
+              <img
+                alt={room.title}
+                className="h-64 w-full object-cover"
+                src={room.image}
+              />
+              <div className="flex flex-1 flex-col p-6">
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand">
+                  <span>{room.area}</span>
+                  <span>·</span>
+                  <span>{room.capacity}</span>
+                </div>
+                <h3 className="mt-3 font-heading text-3xl font-semibold">
+                  {room.title}
+                </h3>
+                <p className="mt-3 line-clamp-3 leading-7 text-muted-ui-foreground">
+                  {room.description}
+                </p>
+                <p className="mt-auto pt-5 text-lg font-semibold text-brand">
+                  {room.price} / ночь
+                </p>
+                <a
+                  className="mt-5 inline-flex justify-center rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                  href={room.homeButtonHref ?? ROUTES.rooms}
+                >
+                  {room.homeButtonLabel ?? "Подробнее"}
+                </a>
+              </div>
+            </article>
+          ))}
+        </HorizontalCarousel>
+        <div className="mx-auto mt-14 max-w-5xl text-center">
+          <h3 className="font-heading text-3xl font-semibold">AI-консьерж</h3>
+          <p className="mt-4 text-lg leading-8 text-muted-ui-foreground">
+            Не знаете, какой номер выбрать? Подберем лучший формат отдыха по
+            составу гостей, сценарию поездки и желаемому уровню приватности.
+          </p>
+          <button
+            className="mt-7 inline-flex rounded-full bg-page-foreground px-7 py-4 font-semibold text-page"
+            onClick={() => setQuizOpen(true)}
+            type="button"
+          >
+            Спросить AI
+          </button>
+        </div>
+        <RoomRecommendationQuiz
+          onClose={() => setQuizOpen(false)}
+          open={quizOpen}
+          rooms={rooms}
+        />
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};

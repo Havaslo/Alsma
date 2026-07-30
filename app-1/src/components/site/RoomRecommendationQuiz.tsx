@@ -113,12 +113,29 @@ export const RoomRecommendationQuiz = ({
   ]);
   const [showResult, setShowResult] = useState(false);
   const question = questions[step];
-  const recommendedRoom =
-    answers[0] === "6" || answers[3] === "space"
-      ? rooms.at(-1)
-      : answers[0] === "4" || answers[3] === "view"
-        ? rooms[1]
-        : rooms[0];
+  const recommendedRooms = [...rooms]
+    .map((room, index) => {
+      const roomText =
+        `${room.title} ${room.description} ${room.amenities.join(" ")}`.toLocaleLowerCase(
+          "ru",
+        );
+      const capacity = Number(room.capacity.match(/\d+/g)?.at(-1) ?? 0);
+      const area = Number(room.area.match(/\d+/)?.[0] ?? 0);
+      let score = rooms.length - index;
+
+      if (capacity >= Number(answers[0])) score += 3;
+      if (answers[2] === "family" && capacity >= 4) score += 2;
+      if (answers[2] === "spa" && roomText.includes("spa")) score += 2;
+      if (answers[3] === "view" && /вид|панорам|лес/.test(roomText)) score += 3;
+      if (answers[3] === "privacy" && /отдельн|уедин|приват/.test(roomText))
+        score += 3;
+      if (answers[3] === "space" && area >= 40) score += 3;
+
+      return { index, room, score };
+    })
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, 3)
+    .map(({ room }) => room);
 
   const reset = () => {
     setStep(0);
@@ -133,20 +150,39 @@ export const RoomRecommendationQuiz = ({
       open={open}
       title="Подбор идеального номера"
     >
-      {showResult && recommendedRoom ? (
+      {showResult && recommendedRooms.length > 0 ? (
         <div className="py-3">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-            Рекомендуем
+            Подходящие варианты
           </p>
           <h3 className="mt-4 font-heading text-4xl font-semibold">
-            {recommendedRoom.title}
+            Мы подобрали номера для вашего отдыха
           </h3>
-          <p className="mt-5 leading-7 text-muted-ui-foreground">
-            {recommendedRoom.description}
-          </p>
-          <p className="mt-6 text-2xl font-semibold text-brand">
-            {recommendedRoom.price} / ночь
-          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recommendedRooms.map((room) => (
+              <article
+                className="overflow-hidden rounded-3xl border border-line bg-page"
+                key={room.title}
+              >
+                <img
+                  alt={room.title}
+                  className="h-40 w-full object-cover"
+                  src={room.image}
+                />
+                <div className="p-5">
+                  <h4 className="font-heading text-2xl font-semibold">
+                    {room.title}
+                  </h4>
+                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-ui-foreground">
+                    {room.description}
+                  </p>
+                  <p className="mt-4 font-semibold text-brand">
+                    {room.price} / ночь
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
           <button
             className="mt-8 rounded-2xl border border-line px-6 py-4 font-semibold"
             onClick={reset}
