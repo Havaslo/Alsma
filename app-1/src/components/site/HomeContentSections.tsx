@@ -232,10 +232,13 @@ export const HomeRoomsSection = ({
                 src={room.image}
               />
               <div className="flex flex-1 flex-col p-6">
-                <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand">
-                  <span>{room.area}</span>
-                  <span>·</span>
-                  <span>{room.capacity}</span>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand">
+                    {room.area}
+                  </span>
+                  <span className="rounded-full border border-line bg-page/40 px-4 py-2 text-sm font-semibold text-brand">
+                    {room.capacity}
+                  </span>
                 </div>
                 <h3 className="mt-3 font-heading text-3xl font-semibold">
                   {room.title}
