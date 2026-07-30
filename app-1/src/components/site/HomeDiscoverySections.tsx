@@ -15,6 +15,7 @@ import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
 import spaSteam from "@/assets/alsma/spa-steam.png";
 import spaceImage from "@/assets/alsma/space-top-view-new.webp";
 import { Form } from "@/components/Form";
+import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
@@ -290,6 +291,7 @@ export const HomeExperienceSections = () => (
 
 export const HomeContactSections = () => {
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   return (
     <>
@@ -356,6 +358,7 @@ export const HomeContactSections = () => {
               </p>
               <button
                 className="mt-6 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+                onClick={() => setTransferOpen(true)}
                 type="button"
               >
                 Заказать трансфер
@@ -400,6 +403,22 @@ export const HomeContactSections = () => {
           </div>
         </div>
       </section>
+      <Modal
+        className="max-w-5xl rounded-4xl bg-brand-foreground"
+        closeLabel="Закрыть форму заказа трансфера"
+        headerClassName="border-b-0 px-6 pt-7 pb-0 sm:px-10 sm:pt-10"
+        onClose={() => setTransferOpen(false)}
+        open={transferOpen}
+        title="Заказать трансфер"
+      >
+        <div className="text-center">
+          <p className="text-muted-ui-foreground">
+            Оставьте заявку, если хотите заранее согласовать поездку и удобное
+            время встречи.
+          </p>
+        </div>
+        <TransferRequestForm />
+      </Modal>
       <HomeInquiryModal
         onClose={() => setInquiryOpen(false)}
         open={inquiryOpen}
