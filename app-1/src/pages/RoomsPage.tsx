@@ -33,7 +33,7 @@ export const RoomsPage = () => {
         badge="Более 80 номеров"
         description={description}
         eyebrow="Номера и коттеджи"
-        image={typeof hero?.image === "string" ? hero.image : page.heroImage}
+        image={page.heroImage}
         title={title}
       />
       <section

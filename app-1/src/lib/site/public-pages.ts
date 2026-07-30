@@ -5,7 +5,7 @@ import heroImage from "@/assets/alsma/hero.jpg";
 import natureImage from "@/assets/alsma/nature.jpg";
 import offersImage from "@/assets/alsma/offers.png";
 import restaurantImage from "@/assets/alsma/restaurant.jpg";
-import roomsImage from "@/assets/alsma/rooms-hero.jpg";
+import roomsImage from "@/assets/alsma/rooms-hero.webp";
 import spaImage from "@/assets/alsma/spa.jpg";
 
 export type PublicPageKey =
