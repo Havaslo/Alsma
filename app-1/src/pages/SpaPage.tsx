@@ -150,7 +150,7 @@ export const SpaPage = () => {
             >
               <img
                 alt={group.title}
-                className="h-56 w-full object-cover"
+                className="h-72 w-full object-cover"
                 src={group.image}
               />
               <div className="p-7">
