@@ -278,7 +278,7 @@ export const HomeExperienceSections = () => (
                   {description}
                 </p>
                 <a
-                  className="mt-auto inline-flex w-fit rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+                  className="mt-6 inline-flex w-fit rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground md:mt-auto xl:mt-6"
                   href={ROUTES.entertainment}
                 >
                   Подробнее
