@@ -26,6 +26,13 @@ const ceremonyGroups = [
   },
 ] as const;
 
+const spaPrograms = [
+  ["Манго", "скраб + обёртывание + массаж"],
+  ["Шоколад", "скраб + обёртывание + массаж + маска"],
+  ["Водоросли", "скраб + обёртывание + маска + массаж"],
+  ["Франжипани", "скраб + обёртывание + маска + массаж"],
+] as const;
+
 const additionalServices = [
   ["Минерально-молочная ванна «Клеопатра» — 20 мин", "1 300 ₽"],
   ["Жемчужная ванна — 20 мин", "1 000 ₽"],
@@ -143,12 +150,19 @@ export const SpaCeremoniesSection = () => (
           </article>
         ))}
       </div>
-      <article className="mt-6 rounded-3xl bg-page p-7">
-        <h3 className="font-heading text-3xl font-semibold">SPA-программы</h3>
-        <p className="mt-3 text-muted-ui-foreground">
-          Программы «Манго», «Шоколад», «Водоросли» и «Франжипани» включают
-          скраб, обёртывание, массаж и уход. 90 минут — 6 000 ₽.
+      <article className="mt-6 rounded-4xl bg-page p-8 sm:p-10">
+        <h3 className="font-heading text-4xl font-semibold">SPA-программы</h3>
+        <p className="mt-4 text-lg text-muted-ui-foreground">
+          Все программы длятся 90 минут и стоят 6 000 ₽.
         </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {spaPrograms.map(([title, description]) => (
+            <div className="rounded-3xl bg-panel px-6 py-5" key={title}>
+              <strong className="block">{title}</strong>
+              <span className="mt-1 block leading-6">{description}</span>
+            </div>
+          ))}
+        </div>
       </article>
     </div>
   </section>
