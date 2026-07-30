@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import corporateImage from "@/assets/alsma/corporate-checkins.webp";
 import entertainmentKids from "@/assets/alsma/entertainment-kids.jpg";
@@ -13,6 +14,10 @@ import spaBath from "@/assets/alsma/spa-bath-v2.jpg";
 import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
 import spaQuantum from "@/assets/alsma/spa-quantum-v2.jpg";
 import spaceImage from "@/assets/alsma/space-top-view.png";
+import { Form } from "@/components/Form";
+import { Loader } from "@/components/ui/Loader";
+import { Modal } from "@/components/ui/Modal";
+import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { ROUTES } from "@/route-constants";
 
 const spaCards = [
@@ -290,93 +295,204 @@ export const HomeExperienceSections = () => (
   </>
 );
 
-export const HomeContactSections = () => (
-  <>
-    <section className="py-24" id="contacts">
-      <div className="mx-auto grid max-w-[100rem] gap-8 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
-        <div className="rounded-4xl bg-muted-ui/65 p-8 sm:p-10">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Ждем вас в гости
-          </h2>
-          <div className="mt-8 space-y-6 leading-7">
-            <div>
-              <p className="text-xs text-muted-ui-foreground">Адрес</p>
-              <p className="mt-2">
-                Нижегородская область, 35 км от Н. Новгорода
+export const HomeContactSections = () => {
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+
+  return (
+    <>
+      <section className="py-24" id="contacts">
+        <div className="mx-auto grid max-w-[100rem] gap-8 px-4 sm:px-6 lg:grid-cols-[0.92fr_1.08fr]">
+          <div className="rounded-4xl bg-muted-ui/65 p-8 sm:p-10">
+            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+              Ждем вас в гости
+            </h2>
+            <div className="mt-8 space-y-6 leading-7">
+              <div>
+                <p className="text-xs text-muted-ui-foreground">Адрес</p>
+                <p className="mt-2">
+                  Нижегородская область, 35 км от Н. Новгорода
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-ui-foreground">Телефон</p>
+                <a
+                  className="mt-2 block font-medium text-brand"
+                  href="tel:+79302838828"
+                >
+                  +7 930 283-88-28
+                </a>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-ui-foreground">Заезд</p>
+                  <p className="mt-2">с 14:00</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-ui-foreground">Выезд</p>
+                  <p className="mt-2">до 12:00</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-10 rounded-3xl bg-page p-7">
+              <p className="text-xs font-semibold text-brand">
+                Фирменный трансфер
               </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-ui-foreground">Телефон</p>
-              <a
-                className="mt-2 block font-medium text-brand"
-                href="tel:+79302838828"
+              <p className="mt-4 leading-7 text-muted-ui-foreground">
+                Комфорт-класс с персональной встречей, водой в салоне и
+                маршрутом через самые живописные лесные дороги.
+              </p>
+              <button
+                className="mt-6 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+                type="button"
               >
-                +7 930 283-88-28
-              </a>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-ui-foreground">Заезд</p>
-                <p className="mt-2">с 14:00</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-ui-foreground">Выезд</p>
-                <p className="mt-2">до 12:00</p>
-              </div>
+                Заказать трансфер
+              </button>
             </div>
           </div>
-          <div className="mt-10 rounded-3xl bg-page p-7">
-            <p className="text-xs font-semibold text-brand">
-              Фирменный трансфер
+          <iframe
+            allowFullScreen
+            className="h-full min-h-130 w-full rounded-4xl border-0"
+            src="https://yandex.ru/map-widget/v1/?ll=44.113128%2C56.537617&z=16"
+            title="Яндекс Карта с отметкой отеля АЛСМА"
+          />
+        </div>
+      </section>
+
+      <section className="px-4 pt-6 pb-24 sm:px-6">
+        <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground">
+          <img
+            alt=""
+            className="absolute inset-0 size-full object-cover"
+            src={ctaImage}
+          />
+          <div className="absolute inset-0 bg-brand/65" />
+          <div className="relative">
+            <p className="text-xs font-semibold tracking-widest uppercase opacity-75">
+              Поможем выбрать формат отдыха
             </p>
-            <p className="mt-4 leading-7 text-muted-ui-foreground">
-              Комфорт-класс с персональной встречей, водой в салоне и маршрутом
-              через самые живописные лесные дороги.
+            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+              Планируете отдых в АЛСМЕ?
+            </h2>
+            <p className="mx-auto mt-6 max-w-4xl text-lg leading-8 opacity-85">
+              Оставьте заявку, если хотите забронировать номер или узнать
+              подробнее об услугах, SPA, проживании и сценариях отдыха.
             </p>
             <button
-              className="mt-6 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+              className="mt-8 inline-flex rounded-full bg-brand px-8 py-4 text-sm font-semibold text-brand-foreground"
+              onClick={() => setInquiryOpen(true)}
               type="button"
             >
-              Заказать трансфер
+              Подробнее
             </button>
           </div>
         </div>
-        <iframe
-          allowFullScreen
-          className="h-full min-h-130 w-full rounded-4xl border-0"
-          src="https://yandex.ru/map-widget/v1/?ll=44.113128%2C56.537617&z=16"
-          title="Яндекс Карта с отметкой отеля АЛСМА"
-        />
-      </div>
-    </section>
+      </section>
+      <HomeInquiryModal
+        onClose={() => setInquiryOpen(false)}
+        open={inquiryOpen}
+      />
+    </>
+  );
+};
 
-    <section className="px-4 pt-6 pb-24 sm:px-6">
-      <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground">
-        <img
-          alt=""
-          className="absolute inset-0 size-full object-cover"
-          src={ctaImage}
-        />
-        <div className="absolute inset-0 bg-brand/65" />
-        <div className="relative">
-          <p className="text-xs font-semibold tracking-widest uppercase opacity-75">
-            Поможем выбрать формат отдыха
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Планируете отдых в АЛСМЕ?
-          </h2>
-          <p className="mx-auto mt-6 max-w-4xl text-lg leading-8 opacity-85">
-            Оставьте заявку, если хотите забронировать номер или узнать
-            подробнее об услугах, SPA, проживании и сценариях отдыха.
-          </p>
-          <a
-            className="mt-8 inline-flex rounded-full bg-brand px-8 py-4 text-sm font-semibold"
-            href="#booking"
-          >
-            Подробнее
-          </a>
-        </div>
+type HomeInquiryFormValues = {
+  comment: string;
+  email: string;
+  phone: string;
+};
+
+const HomeInquiryModal = ({
+  onClose,
+  open,
+}: {
+  readonly onClose: () => void;
+  readonly open: boolean;
+}) => {
+  const lead = useCreateLead();
+  const form = useForm<HomeInquiryFormValues>({
+    defaultValues: { comment: "", email: "", phone: "" },
+  });
+  const inputClassName =
+    "min-h-15 w-full rounded-2xl border border-line bg-page px-5 py-4 text-page-foreground outline-none placeholder:text-muted-ui-foreground focus:border-brand focus:ring-4 focus:ring-focus/10";
+
+  return (
+    <Modal
+      className="max-w-3xl rounded-4xl"
+      closeLabel="Закрыть форму заявки"
+      onClose={onClose}
+      open={open}
+      title="Забронировать или узнать подробнее"
+    >
+      <div className="-mt-2">
+        <p className="text-sm font-semibold tracking-wide text-brand/60">
+          Заявка на отдых
+        </p>
+        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+          Оставьте контакты, и мы свяжемся с вами, чтобы помочь с бронированием
+          и рассказать подробнее о проживании, SPA и услугах отеля.
+        </p>
       </div>
-    </section>
-  </>
-);
+      <Form
+        className="mt-8 space-y-5"
+        form={form}
+        onSubmit={(values) => {
+          lead.mutate(
+            {
+              comment: values.comment || undefined,
+              email: values.email,
+              formCode: "home-inquiry-modal",
+              formTitle: "Заявка с сайта — CTA-блок на главной странице",
+              phone: values.phone,
+              sourcePage: "home",
+            },
+            { onSuccess: () => form.reset() },
+          );
+        }}
+      >
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block">Номер</span>
+          <input
+            className={inputClassName}
+            placeholder="+7 (___) ___-__-__"
+            type="tel"
+            {...form.register("phone", { required: true })}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block">Почта</span>
+          <input
+            className={inputClassName}
+            placeholder="you@example.com"
+            type="email"
+            {...form.register("email", { required: true })}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block">Комментарий</span>
+          <textarea
+            className="min-h-36 w-full rounded-2xl border border-line bg-page px-5 py-4 text-page-foreground outline-none placeholder:text-muted-ui-foreground focus:border-brand focus:ring-4 focus:ring-focus/10"
+            placeholder="Напишите, хотите ли вы забронировать номер или узнать подробнее об услугах"
+            {...form.register("comment")}
+          />
+        </label>
+        <button
+          className="inline-flex min-h-15 w-full items-center justify-center rounded-full bg-brand px-8 py-4 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90 disabled:opacity-60"
+          disabled={lead.isPending}
+          type="submit"
+        >
+          {lead.isPending ? <Loader size="sm" /> : "Отправить заявку"}
+        </button>
+        {lead.isSuccess && (
+          <p className="text-center text-sm text-brand">
+            Заявка принята. Мы скоро свяжемся с вами.
+          </p>
+        )}
+        {lead.isError && (
+          <p className="text-center text-sm text-destructive">
+            Не удалось отправить заявку. Попробуйте ещё раз.
+          </p>
+        )}
+      </Form>
+    </Modal>
+  );
+};
