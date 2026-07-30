@@ -207,7 +207,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
   },
   rooms: {
     description:
-      "Просторные номера с видами на лес, продуманным интерьером и всем необходимым для отдыха.",
+      "Почувствуйте ритм загородного отдыха: уютные номера, тишина соснового леса и всё необходимое для перезагрузки вдали от городской суеты.",
     eyebrow: "Проживание",
     heroImage: roomsImage,
     highlights: [
