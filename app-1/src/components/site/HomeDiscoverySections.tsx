@@ -10,9 +10,9 @@ import animationImage from "@/assets/alsma/home-animation.jpg";
 import ctaImage from "@/assets/alsma/home-cta.jpg";
 import natureImage from "@/assets/alsma/home-nature.jpg";
 import restaurantImage from "@/assets/alsma/home-restaurant.jpg";
-import spaBath from "@/assets/alsma/spa-bath-v2.jpg";
+import spaProcedures from "@/assets/alsma/spa-procedures.png";
 import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
-import spaQuantum from "@/assets/alsma/spa-quantum-v2.jpg";
+import spaSteam from "@/assets/alsma/spa-steam.png";
 import spaceImage from "@/assets/alsma/space-top-view.png";
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
@@ -24,12 +24,12 @@ const spaCards = [
   [
     "Парение",
     "Мягкий банный ритуал для глубокого расслабления и восстановления.",
-    spaBath,
+    spaSteam,
   ],
   [
     "Аппаратные процедуры",
     "Современные методики для тонуса, восстановления и заботы о теле.",
-    spaQuantum,
+    spaProcedures,
   ],
   [
     "Массаж и SPA-процедуры",
