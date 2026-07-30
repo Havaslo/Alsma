@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
@@ -150,7 +150,12 @@ export const HomeReviewsSection = ({
         Истории вашего отдыха
       </h2>
       <p className="mt-8 text-center text-lg text-muted-ui-foreground">
-        Общий рейтинг <strong className="text-page-foreground">4.9</strong> ·{" "}
+        Общий рейтинг{" "}
+        <Star
+          aria-hidden="true"
+          className="mr-1 inline-block size-5 fill-accent-ui align-[-0.15em] text-accent-ui"
+        />
+        <strong className="text-page-foreground">4.9</strong> ·{" "}
         <strong className="text-page-foreground">1200+ отзывов</strong>
       </p>
       <HorizontalCarousel
