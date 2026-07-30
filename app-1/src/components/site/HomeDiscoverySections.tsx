@@ -206,7 +206,7 @@ export const HomeExperienceSections = () => (
                 className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
                 src={image}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-booking-line/95 via-booking-line/35 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-booking-line via-booking-line/60 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-8">
                 <h3 className="font-heading text-3xl font-semibold">{title}</h3>
                 <ul className="mt-4 space-y-2 font-medium">
