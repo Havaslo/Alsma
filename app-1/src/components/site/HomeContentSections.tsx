@@ -241,7 +241,7 @@ export const HomeRoomsSection = ({
                 {room.price} / ночь
               </p>
               <a
-                className="mt-5 inline-flex rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                className="mt-5 inline-flex justify-center rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
                 href={room.homeButtonHref ?? ROUTES.rooms}
               >
                 {room.homeButtonLabel ?? "Подробнее"}
