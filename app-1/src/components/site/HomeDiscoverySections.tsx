@@ -32,7 +32,7 @@ const spaCards = [
     spaQuantum,
   ],
   [
-    "SPA-программы",
+    "Массаж и SPA-процедуры",
     "Комплексные уходы для перезагрузки, красоты и внутреннего баланса.",
     spaPrograms,
   ],
@@ -161,7 +161,7 @@ export const HomeExperienceSections = () => (
         </div>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
           {spaCards.map(([title, description, image]) => (
-            <article className="overflow-hidden rounded-3xl" key={title}>
+            <article className="rounded-3xl" key={title}>
               <div className="relative h-64 overflow-hidden rounded-3xl">
                 <img
                   alt={title}
