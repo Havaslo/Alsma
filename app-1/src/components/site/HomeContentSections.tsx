@@ -47,7 +47,7 @@ export const HomeRestSection = ({
                 </span>
               ))}
             </div>
-            <div className="mt-auto flex items-end justify-between gap-4 pt-8">
+            <div className="mt-auto flex flex-col items-start gap-4 pt-8 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <span className="text-sm text-muted-ui-foreground">
                   Стоимость программы
