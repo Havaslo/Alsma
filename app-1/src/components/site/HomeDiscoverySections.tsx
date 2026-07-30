@@ -303,26 +303,46 @@ export const HomeContactSections = () => {
               <div>
                 <p className="text-xs text-muted-ui-foreground">Адрес</p>
                 <p className="mt-2">
-                  Нижегородская область, 35 км от Н. Новгорода
+                  Нижегородская обл., г. Бор, д. Васильково, ул. Лесная, д. 7
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-ui-foreground">Телефон</p>
-                <a
-                  className="mt-2 block font-medium text-brand"
-                  href="tel:+79302838828"
-                >
-                  +7 930 283-88-28
-                </a>
+                <p className="text-xs text-muted-ui-foreground">Телефоны</p>
+                <div className="mt-2 space-y-2">
+                  <a
+                    className="block font-medium text-brand"
+                    href="tel:+79302838828"
+                  >
+                    Многоканальный: 8 (930) 283-88-28
+                  </a>
+                  <a
+                    className="block font-medium text-brand"
+                    href="tel:+79200131761"
+                  >
+                    Администратор: 8 (920) 013-17-61
+                  </a>
+                  <a
+                    className="block font-medium text-brand"
+                    href="tel:+79200343579"
+                  >
+                    Групповые заезды: 8 (920) 034-35-79
+                  </a>
+                  <a
+                    className="block font-medium text-brand"
+                    href="tel:+79867255777"
+                  >
+                    Бронирование: 8 (986) 725-57-77
+                  </a>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-ui-foreground">Заезд</p>
-                  <p className="mt-2">с 14:00</p>
+                  <p className="mt-2">с 16:00</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-ui-foreground">Выезд</p>
-                  <p className="mt-2">до 12:00</p>
+                  <p className="mt-2">до 14:00</p>
                 </div>
               </div>
             </div>
