@@ -33,7 +33,7 @@ export const HardwareProceduresPage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto max-w-3xl text-center">

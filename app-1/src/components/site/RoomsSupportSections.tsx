@@ -17,7 +17,7 @@ export const RoomsSupportSections = ({
 
   return (
     <>
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
         <div className="grid gap-8 rounded-4xl bg-panel p-8 sm:p-12 lg:grid-cols-2">
           <div>
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
@@ -58,7 +58,7 @@ export const RoomsSupportSections = ({
       </section>
 
       <section className="bg-page px-5 py-20 text-brand-foreground sm:px-8">
-        <div className="mx-auto max-w-7xl rounded-4xl bg-brand px-8 py-10 shadow-xl sm:px-12 sm:py-12">
+        <div className="mx-auto max-w-[100rem] rounded-4xl bg-brand px-8 py-10 shadow-xl sm:px-12 sm:py-12">
           <p className="text-sm font-semibold tracking-widest uppercase opacity-70">
             AI-рекомендатор
           </p>

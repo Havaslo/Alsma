@@ -54,7 +54,7 @@ const additionalServices = [
 
 export const SpaMembershipSection = () => (
   <section className="px-5 pb-10 sm:px-8">
-    <div className="mx-auto grid max-w-7xl gap-8 rounded-4xl bg-brand px-7 py-10 text-brand-foreground sm:px-10 lg:grid-cols-[1fr_auto] lg:items-center lg:px-14">
+    <div className="mx-auto grid max-w-[100rem] gap-8 rounded-4xl bg-brand px-7 py-10 text-brand-foreground sm:px-10 lg:grid-cols-[1fr_auto] lg:items-center lg:px-14">
       <div className="max-w-3xl">
         <p className="text-sm font-semibold tracking-widest uppercase opacity-65">
           Абонемент на SPA
@@ -80,7 +80,7 @@ export const SpaMembershipSection = () => (
 
 export const SpaAdditionalServicesSection = () => (
   <section className="px-5 py-24 sm:px-8">
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-[100rem]">
       <div className="text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           Посещение и сервис
@@ -115,7 +115,7 @@ export const SpaAdditionalServicesSection = () => (
 
 export const SpaCeremoniesSection = () => (
   <section className="bg-panel py-24">
-    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           Ритуалы и церемонии
@@ -155,7 +155,7 @@ export const SpaCeremoniesSection = () => (
 );
 
 export const SpaCompanySection = () => (
-  <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+  <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
     <div className="mx-auto max-w-3xl text-center">
       <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
         SPA для компаний
@@ -191,7 +191,7 @@ export const SpaCompanySection = () => (
 
 export const SpaPromotionsSection = () => (
   <section className="py-24">
-    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
       <div className="text-center">
         <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
           Актуальные акции
@@ -236,7 +236,7 @@ export const SpaPromotionsSection = () => (
 
 export const SpaInformationSections = () => (
   <>
-    <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+    <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
       <article className="overflow-hidden rounded-4xl bg-panel lg:grid lg:grid-cols-2">
         <img
           alt="Кафе Минерал"
@@ -275,7 +275,7 @@ export const SpaInformationSections = () => (
     </section>
     <SpaAdditionalServicesSection />
     <section className="bg-panel py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           Важно знать
         </p>

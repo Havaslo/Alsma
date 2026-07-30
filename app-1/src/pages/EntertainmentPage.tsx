@@ -77,7 +77,7 @@ export const EntertainmentPage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="text-center">
@@ -122,7 +122,7 @@ export const EntertainmentPage = () => {
         </div>
       </section>
       <section className="py-20">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold text-brand">Круглый год</p>
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
@@ -176,7 +176,7 @@ export const EntertainmentPage = () => {
           </HorizontalCarousel>
         </div>
       </section>
-      <section className="mx-auto max-w-screen-2xl px-5 py-20 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-20 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand">Каждый день</p>
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
@@ -214,7 +214,7 @@ export const EntertainmentPage = () => {
         </div>
       </section>
       <section className="bg-panel py-20">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Для семей с детьми
@@ -258,7 +258,7 @@ export const EntertainmentPage = () => {
         </div>
       </section>
       <section className="py-20">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold text-brand">
               Для активного отдыха

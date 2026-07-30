@@ -35,7 +35,10 @@ export const SpaPage = () => {
         image={typeof hero?.image === "string" ? hero.image : spaHeroImage}
         title={title}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+      <section
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
+        id="details"
+      >
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
             Локации SPA-центра
@@ -88,7 +91,7 @@ export const SpaPage = () => {
       </section>
       <SpaMembershipSection />
       <section className="py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
               Массажные процедуры
@@ -130,7 +133,7 @@ export const SpaPage = () => {
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Минеральное восстановление
@@ -174,7 +177,7 @@ export const SpaPage = () => {
       <SpaCompanySection />
       <SpaPromotionsSection />
       <section className="px-5 py-20 sm:px-8" id="spa-cta">
-        <div className="mx-auto max-w-7xl rounded-4xl bg-panel px-7 py-9 sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-7 py-9 sm:px-10 lg:px-12">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             <div>
               <h2 className="font-heading text-4xl font-semibold sm:text-5xl">

@@ -77,7 +77,7 @@ export const AccountPage = () => {
   return (
     <main className="min-h-screen bg-page px-4 pt-32 pb-20">
       <SiteHeader light />
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[100rem]">
         <section className="flex flex-col justify-between gap-6 rounded-4xl border border-line bg-panel p-7 sm:flex-row sm:items-center">
           <div className="flex items-center gap-5">
             <div className="grid size-20 place-items-center rounded-full bg-page text-3xl font-semibold text-brand">

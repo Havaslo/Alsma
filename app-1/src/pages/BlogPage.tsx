@@ -42,7 +42,7 @@ export const BlogPage = () => {
         title={typeof hero?.title === "string" ? hero.title : "Блог"}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto max-w-4xl text-center">

@@ -37,7 +37,10 @@ export const RoomsPage = () => {
         image={typeof hero?.image === "string" ? hero.image : page.heroImage}
         title={title}
       />
-      <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8" id="details">
+      <section
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
+        id="details"
+      >
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
             Варианты размещения
@@ -54,7 +57,7 @@ export const RoomsPage = () => {
         </div>
       </section>
       <section className="bg-panel py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
             Сравнительная таблица категорий
           </h2>

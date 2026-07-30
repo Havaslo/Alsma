@@ -69,7 +69,7 @@ export const SiteHeader = ({
   return (
     <header
       className={cn(
-        "fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300",
+        "fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[100rem] -translate-x-1/2 items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300",
         useLightStyle
           ? "border-brand/10 bg-page text-brand shadow-xl"
           : "border-brand-foreground/15 bg-brand-foreground/5 text-brand-foreground",

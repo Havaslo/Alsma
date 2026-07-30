@@ -33,7 +33,7 @@ export const CelebrationsPage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto max-w-3xl text-center">
@@ -84,7 +84,7 @@ export const CelebrationsPage = () => {
           ))}
         </div>
       </section>
-      <section className="mx-auto max-w-screen-2xl px-5 pb-24 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 pb-24 sm:px-8">
         <div className="relative overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground sm:px-10">
           <img
             alt=""
@@ -116,7 +116,7 @@ export const CelebrationsPage = () => {
         </div>
       </section>
       <section className="bg-panel py-24">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Галерея атмосферы

@@ -31,7 +31,7 @@ export const SocialLinksSection = ({
   title,
 }: SocialLinksSectionProps) => (
   <section className="bg-page pb-24">
-    <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+    <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
       <div className="grid gap-6 rounded-4xl bg-panel px-8 py-9 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
           <p className="text-xs font-semibold text-brand/70">

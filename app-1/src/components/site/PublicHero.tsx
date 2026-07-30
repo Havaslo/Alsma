@@ -21,7 +21,7 @@ export const PublicHero = ({
       source={image}
     />
     <div className="absolute inset-0 bg-gradient-to-b from-page-foreground/20 via-page-foreground/30 to-page-foreground/85" />
-    <div className="relative mx-auto w-full max-w-7xl px-5 pt-32 pb-16 text-center sm:px-8 lg:pt-36 lg:pb-20">
+    <div className="relative mx-auto w-full max-w-[100rem] px-5 pt-32 pb-16 text-center sm:px-8 lg:pt-36 lg:pb-20">
       <p className="text-sm font-bold tracking-widest text-brand-foreground/75 uppercase">
         {eyebrow}
       </p>

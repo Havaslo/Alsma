@@ -57,7 +57,7 @@ export const AboutPage = () => {
       />
 
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto text-center">
@@ -99,7 +99,7 @@ export const AboutPage = () => {
       </section>
 
       <section className="px-5 py-24 sm:px-8">
-        <div className="mx-auto max-w-screen-2xl rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
               Контакты и расположение
@@ -168,7 +168,7 @@ export const AboutPage = () => {
       />
 
       <section className="px-5 py-24 sm:px-8">
-        <div className="mx-auto max-w-screen-2xl rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
             Трансфер до отеля
           </h2>
@@ -217,7 +217,7 @@ export const AboutPage = () => {
         </div>
       </section>
 
-      <section className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Для вашего удобства

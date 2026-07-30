@@ -41,7 +41,7 @@ export const AllInclusivePage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="mx-auto max-w-3xl text-center">
@@ -76,7 +76,7 @@ export const AllInclusivePage = () => {
         </div>
       </section>
       <section className="py-24">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
             Что входит в питание
           </h2>
@@ -113,7 +113,7 @@ export const AllInclusivePage = () => {
         </div>
       </section>
       <section className="px-5 pb-20 sm:px-8">
-        <div className="mx-auto max-w-screen-2xl">
+        <div className="mx-auto max-w-[100rem]">
           <FeatureSplit format={FEATURED_FORMATS[0]} />
           <p className="mt-8 rounded-3xl bg-brand px-8 py-7 text-lg leading-8 text-brand-foreground">
             Гости особенно отмечают, что питание здесь не стремится удивить
@@ -133,7 +133,7 @@ export const AllInclusivePage = () => {
         eyebrow="Вечерний бар"
         format={FEATURED_FORMATS[2]}
       />
-      <section className="mx-auto max-w-screen-2xl px-5 py-20 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-20 sm:px-8">
         <FeatureSplit format={FEATURED_FORMATS[3]} reverse />
       </section>
       <AllInclusiveFinalSection />
@@ -184,7 +184,7 @@ const DetailShowcase = ({
   format: FeaturedFormat;
 }) => (
   <section className="px-5 py-20 sm:px-8">
-    <div className="mx-auto max-w-screen-2xl">
+    <div className="mx-auto max-w-[100rem]">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
           {eyebrow}

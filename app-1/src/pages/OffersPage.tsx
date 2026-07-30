@@ -107,7 +107,7 @@ export const OffersPage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
         <div className="text-center">
@@ -165,7 +165,7 @@ export const OffersPage = () => {
         </div>
       </section>
       <section className="bg-panel py-24">
-        <div className="mx-auto max-w-screen-2xl px-5 sm:px-8">
+        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
               Пакетные предложения
@@ -230,7 +230,7 @@ export const OffersPage = () => {
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-screen-2xl px-5 py-24 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Календарь акций
