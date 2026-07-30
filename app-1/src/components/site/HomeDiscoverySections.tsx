@@ -264,12 +264,12 @@ export const HomeExperienceSections = () => (
         <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {entertainment.map(([title, description, image]) => (
             <article
-              className="flex overflow-hidden rounded-3xl bg-panel xl:flex-col"
+              className="flex flex-col overflow-hidden rounded-3xl bg-panel md:flex-row xl:flex-col"
               key={title}
             >
               <img
                 alt={title}
-                className="w-2/5 object-cover xl:h-48 xl:w-full"
+                className="h-48 w-full object-cover md:h-auto md:w-2/5 xl:h-48 xl:w-full"
                 src={image}
               />
               <div className="flex flex-1 flex-col p-6">
