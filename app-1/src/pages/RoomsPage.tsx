@@ -14,8 +14,7 @@ export const RoomsPage = () => {
     (item) => item.itemKey === "hero",
   )?.content;
   const title = typeof hero?.title === "string" ? hero.title : page.title;
-  const description =
-    typeof hero?.description === "string" ? hero.description : page.description;
+  const description = page.description;
   const rooms = getRoomCards(content.data?.items)
     .filter((room) => room.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
