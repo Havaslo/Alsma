@@ -203,7 +203,7 @@ export const SpaPromotionsSection = () => (
       <div className="mt-12 grid gap-6 lg:grid-cols-3">
         {SPA_PROMOTIONS.map((promotion) => (
           <article
-            className="overflow-hidden rounded-3xl bg-page"
+            className="overflow-hidden rounded-3xl border border-line bg-page"
             key={promotion.title}
           >
             <img
