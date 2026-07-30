@@ -271,15 +271,17 @@ export const HomeExperienceSections = () => (
                 <p className="mt-3 leading-7 text-muted-ui-foreground">
                   {description}
                 </p>
-                <a
-                  className="mt-6 inline-flex w-fit rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground md:mt-auto xl:mt-6"
-                  href={ROUTES.entertainment}
-                >
-                  Подробнее
-                </a>
               </div>
             </article>
           ))}
+        </div>
+        <div className="mt-10 text-center">
+          <a
+            className="inline-flex rounded-full bg-brand px-8 py-4 text-sm font-semibold text-brand-foreground"
+            href={ROUTES.entertainment}
+          >
+            Подробнее
+          </a>
         </div>
       </div>
     </section>
