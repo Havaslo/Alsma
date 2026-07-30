@@ -37,7 +37,7 @@ export const AccountPage = () => {
   if (!guest) return <Navigate replace to={ROUTES.login} />;
   if (guest.requiresNameCompletion)
     return (
-      <main className="min-h-screen bg-page px-4 pt-32">
+      <main className="min-h-screen bg-page px-4 pt-24 sm:pt-32">
         <SiteHeader light />
         <section className="mx-auto max-w-xl rounded-4xl border border-line bg-panel p-8 shadow-xl">
           <h1 className="font-heading text-4xl font-semibold text-brand">
@@ -75,7 +75,7 @@ export const AccountPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-page px-4 pt-32 pb-20">
+    <main className="min-h-screen bg-page px-4 pt-24 pb-20 sm:pt-32">
       <SiteHeader light />
       <div className="mx-auto max-w-[100rem]">
         <section className="flex flex-col justify-between gap-6 rounded-4xl border border-line bg-panel p-7 sm:flex-row sm:items-center">

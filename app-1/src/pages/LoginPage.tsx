@@ -47,7 +47,7 @@ export const LoginPage = () => {
   });
 
   return (
-    <main className="min-h-screen bg-page px-4 pt-32 pb-16 text-page-foreground">
+    <main className="min-h-screen bg-page px-4 pt-24 pb-16 text-page-foreground sm:pt-32">
       <SiteHeader light />
       <section className="mx-auto w-full max-w-xl rounded-4xl border border-line bg-panel p-6 shadow-xl sm:p-9">
         {!pending ? (

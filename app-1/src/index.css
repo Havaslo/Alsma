@@ -129,3 +129,29 @@
     display: none;
   }
 }
+
+/* Keep the mobile rhythm compact and consistent while preserving desktop spacing. */
+@media (max-width: 639px) {
+  .py-24,
+  .py-20 {
+    padding-block: 3rem;
+  }
+
+  .pb-24,
+  .pb-20 {
+    padding-bottom: 3rem;
+  }
+
+  .mt-14,
+  .mt-12 {
+    margin-top: 2rem;
+  }
+
+  .mt-10 {
+    margin-top: 1.5rem;
+  }
+
+  .space-y-10 > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
