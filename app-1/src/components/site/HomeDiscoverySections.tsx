@@ -13,7 +13,7 @@ import ctaImage from "@/assets/alsma/home-cta.jpg";
 import spaProcedures from "@/assets/alsma/spa-procedures.png";
 import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
 import spaSteam from "@/assets/alsma/spa-steam.png";
-import spaceImage from "@/assets/alsma/space-top-view.png";
+import spaceImage from "@/assets/alsma/space-top-view-new.webp";
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
