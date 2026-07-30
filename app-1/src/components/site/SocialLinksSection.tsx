@@ -1,6 +1,6 @@
 import { ExternalLink, MessageCircle } from "lucide-react";
 
-const VkontakteIcon = () => (
+export const VkontakteIcon = () => (
   <svg aria-hidden="true" className="size-5 fill-current" viewBox="0 0 24 24">
     <path d="M12.8 17.2c-5.7 0-9-3.9-9.2-10.4h2.9c.1 4.8 2.2 6.8 3.9 7.2V6.8h2.7v4.1c1.6-.2 3.4-2 4-4.1h2.7c-.45 2.5-2.4 4.3-3.7 5.2 1.3.7 3.5 2.3 4.3 5.2h-3c-.6-2-2.3-3.5-4.3-3.7v3.7h-.3Z" />
   </svg>

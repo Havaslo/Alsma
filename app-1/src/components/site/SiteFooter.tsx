@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { MapPin, MessageCircle } from "lucide-react";
 
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import { ROUTES } from "@/route-constants";
+
+import { VkontakteIcon } from "./SocialLinksSection";
 
 const navigation = [
   ["Номера", ROUTES.rooms],
@@ -57,31 +59,34 @@ export const SiteFooter = () => (
         <p className="text-sm font-semibold tracking-widest text-brand-foreground/55 uppercase">
           Связаться
         </p>
-        <div className="mt-5 space-y-4 text-brand-foreground/80">
-          <a className="flex items-center gap-2" href="tel:+79867255777">
-            <Phone className="size-4" /> Позвонить
-          </a>
+        <div className="mt-5 flex gap-3">
           <a
-            className="flex items-center gap-2"
-            href="mailto:info@alsma-baza.ru"
-          >
-            <Mail className="size-4" /> Написать
-          </a>
-          <a href="https://vk.com/alsma_nnov" rel="noreferrer" target="_blank">
-            ВКонтакте ↗
-          </a>
-          <a
-            className="block"
-            href="https://t.me/alsma_hotel"
+            aria-label="ВКонтакте"
+            className="grid size-11 place-items-center rounded-full bg-brand-foreground/10 transition hover:bg-brand-foreground/20"
+            href="https://vk.com/alsma_nnov"
             rel="noreferrer"
             target="_blank"
+            title="ВКонтакте"
           >
-            Telegram ↗
+            <VkontakteIcon />
           </a>
-          <Link className="block" to={ROUTES.privacy}>
-            Политика конфиденциальности
-          </Link>
+          <a
+            aria-label="MAX"
+            className="grid size-11 place-items-center rounded-full bg-brand-foreground/10 transition hover:bg-brand-foreground/20"
+            href="https://web.max.ru/158586418"
+            rel="noreferrer"
+            target="_blank"
+            title="MAX"
+          >
+            <MessageCircle className="size-5" />
+          </a>
         </div>
+        <Link
+          className="mt-6 block text-sm text-brand-foreground/80 transition hover:text-brand-foreground"
+          to={ROUTES.privacy}
+        >
+          Политика конфиденциальности
+        </Link>
       </div>
       <div>
         <p className="text-sm font-semibold tracking-widest text-brand-foreground/55 uppercase">
