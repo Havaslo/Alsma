@@ -4,41 +4,17 @@ import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 import type { RoomCategory } from "@/lib/site/rooms";
 
+type GuestCounts = {
+  readonly adults: string;
+  readonly children: string;
+  readonly infants: string;
+};
+
 const questions = [
   {
     description:
-      "Это поможет сразу исключить слишком маленькие или слишком большие варианты.",
-    options: [
-      [
-        "2",
-        "1–2 гостя",
-        "Для уединенного отдыха, романтической поездки или SPA-выходных.",
-      ],
-      ["4", "3–4 гостя", "Подходит для семьи или небольшой компании."],
-      [
-        "6",
-        "5–6 гостей",
-        "Если важно разместиться всем вместе и сохранить приватность.",
-      ],
-    ],
-    title: "Сколько гостей планирует поездку?",
-  },
-  {
-    description:
-      "Выберите вариант, который лучше всего описывает вашу компанию.",
-    options: [
-      ["kids", "Есть дети", "Нужнее простор, удобный быт и спокойный режим."],
-      [
-        "teens",
-        "Подростки",
-        "Важен баланс между активностью и личным пространством.",
-      ],
-      [
-        "adults",
-        "Только взрослые",
-        "Можно сместить акцент на приватность, вид и SPA.",
-      ],
-    ],
+      "Укажите количество взрослых, детей и младенцев. Для детей и младенцев возраст уже указан в подписи.",
+    options: [],
     title: "Кто едет с вами?",
   },
   {
@@ -68,12 +44,18 @@ const questions = [
     title: "Какой формат отдыха вы хотите?",
   },
   {
-    description: "Главный приоритет повлияет на итоговую рекомендацию.",
+    description:
+      "Можно выбрать до трех приоритетов — это повлияет на итоговую подборку.",
     options: [
       [
         "view",
+        "Вид на реку",
+        "Для более выразительных видов и атмосферы загородного ретрита.",
+      ],
+      [
+        "panorama",
         "Панорамный вид",
-        "Больше света, воздуха и красивой перспективы.",
+        "Если хочется больше света, воздуха и красивой перспективы.",
       ],
       [
         "spa",
@@ -95,6 +77,12 @@ const questions = [
   },
 ] as const;
 
+const guestFields = [
+  ["adults", "Взрослый", ""] as const,
+  ["children", "Ребенок", "2–12 лет"] as const,
+  ["infants", "Младенец", "0–2 года"] as const,
+];
+
 export const RoomRecommendationQuiz = ({
   onClose,
   open,
@@ -105,31 +93,40 @@ export const RoomRecommendationQuiz = ({
   rooms: readonly RoomCategory[];
 }) => {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState([
-    "2",
-    "adults",
-    "romantic",
-    "privacy",
-  ]);
+  const [guests, setGuests] = useState<GuestCounts>({
+    adults: "2",
+    children: "1",
+    infants: "1",
+  });
+  const [answers, setAnswers] = useState(["", "romantic", "privacy"]);
   const [showResult, setShowResult] = useState(false);
   const question = questions[step];
+  const totalGuests = Object.values(guests).reduce(
+    (total, count) => total + Number(count || 0),
+    0,
+  );
   const recommendedRooms = [...rooms]
     .map((room, index) => {
       const roomText =
         `${room.title} ${room.description} ${room.amenities.join(" ")}`.toLocaleLowerCase(
           "ru",
         );
-      const capacity = Number(room.capacity.match(/\d+/g)?.at(-1) ?? 0);
+      const capacity = Math.max(
+        ...(room.capacity.match(/\d+/g)?.map(Number) ?? [0]),
+      );
       const area = Number(room.area.match(/\d+/)?.[0] ?? 0);
       let score = rooms.length - index;
 
-      if (capacity >= Number(answers[0])) score += 3;
-      if (answers[2] === "family" && capacity >= 4) score += 2;
-      if (answers[2] === "spa" && roomText.includes("spa")) score += 2;
-      if (answers[3] === "view" && /вид|панорам|лес/.test(roomText)) score += 3;
-      if (answers[3] === "privacy" && /отдельн|уедин|приват/.test(roomText))
+      if (capacity >= totalGuests) score += 3;
+      if (totalGuests > capacity) score -= 4;
+      if (answers[1] === "family" && capacity >= 4) score += 2;
+      if (answers[1] === "spa" && roomText.includes("spa")) score += 2;
+      if (answers[2] === "view" && /вид|панорам|лес/.test(roomText)) score += 3;
+      if (answers[2] === "panorama" && /панорам|вид|лес/.test(roomText))
         score += 3;
-      if (answers[3] === "space" && area >= 40) score += 3;
+      if (answers[2] === "privacy" && /отдельн|уедин|приват/.test(roomText))
+        score += 3;
+      if (answers[2] === "space" && area >= 40) score += 3;
 
       return { index, room, score };
     })
@@ -139,7 +136,16 @@ export const RoomRecommendationQuiz = ({
 
   const reset = () => {
     setStep(0);
+    setGuests({ adults: "2", children: "1", infants: "1" });
+    setAnswers(["", "romantic", "privacy"]);
     setShowResult(false);
+  };
+
+  const updateGuestCount = (field: keyof GuestCounts, value: string) => {
+    setGuests((current) => ({
+      ...current,
+      [field]: value.replace(/\D/g, "").slice(0, 2),
+    }));
   };
 
   return (
@@ -193,7 +199,7 @@ export const RoomRecommendationQuiz = ({
         </div>
       ) : (
         <div>
-          <div className="mb-8 grid grid-cols-4 gap-3">
+          <div className="mb-8 grid grid-cols-3 gap-3">
             {questions.map((item, index) => (
               <span
                 className={cn(
@@ -213,32 +219,70 @@ export const RoomRecommendationQuiz = ({
           <p className="mt-4 text-muted-ui-foreground">
             {question.description}
           </p>
-          <div className="mt-6 space-y-3">
-            {question.options.map(([value, label, description]) => (
-              <button
-                className={cn(
-                  "block w-full rounded-2xl border bg-page px-6 py-5 text-left transition",
-                  answers[step] === value
-                    ? "border-brand bg-brand/5"
-                    : "border-line hover:border-brand/40",
-                )}
-                key={value}
-                onClick={() =>
-                  setAnswers((current) =>
-                    current.map((answer, index) =>
-                      index === step ? value : answer,
-                    ),
-                  )
-                }
-                type="button"
-              >
-                <strong className="block text-lg">{label}</strong>
-                <span className="mt-2 block text-sm text-muted-ui-foreground">
-                  {description}
-                </span>
-              </button>
-            ))}
-          </div>
+          {step === 0 ? (
+            <div className="mt-6 rounded-3xl border border-line p-6">
+              <strong className="block text-lg">Состав гостей</strong>
+              <p className="mt-2 text-muted-ui-foreground">
+                Количество можно указать отдельно для каждого типа гостей,
+                включая ноль.
+              </p>
+              <div className="mt-5 space-y-4">
+                {guestFields.map(([field, label, hint]) => (
+                  <label
+                    className="flex min-h-28 items-center justify-between gap-5 rounded-2xl border border-line px-5 py-4"
+                    key={field}
+                  >
+                    <span>
+                      <strong className="block text-lg">{label}</strong>
+                      {hint && (
+                        <span className="mt-1 block text-sm text-muted-ui-foreground">
+                          {hint}
+                        </span>
+                      )}
+                    </span>
+                    <input
+                      aria-label={`Количество: ${label.toLocaleLowerCase("ru")}`}
+                      className="h-16 w-28 rounded-full border border-line bg-page px-4 text-center text-lg transition outline-none focus:border-brand focus:ring-4 focus:ring-focus/20"
+                      inputMode="numeric"
+                      min="0"
+                      onChange={(event) =>
+                        updateGuestCount(field, event.target.value)
+                      }
+                      type="number"
+                      value={guests[field]}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {question.options.map(([value, label, description]) => (
+                <button
+                  className={cn(
+                    "block w-full rounded-2xl border bg-page px-6 py-5 text-left transition",
+                    answers[step] === value
+                      ? "border-brand bg-brand/5"
+                      : "border-line hover:border-brand/40",
+                  )}
+                  key={value}
+                  onClick={() =>
+                    setAnswers((current) =>
+                      current.map((answer, index) =>
+                        index === step ? value : answer,
+                      ),
+                    )
+                  }
+                  type="button"
+                >
+                  <strong className="block text-lg">{label}</strong>
+                  <span className="mt-2 block text-sm text-muted-ui-foreground">
+                    {description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="mt-7 flex items-center justify-between border-t border-line pt-5">
             {step > 0 ? (
               <button
