@@ -83,17 +83,27 @@ const entertainment = [
 ] as const;
 
 const mapMarkers = [
-  { label: "Спортивная площадка", position: "top-[26%] left-[38%]" },
-  { label: "SPA-комплекс", position: "top-[51%] left-[60%]" },
-  { label: "Ресторан", position: "top-[45%] left-[71%]" },
-  { label: "Главный корпус", position: "top-[42%] left-[80%]" },
-  { label: "Парковка", position: "top-[42%] left-[90%]" },
-  { label: "Коттедж у реки", position: "top-[62%] left-[9%]" },
-  { label: "Лесной коттедж", position: "top-[64%] left-[18%]" },
-  { label: "Семейный коттедж", position: "top-[61%] left-[29%]" },
-  { label: "Банный дом", position: "top-[75%] left-[56%]" },
-  { label: "Летний павильон", position: "top-[73%] left-[66%]" },
-  { label: "Пляж", position: "top-[71%] left-[80%]" },
+  { label: "Волейбольное поле", position: "top-[23.8%] left-[39%]" },
+  { label: "Диско-зал", position: "top-[37.7%] left-[71.5%]" },
+  { label: "SPA-Центр с бассейном", position: "top-[33.4%] left-[78.6%]" },
+  { label: "Паркинг", position: "top-[39.7%] left-[88.9%]" },
+  { label: "Центр здоровья", position: "top-[56.8%] left-[10.1%]" },
+  { label: "Жилой корпус №4", position: "top-[60.2%] left-[19.2%]" },
+  { label: "Жилой корпус №3", position: "top-[57.1%] left-[29.4%]" },
+  { label: "Спортивная площадка", position: "top-[49.7%] left-[41.8%]" },
+  { label: "Жилой корпус №1", position: "top-[41.7%] left-[59.1%]" },
+  { label: "Открытый бассейн", position: "top-[46.1%] left-[76.3%]" },
+  { label: "Эко тропы", position: "top-[73.6%] left-[48.6%]" },
+  {
+    label: "Коттедж “Русская Баня”",
+    position: "top-[74.8%] left-[59.4%]",
+  },
+  { label: "Купол", position: "top-[62.4%] left-[63.3%]" },
+  { label: "Купол", position: "top-[61.9%] left-[73.9%]" },
+  { label: "Рыбалка", position: "top-[56.2%] left-[91.4%]" },
+  { label: "Финская сауна", position: "top-[72.8%] left-[69.4%]" },
+  { label: "Пляж", position: "top-[69%] left-[80.2%]" },
+  { label: "Шатер", position: "top-[84.2%] left-[66.3%]" },
 ] as const;
 
 const HomeMapSection = () => (
@@ -112,7 +122,7 @@ const HomeMapSection = () => (
           {mapMarkers.map((marker) => (
             <div
               className={`group absolute -translate-x-1/2 -translate-y-1/2 ${marker.position}`}
-              key={marker.label}
+              key={marker.position}
             >
               <button
                 aria-label={marker.label}
