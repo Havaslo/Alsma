@@ -168,9 +168,6 @@ export const HomeExperienceSections = () => (
                   className="size-full object-cover"
                   src={image}
                 />
-                <span className="absolute top-4 left-4 rounded-full bg-panel/95 px-4 py-2 text-xs font-semibold tracking-widest text-brand uppercase">
-                  дневное пребывание
-                </span>
               </div>
               <h3 className="mt-5 font-heading text-2xl font-semibold">
                 {title}
