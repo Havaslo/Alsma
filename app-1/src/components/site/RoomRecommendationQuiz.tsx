@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 import type { RoomCategory } from "@/lib/site/rooms";
+import { ROUTES } from "@/route-constants";
 
 type GuestCounts = {
   readonly adults: string;
@@ -12,8 +13,7 @@ type GuestCounts = {
 
 const questions = [
   {
-    description:
-      "Укажите количество взрослых, детей и младенцев. Для детей и младенцев возраст уже указан в подписи.",
+    description: "",
     options: [],
     title: "Кто едет с вами?",
   },
@@ -152,6 +152,34 @@ export const RoomRecommendationQuiz = ({
     <Modal
       className="max-w-4xl rounded-4xl"
       closeLabel="Закрыть подбор номера"
+      footer={
+        !showResult && (
+          <div className="flex w-full items-center justify-between gap-3">
+            {step > 0 ? (
+              <button
+                className="min-h-11 rounded-2xl border border-line px-6 py-3 font-semibold"
+                onClick={() => setStep((current) => current - 1)}
+                type="button"
+              >
+                Назад
+              </button>
+            ) : (
+              <span />
+            )}
+            <button
+              className="min-h-11 rounded-2xl bg-brand px-8 py-3 font-semibold text-brand-foreground"
+              onClick={() =>
+                step === questions.length - 1
+                  ? setShowResult(true)
+                  : setStep((current) => current + 1)
+              }
+              type="button"
+            >
+              {step === questions.length - 1 ? "Показать номера" : "Дальше"}
+            </button>
+          </div>
+        )
+      }
       onClose={onClose}
       open={open}
       title="Подбор идеального номера"
@@ -166,8 +194,9 @@ export const RoomRecommendationQuiz = ({
           </h3>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {recommendedRooms.map((room) => (
-              <article
-                className="overflow-hidden rounded-3xl border border-line bg-page"
+              <a
+                className="group block overflow-hidden rounded-3xl border border-line bg-page transition hover:-translate-y-1 hover:border-brand focus-visible:ring-4 focus-visible:ring-focus/20 focus-visible:outline-none"
+                href={`${ROUTES.home}#booking`}
                 key={room.title}
               >
                 <img
@@ -186,7 +215,7 @@ export const RoomRecommendationQuiz = ({
                     {room.price} / ночь
                   </p>
                 </div>
-              </article>
+              </a>
             ))}
           </div>
           <button
@@ -216,44 +245,39 @@ export const RoomRecommendationQuiz = ({
           <h3 className="mt-5 font-heading text-3xl font-semibold">
             {question.title}
           </h3>
-          <p className="mt-4 text-muted-ui-foreground">
-            {question.description}
-          </p>
+          {question.description && (
+            <p className="mt-4 text-muted-ui-foreground">
+              {question.description}
+            </p>
+          )}
           {step === 0 ? (
-            <div className="mt-6 rounded-3xl border border-line p-6">
-              <strong className="block text-lg">Состав гостей</strong>
-              <p className="mt-2 text-muted-ui-foreground">
-                Количество можно указать отдельно для каждого типа гостей,
-                включая ноль.
-              </p>
-              <div className="mt-5 space-y-4">
-                {guestFields.map(([field, label, hint]) => (
-                  <label
-                    className="flex min-h-28 items-center justify-between gap-5 rounded-2xl border border-line px-5 py-4"
-                    key={field}
-                  >
-                    <span>
-                      <strong className="block text-lg">{label}</strong>
-                      {hint && (
-                        <span className="mt-1 block text-sm text-muted-ui-foreground">
-                          {hint}
-                        </span>
-                      )}
-                    </span>
-                    <input
-                      aria-label={`Количество: ${label.toLocaleLowerCase("ru")}`}
-                      className="h-16 w-28 rounded-full border border-line bg-page px-4 text-center text-lg transition outline-none focus:border-brand focus:ring-4 focus:ring-focus/20"
-                      inputMode="numeric"
-                      min="0"
-                      onChange={(event) =>
-                        updateGuestCount(field, event.target.value)
-                      }
-                      type="number"
-                      value={guests[field]}
-                    />
-                  </label>
-                ))}
-              </div>
+            <div className="mt-6 space-y-4">
+              {guestFields.map(([field, label, hint]) => (
+                <label
+                  className="flex min-h-28 items-center justify-between gap-5 rounded-2xl border border-line bg-page px-5 py-4 shadow-sm shadow-page-foreground/5"
+                  key={field}
+                >
+                  <span>
+                    <strong className="block text-lg">{label}</strong>
+                    {hint && (
+                      <span className="mt-1 block text-sm text-muted-ui-foreground">
+                        {hint}
+                      </span>
+                    )}
+                  </span>
+                  <input
+                    aria-label={`Количество: ${label.toLocaleLowerCase("ru")}`}
+                    className="h-16 w-28 rounded-full border border-line bg-page px-4 text-center text-lg transition outline-none focus:border-brand focus:ring-4 focus:ring-focus/20"
+                    inputMode="numeric"
+                    min="0"
+                    onChange={(event) =>
+                      updateGuestCount(field, event.target.value)
+                    }
+                    type="number"
+                    value={guests[field]}
+                  />
+                </label>
+              ))}
             </div>
           ) : (
             <div className="mt-6 space-y-3">
@@ -283,30 +307,6 @@ export const RoomRecommendationQuiz = ({
               ))}
             </div>
           )}
-          <div className="mt-7 flex items-center justify-between border-t border-line pt-5">
-            {step > 0 ? (
-              <button
-                className="rounded-2xl border border-line px-6 py-4 font-semibold"
-                onClick={() => setStep((current) => current - 1)}
-                type="button"
-              >
-                Назад
-              </button>
-            ) : (
-              <span />
-            )}
-            <button
-              className="rounded-2xl bg-brand px-8 py-4 font-semibold text-brand-foreground"
-              onClick={() =>
-                step === questions.length - 1
-                  ? setShowResult(true)
-                  : setStep((current) => current + 1)
-              }
-              type="button"
-            >
-              {step === questions.length - 1 ? "Показать номера" : "Дальше"}
-            </button>
-          </div>
         </div>
       )}
     </Modal>
