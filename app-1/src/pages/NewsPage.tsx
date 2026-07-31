@@ -86,7 +86,7 @@ export const NewsPage = () => {
             </button>
           ))}
         </div>
-        <div className="mx-auto mt-12 grid max-w-4xl gap-7">
+        <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <EditorialCard item={item} key={item.title} variant="news" />
           ))}
