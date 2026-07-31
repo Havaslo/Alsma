@@ -87,6 +87,9 @@ export const EntertainmentPage = () => {
           <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
             Территория для активного отдыха
           </h2>
+          <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-muted-ui-foreground">
+            Находите на свежем воздухе среди величественных сосен.
+          </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {zones.map((zone) => (
