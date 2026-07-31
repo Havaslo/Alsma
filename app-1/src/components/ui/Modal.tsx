@@ -26,6 +26,7 @@ export type ModalProps = Omit<
 > & {
   readonly children: ReactNode;
   readonly closeLabel?: string;
+  readonly closeButtonClassName?: string;
   /** Optional action row rendered below the scrollable body. */
   readonly footer?: ReactNode;
   readonly headerContent?: ReactNode;
@@ -40,6 +41,7 @@ export type ModalProps = Omit<
 export const Modal = ({
   children,
   className,
+  closeButtonClassName,
   closeLabel = "Close",
   footer,
   headerClassName,
@@ -141,7 +143,7 @@ export const Modal = ({
                 )}
               >
                 {headerContent ? (
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h2 className="sr-only" id={titleId}>
                       {title}
                     </h2>
@@ -160,7 +162,7 @@ export const Modal = ({
                 )}
                 <Button
                   aria-label={closeLabel}
-                  className="size-10 shrink-0 p-0"
+                  className={cn("size-10 shrink-0 p-0", closeButtonClassName)}
                   onClick={onClose}
                   ref={closeButtonRef}
                   title={closeLabel}

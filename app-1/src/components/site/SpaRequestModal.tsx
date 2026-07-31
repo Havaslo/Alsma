@@ -27,12 +27,13 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
   return (
     <Modal
       className="max-w-3xl rounded-4xl bg-page"
+      closeButtonClassName="absolute top-8 right-8 sm:top-10 sm:right-12"
       closeLabel="Закрыть"
-      headerClassName="border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
+      headerClassName="relative block border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
       headerContent={
-        <div className="space-y-3">
+        <div className="space-y-3 pr-12 sm:pr-16">
           <p className="text-sm font-semibold text-brand">Заявка на SPA</p>
-          <h2 className="font-heading text-4xl leading-tight font-semibold text-panel-foreground sm:text-5xl">
+          <h2 className="font-heading text-3xl leading-tight font-semibold text-panel-foreground sm:text-5xl">
             Записаться на процедуру
           </h2>
           <p className="max-w-2xl text-lg leading-8 text-muted-ui-foreground">
