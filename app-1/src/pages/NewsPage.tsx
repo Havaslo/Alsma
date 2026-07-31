@@ -36,13 +36,12 @@ export const NewsPage = () => {
   const activeNewsItems = allNewsItems.filter(
     (item) => item.isArchived !== true,
   );
-  const items = (
+  const items =
     filter === "archive"
       ? allNewsItems.filter((item) => item.isArchived === true)
       : filter === "all"
         ? activeNewsItems
-        : activeNewsItems.filter((item) => item.category === filter)
-  ).slice(0, 3);
+        : activeNewsItems.filter((item) => item.category === filter);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -87,7 +86,7 @@ export const NewsPage = () => {
             </button>
           ))}
         </div>
-        <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto mt-12 grid max-w-4xl gap-7">
           {items.map((item) => (
             <EditorialCard item={item} key={item.title} variant="news" />
           ))}
