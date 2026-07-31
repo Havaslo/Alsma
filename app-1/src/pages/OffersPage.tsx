@@ -29,6 +29,13 @@ const getOfferMonth = (value: string) => {
   return `${month.charAt(0).toUpperCase()}${month.slice(1)}`;
 };
 
+const getToday = () => {
+  const today = new Date();
+  const month = `${today.getMonth() + 1}`.padStart(2, "0");
+  const day = `${today.getDate()}`.padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+};
+
 const scenarioCtaLabels = [
   "Подробнее",
   "Забронировать",
@@ -72,7 +79,13 @@ export const OffersPage = () => {
       OFFER_EVENTS,
     ),
   ]
-    .filter((item) => item.isActive !== false)
+    .filter((item) => {
+      const expirationDate = item.endDate ?? item.startDate;
+      return (
+        item.isActive !== false &&
+        (!expirationDate || expirationDate >= getToday())
+      );
+    })
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
     .map((item) => ({
       ...item,
