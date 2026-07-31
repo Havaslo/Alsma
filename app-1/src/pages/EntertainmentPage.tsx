@@ -142,17 +142,17 @@ export const EntertainmentPage = () => {
           >
             {seasons.map((season) => (
               <article
-                className="relative min-h-[44rem] overflow-hidden rounded-4xl text-brand-foreground"
+                className="overflow-hidden rounded-4xl bg-panel text-page-foreground lg:relative lg:min-h-[44rem] lg:bg-transparent lg:text-brand-foreground"
                 key={season.label}
               >
                 <img
                   alt={season.title}
-                  className="absolute inset-0 size-full object-cover"
+                  className="aspect-[4/3] w-full object-cover lg:absolute lg:inset-0 lg:aspect-auto lg:size-full"
                   src={season.image}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-page-foreground/90 via-page-foreground/35 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-8 lg:p-14">
-                  <div className="max-w-3xl rounded-3xl bg-page-foreground/30 p-7 backdrop-blur-sm">
+                <div className="hidden lg:absolute lg:inset-0 lg:block lg:bg-gradient-to-t lg:from-page-foreground/90 lg:via-page-foreground/35 lg:to-transparent" />
+                <div className="p-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
+                  <div className="rounded-3xl bg-page-foreground/5 p-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
                     <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
                       {season.label}
                     </span>
