@@ -67,7 +67,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "all-inclusive",
-    title: "Питание, которое делает отдых по-настоящему беззаботным",
+    title: "Всё для вкусного отдыха уже включено",
   },
   blog: {
     description:
