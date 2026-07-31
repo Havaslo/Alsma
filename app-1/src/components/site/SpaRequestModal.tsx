@@ -26,7 +26,7 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
 
   return (
     <Modal
-      className="max-w-3xl rounded-4xl"
+      className="max-w-3xl rounded-4xl bg-page"
       closeLabel="Закрыть"
       headerClassName="border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
       headerContent={
