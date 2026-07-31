@@ -144,10 +144,10 @@ export const SpaInformationSections = ({
       </section>
       <section className="bg-panel py-8 sm:py-12 lg:py-12">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-          <h2 className="font-heading text-4xl font-semibold">
+          <h2 className="text-center font-heading text-4xl font-semibold">
             Общие противопоказания
           </h2>
-          <p className="mt-3 max-w-2xl text-muted-ui-foreground">
+          <p className="mx-auto mt-3 max-w-2xl text-center text-muted-ui-foreground">
             Ко всем процедурам, если не указано иное:
           </p>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2">
