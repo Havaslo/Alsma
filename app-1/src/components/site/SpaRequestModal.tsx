@@ -8,8 +8,11 @@ import { useCreateLead } from "@/lib/leads/useCreateLead";
 export type SpaRequestOpenHandler = () => void;
 
 type SpaRequestModalProps = {
+  readonly formCode?: string;
   readonly onClose: () => void;
   readonly open: boolean;
+  readonly procedureName?: string;
+  readonly sourcePage?: string;
 };
 
 type SpaRequestValues = {
@@ -18,11 +21,21 @@ type SpaRequestValues = {
   phone: string;
 };
 
-export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
+export const SpaRequestModal = ({
+  formCode = "spa-request",
+  onClose,
+  open,
+  procedureName,
+  sourcePage = "spa",
+}: SpaRequestModalProps) => {
   const lead = useCreateLead();
   const form = useForm<SpaRequestValues>({
     defaultValues: { comment: "", email: "", phone: "" },
   });
+  const isProcedureRequest = Boolean(procedureName);
+  const formTitle = procedureName
+    ? `Запись на процедуру: ${procedureName}`
+    : "Запись на SPA-процедуру";
 
   return (
     <Modal
@@ -32,7 +45,9 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
       headerClassName="relative block border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
       headerContent={
         <div className="space-y-3 pr-12 sm:pr-16">
-          <p className="text-sm font-semibold text-brand">Заявка на SPA</p>
+          <p className="text-sm font-semibold text-brand">
+            {isProcedureRequest ? "Запись на процедуру" : "Заявка на SPA"}
+          </p>
           <h2 className="font-heading text-3xl leading-tight font-semibold text-panel-foreground sm:text-5xl">
             Записаться на процедуру
           </h2>
@@ -40,6 +55,11 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
             Оставьте контакты, и мы поможем подобрать удобное время и подходящую
             процедуру.
           </p>
+          {procedureName && (
+            <p className="text-lg font-semibold text-brand">
+              Запись на: {procedureName}
+            </p>
+          )}
         </div>
       }
       onClose={onClose}
@@ -53,10 +73,10 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
           lead.mutate({
             comment: values.comment || undefined,
             email: values.email || undefined,
-            formCode: "spa-request",
-            formTitle: "Запись на SPA-процедуру",
+            formCode,
+            formTitle,
             phone: values.phone,
-            sourcePage: "spa",
+            sourcePage,
           });
         }}
       >
@@ -85,7 +105,11 @@ export const SpaRequestModal = ({ onClose, open }: SpaRequestModalProps) => {
           <textarea
             className="min-h-36 w-full resize-y rounded-2xl border border-line bg-page px-5 py-4 text-lg text-page-foreground outline-none placeholder:text-muted-ui-foreground/70 focus:border-brand focus:ring-4 focus:ring-focus/20"
             id="spa-request-comment"
-            placeholder="Напишите, на какую процедуру хотите записаться"
+            placeholder={
+              procedureName
+                ? "Дополнительная информация по записи"
+                : "Напишите, на какую процедуру хотите записаться"
+            }
             {...form.register("comment")}
           />
         </label>

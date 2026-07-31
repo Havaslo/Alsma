@@ -1,11 +1,10 @@
 import { useState } from "react";
 
 import heroImage from "@/assets/alsma/spa-hero-new.jpg";
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SpaRequestModal } from "@/components/site/SpaRequestModal";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { HARDWARE_PROCEDURES } from "@/lib/site/hardware-procedures";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
@@ -99,41 +98,13 @@ export const HardwareProceduresPage = () => {
         </div>
       </section>
 
-      <Modal
-        className="max-w-3xl rounded-4xl bg-page"
-        closeButtonClassName="absolute top-8 right-8 sm:top-10 sm:right-12"
-        closeLabel="Закрыть форму записи"
-        headerClassName="relative block border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
-        headerContent={
-          <div className="pr-12 sm:pr-16">
-            <h2 className="font-heading text-3xl leading-tight font-semibold text-panel-foreground sm:text-5xl">
-              Записаться на процедуру
-            </h2>
-          </div>
-        }
+      <SpaRequestModal
+        formCode="hardware-procedure-request"
         onClose={() => setSelectedProcedure(null)}
         open={selectedProcedure !== null}
-        title="Записаться на процедуру"
-      >
-        <div className="mb-6">
-          <p className="text-lg leading-8 text-muted-ui-foreground">
-            Специалист поможет подобрать методику и удобное время сеанса.
-          </p>
-          {selectedProcedure && (
-            <p className="mt-2 text-lg font-semibold text-brand">
-              Выбрано: {selectedProcedure}
-            </p>
-          )}
-        </div>
-        {selectedProcedure && (
-          <LeadRequestForm
-            formCode="hardware-procedure-request"
-            formTitle={`Запись на процедуру: ${selectedProcedure}`}
-            sourcePage="hardware-procedures"
-            variant="panel"
-          />
-        )}
-      </Modal>
+        procedureName={selectedProcedure ?? undefined}
+        sourcePage="hardware-procedures"
+      />
     </main>
   );
 };
