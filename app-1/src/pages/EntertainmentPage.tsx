@@ -1,6 +1,6 @@
 import { Check, RussianRuble } from "lucide-react";
 
-import entertainmentHeroImage from "@/assets/alsma/spa-forest-walk.jpg";
+import entertainmentHeroImage from "@/assets/alsma/entertainment-hero-new.webp";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
