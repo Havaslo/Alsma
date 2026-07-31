@@ -12,7 +12,7 @@ import {
   Waves,
 } from "lucide-react";
 
-import heroImage from "@/assets/alsma/spa-programs.jpg";
+import heroImage from "@/assets/alsma/about-hero-forest.webp";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
