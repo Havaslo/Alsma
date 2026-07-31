@@ -1,10 +1,12 @@
 import bathImage from "@/assets/alsma/spa-bath-new.jpg";
-import faceImage from "@/assets/alsma/spa-face-care.webp";
-import massageImage from "@/assets/alsma/spa-massage-new.jpg";
+import faceCareLocationImage from "@/assets/alsma/spa-face-care-location.webp";
+import massageImage from "@/assets/alsma/spa-massage-rooms.webp";
 import massagePromotionImage from "@/assets/alsma/spa-massage.jpg";
+import mineralPoolImage from "@/assets/alsma/spa-mineral-pool.webp";
 import mineralImage from "@/assets/alsma/spa-mineral-water-new.jpg";
 import programsImage from "@/assets/alsma/spa-programs.jpg";
 import quantumImage from "@/assets/alsma/spa-quantum.jpg";
+import thermalZoneImage from "@/assets/alsma/spa-thermal-zone.webp";
 
 export const SPA_SPACES = [
   {
@@ -16,7 +18,7 @@ export const SPA_SPACES = [
       "Инфракрасная сауна",
       "Турецкий хаммам (мягкий пар, мраморный лежак)",
     ],
-    image: bathImage,
+    image: thermalZoneImage,
     title: "Термальная зона",
   },
   {
@@ -29,7 +31,7 @@ export const SPA_SPACES = [
       "Водопад",
       "Панорамный вид на сосновый лес",
     ],
-    image: mineralImage,
+    image: mineralPoolImage,
     title: "Бассейн с минеральной водой",
   },
   {
@@ -52,7 +54,7 @@ export const SPA_SPACES = [
       "Фейслифтинг + уход + маска — 60 мин / 4 000 ₽",
       "Маска для лица (10 видов на выбор) — 15 мин / 900 ₽",
     ],
-    image: faceImage,
+    image: faceCareLocationImage,
     title: "Уход за лицом",
   },
 ] as const;
