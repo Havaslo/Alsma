@@ -145,7 +145,7 @@ export const EditorialCard = ({
         >
           <img
             alt={item.title}
-            className="-mx-6 aspect-video w-[calc(100%+3rem)] object-cover"
+            className="relative -mx-6 block aspect-video w-[calc(100%+3rem)] max-w-none shrink-0 object-cover"
             src={item.image}
           />
           <div className="px-1 py-5">
