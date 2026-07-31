@@ -1,4 +1,4 @@
-import barbecueImage from "@/assets/alsma/barbecue-glass-dome.jpg";
+import barbecueImage from "@/assets/alsma/barbecue-glass-dome-new.webp";
 import buffetImage from "@/assets/alsma/breakfast-new.webp";
 import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
 import beachImage from "@/assets/alsma/river-beach.jpg";

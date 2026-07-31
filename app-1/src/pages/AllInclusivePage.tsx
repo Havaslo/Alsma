@@ -118,7 +118,7 @@ export const AllInclusivePage = () => {
           </div>
         </div>
       </section>
-      <section className="px-5 pb-20 sm:px-8">
+      <section className="px-5 pb-12 sm:px-8">
         <div className="mx-auto max-w-[100rem]">
           <FeatureSplit format={FEATURED_FORMATS[0]} />
           <p className="mt-8 rounded-3xl bg-brand px-8 py-7 text-lg leading-8 text-brand-foreground">
@@ -156,13 +156,13 @@ const FeatureSplit = ({
   format: FeaturedFormat;
   reverse?: boolean;
 }) => (
-  <article className="overflow-hidden rounded-4xl bg-brand-foreground lg:grid lg:min-h-[34rem] lg:grid-cols-2">
+  <article className="overflow-hidden rounded-4xl bg-brand-foreground lg:grid lg:grid-cols-2">
     <img
       alt={format.title}
-      className={`size-full min-h-80 object-cover ${reverse ? "lg:order-2" : ""}`}
+      className={`aspect-[4/3] w-full object-cover lg:aspect-auto lg:h-full ${reverse ? "lg:order-2" : ""}`}
       src={format.image}
     />
-    <div className="flex flex-col justify-end p-8 sm:p-12">
+    <div className="flex flex-col justify-center p-8 sm:p-12">
       <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
         {format.title}
       </h2>
