@@ -118,8 +118,8 @@ export const OffersPage = () => {
             Все действующие предложения
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-muted-ui-foreground">
-            Выберите подходящее предложение для отдыха и забронируйте поездку на
-            удобные даты.
+            Собрали предложения для тех, кто хочет провести время у нас с
+            удовольствием — выбирайте то, что ближе именно вам.
           </p>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
