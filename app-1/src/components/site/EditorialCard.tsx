@@ -80,7 +80,7 @@ export const EditorialCard = ({
             {item.title}
           </h3>
           <p className="mt-4 leading-7 text-muted-ui-foreground">
-            {isNews ? item.details : item.description}
+            {isNews ? item.description : item.description}
           </p>
           {isBlog ? (
             <details className="group mt-auto pt-8">
@@ -110,7 +110,7 @@ export const EditorialCard = ({
                 onClick={() => setNewsOpen(true)}
                 type="button"
               >
-                {item.buttonText || "Подробнее"}
+                Подробнее
                 <ArrowUpRight className="size-4" />
               </button>
             </div>

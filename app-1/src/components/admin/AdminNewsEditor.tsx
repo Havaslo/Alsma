@@ -65,6 +65,7 @@ export const AdminNewsEditor = () => {
               items: formValues.items
                 .map((item) => ({
                   ...item,
+                  buttonText: "Подробнее",
                   date: formatNewsDate(item.dateValue),
                   tags: [item.tag].filter(Boolean),
                 }))
@@ -89,7 +90,7 @@ export const AdminNewsEditor = () => {
             <Button
               onClick={() =>
                 cards.append({
-                  buttonText: "",
+                  buttonText: "Подробнее",
                   category: "wellness",
                   dateValue: getCurrentDateValue(),
                   description: "",
@@ -206,15 +207,9 @@ export const AdminNewsEditor = () => {
                 </span>
               </label>
             </div>
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <TextField
-                label="Текст кнопки"
-                placeholder="Подробнее"
-                {...form.register(`items.${index}.buttonText`)}
-              />
+            <div className="mt-5">
               <CheckboxField
                 checked={values[index]?.isArchived ?? false}
-                className="w-full self-end"
                 label="Отправить в архив"
                 onChange={(checked) =>
                   form.setValue(`items.${index}.isArchived`, checked, {
