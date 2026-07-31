@@ -25,7 +25,7 @@ export type AnimationProgramForm = Required<AnimationProgram>;
 
 export type KidsServiceForm = Omit<
   KidsService,
-  "tags" | "isActive" | "sortOrder"
+  "price" | "tags" | "isActive" | "sortOrder"
 > & {
   imageName: string;
   isActive: boolean;

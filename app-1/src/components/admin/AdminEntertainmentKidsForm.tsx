@@ -54,7 +54,7 @@ export const AdminEntertainmentKidsForm = ({
         <div>
           <h2 className="text-lg font-semibold text-brand">Детские услуги</h2>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Карточки с изображением, названием, тегами и стоимостью.
+            Карточки с изображением, названием и тегами.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -64,7 +64,6 @@ export const AdminEntertainmentKidsForm = ({
                 image: "",
                 imageName: "",
                 isActive: true,
-                price: "",
                 sortOrder: cards.fields.length,
                 tags: "",
                 title: "",
@@ -111,16 +110,11 @@ export const AdminEntertainmentKidsForm = ({
               <Trash2 className="size-4" /> Удалить
             </Button>
           </div>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div>
             <TextField
               label="Название"
               placeholder="..."
               {...form.register(`items.${index}.title`, { required: true })}
-            />
-            <TextField
-              label="Стоимость"
-              placeholder="..."
-              {...form.register(`items.${index}.price`)}
             />
           </div>
           <div className="mt-5">
