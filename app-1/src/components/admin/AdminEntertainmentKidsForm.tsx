@@ -6,7 +6,11 @@ import { Plus, Save, Trash2 } from "lucide-react";
 import { Form } from "@/components/Form";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { CheckboxField, TextField } from "@/components/ui/FormField";
+import {
+  CheckboxField,
+  TextAreaField,
+  TextField,
+} from "@/components/ui/FormField";
 import { MediaUploadField } from "@/components/ui/MediaUploadField";
 import {
   type KidsServiceForm,
@@ -54,13 +58,14 @@ export const AdminEntertainmentKidsForm = ({
         <div>
           <h2 className="text-lg font-semibold text-brand">Детские услуги</h2>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Карточки с изображением, названием и тегами.
+            Карточки с изображением, названием, описанием и тегами.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button
             onClick={() =>
               cards.append({
+                description: "",
                 image: "",
                 imageName: "",
                 isActive: true,
@@ -110,11 +115,17 @@ export const AdminEntertainmentKidsForm = ({
               <Trash2 className="size-4" /> Удалить
             </Button>
           </div>
-          <div>
+          <div className="grid gap-5 lg:grid-cols-2">
             <TextField
               label="Название"
               placeholder="..."
               {...form.register(`items.${index}.title`, { required: true })}
+            />
+            <TextAreaField
+              label="Описание"
+              placeholder="..."
+              rows={3}
+              {...form.register(`items.${index}.description`)}
             />
           </div>
           <div className="mt-5">

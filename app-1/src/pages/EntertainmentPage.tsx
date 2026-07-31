@@ -20,6 +20,10 @@ import { normalizeAnimationProgram } from "@/lib/site/entertainment-content";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
+type KidsServiceWithDescription = KidsService & {
+  readonly description?: string;
+};
+
 export const EntertainmentPage = () => {
   const page = PUBLIC_PAGES.entertainment;
   const content = usePublishedSiteContent("entertainment");
@@ -57,7 +61,7 @@ export const EntertainmentPage = () => {
   )
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
-  const kidsServices = getSiteCollection<KidsService>(
+  const kidsServices = getSiteCollection<KidsServiceWithDescription>(
     content.data?.items,
     "kids-services",
     KIDS_SERVICES,
@@ -241,6 +245,11 @@ export const EntertainmentPage = () => {
                   <h3 className="font-heading text-3xl font-semibold text-brand">
                     {service.title}
                   </h3>
+                  {service.description && (
+                    <p className="mt-3 leading-7 text-muted-ui-foreground">
+                      {service.description}
+                    </p>
+                  )}
                   <div className="mt-5 flex flex-wrap gap-2">
                     {service.tags.map((tag) => (
                       <span

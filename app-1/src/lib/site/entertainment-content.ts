@@ -27,6 +27,7 @@ export type KidsServiceForm = Omit<
   KidsService,
   "price" | "tags" | "isActive" | "sortOrder"
 > & {
+  description: string;
   imageName: string;
   isActive: boolean;
   sortOrder: number;
@@ -106,6 +107,9 @@ export const getKidsDefaults = (
   items: getStoredItems(items, "kids-services", KIDS_SERVICES).map(
     (item, index) => ({
       ...item,
+      description:
+        (item as KidsService & { readonly description?: string }).description ??
+        "",
       imageName: item.imageName ?? "",
       isActive: item.isActive ?? true,
       sortOrder: item.sortOrder ?? index,
