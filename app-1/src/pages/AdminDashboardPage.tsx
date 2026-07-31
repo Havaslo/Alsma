@@ -23,12 +23,14 @@ import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { AdminSitePlaceholder } from "@/components/admin/AdminSitePlaceholder";
+import { AdminSpaEditor } from "@/components/admin/AdminSpaEditor";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import { useAdmin } from "@/lib/admin/useAdmin";
 import { queryClient } from "@/lib/query/query-client";
+import { useAdminSiteContent } from "@/lib/site/useSiteContent";
 import { ROUTES } from "@/route-constants";
 
 export const AdminDashboardPage = () => {
@@ -36,6 +38,7 @@ export const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
   const admin = useAdmin();
+  const spaContent = useAdminSiteContent("spa");
   const permissions = admin.data?.user.permissions ?? [];
   const can = (permission: string) =>
     permissions.includes("*") || permissions.includes(permission);
@@ -96,6 +99,10 @@ export const AdminDashboardPage = () => {
         (can("site.access") || can("site.manage")) && <AdminHomeEditor />}
       {path === ROUTES.adminSiteManagementRooms &&
         (can("site.access") || can("site.manage")) && <AdminRoomsEditor />}
+      {path === ROUTES.adminSiteManagementSpa &&
+        (can("site.access") || can("site.manage")) && (
+          <AdminSpaEditor items={spaContent.data?.items} />
+        )}
       {path === ROUTES.adminSiteManagementEntertainment &&
         (can("site.access") || can("site.manage")) && (
           <AdminEntertainmentEditor />

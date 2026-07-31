@@ -1,59 +1,46 @@
 import { useState } from "react";
-
 import { Check } from "lucide-react";
-
 import spaHeroImage from "@/assets/alsma/spa-hero-new.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import {
-  SpaCeremoniesSection,
-  SpaCompanySection,
   SpaInformationSections,
-  SpaMembershipSection,
   SpaPromotionsSection,
 } from "@/components/site/SpaAdditionalSections";
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
-import { MASSAGES, SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
+import { SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
+import { getSpaDefaults } from "@/lib/site/spa-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const SpaPage = () => {
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const page = PUBLIC_PAGES.spa;
+  const [open, setOpen] = useState(false);
   const content = usePublishedSiteContent("spa");
+  const spa = getSpaDefaults(content.data?.items);
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const title =
-    typeof hero?.title === "string" ? hero.title : "SPA и процедуры";
-  const description =
-    typeof hero?.description === "string" ? hero.description : page.description;
-
   return (
     <main className="min-h-screen bg-page text-page-foreground">
       <SiteHeader />
       <PublicHero
-        description={description}
+        description={
+          typeof hero?.description === "string"
+            ? hero.description
+            : PUBLIC_PAGES.spa.description
+        }
         eyebrow="SPA-центр"
         image={typeof hero?.image === "string" ? hero.image : spaHeroImage}
-        title={title}
+        title={typeof hero?.title === "string" ? hero.title : "SPA и процедуры"}
       />
-      <section
-        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
-        id="details"
-      >
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            Локации SPA-центра
-          </h2>
-          <p className="mt-5 text-lg text-muted-ui-foreground">
-            Современные пространства для комфорта, релаксации и восстановления.
-          </p>
-        </div>
+      <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
+        <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
+          Локации SPA-центра
+        </h2>
         <div className="mt-14 grid gap-6 lg:grid-cols-2">
           {SPA_SPACES.map((space) => (
             <article
-              className="flex h-full flex-col overflow-hidden rounded-4xl bg-panel"
+              className="overflow-hidden rounded-4xl bg-panel"
               key={space.title}
             >
               <img
@@ -61,132 +48,87 @@ export const SpaPage = () => {
                 className="aspect-[16/9] w-full object-cover"
                 src={space.image}
               />
-              <div className="flex flex-1 flex-col p-7 sm:p-8">
-                <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-                  SPA-пространство
-                </p>
-                <h3 className="mt-3 font-heading text-3xl font-semibold sm:text-4xl">
+              <div className="p-7">
+                <h3 className="font-heading text-3xl font-semibold">
                   {space.title}
                 </h3>
-                <p className="mt-4 leading-7 text-muted-ui-foreground">
+                <p className="mt-4 text-muted-ui-foreground">
                   {space.description}
                 </p>
                 <ul className="mt-6 space-y-3">
                   {space.features.map((feature) => (
                     <li className="flex gap-3" key={feature}>
-                      <Check className="mt-1 size-4 shrink-0 text-brand" />{" "}
+                      <Check className="size-4 text-brand" />
                       {feature}
                     </li>
                   ))}
                 </ul>
-                <div className="mt-auto pt-8">
-                  <button
-                    className="inline-flex w-fit items-center justify-center rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-brand-foreground"
-                    onClick={() => setIsRequestModalOpen(true)}
-                    type="button"
-                  >
-                    Записаться
-                  </button>
-                </div>
               </div>
             </article>
           ))}
         </div>
       </section>
-      <SpaMembershipSection onOpenRequest={() => setIsRequestModalOpen(true)} />
       <section className="py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-              Массажные процедуры
-            </h2>
-            <p className="mt-5 text-lg text-muted-ui-foreground">
-              Полный перечень массажей с длительностью и стоимостью.
-            </p>
-          </div>
-          <div className="mt-14 overflow-hidden rounded-3xl bg-panel">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-muted-ui/50 text-sm font-semibold tracking-widest text-muted-ui-foreground uppercase">
-                    <th className="px-7 py-4">Процедура</th>
-                    <th className="px-7 py-4">Длительность</th>
-                    <th className="px-7 py-4">Стоимость</th>
+          <h2 className="text-center font-heading text-4xl font-semibold">
+            Массажные процедуры
+          </h2>
+          <div className="mt-12 overflow-x-auto rounded-3xl bg-panel">
+            <table className="min-w-full text-left">
+              <thead>
+                <tr className="bg-muted-ui/50">
+                  <th className="px-7 py-4">Процедура</th>
+                  <th className="px-7 py-4">Длительность</th>
+                  <th className="px-7 py-4">Стоимость</th>
+                </tr>
+              </thead>
+              <tbody>
+                {spa.massages.map((item) => (
+                  <tr
+                    className="border-t border-line"
+                    key={`${item.name}:${item.duration}`}
+                  >
+                    <td className="px-7 py-4 font-semibold">{item.name}</td>
+                    <td className="px-7 py-4">{item.duration}</td>
+                    <td className="px-7 py-4 font-semibold">{item.price}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {MASSAGES.map(([name, duration, price]) => (
-                    <tr
-                      className="border-t border-line"
-                      key={`${name}:${duration}`}
-                    >
-                      <td className="px-7 py-4 text-lg font-semibold">
-                        {name}
-                      </td>
-                      <td className="px-7 py-4 text-lg text-muted-ui-foreground">
-                        {duration}
-                      </td>
-                      <td className="px-7 py-4 text-lg font-semibold">
-                        {price}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
       <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
-        <div className="text-center">
-          <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-            Минеральное восстановление
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Водные процедуры и бальнеотерапия
-          </h2>
-        </div>
+        <h2 className="text-center font-heading text-4xl font-semibold">
+          Водные процедуры и бальнеотерапия
+        </h2>
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
           {WATER_PROCEDURES.map((group) => (
-            <article
-              className="overflow-hidden rounded-3xl bg-panel"
-              key={group.title}
-            >
-              <img
-                alt={group.title}
-                className="h-72 w-full object-cover"
-                src={group.image}
-              />
-              <div className="p-7">
-                <h3 className="font-heading text-2xl font-semibold text-brand sm:text-3xl">
-                  {group.title}
-                </h3>
-                <ul className="mt-6 space-y-3">
-                  {group.items.map((item) => (
-                    <li
-                      className="flex gap-3 rounded-2xl bg-page px-4 py-3"
-                      key={item}
-                    >
-                      <Check className="mt-1 size-4 shrink-0 text-brand" />{" "}
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <article className="rounded-3xl bg-panel p-7" key={group.title}>
+              <h3 className="font-heading text-2xl font-semibold text-brand">
+                {group.title}
+              </h3>
+              <ul className="mt-6 space-y-3">
+                {group.items.map((item) => (
+                  <li className="rounded-2xl bg-page px-4 py-3" key={item}>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </article>
           ))}
         </div>
       </section>
-      <SpaCeremoniesSection />
-      <SpaCompanySection />
-      <SpaPromotionsSection onOpenRequest={() => setIsRequestModalOpen(true)} />
-      <SpaRequestModal
-        onClose={() => setIsRequestModalOpen(false)}
-        open={isRequestModalOpen}
+      <SpaPromotionsSection
+        items={spa.promotions}
+        onOpenRequest={() => setOpen(true)}
       />
       <SpaInformationSections
-        onOpenRequest={() => setIsRequestModalOpen(true)}
+        additionalServices={spa.additional}
+        menu={spa.menu}
+        onOpenRequest={() => setOpen(true)}
       />
+      <SpaRequestModal onClose={() => setOpen(false)} open={open} />
     </main>
   );
 };
