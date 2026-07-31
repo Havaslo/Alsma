@@ -151,9 +151,9 @@ export const EntertainmentPage = () => {
                   src={season.image}
                 />
                 <div className="hidden lg:absolute lg:inset-0 lg:block lg:bg-gradient-to-t lg:from-page-foreground/90 lg:via-page-foreground/35 lg:to-transparent" />
-                <div className="p-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
-                  <div className="rounded-3xl p-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
-                    <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
+                <div className="px-7 py-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
+                  <div className="rounded-3xl px-6 py-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
+                    <span className="rounded-full bg-brand-foreground px-4 py-2 text-sm font-semibold text-brand lg:bg-panel">
                       {season.label}
                     </span>
                     <h3 className="mt-5 font-heading text-4xl font-semibold">
@@ -165,7 +165,7 @@ export const EntertainmentPage = () => {
                     <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                       {season.items.map((item) => (
                         <li
-                          className="rounded-xl bg-brand-foreground/10 px-4 py-3 backdrop-blur"
+                          className="rounded-xl bg-brand-foreground px-4 py-3 backdrop-blur lg:bg-brand-foreground/10"
                           key={item}
                         >
                           {item}
