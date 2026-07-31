@@ -53,7 +53,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
   },
   "all-inclusive": {
     description:
-      "Главный ресторан со шведским столом, барбекю в стеклянном куполе, лёгкое меню в SPA-зоне и вечерняя барная атмосфера — всё, что делает отдых в АЛСМЕ по-настоящему беззаботным.",
+      "Трёхразовое питание, блюда на любой вкус и приятные форматы в течение всего дня — в АЛСМЕ о еде уже позаботились, чтобы вы могли спокойно отдыхать.",
     eyebrow: "Всё включено",
     heroImage: allInclusiveImage,
     highlights: [
@@ -67,7 +67,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "all-inclusive",
-    title: "Вкусный отдых, который входит в ваш ритм восстановления",
+    title: "Питание, которое делает отдых по-настоящему беззаботным",
   },
   blog: {
     description:
