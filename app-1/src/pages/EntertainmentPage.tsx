@@ -152,14 +152,14 @@ export const EntertainmentPage = () => {
                 />
                 <div className="hidden lg:absolute lg:inset-0 lg:block lg:bg-gradient-to-t lg:from-page-foreground/90 lg:via-page-foreground/35 lg:to-transparent" />
                 <div className="p-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
-                  <div className="rounded-3xl bg-page-foreground/5 p-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
+                  <div className="rounded-3xl p-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
                     <span className="rounded-full bg-panel px-4 py-2 text-sm font-semibold text-brand">
                       {season.label}
                     </span>
                     <h3 className="mt-5 font-heading text-4xl font-semibold">
                       {season.title}
                     </h3>
-                    <p className="mt-3 text-brand-foreground/80">
+                    <p className="mt-3 text-muted-ui-foreground lg:text-brand-foreground/80">
                       {season.description}
                     </p>
                     <ul className="mt-6 grid gap-3 sm:grid-cols-2">
