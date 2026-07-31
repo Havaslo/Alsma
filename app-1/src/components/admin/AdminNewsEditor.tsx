@@ -66,7 +66,7 @@ export const AdminNewsEditor = () => {
                 .map((item) => ({
                   ...item,
                   date: formatNewsDate(item.dateValue),
-                  tags: [item.tag, item.remainingPlaces].filter(Boolean),
+                  tags: [item.tag].filter(Boolean),
                 }))
                 .sort((left, right) => left.sortOrder - right.sortOrder),
             },
@@ -89,7 +89,6 @@ export const AdminNewsEditor = () => {
             <Button
               onClick={() =>
                 cards.append({
-                  buttonLink: "",
                   buttonText: "",
                   category: "wellness",
                   dateValue: getCurrentDateValue(),
@@ -99,7 +98,6 @@ export const AdminNewsEditor = () => {
                   imageName: "",
                   isActive: true,
                   isArchived: false,
-                  remainingPlaces: "",
                   sortOrder: cards.fields.length,
                   tag: "",
                   title: "",
@@ -174,18 +172,6 @@ export const AdminNewsEditor = () => {
               />
             </div>
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <TextField
-                label="Количество оставшихся мест"
-                placeholder="..."
-                {...form.register(`items.${index}.remainingPlaces`)}
-              />
-              <TextField
-                label="Ссылка для кнопки"
-                placeholder="..."
-                {...form.register(`items.${index}.buttonLink`)}
-              />
-            </div>
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <label className="block text-sm font-medium text-panel-foreground">
                 <span>Тема новости</span>
                 <span className="mt-2 block rounded-xl border border-line bg-page px-4 py-2.5">
@@ -223,7 +209,7 @@ export const AdminNewsEditor = () => {
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <TextField
                 label="Текст кнопки"
-                placeholder="..."
+                placeholder="Подробнее"
                 {...form.register(`items.${index}.buttonText`)}
               />
               <CheckboxField

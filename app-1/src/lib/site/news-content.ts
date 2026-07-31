@@ -6,7 +6,6 @@ import {
 import type { SiteContentItem } from "@/lib/site/site-content-api";
 
 export type NewsItemForm = {
-  buttonLink: string;
   buttonText: string;
   category: NewsCategory;
   dateValue: string;
@@ -16,7 +15,6 @@ export type NewsItemForm = {
   imageName: string;
   isActive: boolean;
   isArchived: boolean;
-  remainingPlaces: string;
   sortOrder: number;
   tag: string;
   title: string;
@@ -54,7 +52,6 @@ export const getNewsDefaults = (
   items?: SiteContentItem[],
 ): { items: NewsItemForm[] } => ({
   items: getStoredNews(items).map((item, index) => ({
-    buttonLink: item.buttonLink ?? "",
     buttonText: item.buttonText ?? "Подробнее",
     category: isNewsCategory(item.category) ? item.category : "wellness",
     dateValue: item.dateValue ?? getCurrentDateValue(),
@@ -64,7 +61,6 @@ export const getNewsDefaults = (
     imageName: item.imageName ?? "",
     isActive: item.isActive ?? true,
     isArchived: item.isArchived ?? false,
-    remainingPlaces: item.remainingPlaces ?? item.tags[1] ?? "",
     sortOrder: item.sortOrder ?? index,
     tag: item.tags[0] ?? "",
     title: item.title,
