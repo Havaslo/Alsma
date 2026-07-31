@@ -1,5 +1,5 @@
 import bathImage from "@/assets/alsma/spa-bath-new.jpg";
-import faceImage from "@/assets/alsma/spa-face-care-new.jpg";
+import faceImage from "@/assets/alsma/spa-face-care.webp";
 import massageImage from "@/assets/alsma/spa-massage-new.jpg";
 import massagePromotionImage from "@/assets/alsma/spa-massage.jpg";
 import mineralImage from "@/assets/alsma/spa-mineral-water-new.jpg";
