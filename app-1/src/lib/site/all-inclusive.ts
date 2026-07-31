@@ -2,7 +2,7 @@ import barbecueImage from "@/assets/alsma/barbecue-glass-dome-new.webp";
 import buffetImage from "@/assets/alsma/breakfast-new.webp";
 import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
 import beachImage from "@/assets/alsma/river-beach.jpg";
-import spaProgramsImage from "@/assets/alsma/spa-programs.jpg";
+import spaProgramsImage from "@/assets/alsma/spa-pool-new.webp";
 import welcomeImage from "@/assets/alsma/welcome-day.jpg";
 
 export const INCLUSIVE_OVERVIEW = [
