@@ -114,18 +114,22 @@ const resolveFile = async (pathname) => {
 };
 
 const server = createServer(async (request, response) => {
-  if (!request.url || !["GET", "HEAD"].includes(request.method ?? "")) {
-    sendText(response, 405, "Method not allowed.\n");
+  if (!request.url) {
+    sendText(response, 400, "Invalid path.\n");
     return;
   }
 
   const url = new URL(request.url, "http://localhost");
-  if (url.pathname === "/health") {
-    sendText(response, 200, "ok\n");
-    return;
-  }
   if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
     proxyApiRequest(request, response);
+    return;
+  }
+  if (!["GET", "HEAD"].includes(request.method ?? "")) {
+    sendText(response, 405, "Method not allowed.\n");
+    return;
+  }
+  if (url.pathname === "/health") {
+    sendText(response, 200, "ok\n");
     return;
   }
 
