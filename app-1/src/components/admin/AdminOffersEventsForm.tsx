@@ -106,6 +106,7 @@ export const AdminOffersEventsForm = ({
           <Button
             onClick={() =>
               cards.append({
+                buttonLink: "",
                 date: "",
                 description: "",
                 endDate: getCurrentDate(),
@@ -183,6 +184,13 @@ export const AdminOffersEventsForm = ({
               label="Дата окончания"
               min={values[index]?.startDate}
               name={`items.${index}.endDate`}
+            />
+          </div>
+          <div className="mt-5">
+            <TextField
+              label="Ссылка на мероприятие"
+              placeholder="https://... или /путь"
+              {...form.register(`items.${index}.buttonLink`)}
             />
           </div>
           <div className="mt-5">

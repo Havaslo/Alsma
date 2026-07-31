@@ -272,45 +272,51 @@ export const OffersPage = () => {
                   {group.events.length === 1 ? "событие" : "события"}
                 </span>
               </div>
-              <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {group.events.map((event) => (
-                  <article
-                    className="overflow-hidden rounded-3xl border border-line bg-page"
-                    key={event.title}
-                  >
-                    <div className="relative aspect-square overflow-hidden">
-                      <img
-                        alt={event.title}
-                        className="size-full object-cover"
-                        src={
-                          event.image ??
-                          OFFER_EVENTS[
-                            Math.min(
-                              events.indexOf(event),
-                              OFFER_EVENTS.length - 1,
-                            )
-                          ].image
-                        }
-                      />
-                      <div className="absolute inset-x-3 top-3 flex flex-wrap gap-2">
-                        <span className="flex items-center gap-2 rounded-full bg-page/90 px-3 py-2 text-xs font-semibold text-brand backdrop-blur-sm">
-                          <CalendarDays className="size-3.5" /> {event.date}
-                        </span>
-                        <span className="flex items-center gap-2 rounded-full bg-accent-ui/90 px-3 py-2 text-xs font-semibold text-accent-ui-foreground backdrop-blur-sm">
-                          <Tag className="size-3.5" /> {event.tag}
-                        </span>
+              <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                {group.events.map((event) => {
+                  const card = (
+                    <article
+                      className="group overflow-hidden rounded-3xl border border-line bg-page transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"
+                      key={event.title}
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <img
+                          alt={event.title}
+                          className="size-full object-cover transition duration-500 group-hover:scale-105"
+                          src={event.image}
+                        />
+                        <div className="absolute inset-x-3 top-3 flex flex-wrap gap-2">
+                          <span className="flex items-center gap-2 rounded-full bg-page/90 px-3 py-2 text-xs font-semibold text-brand backdrop-blur-sm">
+                            <CalendarDays className="size-3.5" /> {event.date}
+                          </span>
+                          <span className="flex items-center gap-2 rounded-full bg-accent-ui/90 px-3 py-2 text-xs font-semibold text-accent-ui-foreground backdrop-blur-sm">
+                            <Tag className="size-3.5" /> {event.tag}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-6">
-                      <h4 className="font-heading text-2xl font-semibold">
-                        {event.title}
-                      </h4>
-                      <p className="mt-3 leading-7 text-muted-ui-foreground">
-                        {event.description}
-                      </p>
-                    </div>
-                  </article>
-                ))}
+                      <div className="p-6">
+                        <h4 className="font-heading text-2xl font-semibold">
+                          {event.title}
+                        </h4>
+                        <p className="mt-3 leading-7 text-muted-ui-foreground">
+                          {event.description}
+                        </p>
+                      </div>
+                    </article>
+                  );
+
+                  return event.buttonLink ? (
+                    <a
+                      className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                      href={event.buttonLink}
+                      key={event.title}
+                    >
+                      {card}
+                    </a>
+                  ) : (
+                    card
+                  );
+                })}
               </div>
             </section>
           ))}

@@ -95,6 +95,7 @@ export const getEventDefaults = (
 ): { items: OfferEventForm[] } => ({
   items: getStoredItems(items, "events", OFFER_EVENTS).map((item, index) => ({
     ...item,
+    buttonLink: item.buttonLink ?? "",
     endDate: item.endDate ?? "",
     imageName: item.imageName ?? "",
     isActive: item.isActive ?? true,
