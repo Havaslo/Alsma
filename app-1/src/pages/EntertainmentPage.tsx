@@ -151,8 +151,8 @@ export const EntertainmentPage = () => {
                   src={season.image}
                 />
                 <div className="hidden lg:absolute lg:inset-0 lg:block lg:bg-gradient-to-t lg:from-page-foreground/90 lg:via-page-foreground/35 lg:to-transparent" />
-                <div className="px-7 py-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
-                  <div className="rounded-3xl px-6 py-5 sm:p-7 lg:max-w-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
+                <div className="px-9 py-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
+                  <div className="p-0 sm:p-7 lg:max-w-3xl lg:rounded-3xl lg:bg-page-foreground/30 lg:backdrop-blur-sm">
                     <span className="rounded-full bg-brand-foreground px-4 py-2 text-sm font-semibold text-brand lg:bg-panel">
                       {season.label}
                     </span>
