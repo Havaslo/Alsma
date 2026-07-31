@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { AlertCircle } from "lucide-react";
 
-import cafeImage from "@/assets/alsma/spa-cafe-mineral-new.jpg";
+import cafeImage from "@/assets/alsma/cafe-mineral-food.webp";
 import type { SpaRequestOpenHandler } from "@/components/site/SpaRequestModal";
 import { Modal } from "@/components/ui/Modal";
 import type {
