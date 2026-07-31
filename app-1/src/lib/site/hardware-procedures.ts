@@ -1,8 +1,8 @@
-import cryolipolysisImage from "@/assets/alsma/cryolipolysis.jpg";
-import massageChairImage from "@/assets/alsma/massage-chair.jpg";
-import pressotherapyImage from "@/assets/alsma/pressotherapy.jpg";
-import quantumBedImage from "@/assets/alsma/quantum-bed.jpg";
-import nugaBedImage from "@/assets/alsma/spa-quantum.jpg";
+import cryolipolysisImage from "@/assets/alsma/cryolipolysis-new.webp";
+import massageChairImage from "@/assets/alsma/massage-chair-new.webp";
+import nugaBedImage from "@/assets/alsma/nuga-bed-new.webp";
+import pressotherapyImage from "@/assets/alsma/pressotherapy-new.webp";
+import quantumBedImage from "@/assets/alsma/quantum-bed-new.png";
 
 export const HARDWARE_PROCEDURES = [
   {
