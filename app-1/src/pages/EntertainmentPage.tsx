@@ -251,9 +251,6 @@ export const EntertainmentPage = () => {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-auto pt-6 text-lg font-semibold text-accent-ui-foreground">
-                    Стоимость: {service.price}
-                  </p>
                 </div>
               </article>
             ))}
