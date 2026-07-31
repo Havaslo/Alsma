@@ -224,7 +224,7 @@ export const AboutPage = () => {
             отеля.
           </p>
         </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-3 lg:grid-cols-4">
           {HOTEL_SERVICE_HOURS.map((service) => (
             <article
               className="rounded-3xl bg-brand-foreground p-8"
