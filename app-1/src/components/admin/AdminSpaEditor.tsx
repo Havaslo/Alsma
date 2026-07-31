@@ -1,85 +1,23 @@
-import { useForm } from "react-hook-form";
-import { Save } from "lucide-react";
-import { Form } from "@/components/Form";
-import { Button } from "@/components/ui/Button";
-import { TextAreaField } from "@/components/ui/FormField";
-import type { SiteContentItem } from "@/lib/site/site-content-api";
+import { useState } from "react";
+import { Loader } from "@/components/ui/Loader";
+import { cn } from "@/lib/cn";
+import { useAdminSiteContent } from "@/lib/site/useSiteContent";
 import { getSpaDefaults } from "@/lib/site/spa-content";
-import { useSaveAdminSiteContent } from "@/lib/site/useSiteContent";
-type Values = {
-  massages: string;
-  promotions: string;
-  menu: string;
-  additional: string;
-};
-export const AdminSpaEditor = ({
-  items,
-}: {
-  readonly items?: SiteContentItem[];
-}) => {
-  const d = getSpaDefaults(items);
-  const save = useSaveAdminSiteContent();
-  const form = useForm<Values>({
-    defaultValues: {
-      massages: JSON.stringify(d.massages, null, 2),
-      promotions: JSON.stringify(d.promotions, null, 2),
-      menu: JSON.stringify(d.menu, null, 2),
-      additional: JSON.stringify(d.additional, null, 2),
-    },
-  });
-  const submit = (v: Values) =>
-    [
-      ["massages", "Массажные процедуры", v.massages],
-      ["promotions", "Актуальные акции", v.promotions],
-      ["cafe-menu", "Меню кафе «Минерал»", v.menu],
-      [
-        "additional-services",
-        "Дополнительные услуги и посещение SPA",
-        v.additional,
-      ],
-    ].forEach(([itemKey, title, value], position) => {
-      try {
-        save.mutate({
-          content: { items: JSON.parse(value) },
-          itemKey,
-          position,
-          section: "spa",
-          status: "published",
-          title,
-        });
-      } catch {
-        form.setError(itemKey as keyof Values, { message: "Проверьте JSON" });
-      }
-    });
-  return (
-    <Form className="space-y-6" form={form} onSubmit={submit}>
-      <h1 className="text-3xl font-semibold text-brand">SPA</h1>
-      <p className="text-muted-ui-foreground">
-        Редактируйте данные блоков в формате JSON и сохраняйте изменения.
-      </p>
-      <TextAreaField
-        label="Массажные процедуры"
-        rows={12}
-        {...form.register("massages")}
-      />
-      <TextAreaField
-        label="Актуальные акции"
-        rows={12}
-        {...form.register("promotions")}
-      />
-      <TextAreaField
-        label="Меню кафе «Минерал»"
-        rows={10}
-        {...form.register("menu")}
-      />
-      <TextAreaField
-        label="Дополнительные услуги и посещение SPA"
-        rows={14}
-        {...form.register("additional")}
-      />
-      <Button disabled={save.isPending} type="submit">
-        <Save className="size-4" /> Сохранить все блоки
-      </Button>
-    </Form>
-  );
+import { AdminSpaCollectionForm } from "@/components/admin/AdminSpaCollectionForm";
+
+const tabs = [
+  { id: "massages", label: "Массажные процедуры" },
+  { id: "promotions", label: "Актуальные акции" },
+  { id: "menu", label: "Меню кафе «Минерал»" },
+  { id: "additional", label: "Дополнительные услуги" },
+] as const;
+type Tab = (typeof tabs)[number]["id"];
+
+export const AdminSpaEditor = () => {
+  const [tab, setTab] = useState<Tab>("massages");
+  const content = useAdminSiteContent("spa");
+  if (content.isLoading) return <div className="grid min-h-[60vh] place-items-center"><Loader className="text-brand" label="Загрузка редактора" size="lg" /></div>;
+  const defaults = getSpaDefaults(content.data?.items);
+  const common = { items: content.data?.items };
+  return <div className="space-y-6"><section><p className="text-sm font-semibold tracking-wide text-muted-ui-foreground uppercase">Управление сайтом</p><h1 className="mt-2 text-3xl font-semibold text-brand">SPA</h1><p className="mt-2 text-sm leading-6 text-muted-ui-foreground">Настройте каждый блок страницы SPA в отдельном разделе.</p></section><nav aria-label="Разделы страницы SPA" className="scrollbar-none flex gap-7 overflow-x-auto border-b border-line">{tabs.map((item) => <button aria-current={tab === item.id ? "page" : undefined} className={cn("shrink-0 border-b-2 px-1 pb-4 text-sm font-semibold transition", tab === item.id ? "border-brand text-brand" : "border-transparent text-muted-ui-foreground hover:text-brand")} key={item.id} onClick={() => setTab(item.id)} type="button">{item.label}</button>)}</nav>{tab === "massages" && <AdminSpaCollectionForm {...common} defaults={defaults.massages} fields={[{ key: "name", label: "Процедура" }, { key: "duration", label: "Длительность" }, { key: "price", label: "Стоимость" }]} addItem={{ name: "", duration: "", price: "" }} addLabel="Добавить процедуру" itemKey="massages" title="Массажные процедуры" description="Заполните строки таблицы с процедурами, длительностью и стоимостью." />}{tab === "promotions" && <AdminSpaCollectionForm {...common} defaults={defaults.promotions} fields={[{ key: "title", label: "Название" }, { key: "deadline", label: "Срок действия" }, { key: "price", label: "Стоимость" }, { key: "image", label: "URL изображения" }, { key: "description", label: "Описание", area: true }]} addItem={{ title: "", deadline: "", price: "", image: "", description: "" }} addLabel="Добавить акцию" itemKey="promotions" title="Актуальные акции" description="Управляйте карточками актуальных предложений SPA." />}{tab === "menu" && <AdminSpaCollectionForm {...common} defaults={defaults.menu} fields={[{ key: "name", label: "Позиция меню" }, { key: "description", label: "Описание" }, { key: "price", label: "Стоимость" }]} addItem={{ name: "", description: "", price: "" }} addLabel="Добавить позицию" itemKey="cafe-menu" title="Меню кафе «Минерал»" description="Добавляйте блюда, напитки и услуги кафе." />}{tab === "additional" && <AdminSpaCollectionForm {...common} defaults={defaults.additional} fields={[{ key: "service", label: "Услуга или тариф" }, { key: "price", label: "Стоимость" }]} addItem={{ service: "", price: "" }} addLabel="Добавить услугу" itemKey="additional-services" title="Дополнительные услуги и посещение SPA" description="Заполните таблицу дополнительных услуг и тарифов посещения." />}</div>;
 };
