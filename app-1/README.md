@@ -1,35 +1,35 @@
-# ALSMA Frontend
+# ALSMA frontend
 
-The frontend serves the public ALSMA hotel website, guest account, and staff administration. It
-uses Vite, React, TypeScript, TanStack Router file-based routing, TanStack Query, React Hook Form,
-and Tailwind CSS.
+`app-1` is the ALSMA hotel web application. It delivers the public hotel website, guest account flows, and the staff administration interface.
 
-## Commands
+## Architecture
+
+The application uses React, TypeScript, Vite, TanStack Router, TanStack Query, React Hook Form, and Tailwind CSS.
+
+- `src/routes` contains file-based route declarations; `src/routeTree.gen.ts` is generated from them.
+- `src/pages` composes route-level screens.
+- `src/components/site`, `src/components/account`, and `src/components/admin` contain product UI by area.
+- `src/components/ui` contains shared UI primitives.
+- `src/lib` contains API clients, query hooks, session helpers, and site data.
+
+The frontend communicates with `app-2` through relative `/api` requests. During development, Vite forwards that path to the backend target configured through `BACKEND_PROXY_TARGET`; browser code must not use backend container addresses directly.
+
+## Development
+
+Run commands from `app-1`:
 
 ```bash
 pnpm install
 pnpm run dev
-pnpm run typecheck
+```
+
+## Validation
+
+```bash
+pnpm run format:check
 pnpm run lint
+pnpm run typecheck
 pnpm run build
 ```
 
-## Product structure
-
-- `src/routes`: TanStack Router file-based route declarations; `src/routeTree.gen.ts` is generated.
-- `src/pages`: route-level composition.
-- `src/components/site`: public website sections and lead forms.
-- `src/components/admin`: staff workflows and editors.
-- `src/components/ui`: product-used interaction primitives.
-- `src/components/Form.tsx`: the typed React Hook Form submit boundary.
-- `src/lib`: API clients, query hooks, sessions, and domain data.
-- `src/route-constants.ts`: the route registry shared with Amazi preview navigation.
-
-Keep server state in TanStack Query and use local React state only for transient UI interaction.
-All submit flows use React Hook Form.
-
-## Data requests
-
-The shared `apiClient` uses `/api`. Standalone tooling and Amazi history previews may override it
-with the process-level `VITE_API_BASE_URL`; project custom variables cannot use the `VITE_` prefix.
-Components use domain query and mutation hooks rather than calling the client directly.
+`pnpm run build` performs a TypeScript check before creating the production bundle.
