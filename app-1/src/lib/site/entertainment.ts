@@ -1,12 +1,12 @@
-import trailsImage from "@/assets/alsma/eco-trails.jpg";
+import trailsImage from "@/assets/alsma/eco-trails-new.webp";
 import kidsAnimationImage from "@/assets/alsma/entertainment-kids-animation.png";
 import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
-import clubImage from "@/assets/alsma/kids-club.jpg";
-import terraceImage from "@/assets/alsma/open-terrace-river-view.jpg";
+import clubImage from "@/assets/alsma/kids-club-new.webp";
+import terraceImage from "@/assets/alsma/open-terrace-river-view-new.webp";
 import summerImage from "@/assets/alsma/season-summer.jpg";
 import winterImage from "@/assets/alsma/season-winter.jpg";
 import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
-import sportsImage from "@/assets/alsma/sports-ground.jpg";
+import sportsImage from "@/assets/alsma/sports-ground-new.webp";
 
 export type AnimationProgram = {
   readonly age: string;
