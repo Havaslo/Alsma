@@ -144,12 +144,6 @@ export const AboutPage = () => {
                   >
                     info@alsma-baza.ru
                   </a>
-                  <a
-                    className="mt-2 block font-semibold text-brand"
-                    href="mailto:Alsma25@yandex.ru"
-                  >
-                    Alsma25@yandex.ru
-                  </a>
                 </div>
               </div>
             </div>
