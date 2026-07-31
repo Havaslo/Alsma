@@ -23,7 +23,7 @@ import {
   type HomeReview,
 } from "@/lib/site/home-content";
 import { ACTIVE_OFFERS, type ActiveOffer } from "@/lib/site/offers";
-import { HOME_ROOM_CATEGORIES, type RoomCategory } from "@/lib/site/rooms";
+import { getRoomCards } from "@/lib/site/rooms-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const HomePage = () => {
@@ -47,18 +47,8 @@ export const HomePage = () => {
   )
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
-  const hasStoredRoomCards = roomsContent.data?.items.some(
-    (item) => item.itemKey === "cards" && Array.isArray(item.content.items),
-  );
-  const rooms = getSiteCollection<RoomCategory>(
-    roomsContent.data?.items,
-    "cards",
-    HOME_ROOM_CATEGORIES,
-  )
-    .filter(
-      (room) =>
-        room.isActive !== false && (room.showOnHomepage ?? !hasStoredRoomCards),
-    )
+  const rooms = getRoomCards(roomsContent.data?.items)
+    .filter((room) => room.isActive !== false && room.showOnHomepage !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const offers = getSiteCollection<ActiveOffer>(
     offersContent.data?.items,
