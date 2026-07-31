@@ -102,7 +102,7 @@ export const HorizontalCarousel = ({
       {slides.length > 1 && (
         <div
           className={cn(
-            "mt-8 flex justify-center gap-3",
+            "mt-10 flex justify-center gap-3 lg:mt-8",
             controlsInside &&
               "absolute bottom-4 left-1/2 z-10 mt-0 -translate-x-1/2",
           )}
