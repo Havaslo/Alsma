@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 
 import cafeImage from "@/assets/alsma/spa-cafe-mineral-new.jpg";
+import type { SpaRequestOpenHandler } from "@/components/site/SpaRequestModal";
 import {
   SPA_COMPANY_FORMATS,
   SPA_CONTRAINDICATIONS,
@@ -59,7 +60,11 @@ const additionalServices = [
   ["Парафинотерапия рук или ног — 20 мин", "800 ₽"],
 ] as const;
 
-export const SpaMembershipSection = () => (
+export const SpaMembershipSection = ({
+  onOpenRequest,
+}: {
+  readonly onOpenRequest: SpaRequestOpenHandler;
+}) => (
   <section className="px-5 pb-10 sm:px-8">
     <div className="mx-auto grid max-w-[100rem] gap-8 rounded-4xl bg-brand px-7 py-10 text-brand-foreground sm:px-10 lg:grid-cols-[1fr_auto] lg:items-center lg:px-14">
       <div className="max-w-3xl">
@@ -75,12 +80,13 @@ export const SpaMembershipSection = () => (
           Взрослые — 3 500 ₽, дети — 2 500 ₽.
         </p>
       </div>
-      <a
+      <button
         className="inline-flex justify-center rounded-full bg-accent-ui px-8 py-4 font-semibold text-accent-ui-foreground"
-        href="#spa-cta"
+        onClick={onOpenRequest}
+        type="button"
       >
         Купить абонемент
-      </a>
+      </button>
     </div>
   </section>
 );
@@ -203,7 +209,11 @@ export const SpaCompanySection = () => (
   </section>
 );
 
-export const SpaPromotionsSection = () => (
+export const SpaPromotionsSection = ({
+  onOpenRequest,
+}: {
+  readonly onOpenRequest: SpaRequestOpenHandler;
+}) => (
   <section className="py-24">
     <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
       <div className="text-center">
@@ -234,12 +244,13 @@ export const SpaPromotionsSection = () => (
               </p>
               <p className="mt-5 text-sm text-brand">{promotion.deadline}</p>
               <p className="mt-2 text-2xl font-semibold">{promotion.price}</p>
-              <a
+              <button
                 className="mt-auto inline-flex w-full justify-center rounded-full bg-brand px-6 py-3.5 font-semibold text-brand-foreground"
-                href="#spa-cta"
+                onClick={onOpenRequest}
+                type="button"
               >
                 Забронировать
-              </a>
+              </button>
             </div>
           </article>
         ))}
@@ -248,7 +259,11 @@ export const SpaPromotionsSection = () => (
   </section>
 );
 
-export const SpaInformationSections = () => (
+export const SpaInformationSections = ({
+  onOpenRequest,
+}: {
+  readonly onOpenRequest: SpaRequestOpenHandler;
+}) => (
   <>
     <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
       <article className="overflow-hidden rounded-4xl bg-panel lg:grid lg:grid-cols-2">
@@ -278,12 +293,13 @@ export const SpaInformationSections = () => (
           <p className="mt-6 rounded-2xl bg-page px-5 py-4 font-medium">
             Режим работы: Ежедневно с 10:00 до 22:00
           </p>
-          <a
+          <button
             className="mt-8 inline-flex rounded-full bg-brand px-7 py-4 text-sm font-semibold text-brand-foreground"
-            href="#spa-cta"
+            onClick={onOpenRequest}
+            type="button"
           >
             Меню
-          </a>
+          </button>
         </div>
       </article>
     </section>

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { Check } from "lucide-react";
 
 import spaHeroImage from "@/assets/alsma/spa-hero-new.jpg";
@@ -10,12 +12,13 @@ import {
   SpaMembershipSection,
   SpaPromotionsSection,
 } from "@/components/site/SpaAdditionalSections";
-import { SpaRequestForm } from "@/components/site/SpaRequestForm";
+import { SpaRequestModal } from "@/components/site/SpaRequestModal";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { MASSAGES, SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const SpaPage = () => {
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const page = PUBLIC_PAGES.spa;
   const content = usePublishedSiteContent("spa");
   const hero = content.data?.items.find(
@@ -77,19 +80,20 @@ export const SpaPage = () => {
                   ))}
                 </ul>
                 <div className="mt-auto pt-8">
-                  <a
+                  <button
                     className="inline-flex w-fit items-center justify-center rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-brand-foreground"
-                    href="#spa-cta"
+                    onClick={() => setIsRequestModalOpen(true)}
+                    type="button"
                   >
                     Записаться
-                  </a>
+                  </button>
                 </div>
               </div>
             </article>
           ))}
         </div>
       </section>
-      <SpaMembershipSection />
+      <SpaMembershipSection onOpenRequest={() => setIsRequestModalOpen(true)} />
       <section className="py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-3xl text-center">
@@ -175,24 +179,14 @@ export const SpaPage = () => {
       </section>
       <SpaCeremoniesSection />
       <SpaCompanySection />
-      <SpaPromotionsSection />
-      <section className="px-5 py-20 sm:px-8" id="spa-cta">
-        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-7 py-9 sm:px-10 lg:px-12">
-          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-                Готовы к перезагрузке?
-              </h2>
-              <p className="mt-4 text-lg text-muted-ui-foreground">
-                Оставьте контакты — специалист поможет подобрать процедуру и
-                время.
-              </p>
-            </div>
-            <SpaRequestForm />
-          </div>
-        </div>
-      </section>
-      <SpaInformationSections />
+      <SpaPromotionsSection onOpenRequest={() => setIsRequestModalOpen(true)} />
+      <SpaRequestModal
+        onClose={() => setIsRequestModalOpen(false)}
+        open={isRequestModalOpen}
+      />
+      <SpaInformationSections
+        onOpenRequest={() => setIsRequestModalOpen(true)}
+      />
     </main>
   );
 };
