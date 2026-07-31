@@ -58,7 +58,7 @@ export const HardwareProceduresPage = () => {
               <div className="flex w-full flex-col">
                 <img
                   alt={procedure.title}
-                  className="aspect-[16/7] w-full object-cover"
+                  className="aspect-video w-full object-cover"
                   src={procedure.image}
                 />
                 <div className="flex flex-1 flex-col p-7">
