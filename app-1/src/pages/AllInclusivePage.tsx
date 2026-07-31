@@ -121,12 +121,6 @@ export const AllInclusivePage = () => {
       <section className="px-5 pb-12 sm:px-8">
         <div className="mx-auto max-w-[100rem]">
           <FeatureSplit format={FEATURED_FORMATS[0]} />
-          <p className="mt-8 rounded-3xl bg-brand px-8 py-7 text-lg leading-8 text-brand-foreground">
-            Гости особенно отмечают, что питание здесь не стремится удивить
-            сложностью, а действительно радует вкусом: горячие блюда, десерты,
-            фрукты, соки, морсы и кофемашина создают ощущение заботы на
-            протяжении всего отдыха.
-          </p>
         </div>
       </section>
       <DetailShowcase
