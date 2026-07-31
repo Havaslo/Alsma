@@ -137,29 +137,38 @@ export const EditorialCard = ({
       </article>
       {isNews && (
         <Modal
+          className="bg-page text-page-foreground"
+          hideHeader
           onClose={() => setNewsOpen(false)}
           open={newsOpen}
           title={item.title}
         >
           <img
             alt={item.title}
-            className="aspect-video w-full rounded-2xl object-cover"
+            className="aspect-video w-full object-cover"
             src={item.image}
           />
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            {visibleTags.map((tag) => (
-              <span
-                className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand"
-                key={tag}
-              >
-                {tag}
+          <div className="px-1 py-5">
+            <h2 className="font-heading text-3xl font-semibold text-brand">
+              {item.title}
+            </h2>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {visibleTags.map((tag) => (
+                <span
+                  className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand"
+                  key={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+              <span className="text-sm text-muted-ui-foreground">
+                {item.date}
               </span>
-            ))}
-            <span className="text-sm text-muted-ui-foreground">
-              {item.date}
-            </span>
+            </div>
+            <p className="mt-5 leading-8 text-page-foreground">
+              {item.details}
+            </p>
           </div>
-          <p className="mt-5 leading-8 text-panel-foreground">{item.details}</p>
         </Modal>
       )}
     </>

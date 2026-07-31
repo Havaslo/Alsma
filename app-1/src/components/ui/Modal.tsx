@@ -31,6 +31,7 @@ export type ModalProps = Omit<
   readonly footer?: ReactNode;
   readonly headerContent?: ReactNode;
   readonly headerClassName?: string;
+  readonly hideHeader?: boolean;
   readonly onClose: () => void;
   readonly titleClassName?: string;
   /** Keep Modal mounted and toggle this value so exit animation can finish. */
@@ -46,6 +47,7 @@ export const Modal = ({
   footer,
   headerClassName,
   headerContent,
+  hideHeader = false,
   onClose,
   onKeyDown,
   open,
@@ -122,7 +124,7 @@ export const Modal = ({
               aria-labelledby={titleId}
               aria-modal="true"
               className={cn(
-                "flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-line/70 bg-panel/95 text-panel-foreground shadow-2xl",
+                "relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-line/70 bg-panel/95 text-panel-foreground shadow-2xl",
                 className,
               )}
               exit={{ opacity: 0, scale: 0.98, y: 8 }}
@@ -136,33 +138,54 @@ export const Modal = ({
               }}
               {...props}
             >
-              <header
-                className={cn(
-                  "flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5",
-                  headerClassName,
-                )}
-              >
-                {headerContent ? (
-                  <div className="min-w-0 flex-1">
-                    <h2 className="sr-only" id={titleId}>
+              {hideHeader ? (
+                <h2 className="sr-only" id={titleId}>
+                  {title}
+                </h2>
+              ) : (
+                <header
+                  className={cn(
+                    "flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5",
+                    headerClassName,
+                  )}
+                >
+                  {headerContent ? (
+                    <div className="min-w-0 flex-1">
+                      <h2 className="sr-only" id={titleId}>
+                        {title}
+                      </h2>
+                      {headerContent}
+                    </div>
+                  ) : (
+                    <h2
+                      className={cn(
+                        "m-0 font-heading text-xl font-semibold",
+                        titleClassName,
+                      )}
+                      id={titleId}
+                    >
                       {title}
                     </h2>
-                    {headerContent}
-                  </div>
-                ) : (
-                  <h2
-                    className={cn(
-                      "m-0 font-heading text-xl font-semibold",
-                      titleClassName,
-                    )}
-                    id={titleId}
+                  )}
+                  <Button
+                    aria-label={closeLabel}
+                    className={cn("size-10 shrink-0 p-0", closeButtonClassName)}
+                    onClick={onClose}
+                    ref={closeButtonRef}
+                    title={closeLabel}
+                    variant="secondary"
                   >
-                    {title}
-                  </h2>
-                )}
+                    <X aria-hidden="true" className="size-4" />
+                  </Button>
+                </header>
+              )}
+              {hideHeader && (
                 <Button
                   aria-label={closeLabel}
-                  className={cn("size-10 shrink-0 p-0", closeButtonClassName)}
+                  className={cn(
+                    "absolute top-4 right-4 z-10 size-10 bg-page/90 p-0 shadow-sm",
+                    closeButtonClassName,
+                  )}
                   onClick={onClose}
                   ref={closeButtonRef}
                   title={closeLabel}
@@ -170,8 +193,13 @@ export const Modal = ({
                 >
                   <X aria-hidden="true" className="size-4" />
                 </Button>
-              </header>
-              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              )}
+              <div
+                className={cn(
+                  "min-h-0 flex-1 overflow-y-auto px-6 py-5",
+                  hideHeader && "pt-0",
+                )}
+              >
                 {children}
               </div>
               {footer && (
