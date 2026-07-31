@@ -48,7 +48,7 @@ export const HomePage = () => {
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const rooms = getRoomCards(roomsContent.data?.items)
-    .filter((room) => room.isActive !== false && room.showOnHomepage !== false)
+    .filter((room) => room.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const offers = getSiteCollection<ActiveOffer>(
     offersContent.data?.items,
