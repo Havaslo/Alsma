@@ -1,6 +1,6 @@
 import { Check, PartyPopper, Umbrella, Utensils, Waves } from "lucide-react";
 
-import heroImage from "@/assets/alsma/all-inclusive-hero-new.jpg";
+import heroImage from "@/assets/alsma/all-inclusive-hero.webp";
 import { AllInclusiveFinalSection } from "@/components/site/AllInclusiveSupportSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
