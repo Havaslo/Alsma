@@ -96,7 +96,7 @@ export const EntertainmentPage = () => {
             >
               <img
                 alt={zone.title}
-                className="h-56 w-full object-cover"
+                className="aspect-[16/9] w-full object-cover"
                 src={zone.image}
               />
               <div className="p-7">
