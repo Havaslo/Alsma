@@ -1,6 +1,9 @@
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { PRIVACY_SECTIONS } from "@/lib/site/privacy-policy";
 
+const normalizeBrandName = (value: string) =>
+  value.replace(/ALSMA|Алсма/gi, "АЛСМА");
+
 export const PrivacyPage = () => (
   <main className="min-h-screen bg-page text-page-foreground">
     <SiteHeader light transparentAtTop={false} />
@@ -14,7 +17,7 @@ export const PrivacyPage = () => (
         </h1>
         <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
           Актуальная редакция политики обработки персональных данных для
-          посетителей сайта ALSMA Resort.
+          посетителей сайта АЛСМА.
         </p>
 
         <div className="mt-10 space-y-10">
@@ -25,7 +28,7 @@ export const PrivacyPage = () => (
               </h2>
               <div className="mt-5 space-y-4 leading-7 text-muted-ui-foreground">
                 {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
+                  <p key={paragraph}>{normalizeBrandName(paragraph)}</p>
                 ))}
               </div>
             </section>

@@ -10,6 +10,9 @@ import {
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/route-constants";
 
+const normalizeBrandName = (value: string) =>
+  value.replace(/ALSMA|Алсма/gi, "АЛСМА");
+
 const fallbackDetails = (requestId: string): MockRequestDetails => {
   const request = MOCK_REQUESTS.find((item) => item.id === requestId);
   return {
@@ -127,10 +130,12 @@ export const AdminRequestDetail = ({
               >
                 <p className="text-xs font-semibold tracking-wider text-muted-ui-foreground uppercase">
                   {message.author === "manager"
-                    ? (details.managerLabel ?? "Менеджер")
+                    ? normalizeBrandName(details.managerLabel ?? "Менеджер")
                     : "Гость"}
                 </p>
-                <p className="mt-3 leading-7">{message.text}</p>
+                <p className="mt-3 leading-7">
+                  {normalizeBrandName(message.text)}
+                </p>
               </article>
             ))}
           </div>
@@ -169,7 +174,7 @@ const DetailsCard = ({
         >
           <dt className="text-sm text-muted-ui-foreground">{item.label}</dt>
           <dd className="max-w-52 text-right text-sm font-semibold">
-            {item.value}
+            {normalizeBrandName(item.value)}
           </dd>
         </div>
       ))}

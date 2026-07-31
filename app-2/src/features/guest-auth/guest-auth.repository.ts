@@ -63,7 +63,7 @@ export const createGuestAuthRepository = (database: Database) => ({
               },
             ],
           },
-          fullName: "Гость ALSMA",
+          fullName: "Гость АЛСМА",
         },
         include: guestInclude,
         where: { id: userId },

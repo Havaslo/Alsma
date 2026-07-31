@@ -62,11 +62,11 @@ export const AboutPage = () => {
       >
         <div className="mx-auto text-center">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            «Алсма» — загородный SPA-отель с большой территорией, бассейнами и
+            «АЛСМА» — загородный SPA-отель с большой территорией, бассейнами и
             отдыхом для всей семьи
           </h2>
           <p className="mt-6 text-lg leading-8 text-muted-ui-foreground">
-            Мы находимся в сосновом лесу у слияния рек Линда и Алсма — всего в
+            Мы находимся в сосновом лесу у слияния рек Линда и АЛСМА — всего в
             35 км от Нижнего Новгорода. Здесь можно приехать на день, выходные,
             отпуск, праздник или корпоратив.
           </p>
@@ -173,7 +173,7 @@ export const AboutPage = () => {
             Трансфер до отеля
           </h2>
           <p className="mt-4 text-center text-muted-ui-foreground">
-            Актуальная информация по трансферу до спа-отеля «Алсма».
+            Актуальная информация по трансферу до спа-отеля «АЛСМА».
           </p>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {TRANSFER_OPTIONS.map((option) => (

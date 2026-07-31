@@ -31,16 +31,16 @@ const documentTitles: Record<string, string> = {
   [ROUTES.about]: "О нас — АЛСМА",
   [ROUTES.allInclusive]: "Все включено — АЛСМА",
   [ROUTES.adminAgentScenarios]: "Сценарии агентов",
-  [ROUTES.adminBookingRequests]: "Заявки на бронирование — админ-панель ALSMA",
-  [ROUTES.adminClients]: "Клиенты — админ-панель ALSMA",
-  [ROUTES.adminDashboard]: "Админ-панель ALSMA",
-  [ROUTES.adminIntegrations]: "Интеграции — админ-панель ALSMA",
+  [ROUTES.adminBookingRequests]: "Заявки на бронирование — админ-панель АЛСМА",
+  [ROUTES.adminClients]: "Клиенты — админ-панель АЛСМА",
+  [ROUTES.adminDashboard]: "Админ-панель АЛСМА",
+  [ROUTES.adminIntegrations]: "Интеграции — админ-панель АЛСМА",
   [ROUTES.adminKnowledgeBase]: "База знаний",
   [ROUTES.adminLogin]: "Вход в админ-панель — АЛСМА",
-  [ROUTES.adminRequests]: "Обращения — админ-панель ALSMA",
+  [ROUTES.adminRequests]: "Обращения — админ-панель АЛСМА",
   [ROUTES.adminSettings]: "Настройки",
-  [ROUTES.adminSiteLeads]: "Заявки сайта — админ-панель ALSMA",
-  [ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель ALSMA",
+  [ROUTES.adminSiteLeads]: "Заявки сайта — админ-панель АЛСМА",
+  [ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель АЛСМА",
   [ROUTES.blog]: "Блог — АЛСМА",
   [ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
   [ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
@@ -62,7 +62,7 @@ const RootLayout = () => {
   useEffect(() => {
     document.title =
       documentTitles[pathname] ??
-      (pathname.startsWith("/admin") ? "Админ-панель ALSMA" : "АЛСМА");
+      (pathname.startsWith("/admin") ? "Админ-панель АЛСМА" : "АЛСМА");
   }, [pathname]);
 
   return (

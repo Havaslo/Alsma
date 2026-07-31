@@ -33,7 +33,7 @@ export type PublicPageDefinition = {
 export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
   about: {
     description:
-      "«Алсма» — загородный SPA-отель с большой территорией, бассейнами и отдыхом для всей семьи.",
+      "«АЛСМА» — загородный SPA-отель с большой территорией, бассейнами и отдыхом для всей семьи.",
     eyebrow: "Об отеле",
     heroImage: natureImage,
     highlights: [
