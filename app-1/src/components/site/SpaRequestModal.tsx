@@ -39,7 +39,7 @@ export const SpaRequestModal = ({
 
   return (
     <Modal
-      className="max-w-3xl rounded-4xl bg-page"
+      className="max-w-3xl rounded-4xl bg-white"
       closeButtonClassName="absolute top-8 right-8 sm:top-10 sm:right-12"
       closeLabel="Закрыть"
       headerClassName="relative block border-b-0 px-10 pt-8 pb-0 sm:px-12 sm:pt-10"
