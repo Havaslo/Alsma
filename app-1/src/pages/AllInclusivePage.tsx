@@ -41,7 +41,7 @@ export const AllInclusivePage = () => {
         title={title}
       />
       <section
-        className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
+        className="mx-auto max-w-[100rem] px-5 py-10 sm:px-8 sm:py-24"
         id="details"
       >
         <div className="mx-auto max-w-3xl text-center">
@@ -75,7 +75,7 @@ export const AllInclusivePage = () => {
           })}
         </div>
       </section>
-      <section className="py-24">
+      <section className="py-10 sm:py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
@@ -133,7 +133,7 @@ export const AllInclusivePage = () => {
         eyebrow="Вечерний бар"
         format={FEATURED_FORMATS[2]}
       />
-      <section className="mx-auto max-w-[100rem] px-5 py-20 sm:px-8">
+      <section className="mx-auto max-w-[100rem] px-5 py-10 sm:px-8 sm:py-20">
         <FeatureSplit format={FEATURED_FORMATS[3]} reverse />
       </section>
       <AllInclusiveFinalSection />
@@ -183,7 +183,7 @@ const DetailShowcase = ({
   eyebrow: string;
   format: FeaturedFormat;
 }) => (
-  <section className="px-5 py-20 sm:px-8">
+  <section className="px-5 py-10 sm:px-8 sm:py-20">
     <div className="mx-auto max-w-[100rem]">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">

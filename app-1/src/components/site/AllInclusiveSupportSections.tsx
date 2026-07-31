@@ -21,7 +21,7 @@ const animationFormats = [
 ] as const;
 
 export const AllInclusiveAnimationSection = () => (
-  <section className="bg-panel py-24">
+  <section className="bg-panel py-10 sm:py-24">
     <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-semibold tracking-widest text-brand uppercase">
@@ -58,7 +58,7 @@ export const AllInclusiveAnimationSection = () => (
 );
 
 export const AllInclusiveFinalSection = () => (
-  <section className="px-5 py-24 sm:px-8">
+  <section className="px-5 py-10 sm:px-8 sm:py-24">
     <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-16 text-center text-brand-foreground sm:px-12 sm:py-20">
       <img
         alt="Отдых в АЛСМА"
