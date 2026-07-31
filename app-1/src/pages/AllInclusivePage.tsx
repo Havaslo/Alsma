@@ -77,9 +77,15 @@ export const AllInclusivePage = () => {
       </section>
       <section className="py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-          <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
-            Что входит в питание
-          </h2>
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+              Что входит в питание
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+              Три основных приёма пищи и лёгкие перекусы в течение дня — всё,
+              чтобы отдыхать без забот о том, где и что поесть.
+            </p>
+          </div>
           <div className="mt-12 grid gap-7 lg:grid-cols-2">
             {FOOD_FORMATS.map((format) => (
               <article
@@ -88,7 +94,7 @@ export const AllInclusivePage = () => {
               >
                 <img
                   alt={format.title}
-                  className="h-64 w-full object-cover"
+                  className="aspect-video w-full object-cover"
                   src={format.image}
                 />
                 <div className="p-8">
