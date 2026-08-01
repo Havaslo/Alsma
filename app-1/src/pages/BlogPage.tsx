@@ -5,7 +5,8 @@ import { EditorialCard } from "@/components/site/EditorialCard";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
-import { BLOG_ITEMS } from "@/lib/site/editorial";
+import { getSiteCollection } from "@/lib/site/content-collections";
+import { BLOG_ITEMS, type EditorialItem } from "@/lib/site/editorial";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -23,10 +24,17 @@ export const BlogPage = () => {
   const hero = content.data?.items.find(
     (item) => item.itemKey === "hero",
   )?.content;
+  const allBlogItems = getSiteCollection<EditorialItem>(
+    content.data?.items,
+    "items",
+    BLOG_ITEMS,
+  )
+    .filter((item) => item.isActive !== false)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const items =
     filter === "all"
-      ? BLOG_ITEMS
-      : BLOG_ITEMS.filter((item) => item.category === filter);
+      ? allBlogItems
+      : allBlogItems.filter((item) => item.category === filter);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -74,6 +82,11 @@ export const BlogPage = () => {
             <EditorialCard item={item} key={item.title} variant="blog" />
           ))}
         </div>
+        {items.length === 0 && (
+          <div className="mt-12 rounded-4xl border border-line bg-page px-6 py-16 text-center text-muted-ui-foreground">
+            В этом разделе пока нет публикаций.
+          </div>
+        )}
       </section>
       <SocialLinksSection
         description="Показываем атмосферу отдыха, делимся анонсами, публикуем статьи и рассказываем о красивых местах рядом с АЛСМА."

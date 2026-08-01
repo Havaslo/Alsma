@@ -14,7 +14,7 @@ export const EditorialCard = ({
   item,
   variant = "default",
 }: EditorialCardProps) => {
-  const [newsOpen, setNewsOpen] = useState(false);
+  const [articleOpen, setArticleOpen] = useState(false);
   const isBlog = variant === "blog";
   const isNews = variant === "news";
   const visibleTags = isNews ? item.tags.slice(0, 1) : item.tags;
@@ -80,34 +80,27 @@ export const EditorialCard = ({
             {item.title}
           </h3>
           <p className="mt-4 leading-7 text-muted-ui-foreground">
-            {isNews ? item.description : item.description}
+            {item.description}
           </p>
           {isBlog ? (
-            <details className="group mt-auto pt-8">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+            <div className="mt-auto pt-8">
+              <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-ui-foreground">{item.date}</span>
-                <span className="flex items-center gap-2 font-semibold text-brand">
-                  Читать статью
-                  <ChevronDown className="size-4 -rotate-90 transition group-open:rotate-180" />
-                </span>
-              </summary>
-              <div className="mt-5 border-t border-line pt-5 leading-7">
-                {item.details}
-              </div>
-              {item.buttonLink && (
-                <a
-                  className="mt-5 inline-flex rounded-full border border-brand px-5 py-2.5 font-semibold text-brand"
-                  href={item.buttonLink}
+                <button
+                  className="flex items-center gap-2 font-semibold text-brand"
+                  onClick={() => setArticleOpen(true)}
+                  type="button"
                 >
-                  Перейти
-                </a>
-              )}
-            </details>
+                  Читать статью
+                  <ArrowUpRight className="size-4" />
+                </button>
+              </div>
+            </div>
           ) : isNews ? (
             <div className="mt-auto pt-6">
               <button
                 className="inline-flex items-center gap-2 font-semibold text-brand"
-                onClick={() => setNewsOpen(true)}
+                onClick={() => setArticleOpen(true)}
                 type="button"
               >
                 Подробнее
@@ -135,12 +128,12 @@ export const EditorialCard = ({
           )}
         </div>
       </article>
-      {isNews && (
+      {(isNews || isBlog) && (
         <Modal
           className="bg-page text-page-foreground"
           hideHeader
-          onClose={() => setNewsOpen(false)}
-          open={newsOpen}
+          onClose={() => setArticleOpen(false)}
+          open={articleOpen}
           title={item.title}
         >
           <img
@@ -158,7 +151,7 @@ export const EditorialCard = ({
                   className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand"
                   key={tag}
                 >
-                  {tag}
+                  {isBlog ? `#${tag}` : tag}
                 </span>
               ))}
               <span className="text-sm text-muted-ui-foreground">

@@ -1,4 +1,5 @@
 import { NEWS_ITEMS } from "@/lib/site/editorial";
+import { BLOG_ITEMS } from "@/lib/site/editorial";
 import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
@@ -32,6 +33,7 @@ export const SITE_COLLECTIONS = {
     "popup-banners": HOME_POPUP_BANNERS,
     reviews: HOME_REVIEWS,
   },
+  blog: { items: BLOG_ITEMS },
   news: { items: NEWS_ITEMS },
   offers: {
     events: OFFER_EVENTS,
