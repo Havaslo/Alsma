@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import maxLogo from "@/assets/alsma/max-logo.svg";
 import { ROUTES } from "@/route-constants";
 
 import { VkontakteIcon } from "./SocialLinksSection";
@@ -78,7 +79,7 @@ export const SiteFooter = () => (
             target="_blank"
             title="MAX"
           >
-            <MessageCircle className="size-5" />
+            <img alt="" className="size-5" src={maxLogo} />
           </a>
         </div>
         <Link
