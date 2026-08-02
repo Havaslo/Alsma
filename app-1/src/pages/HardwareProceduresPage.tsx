@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import heroImage from "@/assets/alsma/spa-hero-new.jpg";
+import heroImage from "@/assets/alsma/hardware-procedures-hero.webp";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
