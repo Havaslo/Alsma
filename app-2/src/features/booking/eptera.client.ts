@@ -1,10 +1,18 @@
 import { HttpError } from "../../lib/http/http-error.js";
 
 const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
+const REQUEST_TIMEOUT_MS = 15_000;
+const TOKEN_REFRESH_MARGIN_MS = 60_000;
+const MAX_TRANSIENT_RETRIES = 2;
 
 type EpteraClientOptions = {
   readonly apiKey?: string;
   readonly hotelId?: string;
+};
+
+type Session = {
+  readonly expiresAt: number | null;
+  readonly token: string;
 };
 
 export type EpteraOffer = {
@@ -41,16 +49,50 @@ const readJwt = (payload: unknown): string => {
     : "";
 };
 
+const readAllowedHotelIds = (payload: unknown): number[] => {
+  const response = asRecord(payload);
+  const values = response?.["allowed-hotel-ids"];
+  if (!Array.isArray(values)) return [];
+  return values.flatMap((value) => {
+    const id = typeof value === "number" ? value : Number(value);
+    return Number.isInteger(id) && id > 0 ? [id] : [];
+  });
+};
+
+const readTokenExpiry = (token: string): number | null => {
+  try {
+    const encodedPayload = token.split(".")[1];
+    if (!encodedPayload) return null;
+    const payload = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as { exp?: unknown };
+    return typeof payload.exp === "number" && payload.exp > 0
+      ? payload.exp * 1000
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
 export const createEpteraClient = ({
   apiKey,
   hotelId,
 }: EpteraClientOptions) => {
-  let sessionToken: string | undefined;
+  let session: Session | undefined;
+  let loginPromise: Promise<Session> | undefined;
 
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
     const normalizedApiKey = apiKey?.trim();
     const normalizedHotelId = hotelId?.trim();
-    if (!normalizedApiKey || !normalizedHotelId) {
+    if (
+      !normalizedApiKey ||
+      !normalizedHotelId ||
+      !/^\d+$/.test(normalizedHotelId) ||
+      Number(normalizedHotelId) < 1
+    ) {
       throw new HttpError(
         503,
         "EPTERA_NOT_CONFIGURED",
@@ -60,46 +102,77 @@ export const createEpteraClient = ({
     return { apiKey: normalizedApiKey, hotelId: normalizedHotelId };
   };
 
-  const login = async (): Promise<string> => {
-    const config = requireConfiguration();
-    let response: Response;
-    try {
-      response = await fetch(`${EPTERA_BASE_URL}/login`, {
-        body: JSON.stringify({}),
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-        signal: AbortSignal.timeout(15_000),
-      });
-    } catch {
-      throw new HttpError(
-        502,
-        "EPTERA_UNAVAILABLE",
-        "Не удалось связаться с сервисом бронирования.",
-      );
+  const login = async (): Promise<Session> => {
+    if (loginPromise) return loginPromise;
+    loginPromise = (async () => {
+      const config = requireConfiguration();
+      let response: Response;
+      try {
+        response = await fetch(`${EPTERA_BASE_URL}/login`, {
+          body: JSON.stringify({}),
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        throw new HttpError(
+          502,
+          "EPTERA_UNAVAILABLE",
+          "Не удалось связаться с сервисом бронирования.",
+        );
+      } finally {
+        loginPromise = undefined;
+      }
+      const payload: unknown = await response.json().catch(() => null);
+      const token = readJwt(payload);
+      const hotelNumber = Number(config.hotelId);
+      const responseRecord = asRecord(payload);
+      const success = responseRecord?.success === true;
+      if (
+        !response.ok ||
+        !success ||
+        !token ||
+        !readAllowedHotelIds(payload).includes(hotelNumber)
+      ) {
+        throw new HttpError(
+          response.status >= 500 ? 502 : 503,
+          "EPTERA_AUTH_FAILED",
+          "Eptera не выдала доступ к настроенному отелю. Проверьте интеграцию Eptera.",
+          { status: response.status },
+        );
+      }
+      const nextSession = {
+        expiresAt: readTokenExpiry(token),
+        token,
+      } satisfies Session;
+      session = nextSession;
+      return nextSession;
+    })();
+    return loginPromise;
+  };
+
+  const getSession = async (): Promise<Session> => {
+    if (
+      session &&
+      (session.expiresAt === null ||
+        session.expiresAt - Date.now() > TOKEN_REFRESH_MARGIN_MS)
+    ) {
+      return session;
     }
-    const payload: unknown = await response.json().catch(() => null);
-    const token = readJwt(payload);
-    if (!response.ok || !token) {
-      throw new HttpError(
-        response.status >= 500 ? 502 : 503,
-        "EPTERA_AUTH_FAILED",
-        "Eptera не выдала токен доступа. Проверьте API-ключ в настройках Environment.",
-        { status: response.status },
-      );
-    }
-    sessionToken = token;
-    return token;
+    session = undefined;
+    return login();
   };
 
   const request = async <T>(
     path: string,
     init?: RequestInit,
-    retry = true,
+    retryAuth = true,
+    transientRetry = 0,
   ): Promise<T> => {
-    const token = sessionToken ?? (await login());
+    const { token } = await getSession();
     let response: Response;
     try {
       response = await fetch(`${EPTERA_BASE_URL}${path}`, {
@@ -109,9 +182,13 @@ export const createEpteraClient = ({
           "Content-Type": "application/json",
           ...init?.headers,
         },
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch {
+      if (transientRetry < MAX_TRANSIENT_RETRIES) {
+        await wait(250 * 2 ** transientRetry);
+        return request(path, init, retryAuth, transientRetry + 1);
+      }
       throw new HttpError(
         502,
         "EPTERA_UNAVAILABLE",
@@ -120,15 +197,26 @@ export const createEpteraClient = ({
     }
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      if ((response.status === 401 || response.status === 498) && retry) {
-        sessionToken = undefined;
-        return request<T>(path, init, false);
+      if ((response.status === 401 || response.status === 498) && retryAuth) {
+        session = undefined;
+        return request(path, init, false, transientRetry);
+      }
+      if (
+        (response.status === 429 || response.status >= 500) &&
+        transientRetry < MAX_TRANSIENT_RETRIES
+      ) {
+        const retryAfter = Number(response.headers.get("retry-after"));
+        const delay = Number.isFinite(retryAfter)
+          ? Math.min(Math.max(retryAfter * 1000, 250), 2_000)
+          : 250 * 2 ** transientRetry;
+        await wait(delay);
+        return request(path, init, retryAuth, transientRetry + 1);
       }
       if (response.status === 401 || response.status === 498) {
         throw new HttpError(
           503,
           "EPTERA_AUTH_FAILED",
-          "Eptera отклонила токен доступа. Проверьте API-ключ в настройках Environment.",
+          "Eptera отклонила токен доступа. Проверьте интеграцию Eptera.",
           { status: response.status },
         );
       }

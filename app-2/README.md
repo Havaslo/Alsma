@@ -13,19 +13,20 @@ The backend uses TypeScript, Express, Prisma, PostgreSQL, Zod, Pino, Helmet, and
 - `src/lib` contains configuration, database, HTTP, logging, and storage support.
 - `prisma/schema.prisma` and `prisma/migrations` define the PostgreSQL schema and migrations.
 
-The backend does not render the frontend. `app-1` calls its JSON endpoints through the relative `/api` path, with its development proxy configured separately.
+The backend does not render the frontend. `app-1` calls its JSON endpoints through the relative `/api` path, with the frontend development proxy configured separately.
 
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
 
 ## Eptera / ElektraWeb booking integration
 
-The production API endpoint supplied by the provider is `https://bookingapi.eptera.ru/`. The documentation is published at the ElektraWeb domain. For this provider's `bookingapi#...` credential, the working flow is:
+The production API endpoint supplied by the provider is `https://bookingapi.eptera.ru/`. The documentation is published at the ElektraWeb domain, but project credentials are sent only to the Eptera endpoint. For this provider's `bookingapi#...` credential, the working flow is:
 
-1. Send `POST /login` to `bookingapi.eptera.ru` with `Authorization: Bearer EPTERA_API_KEY` and an empty JSON body.
-2. Read the JWT from the response field `jwt`.
-3. Send the returned JWT as `Authorization: Bearer <jwt>` to `/hotel/{hotel-id}/price/` and reservation endpoints.
+1. Send `POST /login` to `bookingapi.eptera.ru` with `Authorization: Bearer EPTERA_API_KEY`, `Content-Type: application/json`, and body `{}`.
+2. Require a successful response, read the temporary JWT from the response field `jwt`, and verify that `allowed-hotel-ids` contains the configured numeric `EPTERA_HOTEL_ID`.
+3. Send the temporary JWT as `Authorization: Bearer <jwt>` to `/hotel/{hotel-id}/price/` and reservation endpoints. The bootstrap API key is never used for these requests.
+4. Keep the JWT in process memory, refresh it shortly before its decoded `exp` time, and re-authenticate once after a 401/498. Reads and transient 429/5xx failures use bounded retries.
 
-The client keeps the API key and hotel ID server-side, caches the JWT for the lifetime of the backend process, and re-authenticates once after a 401/498 response. Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` in project Environment settings. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if login is rejected, they return `503 EPTERA_AUTH_FAILED`.
+Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` through the Eptera Booking API integration in project settings. Values must remain server-side and must not be added to the frontend or exposed in `VITE_*` variables. If configuration is absent, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if login or hotel authorization is rejected, they return `503 EPTERA_AUTH_FAILED`.
 
 ## Development
 
