@@ -23,6 +23,8 @@ const start = async (): Promise<void> => {
   const app = createApp({
     database,
     logger,
+    epteraApiKey: config.epteraApiKey,
+    epteraHotelId: config.epteraHotelId,
     managedStorage,
     openaiApiKey: config.openaiApiKey,
   });

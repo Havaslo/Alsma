@@ -10,6 +10,8 @@ import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
+  readonly epteraApiKey?: string;
+  readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly database: Database;
   readonly logger: Logger;
@@ -27,6 +29,8 @@ type CreateAppOptions = {
 
 export const createApp = ({
   database,
+  epteraApiKey,
+  epteraHotelId,
   logger,
   managedStorage,
   openaiApiKey,
@@ -49,7 +53,16 @@ export const createApp = ({
   app.get("/health", (_request, response) => {
     response.json({ status: "ok" });
   });
-  app.use("/api", createApiRouter({ database, managedStorage, openaiApiKey }));
+  app.use(
+    "/api",
+    createApiRouter({
+      database,
+      epteraApiKey,
+      epteraHotelId,
+      managedStorage,
+      openaiApiKey,
+    }),
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

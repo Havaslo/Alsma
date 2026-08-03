@@ -24,11 +24,15 @@ const environmentSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  EPTERA_API_KEY: z.string().min(1).optional(),
+  EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
 });
 
 export type AppConfig = {
   readonly databaseUrl: string;
+  readonly epteraApiKey?: string;
+  readonly epteraHotelId?: string;
   readonly managedStorage: {
     readonly apiUrl: string;
     readonly projectToken: string;
@@ -44,6 +48,8 @@ export const readConfig = (
   const parsed = environmentSchema.parse(environment);
   return {
     databaseUrl: parsed.DATABASE_URL,
+    epteraApiKey: parsed.EPTERA_API_KEY,
+    epteraHotelId: parsed.EPTERA_HOTEL_ID,
     managedStorage: {
       apiUrl: parsed.AMAZI_STORAGE_API_URL,
       projectToken: parsed.AMAZI_STORAGE_PROJECT_TOKEN,

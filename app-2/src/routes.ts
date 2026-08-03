@@ -5,6 +5,8 @@ import { createAdminLeadsRouter } from "./features/admin-leads/admin-leads.route
 import { createAdminOperationsRouter } from "./features/admin-operations/admin-operations.routes.js";
 import { createAdminSettingsRouter } from "./features/admin-settings/admin-settings.routes.js";
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
+import { createBookingRouter } from "./features/booking/booking.routes.js";
+import { createEpteraClient } from "./features/booking/eptera.client.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
@@ -17,6 +19,8 @@ import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
 
 type CreateApiRouterOptions = {
   readonly database: Database;
+  readonly epteraApiKey?: string;
+  readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly managedStorage: {
     readonly createUpload: (input: {
@@ -32,6 +36,8 @@ type CreateApiRouterOptions = {
 
 export const createApiRouter = ({
   database,
+  epteraApiKey,
+  epteraHotelId,
   managedStorage,
   openaiApiKey,
 }: CreateApiRouterOptions): Router => {
@@ -43,6 +49,13 @@ export const createApiRouter = ({
   router.use("/admin", createAdminOperationsRouter(database));
   router.use("/admin/settings", createAdminSettingsRouter(database));
   router.use("/auth", createGuestAuthRouter(database));
+  router.use(
+    "/booking",
+    createBookingRouter(
+      database,
+      createEpteraClient({ apiKey: epteraApiKey, hotelId: epteraHotelId }),
+    ),
+  );
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));
