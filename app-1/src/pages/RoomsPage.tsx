@@ -10,7 +10,7 @@ import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 export const RoomsPage = () => {
   const page = PUBLIC_PAGES.rooms;
   const content = usePublishedSiteContent("rooms");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title = typeof hero?.title === "string" ? hero.title : page.title;

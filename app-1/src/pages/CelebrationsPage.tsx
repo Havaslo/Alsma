@@ -13,7 +13,7 @@ export const CelebrationsPage = () => {
   const [requestOpen, setRequestOpen] = useState(false);
   const page = PUBLIC_PAGES.celebrations;
   const content = usePublishedSiteContent("celebrations");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title =

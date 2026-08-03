@@ -21,7 +21,7 @@ export const NewsPage = () => {
   const [filter, setFilter] = useState("all");
   const page = PUBLIC_PAGES.news;
   const content = usePublishedSiteContent("news");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const allNewsItems = [

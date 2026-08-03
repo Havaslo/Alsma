@@ -27,7 +27,7 @@ type KidsServiceWithDescription = KidsService & {
 export const EntertainmentPage = () => {
   const page = PUBLIC_PAGES.entertainment;
   const content = usePublishedSiteContent("entertainment");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title =

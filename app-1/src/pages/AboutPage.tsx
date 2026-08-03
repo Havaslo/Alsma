@@ -39,7 +39,7 @@ const advantageIconTones = [
 export const AboutPage = () => {
   const page = PUBLIC_PAGES.about;
   const content = usePublishedSiteContent("about");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title = typeof hero?.title === "string" ? hero.title : "О нас";

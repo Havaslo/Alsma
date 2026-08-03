@@ -45,7 +45,7 @@ const scenarioCtaLabels = [
 export const OffersPage = () => {
   const page = PUBLIC_PAGES.offers;
   const content = usePublishedSiteContent("offers");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title =

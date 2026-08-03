@@ -30,7 +30,7 @@ export const HomePage = () => {
   const content = usePublishedSiteContent("home");
   const roomsContent = usePublishedSiteContent("rooms");
   const offersContent = usePublishedSiteContent("offers");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const restCards = getSiteCollection<HomeRestCard>(

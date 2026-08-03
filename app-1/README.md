@@ -11,6 +11,7 @@ The application uses React, TypeScript, Vite, TanStack Router, TanStack Query, R
 - `src/components/site`, `src/components/account`, and `src/components/admin` contain product UI by area.
 - `src/components/ui` contains shared UI primitives.
 - `src/lib` contains API clients, query hooks, session helpers, and site data.
+- Публичные страницы и админские редакторы безопасно обрабатывают ответы без коллекции `items`: для публичной части используются локальные fallback-данные, а редакторы показывают доступное состояние без падения приложения.
 
 The frontend communicates with `app-2` through relative `/api` requests. During development, Vite forwards that path to the backend target configured through `BACKEND_PROXY_TARGET`; browser code must not use backend container addresses directly.
 

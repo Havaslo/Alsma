@@ -15,7 +15,7 @@ export const HardwareProceduresPage = () => {
   );
   const page = PUBLIC_PAGES["hardware-procedures"];
   const content = usePublishedSiteContent("hardware-procedures");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title = typeof hero?.title === "string" ? hero.title : page.title;

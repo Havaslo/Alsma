@@ -24,7 +24,7 @@ const overviewIcons = {
 export const AllInclusivePage = () => {
   const page = PUBLIC_PAGES["all-inclusive"];
   const content = usePublishedSiteContent("all-inclusive");
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   const title = typeof hero?.title === "string" ? hero.title : page.title;

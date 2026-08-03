@@ -149,7 +149,7 @@ const ContentForm = ({ section, stored }: ContentFormProps) => {
 export const AdminSiteContentEditor = () => {
   const [section, setSection] = useState<PublicPageKey>("home");
   const content = useAdminSiteContent(section);
-  const stored = content.data?.items.find((item) => item.itemKey === "hero");
+  const stored = content.data?.items?.find((item) => item.itemKey === "hero");
 
   return (
     <div className="space-y-5">

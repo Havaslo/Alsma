@@ -31,7 +31,7 @@ export const AdminBlogEditor = () => {
   const [deleteIndex, setDeleteIndex] = useState<number>();
   const content = useAdminSiteContent("blog");
   const save = useSaveAdminSiteContent();
-  const storedItems = content.data?.items.find(
+  const storedItems = content.data?.items?.find(
     (item) => item.itemKey === "items",
   )?.content.items;
   const form = useForm<FormValues>({

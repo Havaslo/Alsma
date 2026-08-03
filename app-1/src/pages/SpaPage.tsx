@@ -19,7 +19,7 @@ export const SpaPage = () => {
   const [open, setOpen] = useState(false);
   const content = usePublishedSiteContent("spa");
   const spa = getSpaDefaults(content.data?.items);
-  const hero = content.data?.items.find(
+  const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
   return (
