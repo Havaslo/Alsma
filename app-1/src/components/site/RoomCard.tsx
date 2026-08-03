@@ -1,14 +1,11 @@
 import { Check, Users } from "lucide-react";
 
+import { RoomGallery } from "@/components/site/RoomGallery";
 import type { RoomCategory } from "@/lib/site/rooms";
 
 export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
   <article className="overflow-hidden rounded-4xl bg-panel shadow-lg lg:grid lg:grid-cols-2">
-    <img
-      alt={room.title}
-      className="aspect-square size-full object-cover"
-      src={room.image}
-    />
+    <RoomGallery images={room.gallery ?? [room.image]} title={room.title} />
     <div className="flex flex-col p-7 sm:p-10">
       <div className="flex flex-wrap gap-2 text-sm font-semibold text-brand">
         <span className="rounded-full bg-brand/10 px-3 py-2">{room.area}</span>
@@ -25,7 +22,7 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
         <div className="mt-5 flex flex-wrap gap-2">
           {room.features.map((feature) => (
             <span
-              className="rounded-full border border-line px-3 py-1.5 text-sm text-muted-ui-foreground"
+              className="rounded-full border border-brand/15 px-3 py-1.5 text-sm text-muted-ui-foreground"
               key={feature}
             >
               {feature}
