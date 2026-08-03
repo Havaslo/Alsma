@@ -31,6 +31,7 @@ export const ROUTES = {
   allInclusive: "/all-inclusive",
   about: "/about",
   blog: "/blog",
+  booking: "/booking",
   celebrations: "/celebrations",
   entertainment: "/entertainment",
   hardwareProcedures: "/hardware-procedures",

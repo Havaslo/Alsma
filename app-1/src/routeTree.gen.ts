@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AllInclusiveRouteImport } from './routes/all-inclusive'
 import { Route as BlogRouteImport } from './routes/blog'
+import { Route as BookingRouteImport } from './routes/booking'
 import { Route as CelebrationsRouteImport } from './routes/celebrations'
 import { Route as EntertainmentRouteImport } from './routes/entertainment'
 import { Route as HardwareProceduresRouteImport } from './routes/hardware-procedures'
@@ -74,6 +75,11 @@ const AllInclusiveRoute = AllInclusiveRouteImport.update({
 const BlogRoute = BlogRouteImport.update({
   id: '/blog',
   path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingRoute = BookingRouteImport.update({
+  id: '/booking',
+  path: '/booking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CelebrationsRoute = CelebrationsRouteImport.update({
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRouteWithChildren
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
+  '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRouteWithChildren
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
+  '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
@@ -359,6 +367,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRouteWithChildren
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
+  '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
@@ -404,6 +413,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/all-inclusive'
     | '/blog'
+    | '/booking'
     | '/celebrations'
     | '/entertainment'
     | '/hardware-procedures'
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/all-inclusive'
     | '/blog'
+    | '/booking'
     | '/celebrations'
     | '/entertainment'
     | '/hardware-procedures'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/all-inclusive'
     | '/blog'
+    | '/booking'
     | '/celebrations'
     | '/entertainment'
     | '/hardware-procedures'
@@ -534,6 +546,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRouteWithChildren
   AllInclusiveRoute: typeof AllInclusiveRoute
   BlogRoute: typeof BlogRoute
+  BookingRoute: typeof BookingRoute
   CelebrationsRoute: typeof CelebrationsRoute
   EntertainmentRoute: typeof EntertainmentRoute
   HardwareProceduresRoute: typeof HardwareProceduresRoute
@@ -606,6 +619,13 @@ declare module '@tanstack/react-router' {
       path: '/blog'
       fullPath: '/blog'
       preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/booking': {
+      id: '/booking'
+      path: '/booking'
+      fullPath: '/booking'
+      preLoaderRoute: typeof BookingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/celebrations': {
@@ -880,6 +900,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRouteWithChildren,
   AllInclusiveRoute: AllInclusiveRoute,
   BlogRoute: BlogRoute,
+  BookingRoute: BookingRoute,
   CelebrationsRoute: CelebrationsRoute,
   EntertainmentRoute: EntertainmentRoute,
   HardwareProceduresRoute: HardwareProceduresRoute,

@@ -27,7 +27,7 @@ const moreNavigation = [
 
 export const SiteHeader = ({
   bookingLabel = "Забронировать",
-  bookingTo = `${ROUTES.home}#booking`,
+  bookingTo = ROUTES.booking,
   light = false,
   transparentAtTop = true,
 }: {

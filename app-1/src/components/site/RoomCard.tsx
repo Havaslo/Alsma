@@ -49,13 +49,13 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
         </p>
         <a
           className="rounded-full border border-brand/15 bg-page px-6 py-3 font-semibold text-brand"
-          href="/#booking"
+          href="/booking"
         >
           Проверить даты
         </a>
         <a
           className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-          href="/#booking"
+          href="/booking"
         >
           Перейти к бронированию
         </a>
