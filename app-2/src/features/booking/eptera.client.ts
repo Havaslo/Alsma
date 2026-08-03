@@ -46,7 +46,9 @@ export const createEpteraClient = ({
         "Сервис бронирования временно недоступен.",
       );
     }
-    return { apiKey, hotelId };
+    // API tokens are HTTP header values. Normalize a visually similar Turkish
+    // dotless "ı" that can be introduced when copying a bookingapi# token.
+    return { apiKey: apiKey.trim().replaceAll("ı", "i"), hotelId };
   };
 
   const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
