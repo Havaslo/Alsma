@@ -4,7 +4,7 @@
 
 ## Architecture
 
-The application uses React, TypeScript, Vite, TanStack Router, TanStack Query, React Hook Form, and Tailwind CSS.
+The application uses TanStack Router, TanStack Query, React Hook Form, and Tailwind CSS.
 
 - `src/routes` contains file-based route declarations; `src/routeTree.gen.ts` is generated from them.
 - `src/pages` composes route-level screens.
@@ -12,6 +12,7 @@ The application uses React, TypeScript, Vite, TanStack Router, TanStack Query, R
 - `src/components/ui` contains shared UI primitives.
 - `src/lib` contains API clients, query hooks, session helpers, and site data.
 - Публичные страницы и админские редакторы безопасно обрабатывают ответы без коллекции `items`: для публичной части используются локальные fallback-данные, а редакторы показывают доступное состояние без падения приложения.
+- Админская оболочка проверяет наличие пользователя до чтения его прав. Если сессия истекла или production API вернул неполный ответ авторизации, пользователь перенаправляется на страницу входа вместо падения с ошибкой JavaScript.
 
 The frontend communicates with `app-2` through relative `/api` requests. During development, Vite forwards that path to the backend target configured through `BACKEND_PROXY_TARGET`; browser code must not use backend container addresses directly.
 

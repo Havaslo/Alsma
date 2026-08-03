@@ -38,16 +38,19 @@ export const AdminDashboardPage = () => {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
   const admin = useAdmin();
-  const permissions = admin.data?.user.permissions ?? [];
-  const can = (permission: string) =>
-    permissions.includes("*") || permissions.includes(permission);
+  const user = admin.data?.user;
+
   if (admin.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
         <Loader className="text-brand" size="lg" />
       </main>
     );
-  if (!admin.data?.user) return <Navigate replace to={ROUTES.adminLogin} />;
+  if (!user) return <Navigate replace to={ROUTES.adminLogin} />;
+
+  const permissions = user.permissions ?? [];
+  const can = (permission: string) =>
+    permissions.includes("*") || permissions.includes(permission);
   const isDashboard = path === ROUTES.admin || path === ROUTES.adminDashboard;
   const isSiteLeads = path === ROUTES.adminSiteLeads;
   const isSiteManagement = path.startsWith(ROUTES.adminSiteManagement);
@@ -67,11 +70,7 @@ export const AdminDashboardPage = () => {
     ROUTES.adminSiteManagementBlog,
   ];
   return (
-    <AdminShell
-      onLogout={() => void logout()}
-      path={path}
-      user={admin.data.user}
-    >
+    <AdminShell onLogout={() => void logout()} path={path} user={user}>
       {isDashboard && can("dashboard.access") && <AdminDashboardOverview />}
       {isSiteLeads && can("leads.access") && <AdminSiteLeadsTable />}
       {path === ROUTES.adminBookingRequests && can("dashboard.access") && (
@@ -97,7 +96,7 @@ export const AdminDashboardPage = () => {
         <AdminAgentScenariosPanel />
       )}
       {path === ROUTES.adminSettings && can("settings.access") && (
-        <AdminSettingsPanel currentUserId={admin.data.user.id} />
+        <AdminSettingsPanel currentUserId={user.id} />
       )}
       {path === ROUTES.adminSiteManagementHome &&
         (can("site.access") || can("site.manage")) && <AdminHomeEditor />}
