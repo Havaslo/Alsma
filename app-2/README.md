@@ -17,11 +17,11 @@ The backend does not render the frontend. `app-1` calls its JSON endpoints throu
 
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
 
-## Eptera booking integration
+## ElektraWeb booking integration
 
-The booking client keeps `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` server-side. For every backend process it logs in to Eptera through `POST /login` using the API key, caches the returned access token in memory, and sends that token as a Bearer token to the hotel price and reservation endpoints. A 401/498 response invalidates the cached token and triggers one re-login attempt.
+The booking client keeps `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` server-side. According to the ElektraWeb Hotel Booking API documentation, an API key is already used as a JWT credential: requests must send `Authorization: Bearer API_KEY` directly to `https://bookingapi.elektraweb.com`. The `/login` endpoint is for the alternative hotel-user or login-token flow and is not used for an API key. Price requests use `/hotel/{hotel-id}/price/`; the response is an array of room offers.
 
-Configure both variables in the project Environment settings and make sure the backend application receives the updated environment after publishing. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if Eptera rejects the login, they return `503 EPTERA_AUTH_FAILED` instead of silently showing an empty room list.
+Configure both variables in the project Environment settings and make sure the backend application receives the updated environment after publishing. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if ElektraWeb rejects the key, they return `503 EPTERA_AUTH_FAILED` instead of silently showing an empty room list.
 
 ## Development
 
