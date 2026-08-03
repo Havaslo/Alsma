@@ -17,11 +17,15 @@ The backend does not render the frontend. `app-1` calls its JSON endpoints throu
 
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
 
-## ElektraWeb booking integration
+## Eptera / ElektraWeb booking integration
 
-The booking client keeps `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` server-side. According to the ElektraWeb Hotel Booking API documentation, an API key is already used as a JWT credential: requests must send `Authorization: Bearer API_KEY` directly to `https://bookingapi.elektraweb.com`. The `/login` endpoint is for the alternative hotel-user or login-token flow and is not used for an API key. Price requests use `/hotel/{hotel-id}/price/`; the response is an array of room offers.
+The production API endpoint supplied by the provider is `https://bookingapi.eptera.ru/`. The documentation is published at the ElektraWeb domain. For this provider's `bookingapi#...` credential, the working flow is:
 
-Configure both variables in the project Environment settings and make sure the backend application receives the updated environment after publishing. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if ElektraWeb rejects the key, they return `503 EPTERA_AUTH_FAILED` instead of silently showing an empty room list.
+1. Send `POST /login` to `bookingapi.eptera.ru` with `Authorization: Bearer EPTERA_API_KEY` and an empty JSON body.
+2. Read the JWT from the response field `jwt`.
+3. Send the returned JWT as `Authorization: Bearer <jwt>` to `/hotel/{hotel-id}/price/` and reservation endpoints.
+
+The client keeps the API key and hotel ID server-side, caches the JWT for the lifetime of the backend process, and re-authenticates once after a 401/498 response. Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` in project Environment settings. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if login is rejected, they return `503 EPTERA_AUTH_FAILED`.
 
 ## Development
 

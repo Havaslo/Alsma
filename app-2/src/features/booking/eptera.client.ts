@@ -1,6 +1,6 @@
 import { HttpError } from "../../lib/http/http-error.js";
 
-const EPTERA_BASE_URL = "https://bookingapi.elektraweb.com";
+const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
 
 type EpteraClientOptions = {
   readonly apiKey?: string;
@@ -34,10 +34,19 @@ const string = (record: Record<string, unknown>, key: string): string =>
 const number = (record: Record<string, unknown>, key: string): number =>
   typeof record[key] === "number" ? record[key] : Number(record[key]);
 
+const readJwt = (payload: unknown): string => {
+  const response = asRecord(payload);
+  return response && typeof response.jwt === "string"
+    ? response.jwt.trim()
+    : "";
+};
+
 export const createEpteraClient = ({
   apiKey,
   hotelId,
 }: EpteraClientOptions) => {
+  let sessionToken: string | undefined;
+
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
     const normalizedApiKey = apiKey?.trim();
     const normalizedHotelId = hotelId?.trim();
@@ -51,14 +60,52 @@ export const createEpteraClient = ({
     return { apiKey: normalizedApiKey, hotelId: normalizedHotelId };
   };
 
-  const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const login = async (): Promise<string> => {
     const config = requireConfiguration();
+    let response: Response;
+    try {
+      response = await fetch(`${EPTERA_BASE_URL}/login`, {
+        body: JSON.stringify({}),
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new HttpError(
+        502,
+        "EPTERA_UNAVAILABLE",
+        "Не удалось связаться с сервисом бронирования.",
+      );
+    }
+    const payload: unknown = await response.json().catch(() => null);
+    const token = readJwt(payload);
+    if (!response.ok || !token) {
+      throw new HttpError(
+        response.status >= 500 ? 502 : 503,
+        "EPTERA_AUTH_FAILED",
+        "Eptera не выдала токен доступа. Проверьте API-ключ в настройках Environment.",
+        { status: response.status },
+      );
+    }
+    sessionToken = token;
+    return token;
+  };
+
+  const request = async <T>(
+    path: string,
+    init?: RequestInit,
+    retry = true,
+  ): Promise<T> => {
+    const token = sessionToken ?? (await login());
     let response: Response;
     try {
       response = await fetch(`${EPTERA_BASE_URL}${path}`, {
         ...init,
         headers: {
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           ...init?.headers,
         },
@@ -73,11 +120,15 @@ export const createEpteraClient = ({
     }
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
+      if ((response.status === 401 || response.status === 498) && retry) {
+        sessionToken = undefined;
+        return request<T>(path, init, false);
+      }
       if (response.status === 401 || response.status === 498) {
         throw new HttpError(
           503,
           "EPTERA_AUTH_FAILED",
-          "ElektraWeb отклонила API-ключ. Проверьте его в настройках Environment.",
+          "Eptera отклонила токен доступа. Проверьте API-ключ в настройках Environment.",
           { status: response.status },
         );
       }
