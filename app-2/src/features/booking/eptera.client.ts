@@ -73,6 +73,14 @@ export const createEpteraClient = ({
     }
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
+      if (response.status === 401 || response.status === 498) {
+        throw new HttpError(
+          503,
+          "EPTERA_AUTH_FAILED",
+          "Eptera отклонила ключ API. Проверьте его в настройках Environment.",
+          { status: response.status },
+        );
+      }
       throw new HttpError(
         response.status >= 500 ? 502 : 400,
         "EPTERA_REQUEST_FAILED",
