@@ -1,6 +1,7 @@
 import { HttpError } from "../../lib/http/http-error.js";
 
 const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
+const EPTERA_LOGIN_PATH = "/login";
 
 type EpteraClientOptions = {
   readonly apiKey?: string;
@@ -34,31 +35,96 @@ const string = (record: Record<string, unknown>, key: string): string =>
 const number = (record: Record<string, unknown>, key: string): number =>
   typeof record[key] === "number" ? record[key] : Number(record[key]);
 
+const readToken = (payload: unknown): string => {
+  if (typeof payload === "string") return payload.trim();
+  const record = asRecord(payload);
+  if (!record) return "";
+
+  for (const key of ["token", "accessToken", "access_token", "jwt"]) {
+    if (typeof record[key] === "string" && record[key].trim()) {
+      return record[key].trim();
+    }
+  }
+
+  for (const key of ["data", "result", "response"]) {
+    const nested = readToken(record[key]);
+    if (nested) return nested;
+  }
+  return "";
+};
+
 export const createEpteraClient = ({
   apiKey,
   hotelId,
 }: EpteraClientOptions) => {
+  let sessionToken: string | undefined;
+
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
-    if (!apiKey || !hotelId) {
+    const normalizedApiKey = apiKey?.trim();
+    const normalizedHotelId = hotelId?.trim();
+    if (!normalizedApiKey || !normalizedHotelId) {
       throw new HttpError(
         503,
         "EPTERA_NOT_CONFIGURED",
         "Сервис бронирования временно недоступен.",
       );
     }
-    // API tokens are HTTP header values. Normalize a visually similar Turkish
-    // dotless "ı" that can be introduced when copying a bookingapi# token.
-    return { apiKey: apiKey.trim().replaceAll("ı", "i"), hotelId };
+    return { apiKey: normalizedApiKey, hotelId: normalizedHotelId };
   };
 
-  const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const parseResponse = async (response: Response): Promise<unknown> =>
+    response.json().catch(() => null);
+
+  const login = async (): Promise<string> => {
     const config = requireConfiguration();
+    let response: Response;
+    try {
+      response = await fetch(`${EPTERA_BASE_URL}${EPTERA_LOGIN_PATH}`, {
+        body: JSON.stringify({ apiKey: config.apiKey }),
+        headers: {
+          "Content-Type": "application/json",
+          // Eptera accepts the API key as the login credential and returns a
+          // short-lived access token for subsequent hotel requests.
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        method: "POST",
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new HttpError(
+        502,
+        "EPTERA_UNAVAILABLE",
+        "Не удалось связаться с сервисом бронирования.",
+      );
+    }
+
+    const payload = await parseResponse(response);
+    const token = readToken(payload);
+    if (!response.ok || !token) {
+      throw new HttpError(
+        response.status >= 500 ? 502 : 503,
+        "EPTERA_AUTH_FAILED",
+        "Eptera не выдала токен доступа. Проверьте API-ключ в настройках Environment.",
+        { status: response.status },
+      );
+    }
+    sessionToken = token;
+    return token;
+  };
+
+  const request = async <T>(
+    path: string,
+    init?: RequestInit,
+    retry = true,
+  ): Promise<T> => {
+    const config = requireConfiguration();
+    const token = sessionToken ?? (await login());
     let response: Response;
     try {
       response = await fetch(`${EPTERA_BASE_URL}${path}`, {
         ...init,
         headers: {
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           ...init?.headers,
         },
@@ -71,13 +137,17 @@ export const createEpteraClient = ({
         "Не удалось связаться с сервисом бронирования.",
       );
     }
-    const payload: unknown = await response.json().catch(() => null);
+    const payload = await parseResponse(response);
     if (!response.ok) {
+      if ((response.status === 401 || response.status === 498) && retry) {
+        sessionToken = undefined;
+        return request<T>(path, init, false);
+      }
       if (response.status === 401 || response.status === 498) {
         throw new HttpError(
           503,
           "EPTERA_AUTH_FAILED",
-          "Eptera отклонила ключ API. Проверьте его в настройках Environment.",
+          "Eptera отклонила токен доступа. Проверьте API-ключ в настройках Environment.",
           { status: response.status },
         );
       }

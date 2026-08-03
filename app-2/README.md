@@ -9,13 +9,19 @@ The backend uses TypeScript, Express, Prisma, PostgreSQL, Zod, Pino, Helmet, and
 - `src/app.ts` configures Express middleware and mounts the API.
 - `src/server.ts` loads configuration, runs migrations, starts the server, and handles shutdown.
 - `src/routes.ts` composes feature routers under `/api`.
-- `src/features` contains API features for authentication, administration, leads, site content, media, knowledge base, agent scenarios, and voice-agent records.
+- `src/features` contains API features for authentication, administration, leads, site content, media, knowledge base, agent scenarios, voice-agent records, and booking.
 - `src/lib` contains configuration, database, HTTP, logging, and storage support.
 - `prisma/schema.prisma` and `prisma/migrations` define the PostgreSQL schema and migrations.
 
 The backend does not render the frontend. `app-1` calls its JSON endpoints through the relative `/api` path, with its development proxy configured separately.
 
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
+
+## Eptera booking integration
+
+The booking client keeps `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` server-side. For every backend process it logs in to Eptera through `POST /login` using the API key, caches the returned access token in memory, and sends that token as a Bearer token to the hotel price and reservation endpoints. A 401/498 response invalidates the cached token and triggers one re-login attempt.
+
+Configure both variables in the project Environment settings and make sure the backend application receives the updated environment after publishing. Values must not be added to the frontend or exposed in `VITE_*` variables. If either variable is absent in the running backend, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if Eptera rejects the login, they return `503 EPTERA_AUTH_FAILED` instead of silently showing an empty room list.
 
 ## Development
 
