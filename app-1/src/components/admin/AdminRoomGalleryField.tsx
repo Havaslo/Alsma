@@ -43,10 +43,10 @@ export const AdminRoomGalleryField = ({
               className="overflow-hidden rounded-2xl border border-line bg-panel"
               key={`${url}:${index}`}
             >
-              <div className="relative">
+              <div className="relative aspect-square w-full">
                 <img
                   alt={`Фото проживания ${index + 1}`}
-                  className="h-48 w-full object-cover"
+                  className="size-full object-cover"
                   src={url}
                 />
                 {index === 0 && (
