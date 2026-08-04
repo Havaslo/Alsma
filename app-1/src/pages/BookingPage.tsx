@@ -233,34 +233,41 @@ export const BookingPage = () => {
             <div>
               <section className="rounded-3xl border border-line bg-panel p-4 shadow-sm">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_auto]">
-                  <label className="rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-                    Даты проживания
+                  <div>
+                    <span className="mb-1 block px-1 text-xs font-semibold text-muted-ui-foreground">
+                      Даты проживания
+                    </span>
                     <DateRangePicker
                       checkIn={search.checkIn}
                       checkOut={search.checkOut}
                       onChange={({ checkIn, checkOut }) =>
                         setSearch((v) => ({ ...v, checkIn, checkOut }))
                       }
-                      triggerClassName="mt-1 text-page-foreground"
+                      triggerClassName="rounded-2xl bg-page p-3 text-page-foreground"
                     />
-                  </label>
-                  <RoomsPicker
-                    rooms={roomGuests}
-                    onChange={(rooms) => {
-                      setRoomGuests(rooms);
-                      setSearch((value) => ({
-                        ...value,
-                        adults: rooms.reduce(
-                          (total, room) => total + room.adults,
-                          0,
-                        ),
-                        childAges: rooms.flatMap((room) =>
-                          room.childAges.filter((age) => age >= 0),
-                        ),
-                        roomCount: rooms.length,
-                      }));
-                    }}
-                  />
+                  </div>
+                  <div>
+                    <span className="mb-1 block px-1 text-xs font-semibold text-muted-ui-foreground">
+                      Гости и номера
+                    </span>
+                    <RoomsPicker
+                      rooms={roomGuests}
+                      onChange={(rooms) => {
+                        setRoomGuests(rooms);
+                        setSearch((value) => ({
+                          ...value,
+                          adults: rooms.reduce(
+                            (total, room) => total + room.adults,
+                            0,
+                          ),
+                          childAges: rooms.flatMap((room) =>
+                            room.childAges.filter((age) => age >= 0),
+                          ),
+                          roomCount: rooms.length,
+                        }));
+                      }}
+                    />
+                  </div>
                   <button
                     className="rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
                     onClick={performSearch}
@@ -538,13 +545,9 @@ const RoomsPicker = ({
   const updateRoom = (index: number, room: RoomGuests) =>
     onChange(rooms.map((current, item) => (item === index ? room : current)));
   return (
-    <div
-      className="relative rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground"
-      ref={rootRef}
-    >
-      <span>Гости и номера</span>
+    <div className="relative" ref={rootRef}>
       <button
-        className="mt-1 flex w-full items-center justify-between gap-2 bg-transparent text-left text-base font-semibold text-page-foreground outline-none"
+        className="flex min-h-[3.75rem] w-full items-center justify-between gap-2 rounded-2xl bg-page p-3 text-left text-base font-semibold text-page-foreground outline-none"
         onClick={() => setOpen((value) => !value)}
         type="button"
       >
