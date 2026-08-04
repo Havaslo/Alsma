@@ -7,6 +7,8 @@ import { createAdminSettingsRouter } from "./features/admin-settings/admin-setti
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
 import { createBookingRouter } from "./features/booking/booking.routes.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
+import { createChatRouter } from "./features/chat/chat.routes.js";
+import { createChatService } from "./features/chat/chat.service.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
@@ -42,12 +44,13 @@ export const createApiRouter = ({
   openaiApiKey,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
-
+  const chat = createChatService();
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
   router.use("/admin", createAdminOperationsRouter(database));
   router.use("/admin/settings", createAdminSettingsRouter(database));
+  router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
   router.use("/auth", createGuestAuthRouter(database));
   router.use(
     "/booking",
@@ -56,12 +59,11 @@ export const createApiRouter = ({
       createEpteraClient({ apiKey: epteraApiKey, hotelId: epteraHotelId }),
     ),
   );
+  router.use("/chat", createChatRouter(database, chat));
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
-  router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
   router.use("/voice-agent", createVoiceAgentRouter(database, openaiApiKey));
-
   return router;
 };

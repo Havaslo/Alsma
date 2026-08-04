@@ -8,6 +8,8 @@ import {
 } from "@tanstack/react-router";
 
 import { AppProviders } from "@/app/AppProviders";
+import { AdminChatPanel } from "@/components/admin/AdminChatPanel";
+import { ChatWidget } from "@/components/site/ChatWidget";
 import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ROUTES } from "@/route-constants";
@@ -27,7 +29,6 @@ const publicRoutes = new Set<string>([
   ROUTES.booking,
   ROUTES.privacy,
 ]);
-
 const documentTitles: Record<string, string> = {
   [ROUTES.about]: "О нас — АЛСМА",
   [ROUTES.allInclusive]: "Все включено — АЛСМА",
@@ -55,18 +56,15 @@ const documentTitles: Record<string, string> = {
   [ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
   [ROUTES.spa]: "SPA-центр — АЛСМА",
 };
-
 const RootLayout = () => {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-
   useEffect(() => {
     document.title =
       documentTitles[pathname] ??
       (pathname.startsWith("/admin") ? "Админ-панель АЛСМА" : "АЛСМА");
   }, [pathname]);
-
   return (
     <AppProviders>
       <Suspense
@@ -78,12 +76,21 @@ const RootLayout = () => {
       >
         <Outlet />
       </Suspense>
-      {publicRoutes.has(pathname) && <SiteFooter />}
+      {publicRoutes.has(pathname) && (
+        <>
+          <SiteFooter />
+          <ChatWidget />
+        </>
+      )}
+      {pathname === ROUTES.adminRequests && (
+        <div className="mx-auto hidden max-w-7xl px-5 pb-8 lg:block">
+          <AdminChatPanel />
+        </div>
+      )}
       <SiteOfferPopup />
     </AppProviders>
   );
 };
-
 const RootError = ({ error }: { error: Error }) => (
   <main className="grid min-h-screen place-items-center bg-page px-6 text-center text-brand">
     <div>
@@ -94,7 +101,6 @@ const RootError = ({ error }: { error: Error }) => (
     </div>
   </main>
 );
-
 export const Route = createRootRoute({
   component: RootLayout,
   errorComponent: RootError,
