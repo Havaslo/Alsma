@@ -66,9 +66,13 @@ const proxyApiRequest = (request, response, requestUrl) => {
     return;
   }
 
-  // Keep the complete method and request body. In particular, admin login is
-  // a POST and must never fall through to the static GET/HEAD handler.
-  const target = new URL(requestUrl.pathname + requestUrl.search, backendUrl);
+  // Some production ingress layers remove the public /api prefix before the
+  // request reaches this container. Normalize both forms for Express while
+  // preserving the original method, query string, headers, and body.
+  const backendPath = isApiPath(requestUrl.pathname)
+    ? requestUrl.pathname
+    : `/api${requestUrl.pathname}`;
+  const target = new URL(backendPath + requestUrl.search, backendUrl);
   const proxyRequest = createProxyRequest(
     target,
     {
@@ -126,14 +130,11 @@ const server = createServer(async (request, response) => {
   }
 
   const requestUrl = new URL(request.url, "http://localhost");
-  // This branch deliberately runs before the static method guard so every
-  // browser API method (POST, PATCH, PUT, DELETE, and GET) reaches Express.
-  if (isApiPath(requestUrl.pathname)) {
+  const method = request.method ?? "";
+  // Handle API paths first. Also proxy every non-read request as a safeguard
+  // for ingress layers that strip /api before forwarding to this container.
+  if (isApiPath(requestUrl.pathname) || !["GET", "HEAD"].includes(method)) {
     proxyApiRequest(request, response, requestUrl);
-    return;
-  }
-  if (!["GET", "HEAD"].includes(request.method ?? "")) {
-    sendText(response, 405, "Method not allowed.\n");
     return;
   }
   if (requestUrl.pathname === "/health") {
@@ -159,7 +160,7 @@ const server = createServer(async (request, response) => {
         contentTypes[extname(file).toLowerCase()] ?? "application/octet-stream",
     });
 
-    if (request.method === "HEAD") {
+    if (method === "HEAD") {
       response.end();
       return;
     }
