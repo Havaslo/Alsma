@@ -42,6 +42,16 @@ const string = (record: Record<string, unknown>, key: string): string =>
 const number = (record: Record<string, unknown>, key: string): number =>
   typeof record[key] === "number" ? record[key] : Number(record[key]);
 
+const readOfferItems = (payload: unknown): unknown[] => {
+  if (Array.isArray(payload)) return payload;
+  const response = asRecord(payload);
+  if (!response) return [];
+  for (const key of ["data", "offers", "prices", "items"]) {
+    if (Array.isArray(response[key])) return response[key];
+  }
+  return [];
+};
+
 const readJwt = (payload: unknown): string => {
   const response = asRecord(payload);
   return response && typeof response.jwt === "string"
@@ -247,15 +257,16 @@ export const createEpteraClient = ({
         currency: input.currency,
         fromdate: input.checkIn,
         language: input.language,
+        "min-room-count": "1",
         nationality: input.nationality,
+        "promo-code": "",
         onlybestoffer: "false",
         todate: input.checkOut,
       });
       const payload = await request<unknown>(
         `/hotel/${configuredHotelId}/price/?${query}`,
       );
-      if (!Array.isArray(payload)) return [];
-      return payload.flatMap((item) => {
+      return readOfferItems(payload).flatMap((item) => {
         const offer = asRecord(item);
         if (!offer) return [];
         const id = string(offer, "id");

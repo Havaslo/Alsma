@@ -25,6 +25,7 @@ The production API endpoint supplied by the provider is `https://bookingapi.epte
 2. Require a successful response, read the temporary JWT from the response field `jwt`, and verify that `allowed-hotel-ids` contains the configured numeric `EPTERA_HOTEL_ID`.
 3. Send the temporary JWT as `Authorization: Bearer <jwt>` to `/hotel/{hotel-id}/price/` and reservation endpoints. The bootstrap API key is never used for these requests.
 4. Keep the JWT in process memory, refresh it shortly before its decoded `exp` time, and re-authenticate once after a 401/498. Reads and transient 429/5xx failures use bounded retries.
+5. Availability requests use the provider's explicit `adult`, `childage`, `fromdate`, `todate`, `currency`, `nationality`, `onlybestoffer`, `promo-code`, and `min-room-count` query parameters. The client accepts both the documented array response and equivalent `data`, `offers`, `prices`, or `items` wrappers.
 
 Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` through the Eptera Booking API integration in project settings. Values must remain server-side and must not be added to the frontend or exposed in `VITE_*` variables. If configuration is absent, booking endpoints return `503 EPTERA_NOT_CONFIGURED`; if login or hotel authorization is rejected, they return `503 EPTERA_AUTH_FAILED`.
 
