@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { MediaUploadField } from "@/components/ui/MediaUploadField";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 export const AdminRoomGalleryField = ({
   names,
@@ -47,7 +48,7 @@ export const AdminRoomGalleryField = ({
                 <img
                   alt={`Фото проживания ${index + 1}`}
                   className="size-full object-cover"
-                  src={url}
+                  src={resolveMediaUrl(url)}
                 />
                 {index === 0 && (
                   <span className="absolute top-3 left-3 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground">

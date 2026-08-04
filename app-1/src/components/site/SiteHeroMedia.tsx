@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from "@/lib/site/media-url";
+
 const videoExtensions = [".mp4", ".webm"] as const;
 
 const isVideoSource = (source: string) => {
@@ -24,8 +26,11 @@ export const SiteHeroMedia = ({
   readonly className: string;
   readonly poster?: string;
   readonly source: string;
-}) =>
-  isVideoSource(source) ? (
+}) => {
+  const resolvedSource = resolveMediaUrl(source);
+  const resolvedPoster = poster ? resolveMediaUrl(poster) : undefined;
+
+  return isVideoSource(source) ? (
     <video
       aria-label={alt || undefined}
       autoPlay
@@ -33,9 +38,10 @@ export const SiteHeroMedia = ({
       loop
       muted
       playsInline
-      poster={poster || undefined}
-      src={source}
+      poster={resolvedPoster}
+      src={resolvedSource}
     />
   ) : (
-    <img alt={alt} className={className} src={source} />
+    <img alt={alt} className={className} src={resolvedSource} />
   );
+};

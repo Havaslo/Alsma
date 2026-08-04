@@ -8,6 +8,7 @@ import {
   HOME_POPUP_BANNERS,
   type HomePopupBanner,
 } from "@/lib/site/home-content";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const SiteOfferPopup = () => {
@@ -50,7 +51,7 @@ export const SiteOfferPopup = () => {
       <img
         alt=""
         className="h-48 w-full object-cover sm:h-52"
-        src={banner.image}
+        src={resolveMediaUrl(banner.image)}
       />
       <div className="p-6 sm:p-7">
         <p className="text-xs font-bold tracking-widest text-brand uppercase">

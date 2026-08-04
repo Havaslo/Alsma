@@ -12,6 +12,10 @@ The first chat iteration intentionally uses backend process memory. Messages are
 
 В административной форме проживания превью фотографий отображаются в квадратных контейнерах с кадрированием `object-cover`. Первое фото по-прежнему используется как обложка, а порядок фотографий можно менять стрелками.
 
+## Медиа из CMS
+
+Backend возвращает URL загруженных файлов относительно `/api`. Компоненты сайта и административные превью пропускают такие URL через общий `resolveMediaUrl`, чтобы в preview и production запросы уходили на настроенный API-хост, а не на статический frontend-хост.
+
 ## Architecture
 
 The application uses TanStack Router, TanStack Query, React Hook Form, and Tailwind CSS. Routes are in `src/routes`, pages in `src/pages`, and reusable UI in `src/components`.

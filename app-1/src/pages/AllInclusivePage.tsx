@@ -11,6 +11,7 @@ import {
   INCLUSIVE_OVERVIEW,
   SPA_DETAILS,
 } from "@/lib/site/all-inclusive";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -95,7 +96,7 @@ export const AllInclusivePage = () => {
                 <img
                   alt={format.title}
                   className="aspect-video w-full object-cover"
-                  src={format.image}
+                  src={resolveMediaUrl(format.image)}
                 />
                 <div className="p-8">
                   <p className="text-sm font-semibold tracking-widest text-brand uppercase">
@@ -154,7 +155,7 @@ const FeatureSplit = ({
     <img
       alt={format.title}
       className={`aspect-[4/3] w-full object-cover lg:aspect-auto lg:h-full ${reverse ? "lg:order-2" : ""}`}
-      src={format.image}
+      src={resolveMediaUrl(format.image)}
     />
     <div className="flex flex-col justify-center p-8 sm:p-12">
       <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
@@ -200,7 +201,7 @@ const DetailShowcase = ({
         <img
           alt={format.title}
           className="size-full min-h-[34rem] rounded-4xl object-cover"
-          src={format.image}
+          src={resolveMediaUrl(format.image)}
         />
         <div className="grid gap-5 sm:grid-cols-2">
           {details.map(([title, description], index) => (

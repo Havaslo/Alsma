@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { resolveMediaUrl } from "@/lib/site/media-url";
+
 export const RoomGallery = ({
   images,
   title,
@@ -24,7 +26,7 @@ export const RoomGallery = ({
       <img
         alt={title}
         className="aspect-square size-full object-cover"
-        src={currentImage}
+        src={resolveMediaUrl(currentImage)}
       />
       {gallery.length > 1 && (
         <>

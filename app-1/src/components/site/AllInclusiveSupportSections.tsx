@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import ctaImage from "@/assets/alsma/all-inclusive-cta.jpg";
 import kidsImage from "@/assets/alsma/entertainment-kids.jpg";
 import musicImage from "@/assets/alsma/entertainment-music.jpg";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { ROUTES } from "@/route-constants";
 
 const animationFormats = [
@@ -40,7 +41,7 @@ export const AllInclusiveAnimationSection = () => (
             <img
               alt={format.title}
               className="h-64 w-full object-cover"
-              src={format.image}
+              src={resolveMediaUrl(format.image)}
             />
             <div className="p-8">
               <h3 className="font-heading text-3xl font-semibold">

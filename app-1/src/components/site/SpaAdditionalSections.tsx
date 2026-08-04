@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 import cafeImage from "@/assets/alsma/cafe-mineral-food.webp";
 import type { SpaRequestOpenHandler } from "@/components/site/SpaRequestModal";
 import { Modal } from "@/components/ui/Modal";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import type {
   SpaAdditionalService,
   SpaMenuItem,
@@ -44,7 +45,7 @@ export const SpaPromotionsSection = ({
             <img
               alt={item.title}
               className="h-60 w-full object-cover"
-              src={item.image}
+              src={resolveMediaUrl(item.image)}
             />
             <div className="flex min-h-80 flex-1 flex-col p-7">
               <h3 className="font-heading text-3xl font-semibold">

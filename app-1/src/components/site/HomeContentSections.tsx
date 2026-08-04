@@ -5,6 +5,7 @@ import { ArrowRight, Star } from "lucide-react";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
 import { ROUTES } from "@/route-constants";
@@ -66,7 +67,7 @@ export const HomeRestSection = ({
             <img
               alt={card.title}
               className="size-full object-cover transition duration-500 group-hover:scale-105"
-              src={card.image}
+              src={resolveMediaUrl(card.image)}
             />
           </div>
         </article>
@@ -107,7 +108,7 @@ export const HomePromotionsSection = ({
               <img
                 alt={offer.title}
                 className="size-full object-cover transition duration-500 group-hover:scale-105"
-                src={offer.image}
+                src={resolveMediaUrl(offer.image)}
               />
             </div>
             <div className="p-7">
@@ -188,7 +189,7 @@ export const HomeReviewsSection = ({
                       alt={`Фото к отзыву ${review.name} ${index + 1}`}
                       className="size-16 rounded-2xl object-cover"
                       key={image}
-                      src={image}
+                      src={resolveMediaUrl(image)}
                     />
                   ))}
               </div>
@@ -234,7 +235,7 @@ export const HomeRoomsSection = ({
               <img
                 alt={room.title}
                 className="h-64 w-full object-cover"
-                src={room.image}
+                src={resolveMediaUrl(room.image)}
               />
               <div className="flex flex-1 flex-col p-6">
                 <div className="flex flex-wrap gap-2">

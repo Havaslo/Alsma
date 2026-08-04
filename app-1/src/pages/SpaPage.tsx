@@ -10,6 +10,7 @@ import {
   SpaPromotionsSection,
 } from "@/components/site/SpaAdditionalSections";
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
 import { getSpaDefaults } from "@/lib/site/spa-content";
@@ -51,7 +52,7 @@ export const SpaPage = () => {
               <img
                 alt={space.title}
                 className="aspect-[16/9] w-full object-cover"
-                src={space.image}
+                src={resolveMediaUrl(space.image)}
               />
               <div className="p-7">
                 <h3 className="font-heading text-3xl font-semibold">
@@ -124,7 +125,7 @@ export const SpaPage = () => {
               <img
                 alt={group.title}
                 className="aspect-[16/9] w-full object-cover"
-                src={group.image}
+                src={resolveMediaUrl(group.image)}
               />
               <div className="p-7">
                 <h3 className="font-heading text-2xl font-semibold text-brand">

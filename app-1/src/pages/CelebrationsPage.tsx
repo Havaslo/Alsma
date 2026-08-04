@@ -6,6 +6,7 @@ import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Modal } from "@/components/ui/Modal";
 import { EVENT_FORMATS, EVENT_GALLERY } from "@/lib/site/celebrations";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -57,7 +58,7 @@ export const CelebrationsPage = () => {
               <img
                 alt={event.title}
                 className="h-64 w-full object-cover"
-                src={event.image}
+                src={resolveMediaUrl(event.image)}
               />
               <div className="p-7">
                 <h3 className="font-heading text-3xl font-semibold text-brand">
@@ -138,7 +139,7 @@ export const CelebrationsPage = () => {
                 <img
                   alt={item.title}
                   className="h-64 w-full object-cover"
-                  src={item.image}
+                  src={resolveMediaUrl(item.image)}
                 />
                 <div className="p-6">
                   <h3 className="font-heading text-2xl font-semibold text-brand">

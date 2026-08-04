@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import type { RoomCategory } from "@/lib/site/rooms";
 import { ROUTES } from "@/route-constants";
 
@@ -202,7 +203,7 @@ export const RoomRecommendationQuiz = ({
                 <img
                   alt={room.title}
                   className="h-40 w-full object-cover"
-                  src={room.image}
+                  src={resolveMediaUrl(room.image)}
                 />
                 <div className="p-5">
                   <h4 className="font-heading text-2xl font-semibold">

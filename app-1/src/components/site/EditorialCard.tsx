@@ -4,6 +4,7 @@ import { ArrowUpRight, CalendarDays, ChevronDown } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
 import type { EditorialItem } from "@/lib/site/editorial";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 type EditorialCardProps = {
   readonly item: EditorialItem;
@@ -30,7 +31,7 @@ export const EditorialCard = ({
           <img
             alt={item.title}
             className={`${isBlog ? "h-80" : "h-64"} w-full object-cover`}
-            src={item.image}
+            src={resolveMediaUrl(item.image)}
           />
         </div>
         <div className={`flex flex-1 flex-col ${isBlog ? "p-8" : "p-7"}`}>
@@ -139,7 +140,7 @@ export const EditorialCard = ({
           <img
             alt={item.title}
             className="relative -mx-6 block aspect-video w-[calc(100%+3rem)] max-w-none shrink-0 object-cover"
-            src={item.image}
+            src={resolveMediaUrl(item.image)}
           />
           <div className="px-1 py-5">
             <h2 className="font-heading text-3xl font-semibold text-brand">

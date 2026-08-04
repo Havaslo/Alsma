@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
 import { Button } from "@/components/ui/Button";
 import { HARDWARE_PROCEDURES } from "@/lib/site/hardware-procedures";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -59,7 +60,7 @@ export const HardwareProceduresPage = () => {
                 <img
                   alt={procedure.title}
                   className="aspect-video w-full object-cover"
-                  src={procedure.image}
+                  src={resolveMediaUrl(procedure.image)}
                 />
                 <div className="flex flex-1 flex-col p-7">
                   <p className="text-sm font-semibold text-brand">

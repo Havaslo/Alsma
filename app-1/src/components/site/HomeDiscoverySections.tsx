@@ -19,6 +19,7 @@ import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { ROUTES } from "@/route-constants";
 
 const spaCards = [
@@ -161,7 +162,7 @@ export const HomeExperienceSections = () => (
                 <img
                   alt={title}
                   className="size-full object-cover"
-                  src={image}
+                  src={resolveMediaUrl(image)}
                 />
               </div>
               <h3 className="mt-5 font-heading text-2xl font-semibold">
@@ -199,7 +200,7 @@ export const HomeExperienceSections = () => (
               <img
                 alt={title}
                 className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
-                src={image}
+                src={resolveMediaUrl(image)}
               />
               <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-booking-line via-booking-line/80 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-8">
@@ -265,7 +266,7 @@ export const HomeExperienceSections = () => (
               <img
                 alt={title}
                 className="h-48 w-full object-cover md:h-auto md:w-2/5 xl:h-48 xl:w-full"
-                src={image}
+                src={resolveMediaUrl(image)}
               />
               <div className="flex flex-1 flex-col p-6">
                 <h3 className="font-heading text-2xl font-semibold">{title}</h3>

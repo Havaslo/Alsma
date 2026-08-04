@@ -4,6 +4,7 @@ import heroImage from "@/assets/alsma/offers-hero.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { getSiteCollection } from "@/lib/site/content-collections";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import {
   ACTIVE_OFFERS,
   type ActiveOffer,
@@ -146,7 +147,7 @@ export const OffersPage = () => {
                   <img
                     alt={offer.title}
                     className="size-full object-cover transition duration-500 group-hover:scale-105"
-                    src={offer.image}
+                    src={resolveMediaUrl(offer.image)}
                   />
                 </div>
                 <div className="flex flex-1 flex-col p-6">
@@ -200,7 +201,7 @@ export const OffersPage = () => {
                 <img
                   alt={scenario.title}
                   className="aspect-video w-full object-cover"
-                  src={scenario.image}
+                  src={resolveMediaUrl(scenario.image)}
                 />
                 <div className="flex flex-col p-7 sm:p-8">
                   <h3 className="font-heading text-3xl font-semibold">
@@ -283,7 +284,7 @@ export const OffersPage = () => {
                         <img
                           alt={event.title}
                           className="size-full object-cover transition duration-500 group-hover:scale-105"
-                          src={event.image}
+                          src={resolveMediaUrl(event.image)}
                         />
                         <div className="absolute inset-x-3 top-3 flex flex-wrap gap-2">
                           <span className="flex items-center gap-2 rounded-full bg-page/90 px-3 py-2 text-xs font-semibold text-brand backdrop-blur-sm">

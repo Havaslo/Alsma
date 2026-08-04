@@ -17,6 +17,7 @@ import {
   type SeasonalActivity,
 } from "@/lib/site/entertainment";
 import { normalizeAnimationProgram } from "@/lib/site/entertainment-content";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -104,7 +105,7 @@ export const EntertainmentPage = () => {
               <img
                 alt={zone.title}
                 className="aspect-[16/9] w-full object-cover"
-                src={zone.image}
+                src={resolveMediaUrl(zone.image)}
               />
               <div className="p-7">
                 <h3 className="font-heading text-3xl font-semibold text-brand">
@@ -152,7 +153,7 @@ export const EntertainmentPage = () => {
                 <img
                   alt={season.title}
                   className="aspect-[4/3] w-full object-cover lg:absolute lg:inset-0 lg:aspect-auto lg:size-full"
-                  src={season.image}
+                  src={resolveMediaUrl(season.image)}
                 />
                 <div className="hidden lg:absolute lg:inset-0 lg:block lg:bg-gradient-to-t lg:from-page-foreground/90 lg:via-page-foreground/35 lg:to-transparent" />
                 <div className="px-9 py-5 sm:p-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:p-14">
@@ -239,7 +240,7 @@ export const EntertainmentPage = () => {
                 <img
                   alt={service.title}
                   className="h-64 w-full object-cover"
-                  src={service.image}
+                  src={resolveMediaUrl(service.image)}
                 />
                 <div className="flex flex-1 flex-col p-7">
                   <h3 className="font-heading text-3xl font-semibold text-brand">
