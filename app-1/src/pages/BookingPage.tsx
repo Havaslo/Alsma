@@ -243,7 +243,7 @@ export const BookingPage = () => {
                       onChange={({ checkIn, checkOut }) =>
                         setSearch((v) => ({ ...v, checkIn, checkOut }))
                       }
-                      triggerClassName="rounded-2xl bg-page p-3 text-page-foreground"
+                      triggerClassName="min-h-[3.75rem] rounded-2xl bg-page p-3 text-page-foreground"
                     />
                   </div>
                   <div>
@@ -269,7 +269,7 @@ export const BookingPage = () => {
                     />
                   </div>
                   <button
-                    className="rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+                    className="min-h-[3.75rem] rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
                     onClick={performSearch}
                     type="button"
                   >
