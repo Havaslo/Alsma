@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f5f8fc;
+  --color-foreground: #26364a;
+  --color-surface: #ffffff;
+  --color-surface-foreground: #202c3a;
+  --color-primary: #1677c8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e7f1fa;
+  --color-secondary-foreground: #26364a;
+  --color-accent: #45a2ee;
+  --color-accent-foreground: #ffffff;
+  --color-muted: #eef2f6;
+  --color-muted-foreground: #5e6b7a;
+  --color-border: #d6dee8;
+  --color-ring: #268bd8;
+  --color-danger: #e56565;
+  --color-danger-foreground: #ffffff;
+  --font-primary: "Space Grotesk", system-ui, sans-serif;
+  --font-secondary: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth bg-background;
+  }
+
+  body {
+    @apply m-0 min-h-screen min-w-80 bg-background font-secondary text-foreground antialiased;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  a[href],
+  button:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  label[for],
+  select:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    @apply cursor-pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
+}
+
+@utility field-control {
+  @apply min-h-11 w-full rounded-xl border border-border/70 bg-surface/80 px-3.5 py-2.5 text-sm text-surface-foreground shadow-sm shadow-foreground/5 transition outline-none;
+
+  &::placeholder {
+    @apply text-muted-foreground;
+  }
+
+  &:focus {
+    @apply border-ring ring-4 ring-ring/10;
+  }
+
+  &:disabled {
+    @apply cursor-not-allowed bg-muted text-muted-foreground;
+  }
+
+  &[aria-invalid="true"] {
+    @apply border-danger ring-2 ring-danger/20;
+  }
+}
+
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
