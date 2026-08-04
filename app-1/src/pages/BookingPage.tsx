@@ -46,8 +46,11 @@ const dateText = (value: string) =>
   );
 
 const steps = ["Номера", "Тарифы", "Контакты"];
+type RoomGuests = { adults: number; childAges: number[] };
+const initialRooms: RoomGuests[] = [{ adults: 2, childAges: [] }];
 
 export const BookingPage = () => {
+  const [roomGuests, setRoomGuests] = useState<RoomGuests[]>(initialRooms);
   const [search, setSearch] = useState<BookingSearch>({
     adults: 2,
     checkIn: iso(start),
@@ -232,29 +235,21 @@ export const BookingPage = () => {
                       triggerClassName="mt-1 text-page-foreground"
                     />
                   </label>
-                  <GuestPicker
-                    adults={search.adults}
-                    childAges={search.childAges}
-                    onChange={(adults, childAges) =>
-                      setSearch((v) => ({ ...v, adults, childAges }))
-                    }
+                  <RoomsPicker
+                    rooms={roomGuests}
+                    onChange={(rooms) => {
+                      setRoomGuests(rooms);
+                      setSearch((value) => ({
+                        ...value,
+                        adults: rooms.reduce(
+                          (total, room) => total + room.adults,
+                          0,
+                        ),
+                        childAges: rooms.flatMap((room) => room.childAges),
+                        roomCount: rooms.length,
+                      }));
+                    }}
                   />
-                  <label className="rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-                    Номера
-                    <select
-                      className="mt-1 w-full bg-transparent text-base font-semibold text-page-foreground outline-none"
-                      onChange={(event) =>
-                        setSearch((v) => ({
-                          ...v,
-                          roomCount: Number(event.target.value),
-                        }))
-                      }
-                      value={search.roomCount}
-                    >
-                      <option value={1}>1 номер</option>
-                      <option value={2}>2 номера</option>
-                    </select>
-                  </label>
                   <button
                     className="rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
                     onClick={performSearch}
@@ -492,98 +487,143 @@ export const BookingPage = () => {
   );
 };
 
-const GuestPicker = ({
-  adults,
-  childAges,
+const RoomsPicker = ({
+  rooms,
   onChange,
 }: {
-  readonly adults: number;
-  readonly childAges: number[];
-  readonly onChange: (adults: number, childAges: number[]) => void;
+  readonly rooms: RoomGuests[];
+  readonly onChange: (rooms: RoomGuests[]) => void;
 }) => {
   const [open, setOpen] = useState(false);
-  const summary = `${adults} ${adults === 1 ? "взрослый" : "взрослых"}${childAges.length ? ` · ${childAges.length} детей` : ""}`;
+  const updateRoom = (index: number, room: RoomGuests) =>
+    onChange(rooms.map((current, item) => (item === index ? room : current)));
   return (
     <div className="relative rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-      <span>Гости</span>
+      <span>Гости и номера</span>
       <button
         className="mt-1 flex w-full items-center justify-between gap-2 bg-transparent text-left text-base font-semibold text-page-foreground outline-none"
         onClick={() => setOpen((value) => !value)}
         type="button"
       >
-        <span>{summary}</span>
+        <span>
+          {rooms.length} {rooms.length === 1 ? "номер" : "номера"} ·{" "}
+          {rooms.reduce((total, room) => total + room.adults, 0)} взрослых ·{" "}
+          {rooms.reduce((total, room) => total + room.childAges.length, 0)}{" "}
+          детей
+        </span>
         <ChevronDown className="size-4 shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-[calc(100%+0.5rem)] left-0 z-50 w-72 rounded-2xl border border-line bg-panel p-4 text-page-foreground shadow-2xl">
-          <GuestCounter
-            label="Взрослые"
-            value={adults}
-            min={1}
-            max={12}
-            onChange={(value) => onChange(value, childAges)}
-          />
-          <div className="mt-4 border-t border-line pt-4">
-            <div className="flex items-center justify-between">
-              <span>Дети</span>
-              <span className="text-xs text-muted-ui-foreground">
-                до 17 лет
-              </span>
-            </div>
-            {childAges.map((age, index) => (
-              <div
-                className="mt-3 flex items-center gap-2"
-                key={`${index}-${age}`}
-              >
-                <select
-                  className="field-control min-h-9 py-1"
-                  aria-label={`Возраст ребёнка ${index + 1}`}
-                  value={age}
-                  onChange={(event) =>
-                    onChange(
-                      adults,
-                      childAges.map((current, item) =>
-                        item === index ? Number(event.target.value) : current,
-                      ),
-                    )
-                  }
-                >
-                  {Array.from({ length: 18 }, (_, value) => (
-                    <option key={value} value={value}>
-                      {value === 0
-                        ? "до 1 года"
-                        : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  aria-label={`Удалить ребёнка ${index + 1}`}
-                  className="text-muted-ui-foreground hover:text-destructive"
-                  onClick={() =>
-                    onChange(
-                      adults,
-                      childAges.filter((_, item) => item !== index),
-                    )
-                  }
-                  type="button"
-                >
-                  ×
-                </button>
+        <div className="absolute top-[calc(100%+0.5rem)] left-0 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-line bg-panel p-4 text-page-foreground shadow-2xl">
+          {rooms.map((room, index) => (
+            <div
+              className={cn(index > 0 && "mt-4 border-t border-line pt-4")}
+              key={index}
+            >
+              <div className="flex items-center justify-between">
+                <strong>Номер {index + 1}</strong>
+                {rooms.length > 1 && (
+                  <button
+                    aria-label={`Удалить номер ${index + 1}`}
+                    className="text-destructive"
+                    onClick={() =>
+                      onChange(rooms.filter((_, item) => item !== index))
+                    }
+                    type="button"
+                  >
+                    Удалить
+                  </button>
+                )}
               </div>
-            ))}
-            {childAges.length < 8 && (
-              <button
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand"
-                onClick={() => onChange(adults, [...childAges, 5])}
-                type="button"
-              >
-                <Plus className="size-4" />
-                Добавить ребёнка
-              </button>
-            )}
-          </div>
+              <GuestCounter
+                label="Взрослые"
+                value={room.adults}
+                min={1}
+                max={12}
+                onChange={(adults) => updateRoom(index, { ...room, adults })}
+              />
+              <div className="mt-3">
+                <div className="flex items-center justify-between">
+                  <span>Дети</span>
+                  <span className="text-xs text-muted-ui-foreground">
+                    в этом номере
+                  </span>
+                </div>
+                {room.childAges.map((age, childIndex) => (
+                  <div
+                    className="mt-2 flex items-center gap-2"
+                    key={`${childIndex}-${age}`}
+                  >
+                    <select
+                      className="field-control min-h-9 py-1"
+                      aria-label={`Возраст ребёнка ${childIndex + 1} в номере ${index + 1}`}
+                      value={age}
+                      onChange={(event) =>
+                        updateRoom(index, {
+                          ...room,
+                          childAges: room.childAges.map((current, item) =>
+                            item === childIndex
+                              ? Number(event.target.value)
+                              : current,
+                          ),
+                        })
+                      }
+                    >
+                      {Array.from({ length: 18 }, (_, value) => (
+                        <option key={value} value={value}>
+                          {value === 0
+                            ? "до 1 года"
+                            : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      aria-label={`Удалить ребёнка из номера ${index + 1}`}
+                      className="text-muted-ui-foreground"
+                      onClick={() =>
+                        updateRoom(index, {
+                          ...room,
+                          childAges: room.childAges.filter(
+                            (_, item) => item !== childIndex,
+                          ),
+                        })
+                      }
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {room.childAges.length < 8 && (
+                  <button
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand"
+                    onClick={() =>
+                      updateRoom(index, {
+                        ...room,
+                        childAges: [...room.childAges, 5],
+                      })
+                    }
+                    type="button"
+                  >
+                    <Plus className="size-4" />
+                    Добавить ребёнка
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {rooms.length < 2 && (
+            <button
+              className="mt-4 w-full rounded-xl border border-brand px-4 py-2 text-sm font-semibold text-brand"
+              onClick={() => onChange([...rooms, { adults: 1, childAges: [] }])}
+              type="button"
+            >
+              <Plus className="mr-1 inline size-4" />
+              Добавить номер
+            </button>
+          )}
           <button
-            className="mt-4 w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
+            className="mt-3 w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
             onClick={() => setOpen(false)}
             type="button"
           >
@@ -608,7 +648,7 @@ const GuestCounter = ({
   readonly max: number;
   readonly onChange: (value: number) => void;
 }) => (
-  <div className="flex items-center justify-between gap-4">
+  <div className="mt-3 flex items-center justify-between gap-4">
     <span>{label}</span>
     <div className="flex items-center gap-3">
       <button
