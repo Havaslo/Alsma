@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { AdminHomeBannersForm } from "@/components/admin/AdminHomeBannersForm";
 import { AdminHomeHeroForm } from "@/components/admin/AdminHomeHeroForm";
-import { AdminHomeRestForm } from "@/components/admin/AdminHomeRestForm";
 import { AdminHomeReviewsForm } from "@/components/admin/AdminHomeReviewsForm";
 import { Loader } from "@/components/ui/Loader";
 import { cn } from "@/lib/cn";
@@ -10,7 +9,6 @@ import { useAdminSiteContent } from "@/lib/site/useSiteContent";
 
 const tabs = [
   { id: "hero", label: "Hero" },
-  { id: "ideal-rest", label: "Идеальный отдых" },
   { id: "reviews", label: "Отзывы" },
   { id: "popup-banners", label: "Рекламный баннер" },
 ] as const;
@@ -36,8 +34,8 @@ export const AdminHomeEditor = () => {
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-brand">Главная</h1>
         <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-          Редактируйте ключевые блоки главной страницы и сразу сохраняйте
-          изменения на сайте.
+          Редактируйте ключевые блоки главной страницы. Сценарии отдыха
+          управляются единообразно в разделе «Акции» → «Готовые сценарии».
         </p>
       </section>
 
@@ -64,9 +62,6 @@ export const AdminHomeEditor = () => {
       </nav>
 
       {tab === "hero" && <AdminHomeHeroForm items={content.data?.items} />}
-      {tab === "ideal-rest" && (
-        <AdminHomeRestForm items={content.data?.items} />
-      )}
       {tab === "reviews" && (
         <AdminHomeReviewsForm items={content.data?.items} />
       )}

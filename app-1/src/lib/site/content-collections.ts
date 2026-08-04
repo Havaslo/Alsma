@@ -7,11 +7,7 @@ import {
   KIDS_SERVICES,
   SEASONS,
 } from "@/lib/site/entertainment";
-import {
-  HOME_POPUP_BANNERS,
-  HOME_REST_CARDS,
-  HOME_REVIEWS,
-} from "@/lib/site/home-content";
+import { HOME_POPUP_BANNERS, HOME_REVIEWS } from "@/lib/site/home-content";
 import {
   ACTIVE_OFFERS,
   OFFER_EVENTS,
@@ -29,7 +25,6 @@ export const SITE_COLLECTIONS = {
     "seasonal-slides": SEASONS,
   },
   home: {
-    "ideal-rest": HOME_REST_CARDS,
     "popup-banners": HOME_POPUP_BANNERS,
     reviews: HOME_REVIEWS,
   },

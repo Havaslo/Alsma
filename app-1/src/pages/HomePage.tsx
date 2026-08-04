@@ -16,13 +16,13 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { getSiteCollection } from "@/lib/site/content-collections";
+import { HOME_REVIEWS, type HomeReview } from "@/lib/site/home-content";
 import {
-  HOME_REST_CARDS,
-  HOME_REVIEWS,
-  type HomeRestCard,
-  type HomeReview,
-} from "@/lib/site/home-content";
-import { ACTIVE_OFFERS, type ActiveOffer } from "@/lib/site/offers";
+  ACTIVE_OFFERS,
+  type ActiveOffer,
+  READY_SCENARIOS,
+  type ReadyScenario,
+} from "@/lib/site/offers";
 import { getRoomCards } from "@/lib/site/rooms-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -33,13 +33,17 @@ export const HomePage = () => {
   const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const restCards = getSiteCollection<HomeRestCard>(
-    content.data?.items,
-    "ideal-rest",
-    HOME_REST_CARDS,
+  const restCards = getSiteCollection<ReadyScenario>(
+    offersContent.data?.items,
+    "ready-scenarios",
+    READY_SCENARIOS,
   )
     .filter((item) => item.isActive !== false)
-    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
+    .map((item) => ({
+      ...item,
+      href: item.buttonLink,
+    }));
   const reviews = getSiteCollection<HomeReview>(
     content.data?.items,
     "reviews",

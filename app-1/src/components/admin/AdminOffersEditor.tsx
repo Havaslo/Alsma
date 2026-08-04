@@ -34,7 +34,8 @@ export const AdminOffersEditor = () => {
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-brand">Акции</h1>
         <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-          Управляйте предложениями, готовыми сценариями и календарём событий.
+          Управляйте предложениями, едиными сценариями отдыха для главной и
+          страницы акций, а также календарём событий.
         </p>
       </section>
       <nav

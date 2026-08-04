@@ -57,7 +57,9 @@ export const AdminOffersScenariosForm = ({
         <div>
           <h2 className="text-lg font-semibold text-brand">Готовые сценарии</h2>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Пакетные предложения с описанием, тегами, ценой и кнопкой.
+            Пакетные предложения с описанием, тегами, ценой и кнопкой. Эти же
+            сценарии автоматически отображаются в блоке «Идеальный отдых» на
+            главной странице.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
