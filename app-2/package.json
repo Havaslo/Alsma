@@ -8,7 +8,7 @@
     "node": ">=20.19.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "pnpm run db:generate && tsc -p tsconfig.json",
     "db:check": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate": "tsx src/lib/database/migrate-command.ts",
