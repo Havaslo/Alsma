@@ -10,9 +10,9 @@ The backend uses TypeScript, Express, PostgreSQL, Zod, Pino, Helmet, and managed
 
 ## Realtime chat MVP
 
-The `/api/chat` feature exposes a public guest conversation and an admin inbox. Messages are delivered immediately over Server-Sent Events (`/api/chat/stream` and `/api/chat/admin/stream`) and are currently kept in process memory for this first iteration, with a limit of 100 messages per conversation. Restarting the API clears this temporary chat history; persistent storage can be added once the conversation workflow is approved.
+The `/api/chat` feature exposes a public guest conversation and conversation-specific manager replies. Messages are delivered immediately over Server-Sent Events (`/api/chat/stream` and `/api/chat/admin/stream`) and are currently kept in process memory for this first iteration, with a limit of 100 messages per conversation. Restarting the API clears this temporary chat history; persistent storage can be added once the conversation workflow is approved.
 
-The public widget is mounted on public site pages. Staff can open **Обращения** in the admin panel to see conversations and reply in real time. Admin SSE authentication uses the existing admin session token as a query parameter because native `EventSource` cannot send custom headers.
+The public widget is mounted on public site pages. Staff open a row in **Обращения**, then communicate inside that request detail page. Admin SSE authentication uses the existing admin session token as a query parameter because native `EventSource` cannot send custom headers.
 
 ## Eptera / ElektraWeb booking integration
 

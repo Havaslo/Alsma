@@ -4,7 +4,7 @@
 
 ## Realtime chat
 
-Public pages include a compact chat widget backed by `/api/chat`. Each visitor receives a browser-local conversation id, and messages are exchanged over Server-Sent Events. The **Обращения** admin area includes a realtime inbox for selecting conversations and replying as a manager.
+Public pages include a compact chat widget backed by `/api/chat`. Each visitor receives a browser-local conversation id, and messages are exchanged over Server-Sent Events. When a staff member opens a row from **Обращения**, the request detail page contains the conversation transcript and a realtime reply form for that specific request.
 
 The first chat iteration intentionally uses backend process memory. Messages are limited to 100 per conversation and disappear when the backend restarts; this keeps the MVP focused on the realtime interaction before introducing durable conversation storage.
 

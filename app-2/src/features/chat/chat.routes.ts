@@ -9,7 +9,9 @@ import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.j
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import type { ChatService } from "./chat.service.js";
 
-const conversationSchema = z.object({ conversationId: z.string().uuid() });
+const conversationSchema = z.object({
+  conversationId: z.string().trim().min(1).max(100),
+});
 const messageSchema = conversationSchema.extend({
   text: z.string().trim().min(1).max(2_000),
 });
@@ -48,7 +50,7 @@ export const createChatRouter = (
   router.get(
     "/messages",
     validateRequest({ query: conversationSchema }),
-    (request, response) => {
+    (_request, response) => {
       response.json({
         items: chat.list(response.locals.input.query.conversationId),
       });
@@ -57,7 +59,7 @@ export const createChatRouter = (
   router.post(
     "/messages",
     validateRequest({ body: messageSchema }),
-    (request, response) => {
+    (_request, response) => {
       const input = response.locals.input.body;
       response.status(201).json({
         message: chat.publish(input.conversationId, "guest", input.text),
@@ -67,7 +69,7 @@ export const createChatRouter = (
   router.get(
     "/stream",
     validateRequest({ query: conversationSchema }),
-    (request, response) => {
+    (_request, response) => {
       stream(chat, response.locals.input.query.conversationId, response);
     },
   );
@@ -83,7 +85,7 @@ export const createChatRouter = (
   admin.post(
     "/messages",
     validateRequest({ body: messageSchema }),
-    (request, response) => {
+    (_request, response) => {
       const input = response.locals.input.body;
       response.status(201).json({
         message: chat.publish(input.conversationId, "manager", input.text),
@@ -101,7 +103,7 @@ export const createChatRouter = (
           typeof request.query.conversationId === "string"
             ? request.query.conversationId
             : "";
-        if (!z.string().uuid().safeParse(conversationId).success)
+        if (!conversationSchema.safeParse({ conversationId }).success)
           throw new HttpError(
             400,
             "VALIDATION_ERROR",
