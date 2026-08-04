@@ -65,6 +65,10 @@ export const BookingPage = () => {
   const [step, setStep] = useState(0);
   const [roomName, setRoomName] = useState<string | null>(null);
   const [offer, setOffer] = useState<BookingOffer | null>(null);
+  const [selectedRoomIndex, setSelectedRoomIndex] = useState(0);
+  const [selectedOffers, setSelectedOffers] = useState<(BookingOffer | null)[]>(
+    [null],
+  );
   const [contact, setContact] = useState({
     email: "",
     firstName: "",
@@ -106,9 +110,14 @@ export const BookingPage = () => {
     setSubmittedSearch(search);
     setOffer(null);
     setRoomName(null);
+    setSelectedRoomIndex(0);
+    setSelectedOffers(Array.from({ length: search.roomCount }, () => null));
     setStep(0);
   };
   const selectRoom = (selected: BookingOffer) => {
+    const nextIndex = selectedOffers.findIndex((item) => item === null);
+    const roomIndex = nextIndex === -1 ? 0 : nextIndex;
+    setSelectedRoomIndex(roomIndex);
     setRoomName(selected.roomType);
     setOffer(selected);
     setStep(1);
@@ -264,7 +273,7 @@ export const BookingPage = () => {
                   <div className="mb-5 flex items-end justify-between">
                     <div>
                       <h2 className="font-heading text-3xl font-semibold">
-                        Выберите номер
+                        Выберите номер {selectedRoomIndex + 1}
                       </h2>
                       <p className="mt-1 text-sm text-muted-ui-foreground">
                         Доступные варианты на выбранные даты
@@ -320,7 +329,7 @@ export const BookingPage = () => {
                               onClick={() => selectRoom(item)}
                               type="button"
                             >
-                              Выбрать
+                              Выбрать для номера {selectedRoomIndex + 1}
                             </button>
                           </div>
                         </article>
@@ -341,7 +350,7 @@ export const BookingPage = () => {
                     <ChevronLeft className="size-4" />К номерам
                   </button>
                   <h2 className="font-heading text-3xl font-semibold">
-                    Тарифы: {roomName}
+                    Тарифы для номера {selectedRoomIndex + 1}: {roomName}
                   </h2>
                   <div className="mt-5 space-y-4">
                     {tariffs.map((item) => (
@@ -380,8 +389,25 @@ export const BookingPage = () => {
                             <button
                               className="mt-3 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground"
                               onClick={() => {
-                                setOffer(item);
-                                setStep(2);
+                                const nextOffers = selectedOffers.map(
+                                  (selected, index) =>
+                                    index === selectedRoomIndex
+                                      ? item
+                                      : selected,
+                                );
+                                setSelectedOffers(nextOffers);
+                                const nextIndex = nextOffers.findIndex(
+                                  (selected) => selected === null,
+                                );
+                                if (nextIndex !== -1) {
+                                  setSelectedRoomIndex(nextIndex);
+                                  setRoomName(null);
+                                  setOffer(null);
+                                  setStep(0);
+                                } else {
+                                  setOffer(item);
+                                  setStep(2);
+                                }
                               }}
                               type="button"
                             >
@@ -472,9 +498,9 @@ export const BookingPage = () => {
               )}
             </div>
             <BookingSummary
-              adults={search.adults}
-              childAges={search.childAges}
               roomCount={search.roomCount}
+              roomGuests={roomGuests}
+              selectedOffers={selectedOffers}
               checkIn={search.checkIn}
               checkOut={search.checkOut}
               nights={nights}
@@ -694,17 +720,17 @@ const EmptyState = () => (
   </div>
 );
 const BookingSummary = ({
-  adults,
-  childAges,
   roomCount,
+  roomGuests,
+  selectedOffers,
   checkIn,
   checkOut,
   nights,
   offer,
 }: {
-  readonly adults: number;
-  readonly childAges: number[];
   readonly roomCount: number;
+  readonly roomGuests: RoomGuests[];
+  readonly selectedOffers: (BookingOffer | null)[];
   readonly checkIn: string;
   readonly checkOut: string;
   readonly nights: number;
@@ -725,10 +751,27 @@ const BookingSummary = ({
       </div>
     </div>
     <p className="mt-5 text-sm text-muted-ui-foreground">
-      {nights} {nights === 1 ? "ночь" : "ночей"} · {adults} взрослых ·{" "}
-      {childAges.length} детей · {roomCount}{" "}
-      {roomCount === 1 ? "номер" : "номера"}
+      {nights} {nights === 1 ? "ночь" : "ночей"}
     </p>
+    <div className="mt-4 space-y-3">
+      {roomGuests.map((room, index) => (
+        <div
+          className="rounded-2xl border border-line bg-page p-3 text-sm"
+          key={index}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <strong>Номер {index + 1}</strong>
+            {selectedOffers[index] && <Check className="size-4 text-brand" />}
+          </div>
+          <p className="mt-1 text-muted-ui-foreground">
+            {room.adults} взрослых · {room.childAges.length} детей
+          </p>
+          <p className="mt-2 font-medium text-brand">
+            {selectedOffers[index]?.roomType ?? "Номер ещё не выбран"}
+          </p>
+        </div>
+      ))}
+    </div>
     {offer ? (
       <div className="mt-5 border-t border-line pt-5">
         <p className="font-semibold">{offer.roomType}</p>
