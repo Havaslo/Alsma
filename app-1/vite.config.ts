@@ -4,15 +4,13 @@ import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { URL, fileURLToPath } from "node:url";
-import { type ProxyOptions, type ServerOptions, defineConfig } from "vite";
+import { defineConfig } from "vite";
 
 const GENERATED_ENV_PATH = "AMAZI_ENV_GENERATED.env";
 
 if (existsSync(GENERATED_ENV_PATH)) {
   loadEnvFile(GENERATED_ENV_PATH);
 }
-
-const DEFAULT_BACKEND_PROXY_TARGET = "http://localhost:3000";
 
 const readPort = (): number | undefined => {
   const configuredPort = process.env.PORT?.trim();
@@ -26,25 +24,7 @@ const readPort = (): number | undefined => {
   return port;
 };
 
-export const createBackendProxyServerConfig = (
-  configuredTarget?: string,
-): Pick<ServerOptions, "proxy"> => {
-  const target = configuredTarget?.trim() || DEFAULT_BACKEND_PROXY_TARGET;
-  const proxy: ProxyOptions = {
-    changeOrigin: true,
-    target,
-  };
-
-  return {
-    proxy: {
-      "/api": proxy,
-    },
-  };
-};
-
 export default defineConfig(() => {
-  const backendProxyTarget = process.env.BACKEND_PROXY_TARGET;
-  const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "";
   const port = readPort();
 
   return {
@@ -69,9 +49,6 @@ export default defineConfig(() => {
         },
       },
     },
-    define: {
-      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBaseUrl),
-    },
     plugins: [tanstackRouter(), react(), tailwindcss()],
     resolve: {
       alias: {
@@ -89,7 +66,6 @@ export default defineConfig(() => {
       host: "0.0.0.0",
       port,
       strictPort: port !== undefined,
-      ...createBackendProxyServerConfig(backendProxyTarget),
     },
   };
 });
