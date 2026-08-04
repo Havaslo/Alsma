@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
 import {
@@ -523,10 +523,25 @@ const RoomsPicker = ({
   readonly onChange: (rooms: RoomGuests[]) => void;
 }) => {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () =>
+      document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [open]);
+
   const updateRoom = (index: number, room: RoomGuests) =>
     onChange(rooms.map((current, item) => (item === index ? room : current)));
   return (
-    <div className="relative rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
+    <div
+      className="relative rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground"
+      ref={rootRef}
+    >
       <span>Гости и номера</span>
       <button
         className="mt-1 flex w-full items-center justify-between gap-2 bg-transparent text-left text-base font-semibold text-page-foreground outline-none"
