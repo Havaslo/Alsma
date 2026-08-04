@@ -25,8 +25,17 @@ COPY . .
 
 RUN --mount=type=secret,id=application_environment,required=false \
   set -eu; \
+  : > .backend-proxy-target; \
   if [ -f /run/secrets/application_environment ]; then \
     cp /run/secrets/application_environment .env.production.local; \
+  fi; \
+  if [ -f .env.production.local ]; then \
+    backend_target="$(sed -n 's/^BACKEND_PROXY_TARGET=//p' .env.production.local | head -n 1)"; \
+    backend_target="${backend_target#\"}"; \
+    backend_target="${backend_target%\"}"; \
+    if [ -n "$backend_target" ]; then \
+      printf '%s' "$backend_target" > .backend-proxy-target; \
+    fi; \
   fi; \
   pnpm run build; \
   rm -f .env.production.local
@@ -38,6 +47,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY --from=build --chown=65532:65532 /app/dist ./dist
+COPY --from=build --chown=65532:65532 /app/.backend-proxy-target ./backend-proxy-target
 COPY --chown=65532:65532 static-server.mjs ./server.mjs
 
 USER 65532:65532

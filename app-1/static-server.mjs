@@ -1,10 +1,11 @@
 import { createReadStream } from "node:fs";
-import { realpath, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import { request as createProxyRequest, createServer } from "node:http";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "dist");
+const applicationRoot = dirname(fileURLToPath(import.meta.url));
+const root = resolve(applicationRoot, "dist");
 const canonicalRoot = await realpath(root);
 const spaEntry = await realpath(resolve(root, "index.html"));
 if (
@@ -15,7 +16,12 @@ if (
 }
 const configuredPort = process.env.PORT?.trim();
 const port = Number(configuredPort);
-const backendProxyTarget = process.env.BACKEND_PROXY_TARGET?.trim();
+const persistedBackendTarget = await readFile(
+  resolve(applicationRoot, "backend-proxy-target"),
+  "utf8",
+).catch(() => "");
+const backendProxyTarget =
+  process.env.BACKEND_PROXY_TARGET?.trim() || persistedBackendTarget.trim();
 const backendUrl = backendProxyTarget ? new URL(backendProxyTarget) : null;
 
 if (backendUrl && backendUrl.protocol !== "http:") {
