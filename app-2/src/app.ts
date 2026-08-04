@@ -4,7 +4,7 @@ import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 
 import type { Database } from "./lib/database/database.js";
-import { corsMiddleware } from "./lib/http/cors.js";
+import { publicCorsMiddleware } from "./lib/http/cors.js";
 import { errorHandler } from "./lib/http/error-handler.js";
 import { notFoundHandler } from "./lib/http/not-found-handler.js";
 import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
@@ -39,8 +39,12 @@ export const createApp = ({
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(corsMiddleware);
-  app.use(helmet());
+  app.use(publicCorsMiddleware);
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
   app.use(
     pinoHttp({
       autoLogging: {

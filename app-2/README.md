@@ -6,6 +6,8 @@
 
 The backend uses TypeScript, Express, PostgreSQL, Zod, Pino, Helmet, and managed file storage. Feature routers live in `src/features` and are mounted from `src/routes.ts`.
 
+The browser API is public at the transport layer: every origin receives `Access-Control-Allow-Origin: *`, all preflight requests are accepted, and Helmet permits cross-origin resource embedding. `CORS_ALLOWED_ORIGINS` is no longer read by the application. Endpoint-level authentication and permission checks still protect administrative operations.
+
 ## Managed media storage
 
 Authenticated CMS uploads are sent as raw file bodies to `POST /api/media/admin/uploads?fileName=...`. The API validates the media type and 50 MiB size limit, then performs one server-side authenticated multipart `POST` to the managed storage `/uploads` endpoint using the `file` field. The storage token never reaches browser code, and the API returns an asset only after storage has returned its `objectId`. Managed assets are read through `/api/media/managed/:objectToken`; the UUID media route remains read-only for files created by the legacy database-backed uploader.
