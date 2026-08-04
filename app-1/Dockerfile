@@ -48,7 +48,7 @@ WORKDIR /app
 
 COPY --from=build --chown=65532:65532 /app/dist ./dist
 COPY --from=build --chown=65532:65532 /app/.backend-proxy-target ./backend-proxy-target
-COPY --chown=65532:65532 static-server.mjs ./server.mjs
+COPY --chown=65532:65532 production-server.mjs ./server.mjs
 
 USER 65532:65532
 
