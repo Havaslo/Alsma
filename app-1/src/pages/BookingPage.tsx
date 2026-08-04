@@ -254,7 +254,9 @@ export const BookingPage = () => {
                           (total, room) => total + room.adults,
                           0,
                         ),
-                        childAges: rooms.flatMap((room) => room.childAges),
+                        childAges: rooms.flatMap((room) =>
+                          room.childAges.filter((age) => age >= 0),
+                        ),
                         roomCount: rooms.length,
                       }));
                     }}
@@ -540,7 +542,7 @@ const RoomsPicker = ({
         <ChevronDown className="size-4 shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-[calc(100%+0.5rem)] left-0 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-line bg-panel p-4 text-page-foreground shadow-2xl">
+        <div className="absolute top-[calc(100%+0.5rem)] left-0 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-line bg-white p-4 text-page-foreground shadow-2xl">
           {rooms.map((room, index) => (
             <div
               className={cn(index > 0 && "mt-4 border-t border-line pt-4")}
@@ -575,51 +577,88 @@ const RoomsPicker = ({
                     в этом номере
                   </span>
                 </div>
-                {room.childAges.map((age, childIndex) => (
-                  <div
-                    className="mt-2 flex items-center gap-2"
-                    key={`${childIndex}-${age}`}
-                  >
-                    <select
-                      className="field-control min-h-9 py-1"
-                      aria-label={`Возраст ребёнка ${childIndex + 1} в номере ${index + 1}`}
-                      value={age}
-                      onChange={(event) =>
-                        updateRoom(index, {
-                          ...room,
-                          childAges: room.childAges.map((current, item) =>
-                            item === childIndex
-                              ? Number(event.target.value)
-                              : current,
-                          ),
-                        })
-                      }
-                    >
-                      {Array.from({ length: 18 }, (_, value) => (
-                        <option key={value} value={value}>
-                          {value === 0
-                            ? "до 1 года"
-                            : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      aria-label={`Удалить ребёнка из номера ${index + 1}`}
-                      className="text-muted-ui-foreground"
-                      onClick={() =>
-                        updateRoom(index, {
-                          ...room,
-                          childAges: room.childAges.filter(
-                            (_, item) => item !== childIndex,
-                          ),
-                        })
-                      }
-                      type="button"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {(room.childAges.length ? room.childAges : [-1]).map(
+                  (age, childIndex) => {
+                    const childCount = room.childAges.length;
+                    return (
+                      <div
+                        className="mt-2 flex items-center gap-2"
+                        key={`${childIndex}-${age}`}
+                      >
+                        <select
+                          className="field-control min-h-9 flex-1 bg-white py-1"
+                          aria-label={`Возраст ребёнка ${childIndex + 1} в номере ${index + 1}`}
+                          value={age}
+                          onChange={(event) => {
+                            const nextAge = Number(event.target.value);
+                            if (nextAge < 0) {
+                              updateRoom(index, { ...room, childAges: [] });
+                              return;
+                            }
+                            updateRoom(index, {
+                              ...room,
+                              childAges: childCount
+                                ? room.childAges.map((current, item) =>
+                                    item === childIndex ? nextAge : current,
+                                  )
+                                : [nextAge],
+                            });
+                          }}
+                        >
+                          <option value={-1}>Нет</option>
+                          {Array.from({ length: 18 }, (_, value) => (
+                            <option key={value} value={value}>
+                              {value === 0
+                                ? "до 1 года"
+                                : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
+                            </option>
+                          ))}
+                        </select>
+                        {childIndex === 0 && (
+                          <input
+                            aria-label={`Количество детей в номере ${index + 1}`}
+                            className="field-control min-h-9 w-16 bg-white px-2 py-1 text-center"
+                            disabled={age < 0}
+                            min={age < 0 ? 0 : 1}
+                            max={8}
+                            onChange={(event) => {
+                              const count = Math.max(
+                                0,
+                                Math.min(8, Number(event.target.value) || 0),
+                              );
+                              updateRoom(index, {
+                                ...room,
+                                childAges:
+                                  age < 0 || count === 0
+                                    ? []
+                                    : Array.from({ length: count }, () => age),
+                              });
+                            }}
+                            type="number"
+                            value={age < 0 ? 0 : childCount}
+                          />
+                        )}
+                        {age >= 0 && (
+                          <button
+                            aria-label={`Удалить ребёнка из номера ${index + 1}`}
+                            className="text-muted-ui-foreground"
+                            onClick={() =>
+                              updateRoom(index, {
+                                ...room,
+                                childAges: room.childAges.filter(
+                                  (_, item) => item !== childIndex,
+                                ),
+                              })
+                            }
+                            type="button"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    );
+                  },
+                )}
                 {room.childAges.length < 8 && (
                   <button
                     className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand"
@@ -764,7 +803,8 @@ const BookingSummary = ({
             {selectedOffers[index] && <Check className="size-4 text-brand" />}
           </div>
           <p className="mt-1 text-muted-ui-foreground">
-            {room.adults} взрослых · {room.childAges.length} детей
+            {room.adults} взрослых ·{" "}
+            {room.childAges.filter((age) => age >= 0).length} детей
           </p>
           <p className="mt-2 font-medium text-brand">
             {selectedOffers[index]?.roomType ?? "Номер ещё не выбран"}

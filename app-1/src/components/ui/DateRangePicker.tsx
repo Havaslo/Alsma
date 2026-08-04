@@ -17,9 +17,18 @@ const displayFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
 });
+const priceFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 0,
+});
 const parseDate = (value: string) => new Date(`${value}T12:00:00`);
 const serializeDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const dayPrice = (date: Date) => {
+  const day = date.getDate();
+  if (day % 11 === 0) return { price: 9_900, discount: true };
+  if (day % 5 === 0) return { price: 9_630, discount: true };
+  return { price: 10_000, discount: false };
+};
 
 export const DateRangePicker = ({
   checkIn,
@@ -104,7 +113,7 @@ export const DateRangePicker = ({
       {open && (
         <div
           className={cn(
-            "absolute bottom-[calc(100%+1rem)] left-1/2 z-50 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-3xl border border-line bg-panel p-4 text-panel-foreground shadow-2xl",
+            "absolute top-[calc(100%+0.75rem)] left-1/2 z-50 w-[min(25rem,calc(100vw-2rem))] -translate-x-1/2 rounded-3xl border border-line bg-white p-4 text-panel-foreground shadow-2xl",
             panelClassName,
           )}
         >
@@ -153,10 +162,12 @@ export const DateRangePicker = ({
                 value === checkOut ||
                 value === pendingStart;
               const inRange = value > checkIn && value < checkOut;
+              const meta = dayPrice(date);
               return (
                 <button
+                  aria-label={`${date.getDate()} — ${priceFormatter.format(meta.price)} рублей${meta.discount ? ", скидка" : ""}`}
                   className={cn(
-                    "grid aspect-square place-items-center rounded-full text-sm transition hover:bg-muted-ui/20",
+                    "relative grid min-h-14 place-items-center rounded-xl pt-1 text-sm transition hover:bg-muted-ui/20",
                     date.getMonth() !== month.getMonth() &&
                       "text-muted-ui-foreground/45",
                     inRange && "rounded-none bg-brand/10",
@@ -166,10 +177,30 @@ export const DateRangePicker = ({
                   onClick={() => selectDate(value)}
                   type="button"
                 >
-                  {date.getDate()}
+                  <span>{date.getDate()}</span>
+                  <small
+                    className={cn(
+                      "text-[0.58rem] leading-none text-muted-ui-foreground",
+                      selected && "text-brand-foreground/80",
+                    )}
+                  >
+                    {priceFormatter.format(meta.price)} ₽
+                  </small>
+                  {meta.discount && (
+                    <span
+                      aria-label="Есть скидка"
+                      className="absolute top-1 right-1 size-1.5 rounded-full bg-red-500"
+                    />
+                  )}
                 </button>
               );
             })}
+          </div>
+          <div className="mt-3 flex items-center gap-3 text-[0.68rem] text-muted-ui-foreground">
+            <span className="inline-flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-red-500" /> скидка
+            </span>
+            <span>Цена за ночь</span>
           </div>
         </div>
       )}
