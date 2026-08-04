@@ -6,6 +6,10 @@
 
 The backend uses TypeScript, Express, PostgreSQL, Zod, Pino, Helmet, and managed file storage. Feature routers live in `src/features` and are mounted from `src/routes.ts`.
 
+## Managed media storage
+
+Authenticated CMS uploads are sent as raw file bodies to `POST /api/media/admin/uploads?fileName=...`. The API validates the media type and 50 MiB size limit, then performs one server-side authenticated multipart `POST` to the managed storage `/uploads` endpoint using the `file` field. The storage token never reaches browser code, and the API returns an asset only after storage has returned its `objectId`. Managed assets are read through `/api/media/managed/:objectToken`; the UUID media route remains read-only for files created by the legacy database-backed uploader.
+
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
 
 ## Realtime chat MVP

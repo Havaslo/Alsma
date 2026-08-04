@@ -25,10 +25,10 @@ type CreateApiRouterOptions = {
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly managedStorage: {
-    readonly createUpload: (input: {
+    readonly upload: (input: {
+      readonly content: Uint8Array;
       readonly contentType: string;
       readonly name: string;
-      readonly sizeBytes: number;
     }) => Promise<ManagedStorageUpload>;
     readonly getDownload: (
       objectId: string,

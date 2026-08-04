@@ -17,10 +17,10 @@ type CreateAppOptions = {
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: {
-    readonly createUpload: (input: {
+    readonly upload: (input: {
+      readonly content: Uint8Array;
       readonly contentType: string;
       readonly name: string;
-      readonly sizeBytes: number;
     }) => Promise<ManagedStorageUpload>;
     readonly getDownload: (
       objectId: string,

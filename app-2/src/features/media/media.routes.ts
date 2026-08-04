@@ -19,22 +19,8 @@ const managedFileParamsSchema = z.object({
     .regex(/^[A-Za-z0-9_-]+$/)
     .max(4_096),
 });
-const managedUploadBodySchema = z.object({
-  contentType: z.enum([
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "image/svg+xml",
-    "video/mp4",
-    "video/webm",
-  ]),
+const managedUploadQuerySchema = z.object({
   fileName: z.string().trim().min(1).max(255),
-  sizeBytes: z
-    .number()
-    .int()
-    .positive()
-    .max(50 * 1_024 * 1_024),
 });
 const allowedTypes = new Set([
   "image/jpeg",
@@ -46,11 +32,13 @@ const allowedTypes = new Set([
   "video/webm",
 ]);
 
+const maxUploadBytes = 50 * 1_024 * 1_024;
+
 type ManagedStorage = {
-  readonly createUpload: (input: {
+  readonly upload: (input: {
+    readonly content: Uint8Array;
     readonly contentType: string;
     readonly name: string;
-    readonly sizeBytes: number;
   }) => Promise<ManagedStorageUpload>;
   readonly getDownload: (
     objectId: string,
@@ -112,16 +100,13 @@ export const createMediaRouter = (
     },
   );
   router.post(
-    "/admin/upload",
+    "/admin/uploads",
     requireAdmin,
     requireSiteManagement,
-    raw({ limit: "10mb", type: () => true }),
+    raw({ limit: `${maxUploadBytes}b`, type: () => true }),
+    validateRequest({ query: managedUploadQuerySchema }),
     async (request, response) => {
       const contentType = request.headers["content-type"]?.split(";")[0] ?? "";
-      const fileName = String(request.headers["x-file-name"] ?? "upload").slice(
-        0,
-        255,
-      );
       if (!allowedTypes.has(contentType))
         throw new HttpError(
           400,
@@ -130,52 +115,24 @@ export const createMediaRouter = (
         );
       if (!Buffer.isBuffer(request.body) || request.body.length === 0)
         throw new HttpError(400, "MEDIA_EMPTY", "Выберите непустой файл.");
-      const file = await database.client.uploadedFile.create({
-        data: {
-          category: String(
-            request.headers["x-media-category"] ?? "site-content",
-          ).slice(0, 80),
-          content: Uint8Array.from(request.body),
-          contentType,
-          fileName,
-          sizeBytes: request.body.length,
-        },
-      });
-      response.status(201).json({
-        file: {
-          contentType: file.contentType,
-          fileName: file.fileName,
-          id: file.id,
-          sizeBytes: file.sizeBytes,
-          url: `/api/media/${file.id}`,
-        },
-      });
-    },
-  );
-  router.post(
-    "/admin/uploads",
-    requireAdmin,
-    requireSiteManagement,
-    validateRequest({ body: managedUploadBodySchema }),
-    async (_request, response) => {
-      const input = response.locals.input.body;
-      const upload = await managedStorage.createUpload({
-        contentType: input.contentType,
-        name: input.fileName,
-        sizeBytes: input.sizeBytes,
+
+      const fileName = response.locals.input.query.fileName;
+      const upload = await managedStorage.upload({
+        content: Uint8Array.from(request.body),
+        contentType,
+        name: fileName,
       });
       const objectToken = encodeObjectId(upload.objectId);
       response.status(201).json({
         asset: {
-          contentType: input.contentType,
-          fileName: input.fileName,
+          contentType,
+          fileName,
           objectId: upload.objectId,
-          sizeBytes: input.sizeBytes,
+          sizeBytes: request.body.length,
           url: `/api/media/managed/${objectToken}?contentType=${encodeURIComponent(
-            input.contentType,
+            contentType,
           )}`,
         },
-        upload,
       });
     },
   );

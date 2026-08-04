@@ -50,6 +50,7 @@ export const saveAdminSiteContent = (input: {
     },
     { headers: adminHeaders() },
   );
+
 export const uploadSiteMedia = (file: File) =>
   apiClient
     .post<{
@@ -60,30 +61,11 @@ export const uploadSiteMedia = (file: File) =>
         readonly sizeBytes: number;
         readonly url: string;
       };
-      upload: {
-        readonly uploadFields: Readonly<Record<string, string>>;
-        readonly uploadUrl: string;
-      };
-    }>(
-      "/media/admin/uploads",
-      {
-        contentType: file.type,
-        fileName: file.name,
-        sizeBytes: file.size,
+    }>("/media/admin/uploads", file, {
+      headers: {
+        ...adminHeaders(),
+        "Content-Type": file.type,
       },
-      { headers: adminHeaders() },
-    )
-    .then(async (response) => {
-      const formData = new FormData();
-      Object.entries(response.data.upload.uploadFields).forEach(
-        ([name, value]) => formData.append(name, value),
-      );
-      formData.append("file", file);
-      const uploadResponse = await fetch(response.data.upload.uploadUrl, {
-        body: formData,
-        method: "POST",
-      });
-      if (!uploadResponse.ok)
-        throw new Error("Не удалось загрузить файл в хранилище.");
-      return response.data.asset;
-    });
+      params: { fileName: file.name },
+    })
+    .then((response) => response.data.asset);

@@ -18,7 +18,7 @@ The first chat iteration intentionally uses backend process memory. Messages are
 
 ## Медиа из CMS
 
-Backend возвращает URL загруженных файлов относительно `/api`. Компоненты сайта и административные превью пропускают такие URL через общий `resolveMediaUrl`, чтобы в preview и production запросы уходили на настроенный API-хост, а не на статический frontend-хост.
+Backend возвращает URL загруженных файлов относительно `/api`. Компоненты сайта и административные превью пропускают такие URL через общий `resolveMediaUrl`, чтобы в preview и production запросы уходили на настроенный API-хост, а не на статический frontend-хост. Браузер отправляет файл только ALSMA API; backend выполняет единственную авторизованную multipart-загрузку в managed storage и возвращает asset после получения `objectId`. Прямые и подписанные загрузки из браузера не используются.
 
 ## Architecture
 
