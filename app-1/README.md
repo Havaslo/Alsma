@@ -14,7 +14,7 @@ The application uses TanStack Router, TanStack Query, React Hook Form, and Tailw
 - Публичные страницы и админские редакторы безопасно обрабатывают ответы без коллекции `items`: для публичной части используются локальные fallback-данные, а редакторы показывают доступное состояние без падения приложения.
 - Админская оболочка проверяет наличие пользователя до чтения его прав. Если сессия истекла или production API вернул неполный ответ авторизации, пользователь перенаправляется на страницу входа вместо падения с ошибкой JavaScript.
 
-The frontend communicates with `app-2` through relative `/api` requests. During development, Vite forwards that path to the backend target configured through `BACKEND_PROXY_TARGET`; browser code must not use backend container addresses directly.
+The frontend communicates with `app-2` through relative `/api` requests. During development, Vite forwards that path to the backend target configured through `BACKEND_PROXY_TARGET`. In production, `static-server.mjs` proxies the whole `/api` boundary before the static-file method guard, preserving POST bodies so admin login and other mutations reach Express instead of receiving the static server's `405 Method not allowed` response. Browser code must not use backend container addresses directly.
 
 ## Development
 

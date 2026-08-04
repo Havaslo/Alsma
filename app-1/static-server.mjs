@@ -56,13 +56,19 @@ const sendText = (response, status, body) => {
   response.end(body);
 };
 
-const proxyApiRequest = (request, response) => {
-  if (!backendUrl || !request.url) {
+const isApiPath = (pathname) =>
+  pathname === "/api" || pathname.startsWith("/api/");
+
+const proxyApiRequest = (request, response, requestUrl) => {
+  if (!backendUrl) {
     sendText(response, 503, "Backend application is unavailable.\n");
+    request.resume();
     return;
   }
 
-  const target = new URL(request.url, backendUrl);
+  // Keep the complete method and request body. In particular, admin login is
+  // a POST and must never fall through to the static GET/HEAD handler.
+  const target = new URL(requestUrl.pathname + requestUrl.search, backendUrl);
   const proxyRequest = createProxyRequest(
     target,
     {
@@ -119,22 +125,24 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  const url = new URL(request.url, "http://localhost");
-  if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
-    proxyApiRequest(request, response);
+  const requestUrl = new URL(request.url, "http://localhost");
+  // This branch deliberately runs before the static method guard so every
+  // browser API method (POST, PATCH, PUT, DELETE, and GET) reaches Express.
+  if (isApiPath(requestUrl.pathname)) {
+    proxyApiRequest(request, response, requestUrl);
     return;
   }
   if (!["GET", "HEAD"].includes(request.method ?? "")) {
     sendText(response, 405, "Method not allowed.\n");
     return;
   }
-  if (url.pathname === "/health") {
+  if (requestUrl.pathname === "/health") {
     sendText(response, 200, "ok\n");
     return;
   }
 
   try {
-    const file = await resolveFile(url.pathname);
+    const file = await resolveFile(requestUrl.pathname);
     if (!file) {
       sendText(response, 400, "Invalid path.\n");
       return;
