@@ -1,5 +1,6 @@
 import { readAdminSession } from "@/lib/admin/admin-session";
 import { apiClient } from "@/lib/api/api-client";
+import { canonicalMediaUrl } from "@/lib/site/media-url";
 
 export type SiteContentItem = {
   readonly content: Record<string, unknown>;
@@ -14,6 +15,25 @@ export type SiteContentItem = {
 const adminHeaders = () => ({
   Authorization: `Bearer ${readAdminSession() ?? ""}`,
 });
+
+const canonicalizeContentValue = (value: unknown): unknown => {
+  if (typeof value === "string") return canonicalMediaUrl(value);
+  if (Array.isArray(value)) return value.map(canonicalizeContentValue);
+  if (typeof value === "object" && value) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        canonicalizeContentValue(entry),
+      ]),
+    );
+  }
+  return value;
+};
+
+const canonicalizeContent = (
+  content: Record<string, unknown>,
+): Record<string, unknown> =>
+  canonicalizeContentValue(content) as Record<string, unknown>;
 
 export const loadPublishedSiteContent = (
   section: string,
@@ -43,7 +63,7 @@ export const saveAdminSiteContent = (input: {
   apiClient.put<{ item: SiteContentItem }>(
     `/site-content/admin/${input.section}/${input.itemKey}`,
     {
-      content: input.content,
+      content: canonicalizeContent(input.content),
       position: input.position,
       status: input.status,
       title: input.title,

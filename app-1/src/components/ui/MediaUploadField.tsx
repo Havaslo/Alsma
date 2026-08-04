@@ -38,7 +38,7 @@ export const MediaUploadField = ({
     setUploading(true);
     try {
       const asset = await uploadSiteMedia(file);
-      onUploaded({ ...asset, url: resolveMediaUrl(asset.url) });
+      onUploaded(asset);
       setFile(undefined);
       if (inputRef.current) inputRef.current.value = "";
       toast.success("Файл загружен");
