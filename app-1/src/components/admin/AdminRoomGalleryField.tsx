@@ -37,13 +37,13 @@ export const AdminRoomGalleryField = ({
         </p>
       </div>
       {urls.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {urls.map((url, index) => (
             <figure
               className="overflow-hidden rounded-2xl border border-line bg-panel"
               key={`${url}:${index}`}
             >
-              <div className="relative aspect-square w-1/2">
+              <div className="relative aspect-square w-full">
                 <img
                   alt={`Фото проживания ${index + 1}`}
                   className="size-full object-cover"
