@@ -269,7 +269,7 @@ export const BookingPage = () => {
                     />
                   </div>
                   <button
-                    className="min-h-[3.75rem] rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
+                    className="h-[3.75rem] self-end rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground"
                     onClick={performSearch}
                     type="button"
                   >
