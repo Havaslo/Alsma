@@ -9,109 +9,53 @@ import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.j
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import type { ChatService } from "./chat.service.js";
 
-const conversationSchema = z.object({
-  conversationId: z.string().trim().min(1).max(100),
-});
-const messageSchema = conversationSchema.extend({
+const conversationSchema = z.object({ conversationId: z.string().trim().min(1).max(100) });
+const guestMessageSchema = conversationSchema.extend({
+  contact: z.string().trim().min(3).max(50),
+  requester: z.string().trim().min(2).max(255),
   text: z.string().trim().min(1).max(2_000),
 });
-
-const writeEvent = (
-  response: { write: (value: string) => void },
-  payload: unknown,
-) => {
-  response.write(`data: ${JSON.stringify(payload)}\n\n`);
-};
-
+const managerMessageSchema = conversationSchema.extend({ text: z.string().trim().min(1).max(2_000) });
+const writeEvent = (response: { write: (value: string) => void }, payload: unknown) => response.write(`data: ${JSON.stringify(payload)}\n\n`);
 const stream = (chat: ChatService, conversationId: string, response: any) => {
   response.setHeader("Content-Type", "text/event-stream");
   response.setHeader("Cache-Control", "no-cache");
   response.setHeader("Connection", "keep-alive");
   response.flushHeaders?.();
   writeEvent(response, { type: "ready" });
-  const unsubscribe = chat.subscribe(conversationId, (message) =>
-    writeEvent(response, message),
-  );
-  const heartbeat = setInterval(
-    () => response.write(": heartbeat\n\n"),
-    25_000,
-  );
-  response.on("close", () => {
-    clearInterval(heartbeat);
-    unsubscribe();
-  });
+  const unsubscribe = chat.subscribe(conversationId, (message) => writeEvent(response, message));
+  const heartbeat = setInterval(() => response.write(": heartbeat\n\n"), 25_000);
+  response.on("close", () => { clearInterval(heartbeat); unsubscribe(); });
 };
 
-export const createChatRouter = (
-  database: Database,
-  chat: ChatService,
-): Router => {
+export const createChatRouter = (database: Database, chat: ChatService): Router => {
   const router = Router();
-  router.get(
-    "/messages",
-    validateRequest({ query: conversationSchema }),
-    (_request, response) => {
-      response.json({
-        items: chat.list(response.locals.input.query.conversationId),
-      });
-    },
-  );
-  router.post(
-    "/messages",
-    validateRequest({ body: messageSchema }),
-    (_request, response) => {
-      const input = response.locals.input.body;
-      response.status(201).json({
-        message: chat.publish(input.conversationId, "guest", input.text),
-      });
-    },
-  );
-  router.get(
-    "/stream",
-    validateRequest({ query: conversationSchema }),
-    (_request, response) => {
-      stream(chat, response.locals.input.query.conversationId, response);
-    },
-  );
+  router.get("/messages", validateRequest({ query: conversationSchema }), (_request, response) => response.json({ items: chat.list(response.locals.input.query.conversationId) }));
+  router.post("/messages", validateRequest({ body: guestMessageSchema }), async (_request, response) => {
+    const input = response.locals.input.body;
+    await database.client.adminRequest.upsert({
+      where: { id: input.conversationId },
+      create: { id: input.conversationId, category: "Сайт", contact: input.contact, description: input.text, details: { channelType: "chat", source: "Сайт" }, requester: input.requester, status: "new", title: "Новое сообщение с сайта" },
+      update: { contact: input.contact, description: input.text, requester: input.requester, updatedAt: new Date() },
+    });
+    response.status(201).json({ message: chat.publish(input.conversationId, "guest", input.text) });
+  });
+  router.get("/stream", validateRequest({ query: conversationSchema }), (_request, response) => stream(chat, response.locals.input.query.conversationId, response));
 
-  const requireAdmin = createRequireAdmin(
-    createAdminAuthService(createAdminAuthRepository(database)),
-  );
   const admin = Router();
-  admin.use(requireAdmin);
-  admin.get("/messages", (_request, response) =>
-    response.json({ items: chat.list() }),
-  );
-  admin.post(
-    "/messages",
-    validateRequest({ body: messageSchema }),
-    (_request, response) => {
-      const input = response.locals.input.body;
-      response.status(201).json({
-        message: chat.publish(input.conversationId, "manager", input.text),
-      });
-    },
-  );
+  admin.use(createRequireAdmin(createAdminAuthService(createAdminAuthRepository(database))));
+  admin.get("/messages", (_request, response) => response.json({ items: chat.list() }));
+  admin.post("/messages", validateRequest({ body: managerMessageSchema }), (_request, response) => {
+    const input = response.locals.input.body;
+    response.status(201).json({ message: chat.publish(input.conversationId, "manager", input.text) });
+  });
   admin.get("/stream", (request, response, next) => {
-    const token =
-      typeof request.query.token === "string" ? request.query.token : "";
-    const service = createAdminAuthService(createAdminAuthRepository(database));
-    service
-      .me(token)
-      .then(() => {
-        const conversationId =
-          typeof request.query.conversationId === "string"
-            ? request.query.conversationId
-            : "";
-        if (!conversationSchema.safeParse({ conversationId }).success)
-          throw new HttpError(
-            400,
-            "VALIDATION_ERROR",
-            "Invalid conversation id.",
-          );
-        stream(chat, conversationId, response);
-      })
-      .catch(next);
+    const token = typeof request.query.token === "string" ? request.query.token : "";
+    createAdminAuthService(createAdminAuthRepository(database)).me(token).then(() => {
+      const conversationId = typeof request.query.conversationId === "string" ? request.query.conversationId : "";
+      if (!conversationSchema.safeParse({ conversationId }).success) throw new HttpError(400, "VALIDATION_ERROR", "Invalid conversation id.");
+      stream(chat, conversationId, response);
+    }).catch(next);
   });
   router.use("/admin", admin);
   return router;
