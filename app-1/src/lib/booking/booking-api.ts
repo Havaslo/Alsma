@@ -26,6 +26,7 @@ export type BookingSearch = {
   readonly currency: string;
   readonly language: string;
   readonly nationality: string;
+  readonly roomCount: number;
 };
 
 export type BookingGuest = {

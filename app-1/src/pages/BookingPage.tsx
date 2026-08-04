@@ -5,15 +5,18 @@ import {
   BedDouble,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   CircleAlert,
   LoaderCircle,
+  Minus,
+  Plus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import {
   type BookingOffer,
@@ -53,6 +56,7 @@ export const BookingPage = () => {
     currency: "RUB",
     language: "ru",
     nationality: "RU",
+    roomCount: 1,
   });
   const [submittedSearch, setSubmittedSearch] = useState(search);
   const [step, setStep] = useState(0);
@@ -125,11 +129,19 @@ export const BookingPage = () => {
           lastName: contact.lastName,
           phone: contact.phone,
         },
-        guests: Array.from({ length: search.adults }, (_, index) => ({
-          firstName: index === 0 ? contact.firstName : `Гость ${index + 1}`,
-          lastName: contact.lastName,
-          type: "adult" as const,
-        })),
+        guests: [
+          ...Array.from({ length: search.adults }, (_, index) => ({
+            firstName: index === 0 ? contact.firstName : `Гость ${index + 1}`,
+            lastName: contact.lastName,
+            type: "adult" as const,
+          })),
+          ...search.childAges.map((age, index) => ({
+            birthDate: undefined,
+            firstName: `Ребёнок ${index + 1}`,
+            lastName: contact.lastName,
+            type: age < 1 ? ("baby" as const) : ("child" as const),
+          })),
+        ],
         notes: contact.notes || undefined,
         offerId: offer.id,
       });
@@ -208,51 +220,39 @@ export const BookingPage = () => {
           <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div>
               <section className="rounded-3xl border border-line bg-panel p-4 shadow-sm">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_10rem_auto]">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_auto]">
                   <label className="rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-                    Заезд
-                    <DatePicker
-                      ariaLabel="Дата заезда"
-                      onChange={(checkIn) =>
-                        setSearch((v) => ({
-                          ...v,
-                          checkIn,
-                          checkOut: v.checkOut < checkIn ? checkIn : v.checkOut,
-                        }))
+                    Даты проживания
+                    <DateRangePicker
+                      checkIn={search.checkIn}
+                      checkOut={search.checkOut}
+                      onChange={({ checkIn, checkOut }) =>
+                        setSearch((v) => ({ ...v, checkIn, checkOut }))
                       }
                       triggerClassName="mt-1 text-page-foreground"
-                      value={search.checkIn}
                     />
                   </label>
+                  <GuestPicker
+                    adults={search.adults}
+                    childAges={search.childAges}
+                    onChange={(adults, childAges) =>
+                      setSearch((v) => ({ ...v, adults, childAges }))
+                    }
+                  />
                   <label className="rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-                    Выезд
-                    <DatePicker
-                      ariaLabel="Дата выезда"
-                      min={search.checkIn}
-                      onChange={(checkOut) =>
-                        setSearch((v) => ({ ...v, checkOut }))
-                      }
-                      triggerClassName="mt-1 text-page-foreground"
-                      value={search.checkOut}
-                    />
-                  </label>
-                  <label className="rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
-                    Гости
+                    Номера
                     <select
                       className="mt-1 w-full bg-transparent text-base font-semibold text-page-foreground outline-none"
                       onChange={(event) =>
                         setSearch((v) => ({
                           ...v,
-                          adults: Number(event.target.value),
+                          roomCount: Number(event.target.value),
                         }))
                       }
-                      value={search.adults}
+                      value={search.roomCount}
                     >
-                      {[1, 2, 3, 4, 5, 6].map((value) => (
-                        <option key={value} value={value}>
-                          {value} взрослых
-                        </option>
-                      ))}
+                      <option value={1}>1 номер</option>
+                      <option value={2}>2 номера</option>
                     </select>
                   </label>
                   <button
@@ -315,7 +315,8 @@ export const BookingPage = () => {
                             </p>
                             <p className="text-xl font-semibold">
                               {money(
-                                item.discountedPrice || item.price,
+                                (item.discountedPrice || item.price) *
+                                  search.roomCount,
                                 item.currency,
                               )}
                             </p>
@@ -373,7 +374,8 @@ export const BookingPage = () => {
                           <div className="sm:text-right">
                             <p className="text-2xl font-semibold">
                               {money(
-                                item.discountedPrice || item.price,
+                                (item.discountedPrice || item.price) *
+                                  search.roomCount,
                                 item.currency,
                               )}
                             </p>
@@ -476,6 +478,8 @@ export const BookingPage = () => {
             </div>
             <BookingSummary
               adults={search.adults}
+              childAges={search.childAges}
+              roomCount={search.roomCount}
               checkIn={search.checkIn}
               checkOut={search.checkOut}
               nights={nights}
@@ -487,6 +491,148 @@ export const BookingPage = () => {
     </main>
   );
 };
+
+const GuestPicker = ({
+  adults,
+  childAges,
+  onChange,
+}: {
+  readonly adults: number;
+  readonly childAges: number[];
+  readonly onChange: (adults: number, childAges: number[]) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const summary = `${adults} ${adults === 1 ? "взрослый" : "взрослых"}${childAges.length ? ` · ${childAges.length} детей` : ""}`;
+  return (
+    <div className="relative rounded-2xl bg-page p-3 text-xs font-semibold text-muted-ui-foreground">
+      <span>Гости</span>
+      <button
+        className="mt-1 flex w-full items-center justify-between gap-2 bg-transparent text-left text-base font-semibold text-page-foreground outline-none"
+        onClick={() => setOpen((value) => !value)}
+        type="button"
+      >
+        <span>{summary}</span>
+        <ChevronDown className="size-4 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-[calc(100%+0.5rem)] left-0 z-50 w-72 rounded-2xl border border-line bg-panel p-4 text-page-foreground shadow-2xl">
+          <GuestCounter
+            label="Взрослые"
+            value={adults}
+            min={1}
+            max={12}
+            onChange={(value) => onChange(value, childAges)}
+          />
+          <div className="mt-4 border-t border-line pt-4">
+            <div className="flex items-center justify-between">
+              <span>Дети</span>
+              <span className="text-xs text-muted-ui-foreground">
+                до 17 лет
+              </span>
+            </div>
+            {childAges.map((age, index) => (
+              <div
+                className="mt-3 flex items-center gap-2"
+                key={`${index}-${age}`}
+              >
+                <select
+                  className="field-control min-h-9 py-1"
+                  aria-label={`Возраст ребёнка ${index + 1}`}
+                  value={age}
+                  onChange={(event) =>
+                    onChange(
+                      adults,
+                      childAges.map((current, item) =>
+                        item === index ? Number(event.target.value) : current,
+                      ),
+                    )
+                  }
+                >
+                  {Array.from({ length: 18 }, (_, value) => (
+                    <option key={value} value={value}>
+                      {value === 0
+                        ? "до 1 года"
+                        : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  aria-label={`Удалить ребёнка ${index + 1}`}
+                  className="text-muted-ui-foreground hover:text-destructive"
+                  onClick={() =>
+                    onChange(
+                      adults,
+                      childAges.filter((_, item) => item !== index),
+                    )
+                  }
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {childAges.length < 8 && (
+              <button
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand"
+                onClick={() => onChange(adults, [...childAges, 5])}
+                type="button"
+              >
+                <Plus className="size-4" />
+                Добавить ребёнка
+              </button>
+            )}
+          </div>
+          <button
+            className="mt-4 w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
+            onClick={() => setOpen(false)}
+            type="button"
+          >
+            Готово
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const GuestCounter = ({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: number;
+  readonly min: number;
+  readonly max: number;
+  readonly onChange: (value: number) => void;
+}) => (
+  <div className="flex items-center justify-between gap-4">
+    <span>{label}</span>
+    <div className="flex items-center gap-3">
+      <button
+        aria-label={`Уменьшить: ${label}`}
+        className="grid size-8 place-items-center rounded-full border border-line disabled:opacity-40"
+        disabled={value <= min}
+        onClick={() => onChange(value - 1)}
+        type="button"
+      >
+        <Minus className="size-3" />
+      </button>
+      <strong className="w-5 text-center">{value}</strong>
+      <button
+        aria-label={`Увеличить: ${label}`}
+        className="grid size-8 place-items-center rounded-full border border-line disabled:opacity-40"
+        disabled={value >= max}
+        onClick={() => onChange(value + 1)}
+        type="button"
+      >
+        <Plus className="size-3" />
+      </button>
+    </div>
+  </div>
+);
 
 const cancellationText = (offer: BookingOffer) => {
   const policy = offer.cancellationPenalty;
@@ -509,12 +655,16 @@ const EmptyState = () => (
 );
 const BookingSummary = ({
   adults,
+  childAges,
+  roomCount,
   checkIn,
   checkOut,
   nights,
   offer,
 }: {
   readonly adults: number;
+  readonly childAges: number[];
+  readonly roomCount: number;
   readonly checkIn: string;
   readonly checkOut: string;
   readonly nights: number;
@@ -535,7 +685,9 @@ const BookingSummary = ({
       </div>
     </div>
     <p className="mt-5 text-sm text-muted-ui-foreground">
-      {nights} {nights === 1 ? "ночь" : "ночей"} · {adults} взрослых
+      {nights} {nights === 1 ? "ночь" : "ночей"} · {adults} взрослых ·{" "}
+      {childAges.length} детей · {roomCount}{" "}
+      {roomCount === 1 ? "номер" : "номера"}
     </p>
     {offer ? (
       <div className="mt-5 border-t border-line pt-5">
@@ -546,7 +698,10 @@ const BookingSummary = ({
         <p className="mt-5 flex justify-between border-t border-line pt-4 text-lg font-semibold">
           <span>Итого</span>
           <span>
-            {money(offer.discountedPrice || offer.price, offer.currency)}
+            {money(
+              (offer.discountedPrice || offer.price) * roomCount,
+              offer.currency,
+            )}
           </span>
         </p>
       </div>

@@ -67,6 +67,7 @@ export const createBookingService = (
       currency: input.currency,
       language: "ru",
       nationality: input.nationality,
+      roomCount: input.roomCount,
     });
     const offer = offers.find((candidate) => candidate.id === input.offerId);
     if (!offer || offer.roomToSell < 1) {
@@ -106,7 +107,7 @@ export const createBookingService = (
       "rate-code-id": offer.rateCodeId,
       "rate-type-id": offer.rateTypeId,
       "res-notes": input.notes,
-      "room-count": 1,
+      "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
       "total-price": offer.discountedPrice || offer.price,
       "younger-child-count": input.childAges.filter((age) => age < 7).length,
@@ -134,7 +135,7 @@ export const createBookingService = (
       guestsCount: input.guests.length,
       roomName: offer.roomType,
       selectedOffer: JSON.parse(JSON.stringify(offer)),
-      totalAmount: offer.discountedPrice || offer.price,
+      totalAmount: (offer.discountedPrice || offer.price) * input.roomCount,
       userId: guest.id,
       voucherNumber,
     });

@@ -249,6 +249,7 @@ export const createEpteraClient = ({
       currency: string;
       language: string;
       nationality: string;
+      roomCount: number;
     }): Promise<EpteraOffer[]> => {
       const { hotelId: configuredHotelId } = requireConfiguration();
       const query = new URLSearchParams({
@@ -257,7 +258,7 @@ export const createEpteraClient = ({
         currency: input.currency,
         fromdate: input.checkIn,
         language: input.language,
-        "min-room-count": "1",
+        "min-room-count": String(input.roomCount),
         nationality: input.nationality,
         "promo-code": "",
         onlybestoffer: "false",

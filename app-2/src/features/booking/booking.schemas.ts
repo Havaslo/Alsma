@@ -16,6 +16,7 @@ export const offersQuerySchema = z.object({
   currency: z.string().trim().length(3).default("RUB"),
   language: z.string().trim().length(2).default("ru"),
   nationality: z.string().trim().length(2).default("RU"),
+  roomCount: z.coerce.number().int().min(1).max(2).default(1),
 });
 
 const guestSchema = z.object({
@@ -41,6 +42,7 @@ export const createReservationBodySchema = z.object({
   nationality: z.string().trim().length(2).default("RU"),
   notes: z.string().trim().max(1000).optional(),
   offerId: z.string().trim().min(1).max(300),
+  roomCount: z.number().int().min(1).max(2).default(1),
 });
 
 export type CreateReservationBody = z.infer<typeof createReservationBodySchema>;
