@@ -43,7 +43,7 @@ export const AdminRoomGalleryField = ({
               className="overflow-hidden rounded-2xl border border-line bg-panel"
               key={`${url}:${index}`}
             >
-              <div className="relative aspect-square w-full">
+              <div className="relative aspect-square w-1/2">
                 <img
                   alt={`Фото проживания ${index + 1}`}
                   className="size-full object-cover"
