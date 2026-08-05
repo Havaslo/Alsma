@@ -8,6 +8,10 @@ Public pages include a compact chat widget backed by `/api/chat`. Each visitor r
 
 The first chat iteration intentionally uses backend process memory. Messages are limited to 100 per conversation and disappear when the backend restarts; this keeps the MVP focused on the realtime interaction before introducing durable conversation storage.
 
+## Hero страницы «Блог»
+
+Hero публичной страницы `/blog` использует локальный asset `src/assets/alsma/blog-hero.jpg`. Если контент Hero не задан в CMS, страница применяет это изображение как fallback.
+
 ## Галерея проживания
 
 В административной форме проживания превью фотографий отображаются в квадратных контейнерах с кадрированием `object-cover`. Первое фото по-прежнему используется как обложка, а порядок фотографий можно менять стрелками.

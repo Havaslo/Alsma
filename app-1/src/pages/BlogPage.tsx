@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import heroImage from "@/assets/alsma/spa-forest-walk.jpg";
+import heroImage from "@/assets/alsma/blog-hero.jpg";
 import { EditorialCard } from "@/components/site/EditorialCard";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
