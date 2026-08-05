@@ -312,11 +312,11 @@ export const OffersPage = () => {
                   {group.events.length === 1 ? "событие" : "события"}
                 </span>
               </div>
-              <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-5 grid items-stretch gap-5 sm:grid-cols-2 xl:grid-cols-4">
                 {group.events.map((event) => {
                   const card = (
                     <article
-                      className="group overflow-hidden rounded-3xl border border-line bg-page transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"
+                      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-page transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl"
                       key={event.title}
                     >
                       <div className="relative aspect-square overflow-hidden">
@@ -334,7 +334,7 @@ export const OffersPage = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="p-6">
+                      <div className="flex flex-1 flex-col p-6">
                         <h4 className="font-heading text-2xl font-semibold">
                           {event.title}
                         </h4>
@@ -347,7 +347,7 @@ export const OffersPage = () => {
 
                   return (
                     <button
-                      className="group block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                      className="group block h-full w-full text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
                       key={event.title}
                       onClick={() => setSelectedEvent(event)}
                       type="button"
