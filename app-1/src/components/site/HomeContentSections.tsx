@@ -1,9 +1,10 @@
 import { useState } from "react";
 
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Star } from "lucide-react";
 
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
+import { Modal } from "@/components/ui/Modal";
 import type { HomeRestCard, HomeReview } from "@/lib/site/home-content";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import type { ActiveOffer } from "@/lib/site/offers";
@@ -80,65 +81,113 @@ export const HomePromotionsSection = ({
   offers,
 }: {
   readonly offers: readonly ActiveOffer[];
-}) => (
-  <section className="py-24" id="offers">
-    <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
-      <div className="mx-auto max-w-3xl text-center">
-        <div>
-          <p className="text-sm font-bold tracking-widest text-brand uppercase">
-            Акции и спецпредложения
-          </p>
-          <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-            Выберите предложение под ваш формат отдыха
-          </h2>
-        </div>
-        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Семейные заезды, выгодные будни и специальные условия для тех, кто
-          хочет остаться дольше.
-        </p>
-      </div>
-      <HorizontalCarousel className="mt-14" slideClassName="basis-auto">
-        {offers.map((offer) => (
-          <a
-            className="group block h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground transition outline-none hover:-translate-y-1 focus-visible:ring-4 focus-visible:ring-focus/30 sm:w-[340px] lg:w-[360px]"
-            href={offer.buttonLink || ROUTES.offers}
-            key={offer.title}
-          >
-            <div className="h-56 overflow-hidden">
-              <img
-                alt={offer.title}
-                className="size-full object-cover transition duration-500 group-hover:scale-105"
-                src={resolveMediaUrl(offer.image)}
-              />
-            </div>
-            <div className="p-7">
-              <span className="rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
-                {offer.tag}
-              </span>
-              <h3 className="mt-4 font-heading text-3xl font-semibold">
-                {offer.title}
-              </h3>
-              <p className="mt-3 text-brand-foreground/80">
-                {offer.description}
+}) => {
+  const [selectedOffer, setSelectedOffer] = useState<ActiveOffer>();
+
+  return (
+    <>
+      <section className="py-24" id="offers">
+        <div className="mx-auto max-w-[100rem] px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <div>
+              <p className="text-sm font-bold tracking-widest text-brand uppercase">
+                Акции и спецпредложения
               </p>
-              <span className="mt-6 inline-flex items-center gap-2 font-semibold text-accent-ui">
-                Подробнее <ArrowRight className="size-4" />
-              </span>
+              <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
+                Выберите предложение под ваш формат отдыха
+              </h2>
             </div>
-          </a>
-        ))}
-      </HorizontalCarousel>
-      <div className="mt-8 text-center">
-        <a
-          className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
-          href={ROUTES.offers}
-        >
-          Все акции <ArrowRight className="size-4" />
-        </a>
-      </div>
-    </div>
-  </section>
-);
+            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
+              Семейные заезды, выгодные будни и специальные условия для тех, кто
+              хочет остаться дольше.
+            </p>
+          </div>
+          <HorizontalCarousel className="mt-14" slideClassName="basis-auto">
+            {offers.map((offer) => (
+              <article
+                className="group block h-full min-h-[568px] w-[300px] overflow-hidden rounded-4xl bg-brand text-brand-foreground transition outline-none focus-within:ring-4 focus-within:ring-focus/30 hover:-translate-y-1 sm:w-[340px] lg:w-[360px]"
+                key={offer.title}
+              >
+                <div className="h-56 overflow-hidden">
+                  <img
+                    alt={offer.title}
+                    className="size-full object-cover transition duration-500 group-hover:scale-105"
+                    src={resolveMediaUrl(offer.image)}
+                  />
+                </div>
+                <div className="flex h-[calc(100%-14rem)] flex-col p-7">
+                  <span className="w-fit rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
+                    {offer.tag}
+                  </span>
+                  <h3 className="mt-4 font-heading text-3xl font-semibold">
+                    {offer.title}
+                  </h3>
+                  <p className="mt-3 line-clamp-4 text-brand-foreground/80">
+                    {offer.description}
+                  </p>
+                  <button
+                    className="mt-auto inline-flex items-center gap-2 pt-6 text-left font-semibold text-accent-ui"
+                    onClick={() => setSelectedOffer(offer)}
+                    type="button"
+                  >
+                    Подробнее <ArrowUpRight className="size-4" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </HorizontalCarousel>
+          <div className="mt-8 text-center">
+            <a
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
+              href={ROUTES.offers}
+            >
+              Все акции <ArrowRight className="size-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+      <Modal
+        className="bg-page text-page-foreground"
+        hideHeader
+        onClose={() => setSelectedOffer(undefined)}
+        open={Boolean(selectedOffer)}
+        title={selectedOffer?.title ?? "Акция"}
+      >
+        {selectedOffer && (
+          <>
+            <img
+              alt={selectedOffer.title}
+              className="relative -mx-6 block aspect-video w-[calc(100%+3rem)] max-w-none shrink-0 object-cover"
+              src={resolveMediaUrl(selectedOffer.image)}
+            />
+            <div className="px-1 py-5">
+              <h2 className="font-heading text-3xl font-semibold text-brand">
+                {selectedOffer.title}
+              </h2>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <span className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand">
+                  {selectedOffer.tag}
+                </span>
+              </div>
+              <p className="mt-5 leading-8 whitespace-pre-line text-page-foreground">
+                {selectedOffer.description}
+              </p>
+              {selectedOffer.buttonLink && (
+                <a
+                  className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                  href={selectedOffer.buttonLink}
+                >
+                  Перейти к предложению
+                  <ArrowUpRight className="size-4" />
+                </a>
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
+    </>
+  );
+};
 
 export const HomeReviewsSection = ({
   reviews,
