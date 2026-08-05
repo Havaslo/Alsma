@@ -47,6 +47,12 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
         <p className="text-2xl font-semibold">
           {room.price} <span className="text-base font-normal">/ ночь</span>
         </p>
+        <a
+          className="mt-5 inline-flex rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+          href="/booking"
+        >
+          Забронировать
+        </a>
       </div>
     </div>
   </article>
