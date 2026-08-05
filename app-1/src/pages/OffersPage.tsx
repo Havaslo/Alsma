@@ -92,7 +92,12 @@ export const OffersPage = () => {
         (!expirationDate || expirationDate >= getToday())
       );
     })
-    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
+    .sort((left, right) => {
+      if (left.startDate && right.startDate) {
+        return left.startDate.localeCompare(right.startDate);
+      }
+      return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+    })
     .map((item) => ({
       ...item,
       date: item.startDate
@@ -105,16 +110,20 @@ export const OffersPage = () => {
         : item.date,
       month: item.startDate ? getOfferMonth(item.startDate) : item.month,
     }));
-  const eventMonths = [
-    {
-      events: events.slice(0, 1),
-      month: events[0]?.month ?? OFFER_EVENTS[0].month,
-    },
-    {
-      events: events.slice(1),
-      month: events[1]?.month ?? OFFER_EVENTS[1].month,
-    },
-  ].filter((group) => group.events.length > 0);
+  const eventMonths = events.reduce<
+    { events: typeof events; month: string; key: string }[]
+  >((groups, event) => {
+    const key = event.startDate
+      ? event.startDate.slice(0, 7)
+      : `legacy-${event.month}`;
+    const group = groups.find((candidate) => candidate.key === key);
+    if (group) {
+      group.events.push(event);
+    } else {
+      groups.push({ events: [event], key, month: event.month });
+    }
+    return groups;
+  }, []);
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
