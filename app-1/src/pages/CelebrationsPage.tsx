@@ -119,14 +119,14 @@ export const CelebrationsPage = () => {
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-              Галерея атмосферы
+              Локации для мероприятий
             </p>
             <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-              Локации, блюда и примеры событий
+              Пространства для торжеств и встреч
             </h2>
             <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-              Подобрали визуальные акценты, которые помогают представить формат
-              будущего торжества или корпоративного отдыха.
+              Выберите подходящую площадку для свадьбы, праздника, конференции
+              или отдыха на природе.
             </p>
           </div>
           <div className="mt-12 grid gap-7 md:grid-cols-3">
