@@ -205,7 +205,7 @@ export const OffersPage = () => {
               </p>
               {selectedOffer.buttonLink && (
                 <a
-                  className="mt-6 inline-flex items-center gap-2 font-semibold text-brand"
+                  className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
                   href={selectedOffer.buttonLink}
                 >
                   Перейти к предложению
