@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
+import { Link } from "@tanstack/react-router";
+
 import { Form } from "@/components/Form";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
-import { Loader } from "@/components/ui/Loader";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { ROUTES } from "@/route-constants";
 
 const guestOptions = [
   { label: "2 взрослых", value: 2 },
@@ -115,17 +117,12 @@ export const HomeBookingBar = () => {
           />
         </div>
       </BookingField>
-      <button
-        className="min-h-15 self-end rounded-full bg-brand px-8 py-5 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90 disabled:opacity-60"
-        disabled={leadMutation.isPending}
-        type="submit"
+      <Link
+        className="inline-flex min-h-15 items-center justify-center self-end rounded-full bg-brand px-8 py-5 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90"
+        to={ROUTES.booking}
       >
-        {leadMutation.isPending ? (
-          <Loader className="mx-auto" size="sm" />
-        ) : (
-          "Найти номер"
-        )}
-      </button>
+        Найти номер
+      </Link>
     </Form>
   );
 };

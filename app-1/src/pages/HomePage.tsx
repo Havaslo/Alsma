@@ -84,7 +84,7 @@ export const HomePage = () => {
         <div className="absolute inset-0 bg-hero-highlight" />
 
         <div className="relative mx-auto flex min-h-screen max-w-[100rem] flex-col px-4 pt-5 pb-10 sm:px-6">
-          <SiteHeader bookingTo="#booking" transparentAtTop />
+          <SiteHeader transparentAtTop />
 
           <div
             className="flex flex-1 flex-col items-center justify-center pt-36 pb-24 text-center"
