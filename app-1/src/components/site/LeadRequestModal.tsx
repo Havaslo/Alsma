@@ -57,7 +57,7 @@ export const LeadRequestModal = ({
 
   return (
     <Modal
-      className="max-w-4xl rounded-4xl bg-page"
+      className="max-w-3xl rounded-4xl bg-page"
       closeLabel="Закрыть форму заявки"
       headerClassName="items-start border-b-0 px-6 pt-8 pb-0 sm:px-10 sm:pt-10"
       headerContent={
