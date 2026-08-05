@@ -1,10 +1,9 @@
 import { useState } from "react";
 
 import heroImage from "@/assets/alsma/spa-river-aerial.jpg";
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
+import { LeadRequestModal } from "@/components/site/LeadRequestModal";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { Modal } from "@/components/ui/Modal";
 import { EVENT_FORMATS, EVENT_GALLERY } from "@/lib/site/celebrations";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
@@ -154,25 +153,19 @@ export const CelebrationsPage = () => {
           </div>
         </div>
       </section>
-      <Modal
-        closeLabel="Закрыть форму заявки"
+      <LeadRequestModal
+        commentPlaceholder="Напишите, какой корпоративный отдых вы планируете"
+        description="Оставьте контакты, и мы свяжемся с вами, чтобы обсудить корпоративный отдых, количество гостей, формат программы и подобрать подходящее решение."
+        emailRequired
+        eyebrow="Заявка на корпоративный отдых"
+        formCode="celebrations-request"
+        formTitle="Заявка на корпоративный отдых"
+        nameRequired
         onClose={() => setRequestOpen(false)}
         open={requestOpen}
+        sourcePage="celebrations"
         title="Обсудим ваш визит"
-      >
-        <p className="mb-6 leading-7 text-muted-ui-foreground">
-          Оставьте контакты, и мы свяжемся с вами, чтобы обсудить количество
-          гостей, формат программы и подобрать подходящее решение.
-        </p>
-        <div className="rounded-3xl bg-brand p-6 text-brand-foreground">
-          <LeadRequestForm
-            formCode="celebrations-request"
-            formTitle="Заявка на корпоративный отдых"
-            showDetails
-            sourcePage="celebrations"
-          />
-        </div>
-      </Modal>
+      />
     </main>
   );
 };
