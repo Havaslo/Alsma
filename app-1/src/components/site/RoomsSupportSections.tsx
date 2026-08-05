@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Sparkles } from "lucide-react";
 
-import { LeadRequestForm } from "@/components/site/LeadRequestForm";
+import { Form } from "@/components/Form";
 import { RoomRecommendationQuiz } from "@/components/site/RoomRecommendationQuiz";
+import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
+import { useCreateLead } from "@/lib/leads/useCreateLead";
 import type { RoomCategory } from "@/lib/site/rooms";
 
 export const RoomsSupportSections = ({
@@ -90,23 +93,119 @@ export const RoomsSupportSections = ({
         open={quizOpen}
         rooms={rooms}
       />
-      <Modal
-        className="max-w-xl"
-        closeLabel="Закрыть форму заявки"
+      <PlacementRequestModal
         onClose={() => setRequestOpen(false)}
         open={requestOpen}
-        title="Заявка на размещение"
-      >
-        <p className="mb-6 leading-7 text-muted-ui-foreground">
-          Оставьте контакты, и мы свяжемся с вами, чтобы подобрать подходящий
-          вариант размещения.
-        </p>
-        <LeadRequestForm
-          formCode="rooms-corpuses"
-          formTitle="Заявка на размещение по корпусам"
-          sourcePage="rooms"
-        />
-      </Modal>
+      />
     </>
+  );
+};
+
+type PlacementRequestValues = {
+  comment: string;
+  email: string;
+  phone: string;
+};
+
+const PlacementRequestModal = ({
+  onClose,
+  open,
+}: {
+  readonly onClose: () => void;
+  readonly open: boolean;
+}) => {
+  const lead = useCreateLead();
+  const form = useForm<PlacementRequestValues>({
+    defaultValues: { comment: "", email: "", phone: "" },
+  });
+  const inputClassName =
+    "min-h-16 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-lg text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10";
+
+  return (
+    <Modal
+      className="max-w-4xl rounded-4xl bg-booking-shell"
+      closeLabel="Закрыть форму заявки"
+      headerClassName="items-start px-6 py-8 sm:px-10 sm:py-9"
+      headerContent={
+        <>
+          <p className="text-sm font-semibold tracking-wide text-brand/60">
+            Заявка на размещение
+          </p>
+          <h2 className="mt-4 max-w-2xl font-heading text-3xl leading-[1.08] font-semibold sm:text-5xl">
+            Индивидуальные и групповые корпуса
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-ui-foreground">
+            Оставьте контакты, и мы свяжемся с вами, чтобы подобрать подходящий
+            вариант размещения.
+          </p>
+        </>
+      }
+      onClose={onClose}
+      open={open}
+      title="Индивидуальные и групповые корпуса"
+    >
+      <Form
+        className="space-y-6"
+        form={form}
+        onSubmit={(values) => {
+          lead.mutate(
+            {
+              comment: values.comment || undefined,
+              email: values.email,
+              formCode: "rooms-corpuses",
+              formTitle: "Заявка на размещение по корпусам",
+              phone: values.phone,
+              sourcePage: "rooms",
+            },
+            { onSuccess: () => form.reset() },
+          );
+        }}
+      >
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block text-lg">Номер</span>
+          <input
+            className={inputClassName}
+            placeholder="+7 (___) ___-__-__"
+            type="tel"
+            {...form.register("phone", { required: true })}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block text-lg">Почта</span>
+          <input
+            className={inputClassName}
+            placeholder="you@example.com"
+            type="email"
+            {...form.register("email", { required: true })}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          <span className="mb-3 block text-lg">Комментарий</span>
+          <textarea
+            className="min-h-36 w-full resize-y rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-lg text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10"
+            placeholder="Расскажите, какой формат размещения вас интересует"
+            {...form.register("comment")}
+          />
+        </label>
+        <button
+          className="inline-flex min-h-16 w-full items-center justify-center rounded-full bg-brand px-7 py-4 text-lg font-semibold text-brand-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={lead.isPending}
+          type="submit"
+        >
+          {lead.isPending && <Loader size="sm" />}
+          Отправить заявку
+        </button>
+        {lead.isSuccess && (
+          <p className="text-center text-brand">
+            Заявка принята. Мы скоро свяжемся с вами.
+          </p>
+        )}
+        {lead.isError && (
+          <p className="text-center text-destructive">
+            Не удалось отправить заявку. Попробуйте ещё раз.
+          </p>
+        )}
+      </Form>
+    </Modal>
   );
 };
