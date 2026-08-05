@@ -1,9 +1,11 @@
-import liveMusicImage from "@/assets/alsma/entertainment-live-music.png";
+import tentImage from "@/assets/alsma/celebrations.jpg";
+import corporateHallImage from "@/assets/alsma/corporate-hall.webp";
+import colorHallImage from "@/assets/alsma/feature-nature.png";
+import restaurantImage from "@/assets/alsma/feature-restaurant.png";
+import natureImage from "@/assets/alsma/nature.jpg";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
 import summerImage from "@/assets/alsma/season-summer.jpg";
-import buffetImage from "@/assets/alsma/spa-buffet.jpg";
 import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
-import riverImage from "@/assets/alsma/spa-river-aerial.jpg";
 
 export const EVENT_FORMATS = [
   {
@@ -49,36 +51,55 @@ export const EVENT_FORMATS = [
 
 export const EVENT_GALLERY = [
   {
-    description: "Welcome-зона, летний ужин или выездная церемония.",
-    image: riverImage,
-    title: "Локация у реки",
-  },
-  {
-    description: "Фуршетная линия, сервировка и гастрономические акценты.",
-    image: buffetImage,
-    title: "Банкетная подача",
-  },
-  {
-    description: "Свечи, цветочные композиции и праздничная сервировка.",
-    image: ceremonyImage,
-    title: "Торжественный декор",
+    description:
+      "Просторная светлая площадка для свадеб, выпускных, банкетов и летних мероприятий среди природы.",
+    details: [
+      "До 100 человек за банкетом",
+      "До 130 человек при фуршете или конференции",
+    ],
+    image: tentImage,
+    title: "Шатер (120 м²)",
   },
   {
     description:
-      "Формат события для пары или небольшой компании с проживанием и SPA.",
-    image: romanticImage,
-    title: "Пример частного торжества",
+      "Уютный зал для камерных свадеб, юбилеев, семейных праздников и деловых встреч.",
+    details: [
+      "До 40 человек за банкетом",
+      "До 60 человек при фуршете или конференции",
+    ],
+    image: corporateHallImage,
+    title: "Банкетный зал «Белый» (закрытый)",
   },
   {
     description:
-      "Командные активности, отдых на свежем воздухе и неформальное общение.",
-    image: summerImage,
-    title: "Корпоративный отдых на природе",
+      "Пространство с зеркалами и экраном для конференций, тренингов, спортивных сборов, танцевальных групп и ретритов.",
+    details: [
+      "Зеркала для занятий и репетиций",
+      "Экран для презентаций",
+      "Подходит для тренингов и конференций",
+      "Удобен для спортивных и творческих групп",
+      "До 80 человек при конференциях и обучающих мероприятиях",
+      "До 40 человек при тренировках и занятиях спортом",
+    ],
+    image: colorHallImage,
+    title: "Зал «Цветной»",
+  },
+  {
+    description: "Пространство ресторана для больших праздничных мероприятий.",
+    details: ["До 150 человек при банкете"],
+    image: restaurantImage,
+    title: "Зал ресторана",
   },
   {
     description:
-      "Живая музыка, ведущий и праздничная атмосфера после основной части дня.",
-    image: liveMusicImage,
-    title: "Вечерняя программа",
+      "Красивая церемония среди сосен, с живой природой вокруг и возможностью продумать запасной вариант на случай погоды.",
+    details: [
+      "Открытые площадки в тёплый сезон",
+      "Красивые локации для фото",
+      "Крытая терраса как альтернатива",
+      "Можно провести всё событие на одной территории",
+    ],
+    image: natureImage,
+    title: "Выездная регистрация на природе",
   },
 ] as const;
