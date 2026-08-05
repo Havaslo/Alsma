@@ -1,8 +1,8 @@
-import tentImage from "@/assets/alsma/celebrations.jpg";
-import corporateHallImage from "@/assets/alsma/corporate-hall.webp";
-import colorHallImage from "@/assets/alsma/feature-nature.png";
-import restaurantImage from "@/assets/alsma/feature-restaurant.png";
-import natureImage from "@/assets/alsma/nature.jpg";
+import colorHallImage from "@/assets/alsma/event-color-hall.jpg";
+import outdoorCeremonyImage from "@/assets/alsma/event-outdoor-ceremony.jpg";
+import restaurantHallImage from "@/assets/alsma/event-restaurant-hall.jpg";
+import tentImage from "@/assets/alsma/event-tent.jpg";
+import whiteHallImage from "@/assets/alsma/event-white-hall.jpg";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
 import summerImage from "@/assets/alsma/season-summer.jpg";
 import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
@@ -67,7 +67,7 @@ export const EVENT_GALLERY = [
       "До 40 человек за банкетом",
       "До 60 человек при фуршете или конференции",
     ],
-    image: corporateHallImage,
+    image: whiteHallImage,
     title: "Банкетный зал «Белый» (закрытый)",
   },
   {
@@ -87,7 +87,7 @@ export const EVENT_GALLERY = [
   {
     description: "Пространство ресторана для больших праздничных мероприятий.",
     details: ["До 150 человек при банкете"],
-    image: restaurantImage,
+    image: restaurantHallImage,
     title: "Зал ресторана",
   },
   {
@@ -99,7 +99,7 @@ export const EVENT_GALLERY = [
       "Крытая терраса как альтернатива",
       "Можно провести всё событие на одной территории",
     ],
-    image: natureImage,
+    image: outdoorCeremonyImage,
     title: "Выездная регистрация на природе",
   },
 ] as const;
