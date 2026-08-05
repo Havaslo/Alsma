@@ -178,36 +178,42 @@ export const OffersPage = () => {
         </div>
       </section>
       <Modal
-        className="bg-brand text-brand-foreground"
+        className="bg-page text-page-foreground"
+        hideHeader
         onClose={() => setSelectedOffer(undefined)}
         open={Boolean(selectedOffer)}
         title={selectedOffer?.title ?? "Акция"}
       >
         {selectedOffer && (
-          <div>
+          <>
             <img
               alt={selectedOffer.title}
-              className="-mx-6 -mt-5 block aspect-[4/3] w-[calc(100%+3rem)] object-cover"
+              className="relative -mx-6 block aspect-video w-[calc(100%+3rem)] max-w-none shrink-0 object-cover"
               src={resolveMediaUrl(selectedOffer.image)}
             />
-            <span className="mt-6 inline-flex rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
-              {selectedOffer.tag}
-            </span>
-            <h2 className="mt-4 font-heading text-3xl font-semibold">
-              {selectedOffer.title}
-            </h2>
-            <p className="mt-5 leading-8 whitespace-pre-line text-brand-foreground/85">
-              {selectedOffer.description}
-            </p>
-            {selectedOffer.buttonLink && (
-              <a
-                className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent-ui px-5 py-3 font-semibold text-accent-ui-foreground"
-                href={selectedOffer.buttonLink}
-              >
-                Подробнее <ArrowUpRight className="size-4" />
-              </a>
-            )}
-          </div>
+            <div className="px-1 py-5">
+              <h2 className="font-heading text-3xl font-semibold text-brand">
+                {selectedOffer.title}
+              </h2>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <span className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand">
+                  {selectedOffer.tag}
+                </span>
+              </div>
+              <p className="mt-5 leading-8 whitespace-pre-line text-page-foreground">
+                {selectedOffer.description}
+              </p>
+              {selectedOffer.buttonLink && (
+                <a
+                  className="mt-6 inline-flex items-center gap-2 font-semibold text-brand"
+                  href={selectedOffer.buttonLink}
+                >
+                  Перейти к предложению
+                  <ArrowUpRight className="size-4" />
+                </a>
+              )}
+            </div>
+          </>
         )}
       </Modal>
       <section className="bg-panel py-24">
