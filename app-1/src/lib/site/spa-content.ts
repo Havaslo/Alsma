@@ -1,5 +1,6 @@
 import type { SiteContentItem } from "@/lib/site/site-content-api";
 import { MASSAGES, SPA_PROMOTIONS } from "@/lib/site/spa";
+
 export type SpaMassage = { name: string; duration: string; price: string };
 export type SpaPromotion = {
   title: string;
@@ -7,6 +8,7 @@ export type SpaPromotion = {
   deadline: string;
   price: string;
   image: string;
+  imageName?: string;
 };
 export type SpaMenuItem = { name: string; description: string; price: string };
 export type SpaAdditionalService = { service: string; price: string };
@@ -30,6 +32,7 @@ const promotions = SPA_PROMOTIONS.map(
     deadline,
     price,
     image,
+    imageName: "",
   }),
 );
 const additional = [
