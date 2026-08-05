@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import celebrationsHeroImage from "@/assets/alsma/celebrations-hero.jpg";
 import heroImage from "@/assets/alsma/spa-river-aerial.jpg";
 import { LeadRequestModal } from "@/components/site/LeadRequestModal";
 import { PublicHero } from "@/components/site/PublicHero";
@@ -29,7 +30,9 @@ export const CelebrationsPage = () => {
       <PublicHero
         description={description}
         eyebrow="Свадьбы, юбилеи и корпоративные выезды"
-        image={typeof hero?.image === "string" ? hero.image : heroImage}
+        image={
+          typeof hero?.image === "string" ? hero.image : celebrationsHeroImage
+        }
         title={title}
       />
       <section
