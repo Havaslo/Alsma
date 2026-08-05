@@ -1,11 +1,11 @@
 import colorHallImage from "@/assets/alsma/event-color-hall.jpg";
+import corporateRetreatsImage from "@/assets/alsma/event-corporate-retreats.jpg";
 import outdoorCeremonyImage from "@/assets/alsma/event-outdoor-ceremony.jpg";
+import privateCelebrationsImage from "@/assets/alsma/event-private-celebrations.jpg";
 import restaurantHallImage from "@/assets/alsma/event-restaurant-hall.jpg";
 import tentImage from "@/assets/alsma/event-tent.jpg";
+import weddingsImage from "@/assets/alsma/event-weddings.jpg";
 import whiteHallImage from "@/assets/alsma/event-white-hall.jpg";
-import romanticImage from "@/assets/alsma/romantic-escape.png";
-import summerImage from "@/assets/alsma/season-summer.jpg";
-import ceremonyImage from "@/assets/alsma/spa-ceremony.jpg";
 
 export const EVENT_FORMATS = [
   {
@@ -18,7 +18,7 @@ export const EVENT_FORMATS = [
       "Размещение гостей",
       "Персональный координатор",
     ],
-    image: romanticImage,
+    image: weddingsImage,
     title: "Свадьбы и семейные торжества",
   },
   {
@@ -31,7 +31,7 @@ export const EVENT_FORMATS = [
       "Живая музыка",
       "Фото-зоны и сервировка",
     ],
-    image: ceremonyImage,
+    image: privateCelebrationsImage,
     title: "Юбилеи и частные события",
   },
   {
@@ -44,7 +44,7 @@ export const EVENT_FORMATS = [
       "Командные активности",
       "SPA и вечерняя программа",
     ],
-    image: summerImage,
+    image: corporateRetreatsImage,
     title: "Корпоративные выезды и тимбилдинги",
   },
 ] as const;
