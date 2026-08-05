@@ -34,6 +34,13 @@ const allowedTypes = new Set([
 
 const maxUploadBytes = 50 * 1_024 * 1_024;
 
+// Keep the name shown in the CMS, but send an ASCII filename to storage.
+// Some multipart storage gateways reject UTF-8 filenames in Content-Disposition.
+const getStorageFileName = (fileName: string) => {
+  const safeName = fileName.replace(/[^\x20-\x7E]/g, "_");
+  return safeName || "upload";
+};
+
 type ManagedStorage = {
   readonly upload: (input: {
     readonly content: Uint8Array;
@@ -117,11 +124,21 @@ export const createMediaRouter = (
         throw new HttpError(400, "MEDIA_EMPTY", "Выберите непустой файл.");
 
       const fileName = response.locals.input.query.fileName;
-      const upload = await managedStorage.upload({
-        content: Uint8Array.from(request.body),
-        contentType,
-        name: fileName,
-      });
+      let upload: ManagedStorageUpload;
+      try {
+        upload = await managedStorage.upload({
+          content: Uint8Array.from(request.body),
+          contentType,
+          name: getStorageFileName(fileName),
+        });
+      } catch (error) {
+        request.log.error({ error }, "Managed media upload failed");
+        throw new HttpError(
+          502,
+          "MEDIA_STORAGE_UPLOAD_FAILED",
+          "Не удалось сохранить файл в хранилище. Попробуйте ещё раз.",
+        );
+      }
       const objectToken = encodeObjectId(upload.objectId);
       response.status(201).json({
         asset: {

@@ -10,7 +10,7 @@ The browser API is public at the transport layer: every origin receives `Access-
 
 ## Managed media storage
 
-Authenticated CMS uploads are sent as raw file bodies to `POST /api/media/admin/uploads?fileName=...`. The API validates the media type and 50 MiB size limit, then performs one server-side authenticated multipart `POST` to the managed storage `/uploads` endpoint using the `file` field. The storage token never reaches browser code, and the API returns an asset only after storage has returned its `objectId`. Managed assets are read through `/api/media/managed/:objectToken`; the UUID media route remains read-only for files created by the legacy database-backed uploader.
+Authenticated CMS uploads are sent as raw file bodies to `POST /api/media/admin/uploads?fileName=...`. The API validates the media type and 50 MiB size limit, sends an ASCII-safe internal filename, then performs one server-side authenticated multipart `POST` to the managed storage `/uploads` endpoint using the `file` field. The original filename remains in the CMS response. The storage token never reaches browser code, and the API returns an asset only after storage has returned its `objectId`; storage failures are returned as a clear 502 response. Managed assets are read through `/api/media/managed/:objectToken`; the UUID media route remains read-only for files created by the legacy database-backed uploader.
 
 `GET /health` reports process health without requiring the database. `GET /api/health` reports database readiness.
 
