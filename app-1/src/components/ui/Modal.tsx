@@ -73,11 +73,14 @@ export const Modal = ({
     const focusFrame = window.requestAnimationFrame(() =>
       closeButtonRef.current?.focus(),
     );
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", closeOnEscape);
 
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
   }, [onClose, open]);
@@ -110,7 +113,7 @@ export const Modal = ({
         {open && (
           <m.div
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-page-foreground/35 p-4 backdrop-blur-sm in-data-[theme=dark]:bg-page/75"
+            className="fixed inset-0 z-50 grid min-h-[100dvh] place-items-center overflow-y-auto overscroll-contain bg-page-foreground/35 p-2 backdrop-blur-sm in-data-[theme=dark]:bg-page/75 sm:p-4"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             key="modal-backdrop"
@@ -124,7 +127,7 @@ export const Modal = ({
               aria-labelledby={titleId}
               aria-modal="true"
               className={cn(
-                "relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-line/70 bg-panel/95 text-panel-foreground shadow-2xl",
+                "relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-2xl border border-line/70 bg-panel/95 text-panel-foreground shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl",
                 className,
               )}
               exit={{ opacity: 0, scale: 0.98, y: 8 }}
@@ -145,7 +148,7 @@ export const Modal = ({
               ) : (
                 <header
                   className={cn(
-                    "flex items-center justify-between gap-4 border-b border-line/60 px-6 py-5",
+                    "flex min-w-0 items-start justify-between gap-3 border-b border-line/60 px-4 py-4 sm:items-center sm:gap-4 sm:px-6 sm:py-5",
                     headerClassName,
                   )}
                 >
@@ -196,14 +199,14 @@ export const Modal = ({
               )}
               <div
                 className={cn(
-                  "min-h-0 flex-1 overflow-y-auto px-6 py-5",
+                  "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5",
                   hideHeader && "pt-0",
                 )}
               >
                 {children}
               </div>
               {footer && (
-                <footer className="flex flex-wrap justify-end gap-3 border-t border-line/60 bg-muted-ui/25 px-6 py-4">
+                <footer className="flex flex-wrap justify-end gap-3 border-t border-line/60 bg-muted-ui/25 px-4 py-4 sm:px-6">
                   {footer}
                 </footer>
               )}
