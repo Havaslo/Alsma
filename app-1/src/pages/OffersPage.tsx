@@ -1,8 +1,11 @@
-import { CalendarDays, Check, Tag } from "lucide-react";
+import { useState } from "react";
+
+import { ArrowUpRight, CalendarDays, Check, Tag } from "lucide-react";
 
 import heroImage from "@/assets/alsma/offers-hero.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { Modal } from "@/components/ui/Modal";
 import { getSiteCollection } from "@/lib/site/content-collections";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import {
@@ -44,6 +47,7 @@ const scenarioCtaLabels = [
 ] as const;
 
 export const OffersPage = () => {
+  const [selectedOffer, setSelectedOffer] = useState<ActiveOffer>();
   const page = PUBLIC_PAGES.offers;
   const content = usePublishedSiteContent("offers");
   const hero = content.data?.items?.find(
@@ -157,27 +161,55 @@ export const OffersPage = () => {
                   <h3 className="mt-4 font-heading text-2xl font-semibold">
                     {offer.title}
                   </h3>
-                  <p className="mt-3 leading-7 text-brand-foreground/80">
+                  <p className="mt-3 line-clamp-4 leading-7 text-brand-foreground/80">
                     {offer.description}
                   </p>
-                  {offer.buttonLink ? (
-                    <a
-                      className="mt-auto pt-6 font-semibold text-accent-ui"
-                      href={offer.buttonLink}
-                    >
-                      Подробнее ↗
-                    </a>
-                  ) : (
-                    <span className="mt-auto pt-6 font-semibold text-accent-ui">
-                      Подробнее ↗
-                    </span>
-                  )}
+                  <button
+                    className="mt-auto inline-flex items-center gap-2 pt-6 text-left font-semibold text-accent-ui"
+                    onClick={() => setSelectedOffer(offer)}
+                    type="button"
+                  >
+                    Подробнее <ArrowUpRight className="size-4" />
+                  </button>
                 </div>
               </div>
             </article>
           ))}
         </div>
       </section>
+      <Modal
+        className="bg-brand text-brand-foreground"
+        onClose={() => setSelectedOffer(undefined)}
+        open={Boolean(selectedOffer)}
+        title={selectedOffer?.title ?? "Акция"}
+      >
+        {selectedOffer && (
+          <div>
+            <img
+              alt={selectedOffer.title}
+              className="-mx-6 -mt-5 block aspect-[4/3] w-[calc(100%+3rem)] object-cover"
+              src={resolveMediaUrl(selectedOffer.image)}
+            />
+            <span className="mt-6 inline-flex rounded-full border border-brand-foreground/20 bg-brand-foreground/10 px-3 py-1.5 text-xs font-semibold uppercase">
+              {selectedOffer.tag}
+            </span>
+            <h2 className="mt-4 font-heading text-3xl font-semibold">
+              {selectedOffer.title}
+            </h2>
+            <p className="mt-5 leading-8 whitespace-pre-line text-brand-foreground/85">
+              {selectedOffer.description}
+            </p>
+            {selectedOffer.buttonLink && (
+              <a
+                className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent-ui px-5 py-3 font-semibold text-accent-ui-foreground"
+                href={selectedOffer.buttonLink}
+              >
+                Подробнее <ArrowUpRight className="size-4" />
+              </a>
+            )}
+          </div>
+        )}
+      </Modal>
       <section className="bg-panel py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
