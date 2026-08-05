@@ -47,6 +47,7 @@ const scenarioCtaLabels = [
 ] as const;
 
 export const OffersPage = () => {
+  const [selectedEvent, setSelectedEvent] = useState<OfferEvent>();
   const [selectedOffer, setSelectedOffer] = useState<ActiveOffer>();
   const page = PUBLIC_PAGES.offers;
   const content = usePublishedSiteContent("offers");
@@ -344,22 +345,78 @@ export const OffersPage = () => {
                     </article>
                   );
 
-                  return event.buttonLink ? (
-                    <a
-                      className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-                      href={event.buttonLink}
+                  return (
+                    <button
+                      className="group block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
                       key={event.title}
+                      onClick={() => setSelectedEvent(event)}
+                      type="button"
                     >
                       {card}
-                    </a>
-                  ) : (
-                    card
+                    </button>
                   );
                 })}
               </div>
             </section>
           ))}
         </div>
+        <Modal
+          className="bg-page text-page-foreground"
+          hideHeader
+          onClose={() => setSelectedEvent(undefined)}
+          open={Boolean(selectedEvent)}
+          title={selectedEvent?.title ?? "Мероприятие"}
+        >
+          {selectedEvent && (
+            <>
+              <img
+                alt={selectedEvent.title}
+                className="relative -mx-4 block aspect-video w-[calc(100%+2rem)] max-w-none shrink-0 object-cover sm:-mx-6 sm:w-[calc(100%+3rem)]"
+                src={resolveMediaUrl(selectedEvent.image)}
+              />
+              <div className="px-1 py-5">
+                <h2 className="font-heading text-3xl font-semibold text-brand">
+                  {selectedEvent.title}
+                </h2>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-supporting/30 px-3 py-1.5 text-xs font-semibold text-brand">
+                    {selectedEvent.tag}
+                  </span>
+                  <span className="text-sm text-muted-ui-foreground">
+                    {selectedEvent.date}
+                  </span>
+                </div>
+                <p className="mt-5 leading-8 whitespace-pre-line text-page-foreground">
+                  {selectedEvent.description}
+                </p>
+                {selectedEvent.items && selectedEvent.items.length > 0 && (
+                  <ul className="mt-6 space-y-3 border-t border-line pt-5">
+                    {selectedEvent.items.map((item) => (
+                      <li className="flex gap-3 leading-7" key={item}>
+                        <span className="mt-3 size-1.5 shrink-0 rounded-full bg-brand" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(selectedEvent.startDate || selectedEvent.endDate) && (
+                  <p className="mt-6 text-sm font-semibold text-brand">
+                    Даты: {selectedEvent.date}
+                  </p>
+                )}
+                {selectedEvent.buttonLink && (
+                  <a
+                    className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                    href={selectedEvent.buttonLink}
+                  >
+                    {selectedEvent.buttonText || "Перейти к мероприятию"}
+                    <ArrowUpRight className="size-4" />
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </Modal>
         <div className="mt-12 rounded-3xl bg-panel p-8">
           <h3 className="font-heading text-3xl font-semibold text-brand">
             Общие условия акций

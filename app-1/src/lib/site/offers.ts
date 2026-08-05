@@ -31,6 +31,7 @@ export type ReadyScenario = {
 
 export type OfferEvent = {
   readonly buttonLink?: string;
+  readonly buttonText?: string;
   readonly date: string;
   readonly description: string;
   readonly endDate?: string;

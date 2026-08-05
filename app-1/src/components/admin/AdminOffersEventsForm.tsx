@@ -107,6 +107,7 @@ export const AdminOffersEventsForm = ({
             onClick={() =>
               cards.append({
                 buttonLink: "",
+                buttonText: "Подробнее",
                 date: "",
                 description: "",
                 endDate: getCurrentDate(),
@@ -186,9 +187,14 @@ export const AdminOffersEventsForm = ({
               name={`items.${index}.endDate`}
             />
           </div>
-          <div className="mt-5">
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <TextField
-              label="Ссылка на мероприятие"
+              label="Текст кнопки"
+              placeholder="Подробнее"
+              {...form.register(`items.${index}.buttonText`)}
+            />
+            <TextField
+              label="Ссылка кнопки"
               placeholder="https://... или /путь"
               {...form.register(`items.${index}.buttonLink`)}
             />
