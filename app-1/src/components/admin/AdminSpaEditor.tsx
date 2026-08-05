@@ -82,8 +82,13 @@ export const AdminSpaEditor = () => {
             { key: "title", label: "Название" },
             { key: "deadline", label: "Срок действия" },
             { key: "price", label: "Стоимость" },
-            { key: "image", label: "Изображение", media: true },
             { key: "description", label: "Описание", area: true },
+            {
+              key: "image",
+              label: "Изображение",
+              media: true,
+              fullWidth: true,
+            },
           ]}
           addItem={{
             title: "",

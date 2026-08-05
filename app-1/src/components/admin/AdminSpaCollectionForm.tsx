@@ -13,7 +13,13 @@ import { useSaveAdminSiteContent } from "@/lib/site/useSiteContent";
 
 type SpaRow = Record<string, string>;
 type FormValues = { items: SpaRow[] };
-type Field = { key: string; label: string; area?: boolean; media?: boolean };
+type Field = {
+  key: string;
+  label: string;
+  area?: boolean;
+  media?: boolean;
+  fullWidth?: boolean;
+};
 type Props = {
   readonly itemKey: string;
   readonly title: string;
@@ -163,7 +169,12 @@ export const AdminSpaCollectionForm = ({
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 {fields.map((field) => (
-                  <div key={field.key}>{input(field, index)}</div>
+                  <div
+                    className={field.fullWidth ? "lg:col-span-2" : undefined}
+                    key={field.key}
+                  >
+                    {input(field, index)}
+                  </div>
                 ))}
               </div>
               <Button
