@@ -371,7 +371,7 @@ export const OffersPage = () => {
             <>
               <img
                 alt={selectedEvent.title}
-                className="relative -mx-4 block aspect-video w-[calc(100%+2rem)] max-w-none shrink-0 object-cover sm:-mx-6 sm:w-[calc(100%+3rem)]"
+                className="relative -mx-4 -mt-4 block aspect-video w-[calc(100%+2rem)] max-w-none shrink-0 object-cover sm:-mx-6 sm:-mt-5 sm:w-[calc(100%+3rem)]"
                 src={resolveMediaUrl(selectedEvent.image)}
               />
               <div className="px-1 py-5">
