@@ -30,6 +30,9 @@ export const HomePage = () => {
   const content = usePublishedSiteContent("home");
   const roomsContent = usePublishedSiteContent("rooms");
   const offersContent = usePublishedSiteContent("offers");
+  if (content.isLoading || roomsContent.isLoading || offersContent.isLoading) {
+    return <main className="min-h-screen bg-page" aria-busy="true" />;
+  }
   const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
