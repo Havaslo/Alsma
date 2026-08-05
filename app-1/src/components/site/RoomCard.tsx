@@ -43,22 +43,10 @@ export const RoomCard = ({ room }: { readonly room: RoomCategory }) => (
           </li>
         ))}
       </ul>
-      <div className="mt-auto flex flex-wrap items-center gap-3 pt-8">
-        <p className="w-full text-2xl font-semibold">
+      <div className="mt-auto pt-8">
+        <p className="text-2xl font-semibold">
           {room.price} <span className="text-base font-normal">/ ночь</span>
         </p>
-        <a
-          className="rounded-full border border-brand/15 bg-page px-6 py-3 font-semibold text-brand"
-          href="/booking"
-        >
-          Проверить даты
-        </a>
-        <a
-          className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-          href="/booking"
-        >
-          Перейти к бронированию
-        </a>
       </div>
     </div>
   </article>
