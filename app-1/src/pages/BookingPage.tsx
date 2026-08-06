@@ -306,13 +306,6 @@ export const BookingPage = () => {
               </section>
               {step === 0 && (
                 <section className="mt-6">
-                  <RoomSelectionProgress
-                    roomCount={roomGuests.length}
-                    selectedRooms={selectedRooms}
-                    selectedOffers={selectedOffers}
-                    selectedRoomIndex={selectedRoomIndex}
-                    onSelect={openRoomSelection}
-                  />
                   <div className="mb-5 flex items-end justify-between">
                     <div>
                       <h2 className="font-heading text-3xl font-semibold">
@@ -419,8 +412,7 @@ export const BookingPage = () => {
               )}
               {step === 1 && (
                 <section className="mt-6">
-                  <RoomSelectionProgress
-                    roomCount={roomGuests.length}
+                  <TariffRoomPreviews
                     selectedRooms={selectedRooms}
                     selectedOffers={selectedOffers}
                     selectedRoomIndex={selectedRoomIndex}
@@ -625,58 +617,56 @@ export const BookingPage = () => {
   );
 };
 
-const RoomSelectionProgress = ({
-  roomCount,
+const TariffRoomPreviews = ({
   selectedRooms,
   selectedOffers,
   selectedRoomIndex,
   onSelect,
 }: {
-  readonly roomCount: number;
   readonly selectedRooms: (BookingOffer | null)[];
   readonly selectedOffers: (BookingOffer | null)[];
   readonly selectedRoomIndex: number;
   readonly onSelect: (index: number) => void;
 }) => (
-  <div className="mb-5 rounded-2xl border border-line bg-panel p-3">
-    <p className="mb-2 text-xs font-semibold tracking-[0.12em] text-muted-ui-foreground uppercase">
-      Выбор по номерам
-    </p>
-    <div className="grid gap-2 sm:grid-cols-2">
-      {Array.from({ length: roomCount }, (_, index) => {
-        const room = selectedRooms[index];
-        const selected = selectedOffers[index];
-        return (
-          <button
-            className={cn(
-              "flex items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition",
-              selectedRoomIndex === index
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-line bg-page hover:border-brand/50",
-            )}
-            key={index}
-            onClick={() => onSelect(index)}
-            type="button"
-          >
-            <span className="min-w-0 truncate">
-              <strong>Номер {index + 1}</strong>
-              <span className="ml-2 text-xs text-muted-ui-foreground">
-                {room
-                  ? selected
-                    ? `${room.roomType} · тариф выбран`
-                    : `${room.roomType} · выберите тариф`
-                  : "выберите категорию"}
-              </span>
-            </span>
-            {selected ? (
-              <Check className="size-4 shrink-0 text-brand" />
+  <div className="mb-5 grid gap-3 sm:grid-cols-2">
+    {selectedRooms.map((room, index) =>
+      room ? (
+        <button
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border p-2 text-left transition",
+            selectedRoomIndex === index
+              ? "border-brand bg-brand/5"
+              : "border-line bg-page hover:border-brand/50",
+          )}
+          key={room.id}
+          onClick={() => onSelect(index)}
+          type="button"
+        >
+          <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-brand/10">
+            {room.roomImageUrl ? (
+              <img
+                alt=""
+                className="size-full object-cover"
+                src={room.roomImageUrl}
+              />
             ) : (
-              <span className="text-xs text-brand">Выбрать</span>
+              <div className="grid size-full place-items-center text-brand">
+                <BedDouble className="size-5" />
+              </div>
             )}
-          </button>
-        );
-      })}
-    </div>
+          </div>
+          <span className="min-w-0">
+            <strong className="block">Номер {index + 1}</strong>
+            <span className="block truncate text-sm text-muted-ui-foreground">
+              {room.roomType}
+            </span>
+            <span className="block text-xs text-brand">
+              {selectedOffers[index] ? "Тариф выбран" : "Выберите тариф"}
+            </span>
+          </span>
+        </button>
+      ) : null,
+    )}
   </div>
 );
 
