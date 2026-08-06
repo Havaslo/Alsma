@@ -168,7 +168,9 @@ export const BookingPage = () => {
     setStep(room && selected ? 1 : 0);
   };
   const submit = async () => {
-    if (!offer) return;
+    if (!offer || selectedOffers.some((selected) => !selected)) {
+      return toast.error("Выберите тариф для каждого номера.");
+    }
     if (
       !contact.firstName ||
       !contact.lastName ||
@@ -179,7 +181,7 @@ export const BookingPage = () => {
     setSubmitting(true);
     try {
       const result = await createBookingReservation({
-        ...search,
+        ...submittedSearch,
         contact: {
           email: contact.email,
           firstName: contact.firstName,
@@ -187,12 +189,12 @@ export const BookingPage = () => {
           phone: contact.phone,
         },
         guests: [
-          ...Array.from({ length: search.adults }, (_, index) => ({
+          ...Array.from({ length: submittedSearch.adults }, (_, index) => ({
             firstName: index === 0 ? contact.firstName : `Гость ${index + 1}`,
             lastName: contact.lastName,
             type: "adult" as const,
           })),
-          ...search.childAges.map((age, index) => ({
+          ...submittedSearch.childAges.map((age, index) => ({
             birthDate: undefined,
             firstName: `Ребёнок ${index + 1}`,
             lastName: contact.lastName,
