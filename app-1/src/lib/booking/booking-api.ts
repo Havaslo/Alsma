@@ -2,6 +2,8 @@ import { apiClient } from "@/lib/api/api-client";
 
 export type BookingOffer = {
   readonly boardType: string;
+  readonly rateDescription: string | null;
+  readonly benefits: readonly string[];
   readonly cancellationPenalty: {
     readonly description?: string;
     readonly isRefundable?: boolean;

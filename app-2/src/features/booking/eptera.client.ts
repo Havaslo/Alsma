@@ -31,6 +31,8 @@ export type EpteraOffer = {
   readonly discountedPrice: number;
   readonly roomToSell: number;
   readonly cancellationPenalty: unknown;
+  readonly rateDescription: string | null;
+  readonly benefits: readonly string[];
   readonly roomImageUrl: string | null;
   readonly roomImageUrls: readonly string[];
   readonly roomArea: number | null;
@@ -397,6 +399,17 @@ export const createEpteraClient = ({
             discountedPrice: number(offer, "discounted-price"),
             roomToSell: number(offer, "room-tosell"),
             cancellationPenalty: offer["cancellation-penalty"] ?? null,
+            rateDescription:
+              typeof offer["rate-description"] === "string"
+                ? offer["rate-description"]
+                : typeof offer["rate-property"] === "string"
+                  ? offer["rate-property"]
+                  : null,
+            benefits: Array.isArray(offer.benefits)
+              ? offer.benefits.filter(
+                  (item): item is string => typeof item === "string",
+                )
+              : [],
             roomImageUrl: room?.imageUrls[0] ?? null,
             roomImageUrls: room?.imageUrls ?? [],
             roomArea: room?.area ?? null,

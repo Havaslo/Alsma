@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronUp,
   CircleAlert,
   DoorOpen,
   LoaderCircle,
@@ -159,7 +160,7 @@ export const BookingPage = () => {
           })),
         ],
         notes: contact.notes || undefined,
-        offerId: offer.id,
+        offerId: (selectedOffers.find(Boolean) ?? offer).id,
       });
       setCompleted(result.data.booking);
       setStep(3);
@@ -367,8 +368,7 @@ export const BookingPage = () => {
                             </p>
                             <p className="text-xl font-semibold">
                               {money(
-                                (item.discountedPrice || item.price) *
-                                  search.roomCount,
+                                item.discountedPrice || item.price,
                                 item.currency,
                               )}
                             </p>
@@ -411,28 +411,44 @@ export const BookingPage = () => {
                         )}
                         key={item.id}
                       >
-                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
                             <h3 className="text-xl font-semibold">
                               {item.rateType}
                             </h3>
                             <p className="mt-1 text-muted-ui-foreground">
                               Питание: {item.boardType || "не включено"}
                             </p>
-                            <p className="mt-3 text-sm text-muted-ui-foreground">
-                              {cancellationText(item)}
-                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {rateBenefits(item).map((benefit) => (
+                                <span
+                                  className="rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-medium text-brand"
+                                  key={benefit}
+                                >
+                                  {benefit}
+                                </span>
+                              ))}
+                            </div>
+                            <details className="group mt-4">
+                              <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-brand">
+                                Подробнее о тарифе{" "}
+                                <ChevronDown className="size-4 group-open:hidden" />
+                                <ChevronUp className="hidden size-4 group-open:block" />
+                              </summary>
+                              <p className="mt-3 text-sm leading-6 text-muted-ui-foreground">
+                                {item.rateDescription || cancellationText(item)}
+                              </p>
+                            </details>
                           </div>
-                          <div className="sm:text-right">
+                          <div className="shrink-0 sm:text-right">
                             <p className="text-2xl font-semibold">
                               {money(
-                                (item.discountedPrice || item.price) *
-                                  search.roomCount,
+                                item.discountedPrice || item.price,
                                 item.currency,
                               )}
                             </p>
                             <p className="text-sm text-muted-ui-foreground">
-                              за проживание
+                              за номер
                             </p>
                             <button
                               className="mt-3 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground"
@@ -546,7 +562,6 @@ export const BookingPage = () => {
               )}
             </div>
             <BookingSummary
-              roomCount={search.roomCount}
               roomGuests={roomGuests}
               selectedOffers={selectedOffers}
               checkIn={search.checkIn}
@@ -941,6 +956,17 @@ const GuestCounter = ({
   </div>
 );
 
+const rateBenefits = (offer: BookingOffer) => {
+  const benefits = [...offer.benefits];
+  if (offer.boardType) benefits.unshift(offer.boardType);
+  if (
+    offer.cancellationPenalty &&
+    (offer.cancellationPenalty["is-refundable"] ||
+      offer.cancellationPenalty.isRefundable)
+  )
+    benefits.push("Бесплатная отмена");
+  return Array.from(new Set(benefits.filter(Boolean))).slice(0, 5);
+};
 const cancellationText = (offer: BookingOffer) => {
   const policy = offer.cancellationPenalty;
   if (!policy) return "Условия отмены уточняются";
@@ -961,7 +987,6 @@ const EmptyState = () => (
   </div>
 );
 const BookingSummary = ({
-  roomCount,
   roomGuests,
   selectedOffers,
   checkIn,
@@ -969,7 +994,6 @@ const BookingSummary = ({
   nights,
   offer,
 }: {
-  readonly roomCount: number;
   readonly roomGuests: RoomGuests[];
   readonly selectedOffers: (BookingOffer | null)[];
   readonly checkIn: string;
@@ -1011,6 +1035,16 @@ const BookingSummary = ({
           <p className="mt-2 font-medium text-brand">
             {selectedOffers[index]?.roomType ?? "Номер ещё не выбран"}
           </p>
+          {selectedOffers[index] && (
+            <p className="mt-1 text-xs text-muted-ui-foreground">
+              {selectedOffers[index]?.rateType} ·{" "}
+              {money(
+                selectedOffers[index]!.discountedPrice ||
+                  selectedOffers[index]!.price,
+                selectedOffers[index]!.currency,
+              )}
+            </p>
+          )}
         </div>
       ))}
     </div>
@@ -1024,7 +1058,12 @@ const BookingSummary = ({
           <span>Итого</span>
           <span>
             {money(
-              (offer.discountedPrice || offer.price) * roomCount,
+              selectedOffers.reduce(
+                (total, selected) =>
+                  total +
+                  (selected ? selected.discountedPrice || selected.price : 0),
+                0,
+              ),
               offer.currency,
             )}
           </span>
