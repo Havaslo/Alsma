@@ -41,7 +41,7 @@
     transparent 28%
   );
   --background-image-hero-media-tint:
-    linear-gradient(rgb(16 41 31 / 20%), rgb(16 41 31 / 20%)),
+    linear-gradient(rgb(16 41 31 / 28%), rgb(16 41 31 / 28%)),
     radial-gradient(circle at top, rgb(255 255 255 / 6%), transparent 30%);
   --shadow-booking: 0 18px 40px rgb(16 24 20 / 12%);
 }
