@@ -336,23 +336,29 @@ export const BookingPage = () => {
                             >
                               Подробнее
                             </button>
-                            <div className="mt-auto grid grid-cols-2 gap-x-3 gap-y-2 pt-4 text-sm text-muted-ui-foreground sm:grid-cols-3">
-                              <RoomFact
-                                icon={<Maximize2 className="size-5" />}
-                                value={
-                                  item.roomArea
-                                    ? `${item.roomArea} м²`
-                                    : "Площадь уточняется"
-                                }
-                              />
-                              <RoomFact
-                                icon={<DoorOpen className="size-5" />}
-                                value={`${item.roomCount ?? 1} ${roomWord(item.roomCount ?? 1)}`}
-                              />
-                              <RoomFact
-                                icon={<UsersRound className="size-5" />}
-                                value={`до ${item.roomCapacity ?? search.adults} гостей`}
-                              />
+                            <div className="mt-auto flex flex-wrap gap-2 pt-4 text-sm text-muted-ui-foreground">
+                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                                <RoomFact
+                                  icon={<Maximize2 className="size-5" />}
+                                  value={
+                                    item.roomArea
+                                      ? `${item.roomArea} м²`
+                                      : "Площадь уточняется"
+                                  }
+                                />
+                              </span>
+                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                                <RoomFact
+                                  icon={<DoorOpen className="size-5" />}
+                                  value={`${item.roomCount ?? 1} ${roomWord(item.roomCount ?? 1)}`}
+                                />
+                              </span>
+                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                                <RoomFact
+                                  icon={<UsersRound className="size-5" />}
+                                  value={`до ${item.roomCapacity ?? search.adults} гостей`}
+                                />
+                              </span>
                             </div>
                           </div>
                           <div className="flex flex-col justify-end p-5 pt-0 sm:h-full sm:pt-5 sm:pr-5 sm:pl-2 sm:text-right">
