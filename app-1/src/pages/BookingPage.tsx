@@ -499,7 +499,11 @@ export const BookingPage = () => {
                             <button
                               className="mt-3 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground"
                               onClick={() => {
-                                const nextOffers = selectedOffers.map(
+                                const currentOffers = Array.from(
+                                  { length: selectedRooms.length },
+                                  (_, index) => selectedOffers[index] ?? null,
+                                );
+                                const nextOffers = currentOffers.map(
                                   (selected, index) =>
                                     index === selectedRoomIndex
                                       ? item
