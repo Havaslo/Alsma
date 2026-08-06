@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { ArrowRight, ArrowUpRight, Star } from "lucide-react";
 
@@ -10,6 +10,67 @@ import { resolveMediaUrl } from "@/lib/site/media-url";
 import type { ActiveOffer } from "@/lib/site/offers";
 import type { RoomCategory } from "@/lib/site/rooms";
 import { ROUTES } from "@/route-constants";
+
+const FormattedScenarioDescription = ({
+  description,
+}: {
+  readonly description: string;
+}) => {
+  const blocks: ReactNode[] = [];
+  const paragraph: string[] = [];
+  const list: string[] = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.some((line) => line.trim())) {
+      paragraph.length = 0;
+      return;
+    }
+    blocks.push(
+      <p
+        className={
+          blocks.length ? "mt-4 whitespace-pre-line" : "whitespace-pre-line"
+        }
+        key={`paragraph-${blocks.length}`}
+      >
+        {paragraph.join("\n")}
+      </p>,
+    );
+    paragraph.length = 0;
+  };
+
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(
+      <ul className="mt-4 grid gap-2 pl-1" key={`list-${blocks.length}`}>
+        {list.map((item, index) => (
+          <li
+            className="relative pl-5 before:absolute before:top-[0.7em] before:left-0 before:size-1.5 before:rounded-full before:bg-brand"
+            key={`${item}-${index}`}
+          >
+            {item}
+          </li>
+        ))}
+      </ul>,
+    );
+    list.length = 0;
+  };
+
+  description.split(/\r?\n/).forEach((line) => {
+    const listItem = line.trim().match(/^[-•]\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      list.push(listItem[1]);
+      return;
+    }
+    flushList();
+    paragraph.push(line);
+  });
+
+  flushList();
+  flushParagraph();
+
+  return <div>{blocks}</div>;
+};
 
 export const HomeRestSection = ({
   cards,
@@ -36,9 +97,9 @@ export const HomeRestSection = ({
             <h3 className="font-heading text-4xl font-semibold">
               {card.title}
             </h3>
-            <p className="mt-4 leading-7 whitespace-pre-line text-muted-ui-foreground">
-              {card.description}
-            </p>
+            <div className="mt-4 leading-7 text-muted-ui-foreground">
+              <FormattedScenarioDescription description={card.description} />
+            </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {card.tags.map((tag) => (
                 <span
