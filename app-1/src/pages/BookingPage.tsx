@@ -613,7 +613,7 @@ const RoomDetailsModal = ({
       {room && (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.28fr)_minmax(18rem,0.72fr)]">
           <div className="min-w-0">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand/10 text-brand lg:aspect-auto lg:min-h-[34rem]">
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-brand/10 text-brand">
               {activeImage ? (
                 <img
                   alt={room.roomType}
