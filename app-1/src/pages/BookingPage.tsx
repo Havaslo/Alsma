@@ -977,7 +977,7 @@ const BookingSummary = ({
   readonly nights: number;
   readonly offer: BookingOffer | null;
 }) => (
-  <aside className="sticky top-28 rounded-3xl border border-line bg-panel p-6 shadow-booking">
+  <aside className="sticky top-28 rounded-3xl border border-line bg-panel p-6">
     <h2 className="font-heading text-2xl font-semibold">Ваше бронирование</h2>
     <div className="mt-6 grid grid-cols-2 gap-5 border-b border-line pb-5 text-sm">
       <div>
