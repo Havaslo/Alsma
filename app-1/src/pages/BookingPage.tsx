@@ -337,7 +337,7 @@ export const BookingPage = () => {
                               Подробнее
                             </button>
                             <div className="mt-auto flex flex-wrap gap-2 pt-4 text-sm text-muted-ui-foreground">
-                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                              <span className="rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1.5">
                                 <RoomFact
                                   icon={<Maximize2 className="size-5" />}
                                   value={
@@ -347,13 +347,13 @@ export const BookingPage = () => {
                                   }
                                 />
                               </span>
-                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                              <span className="rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1.5">
                                 <RoomFact
                                   icon={<DoorOpen className="size-5" />}
                                   value={`${item.roomCount ?? 1} ${roomWord(item.roomCount ?? 1)}`}
                                 />
                               </span>
-                              <span className="rounded-lg border border-brand/15 bg-brand/5 px-2.5 py-1.5">
+                              <span className="rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1.5">
                                 <RoomFact
                                   icon={<UsersRound className="size-5" />}
                                   value={`до ${item.roomCapacity ?? search.adults} гостей`}
