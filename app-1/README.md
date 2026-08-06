@@ -24,6 +24,10 @@ Hero публичной страницы `/blog` использует локал
 
 Backend возвращает URL загруженных файлов относительно `/api`. В CMS сохраняются канонические относительные media URL, а общий `resolveMediaUrl` добавляет настроенный API-хост только при отображении. Нормализация учитывает API base, который уже заканчивается на `/api`, и автоматически исправляет ранее сохранённые preview URL с дублированным `/api/api/media/`. Благодаря относительному хранению один и тот же контент работает в preview и production. Браузер отправляет файл только ALSMA API; backend выполняет единственную авторизованную multipart-загрузку в managed storage и возвращает asset после получения `objectId`. Прямые и подписанные загрузки из браузера не используются.
 
+## Источник клиентов
+
+В административной таблице клиентов колонка «Источник» показывает `Eptera` для клиентов, у которых есть бронь, созданная через Eptera и сохранённая с `epteraReservationId`. Для остальных записей показывается `Личный кабинет`. Значение вычисляется backend и не означает, что браузер напрямую обращается к Eptera.
+
 ## Architecture
 
 The application uses TanStack Router, TanStack Query, React Hook Form, and Tailwind CSS. Routes are in `src/routes`, pages in `src/pages`, and reusable UI in `src/components`.

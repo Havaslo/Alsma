@@ -20,6 +20,10 @@ The `/api/chat` feature exposes a public guest conversation and conversation-spe
 
 The public widget is mounted on public site pages. Staff open a row in **Обращения**, then communicate inside that request detail page. Admin SSE authentication uses the existing admin session token as a query parameter because native `EventSource` cannot send custom headers.
 
+## Источник клиентов в админ-панели
+
+Раздел `/api/admin/clients` возвращает поле `source`. Значение `Eptera` устанавливается, если у клиента есть локально сохранённая бронь с `epteraReservationId`; остальные записи помечаются как `Личный кабинет`. Это read-only производное поле: данные бронирования остаются в ALSMA, а секреты Eptera не передаются в браузер.
+
 ## Eptera / ElektraWeb booking integration
 
 Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` through the Eptera Booking API integration in project settings. Values remain server-side and must not be added to the frontend or exposed in `VITE_*` variables.

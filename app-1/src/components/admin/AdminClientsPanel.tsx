@@ -41,9 +41,9 @@ export const AdminClientsPanel = () => {
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <h1 className="text-3xl font-semibold">Клиенты</h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-          Раздел со списком гостей, статусом входа в личный кабинет и
-          количеством бронирований. Нажмите на строку управления карточкой
-          клиента, чтобы открыть подробности.
+          Раздел со списком гостей, источником данных и количеством
+          бронирований. Нажмите на строку управления карточкой клиента, чтобы
+          открыть подробности.
         </p>
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_14rem]">
           <label>
@@ -86,7 +86,7 @@ export const AdminClientsPanel = () => {
                 <th className="px-5 py-4">Имя</th>
                 <th className="px-5 py-4">Телефон</th>
                 <th className="px-5 py-4">Почта</th>
-                <th className="px-5 py-4">Статус личного кабинета</th>
+                <th className="px-5 py-4">Источник</th>
                 <th className="px-5 py-4">Кол-во броней</th>
                 <th className="px-5 py-4 text-right">Действия</th>
               </tr>

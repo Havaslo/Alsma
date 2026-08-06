@@ -8,6 +8,13 @@ import type {
   UpdateRequestStatusBody,
 } from "./admin-operations.schemas.js";
 
+const clientSource = (
+  bookings: readonly { epteraReservationId: string | null }[],
+) =>
+  bookings.some((booking) => Boolean(booking.epteraReservationId))
+    ? "Eptera"
+    : "Личный кабинет";
+
 export const createAdminOperationsRepository = (database: Database) => ({
   createBooking: (input: CreateBookingBody) =>
     database.client.bookingRequest.create({ data: input }),
@@ -29,24 +36,36 @@ export const createAdminOperationsRepository = (database: Database) => ({
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([
       database.client.guestUser.findMany({
-        include: { bonusProgram: true, _count: { select: { bookings: true } } },
+        include: {
+          bonusProgram: true,
+          bookings: { select: { epteraReservationId: true } },
+          _count: { select: { bookings: true } },
+        },
         orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
       database.client.guestUser.count(),
     ]);
-    return { items, total };
+    return {
+      items: items.map(({ bookings, ...client }) => ({
+        ...client,
+        source: clientSource(bookings),
+      })),
+      total,
+    };
   },
-  getClient: (recordId: string) =>
-    database.client.guestUser.findUnique({
+  getClient: async (recordId: string) => {
+    const client = await database.client.guestUser.findUnique({
       include: {
         bonusProgram: true,
         bookings: { orderBy: { checkInDate: "desc" } },
         _count: { select: { bookings: true } },
       },
       where: { id: recordId },
-    }),
+    });
+    return client ? { ...client, source: clientSource(client.bookings) } : null;
+  },
   listRequests: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([

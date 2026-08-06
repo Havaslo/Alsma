@@ -32,7 +32,7 @@ export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
       <td className="px-5 py-4">{item.email || "—"}</td>
       <td className="px-5 py-4">
         <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-          Заходил
+          {item.source}
         </span>
       </td>
       <td className="px-5 py-4">{item._count.bookings}</td>

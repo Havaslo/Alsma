@@ -141,8 +141,8 @@ export const AdminClientDetail = ({
               <dd className="mt-1 font-semibold">{client.email || "—"}</dd>
             </div>
             <div>
-              <dt className="text-muted-ui-foreground">Статус кабинета</dt>
-              <dd className="mt-1 font-semibold">Заходил</dd>
+              <dt className="text-muted-ui-foreground">Источник</dt>
+              <dd className="mt-1 font-semibold">{client.source}</dd>
             </div>
             <div>
               <dt className="text-muted-ui-foreground">Кол-во броней</dt>
