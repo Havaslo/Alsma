@@ -125,7 +125,7 @@ export const HomeRestSection = ({
               </a>
             </div>
           </div>
-          <div className="order-1 h-80 overflow-hidden lg:order-2 lg:h-140">
+          <div className="order-1 min-h-80 overflow-hidden lg:order-2">
             <img
               alt={card.title}
               className="size-full object-cover transition duration-500 group-hover:scale-105"
