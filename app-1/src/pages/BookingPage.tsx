@@ -307,7 +307,7 @@ export const BookingPage = () => {
                           className="grid overflow-hidden rounded-3xl border border-line bg-page sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-center"
                           key={item.roomType}
                         >
-                          <div className="relative aspect-square w-full bg-brand/10 text-brand">
+                          <div className="relative aspect-square w-full bg-brand/10 text-brand sm:aspect-auto sm:h-full sm:min-h-0">
                             {item.roomImageUrl ? (
                               <img
                                 alt={item.roomType}
@@ -322,7 +322,7 @@ export const BookingPage = () => {
                             )}
                           </div>
                           <div className="flex min-w-0 flex-col p-5 sm:py-4 sm:pr-3">
-                            <h3 className="text-xl font-semibold">
+                            <h3 className="truncate text-xl font-semibold">
                               {item.roomType}
                             </h3>
                             <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-ui-foreground">
