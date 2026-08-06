@@ -32,12 +32,9 @@ const authHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export const requestLoginCode = (input: {
-  channel: "email" | "phone";
-  contact: string;
-}) =>
+export const requestLoginCode = (input: { contact: string }) =>
   apiClient.post<{
-    channel: string;
+    channel: "email";
     debugCode: string;
     maskedContact: string;
     pendingCodeId: string;

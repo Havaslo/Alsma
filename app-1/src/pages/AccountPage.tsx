@@ -88,7 +88,7 @@ export const AccountPage = () => {
                 {guest.fullName}
               </h1>
               <div className="mt-3 space-y-1 text-sm text-muted-ui-foreground">
-                {guest.phone && (
+                {guest.phone && !guest.phone.startsWith("email:") && (
                   <p className="flex items-center gap-2">
                     <Phone className="size-4 text-brand" />
                     {guest.phone}

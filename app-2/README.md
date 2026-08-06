@@ -2,6 +2,12 @@
 
 `app-2` is the ALSMA Express API. It provides the data and server-side workflows used by the `app-1` public site, guest account, and staff administration interface.
 
+## Вход в личный кабинет
+
+Гостевой вход выполняется только по электронной почте: `POST /api/auth/request-code` принимает email и возвращает код подтверждения для локальной проверки. Вход по номеру телефона отключён на уровне API и интерфейса.
+
+Поле `phone` в таблицах `guest_users` и `guest_login_codes` пока сохраняется для совместимости со старыми данными схемы. Для новых email-only аккаунтов backend хранит техническое значение `email:<адрес>`; оно не является способом входа и не отображается как номер телефона.
+
 ## Architecture
 
 The backend uses TypeScript, Express, PostgreSQL, Zod, Pino, Helmet, and managed file storage. Feature routers live in `src/features` and are mounted from `src/routes.ts`.
@@ -48,7 +54,7 @@ pnpm run build
 
 ## Расширенные данные номеров
 
-Сервис бронирования обогащает предложения данными `hotel-definitions` Eptera: галерея фотографий, площадь, вместимость, количество комнат, варианты кроватей и описание. Поддерживаются как одиночное `room-image-url`, так и массивы изображений из definitions; данные кэшируются на пять минут, остаются на backend и передаются браузеру только как часть ответа `/api/booking/offers`. При отсутствии отдельных полей frontend показывает нейтральные значения.
+Сервис бронирования обогащает предложения данными `hotel-definitions` Eptera: галерея фотографий, площадь, вместимость, количество комнат, варианты кроватей и описание. Поддерживаются как одиночный `room-image-url`, так и массивы изображений из definitions; данные кэшируются на пять минут, остаются на backend и передаются браузеру только как часть ответа `/api/booking/offers`. При отсутствии отдельных полей frontend показывает нейтральные значения.
 
 ## Данные тарифов
 

@@ -2,6 +2,10 @@
 
 `app-1` is the ALSMA hotel web application. It delivers the public hotel website, guest account flows, and the staff administration interface.
 
+## Вход в личный кабинет
+
+Гостевой вход доступен только по электронной почте. Пользователь вводит email, получает четырёхзначный код и подтверждает вход. Переключатель и сценарий входа по телефону удалены; телефон по-прежнему может использоваться как контакт при бронировании и в других формах сайта.
+
 ## Realtime chat
 
 Public pages include a compact chat widget backed by `/api/chat`. Each visitor receives a browser-local conversation id, and messages are exchanged over Server-Sent Events. When a staff member opens a row from **Обращения**, the request detail page contains the conversation transcript and a realtime reply form for that specific request.

@@ -38,20 +38,6 @@ const publicUser = (user: {
   requiresNameCompletion: !user.fullName,
 });
 
-const normalizePhone = (value: string): string => {
-  let digits = value.replace(/\D/g, "");
-  if (digits.length === 11 && digits.startsWith("8"))
-    digits = `7${digits.slice(1)}`;
-  if (digits.length !== 11 || !digits.startsWith("7")) {
-    throw new HttpError(
-      400,
-      "PHONE_INVALID",
-      "Введите корректный номер телефона.",
-    );
-  }
-  return `+${digits}`;
-};
-
 export const createGuestAuthService = (repository: GuestAuthRepository) => ({
   completeProfile: async (token: string, input: CompleteProfileBody) => {
     const session = await repository.findSession(hash(token));
@@ -73,18 +59,13 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
     return { ok: true };
   },
   requestCode: async (input: RequestCodeBody) => {
-    const email =
-      input.channel === "email"
-        ? input.contact.trim().toLowerCase()
-        : undefined;
-    const phone =
-      input.channel === "phone"
-        ? normalizePhone(input.contact)
-        : `email:${email}`;
-    let user = email
-      ? await repository.findUserByEmail(email)
-      : await repository.findUserByPhone(phone);
-    user ??= await repository.createUser({ email, phone });
+    const email = input.contact.trim().toLowerCase();
+    // GuestUser.phone remains required for compatibility with existing records;
+    // email-only accounts use a non-contact technical value in that column.
+    const technicalPhone = `email:${email}`;
+    let user = await repository.findUserByEmail(email);
+    user ??= await repository.findUserByPhone(technicalPhone);
+    user ??= await repository.createUser({ email, phone: technicalPhone });
     user = (await repository.provisionDemoProfile(user.id)) ?? user;
     const code = String(randomInt(0, 10_000)).padStart(4, "0");
     const record = await repository.createCode({
@@ -93,14 +74,11 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
       phone: user.phone,
       userId: user.id,
     });
-    const maskedContact = email
-      ? `${email.slice(0, 2)}•••@${email.split("@")[1]}`
-      : `${phone.slice(0, 2)} ••• ••• ${phone.slice(-2)}`;
     return {
-      channel: input.channel,
+      channel: "email" as const,
       debugCode: code,
       expiresInSeconds: 600,
-      maskedContact,
+      maskedContact: `${email.slice(0, 2)}•••@${email.split("@")[1]}`,
       pendingCodeId: record.id,
     };
   },

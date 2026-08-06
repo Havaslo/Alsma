@@ -16,14 +16,8 @@ import { ROUTES } from "@/route-constants";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const requestForm = useForm({
-    defaultValues: { channel: "phone" as "email" | "phone", contact: "" },
-  });
+  const requestForm = useForm({ defaultValues: { contact: "" } });
   const verifyForm = useForm({ defaultValues: { code: "" } });
-  const channel = useWatch({
-    control: requestForm.control,
-    name: "channel",
-  });
   const code = useWatch({ control: verifyForm.control, name: "code" });
   const [pending, setPending] = useState<{
     debugCode: string;
@@ -56,44 +50,20 @@ export const LoginPage = () => {
               Вход в личный кабинет
             </h1>
             <p className="mt-3 leading-7 text-muted-ui-foreground">
-              Выберите способ входа и получите четырёхзначный код подтверждения.
-              Для входа по телефону код пока выводится на экран без реальной
-              отправки SMS.
+              Введите электронную почту — мы отправим на неё четырёхзначный код
+              подтверждения.
             </p>
-            <div className="mt-7 grid grid-cols-2 rounded-full bg-muted-ui p-1.5">
-              {(["phone", "email"] as const).map((value) => (
-                <button
-                  className={
-                    value === channel
-                      ? "rounded-full bg-brand px-4 py-3 font-semibold text-brand-foreground"
-                      : "rounded-full px-4 py-3 font-semibold text-brand"
-                  }
-                  key={value}
-                  onClick={() => {
-                    requestForm.setValue("channel", value);
-                    requestForm.resetField("contact");
-                  }}
-                  type="button"
-                >
-                  {value === "phone" ? "По телефону" : "По почте"}
-                </button>
-              ))}
-            </div>
             <Form
               className="mt-7 space-y-5"
               form={requestForm}
               onSubmit={(values) => requestMutation.mutate(values)}
             >
               <label className="block text-sm font-medium">
-                {channel === "phone" ? "Номер телефона" : "Электронная почта"}
+                Электронная почта
                 <input
                   className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-                  placeholder={
-                    channel === "phone"
-                      ? "+7 (___) ___-__-__"
-                      : "you@example.com"
-                  }
-                  type={channel === "email" ? "email" : "tel"}
+                  placeholder="you@example.com"
+                  type="email"
                   {...requestForm.register("contact", { required: true })}
                 />
               </label>
@@ -124,7 +94,7 @@ export const LoginPage = () => {
               type="button"
             >
               <ArrowLeft className="size-4" />
-              Изменить контакт
+              Изменить почту
             </button>
             <h1 className="font-heading text-4xl font-semibold text-brand">
               Подтвердите вход

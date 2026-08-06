@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 export const requestCodeBodySchema = z.object({
-  channel: z.enum(["email", "phone"]),
-  contact: z.string().trim().min(3).max(320),
+  contact: z.email(),
 });
 
 export const verifyCodeBodySchema = z.object({
