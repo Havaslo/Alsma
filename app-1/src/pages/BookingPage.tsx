@@ -71,6 +71,9 @@ export const BookingPage = () => {
   const [offer, setOffer] = useState<BookingOffer | null>(null);
   const [detailsRoom, setDetailsRoom] = useState<BookingOffer | null>(null);
   const [selectedRoomIndex, setSelectedRoomIndex] = useState(0);
+  const [selectedRooms, setSelectedRooms] = useState<(BookingOffer | null)[]>([
+    null,
+  ]);
   const [selectedOffers, setSelectedOffers] = useState<(BookingOffer | null)[]>(
     [null],
   );
@@ -97,8 +100,10 @@ export const BookingPage = () => {
       new Map(offers.map((item) => [item.roomType, item])).values(),
     );
   }, [offers]);
-  const tariffs = offer
-    ? (offers ?? []).filter((item) => item.roomType === offer.roomType)
+  const tariffs = selectedRooms[selectedRoomIndex]
+    ? (offers ?? []).filter(
+        (item) => item.roomType === selectedRooms[selectedRoomIndex]?.roomType,
+      )
     : [];
   const nights = Math.max(
     1,
@@ -116,26 +121,33 @@ export const BookingPage = () => {
     setOffer(null);
     setRoomName(null);
     setSelectedRoomIndex(0);
+    setSelectedRooms(Array.from({ length: search.roomCount }, () => null));
     setSelectedOffers(Array.from({ length: search.roomCount }, () => null));
     setStep(0);
   };
   const selectRoom = (selected: BookingOffer) => {
+    const nextRooms = selectedRooms.map((room, index) =>
+      index === selectedRoomIndex ? selected : room,
+    );
+    setSelectedRooms(nextRooms);
     setRoomName(selected.roomType);
-    setOffer(selected);
+    setOffer(null);
+    const nextIndex = nextRooms.findIndex((room) => room === null);
+    if (nextIndex !== -1) {
+      setSelectedRoomIndex(nextIndex);
+      return;
+    }
+    setSelectedRoomIndex(0);
+    setRoomName(nextRooms[0]?.roomType ?? null);
     setStep(1);
   };
   const openRoomSelection = (roomIndex: number) => {
     setSelectedRoomIndex(roomIndex);
+    const room = selectedRooms[roomIndex];
     const selected = selectedOffers[roomIndex];
-    if (selected) {
-      setRoomName(selected.roomType);
-      setOffer(selected);
-      setStep(1);
-    } else {
-      setRoomName(null);
-      setOffer(null);
-      setStep(0);
-    }
+    setRoomName(room?.roomType ?? null);
+    setOffer(selected);
+    setStep(room && selected ? 1 : 0);
   };
   const submit = async () => {
     if (!offer) return;
@@ -296,6 +308,7 @@ export const BookingPage = () => {
                 <section className="mt-6">
                   <RoomSelectionProgress
                     roomCount={roomGuests.length}
+                    selectedRooms={selectedRooms}
                     selectedOffers={selectedOffers}
                     selectedRoomIndex={selectedRoomIndex}
                     onSelect={openRoomSelection}
@@ -408,6 +421,7 @@ export const BookingPage = () => {
                 <section className="mt-6">
                   <RoomSelectionProgress
                     roomCount={roomGuests.length}
+                    selectedRooms={selectedRooms}
                     selectedOffers={selectedOffers}
                     selectedRoomIndex={selectedRoomIndex}
                     onSelect={openRoomSelection}
@@ -487,9 +501,11 @@ export const BookingPage = () => {
                                 );
                                 if (nextIndex !== -1) {
                                   setSelectedRoomIndex(nextIndex);
-                                  setRoomName(null);
+                                  setRoomName(
+                                    selectedRooms[nextIndex]?.roomType ?? null,
+                                  );
                                   setOffer(null);
-                                  setStep(0);
+                                  setStep(1);
                                 } else {
                                   setOffer(item);
                                   setStep(2);
@@ -585,6 +601,7 @@ export const BookingPage = () => {
             </div>
             <BookingSummary
               roomGuests={roomGuests}
+              selectedRooms={selectedRooms}
               selectedOffers={selectedOffers}
               checkIn={search.checkIn}
               checkOut={search.checkOut}
@@ -610,11 +627,13 @@ export const BookingPage = () => {
 
 const RoomSelectionProgress = ({
   roomCount,
+  selectedRooms,
   selectedOffers,
   selectedRoomIndex,
   onSelect,
 }: {
   readonly roomCount: number;
+  readonly selectedRooms: (BookingOffer | null)[];
   readonly selectedOffers: (BookingOffer | null)[];
   readonly selectedRoomIndex: number;
   readonly onSelect: (index: number) => void;
@@ -625,6 +644,7 @@ const RoomSelectionProgress = ({
     </p>
     <div className="grid gap-2 sm:grid-cols-2">
       {Array.from({ length: roomCount }, (_, index) => {
+        const room = selectedRooms[index];
         const selected = selectedOffers[index];
         return (
           <button
@@ -641,7 +661,11 @@ const RoomSelectionProgress = ({
             <span className="min-w-0 truncate">
               <strong>Номер {index + 1}</strong>
               <span className="ml-2 text-xs text-muted-ui-foreground">
-                {selected ? selected.roomType : "выберите категорию"}
+                {room
+                  ? selected
+                    ? `${room.roomType} · тариф выбран`
+                    : `${room.roomType} · выберите тариф`
+                  : "выберите категорию"}
               </span>
             </span>
             {selected ? (
@@ -1059,6 +1083,7 @@ const EmptyState = () => (
 );
 const BookingSummary = ({
   roomGuests,
+  selectedRooms,
   selectedOffers,
   checkIn,
   checkOut,
@@ -1067,6 +1092,7 @@ const BookingSummary = ({
   onSelectRoom,
 }: {
   readonly roomGuests: RoomGuests[];
+  readonly selectedRooms: (BookingOffer | null)[];
   readonly selectedOffers: (BookingOffer | null)[];
   readonly checkIn: string;
   readonly checkOut: string;
@@ -1116,7 +1142,7 @@ const BookingSummary = ({
             {room.childAges.filter((age) => age >= 0).length} детей
           </p>
           <p className="mt-2 font-medium text-brand">
-            {selectedOffers[index]?.roomType ?? "Номер ещё не выбран"}
+            {selectedRooms[index]?.roomType ?? "Номер ещё не выбран"}
           </p>
           {selectedOffers[index] && (
             <p className="mt-1 text-xs text-muted-ui-foreground">
