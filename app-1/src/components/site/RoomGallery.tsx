@@ -71,6 +71,7 @@ export const RoomGallery = ({
         )}
       </div>
       <Modal
+        backdropClassName="bg-page-foreground/65 in-data-[theme=dark]:bg-page/85"
         className="max-w-6xl bg-page-foreground/95 text-page"
         hideHeader
         onClose={() => setImageOpen(false)}
@@ -79,7 +80,7 @@ export const RoomGallery = ({
       >
         <img
           alt={title}
-          className="mx-auto max-h-[calc(100dvh-4rem)] w-full object-contain"
+          className="-mx-4 -my-4 block max-h-[calc(100dvh-4rem)] w-[calc(100%+2rem)] object-contain sm:-mx-6 sm:-my-5 sm:w-[calc(100%+3rem)]"
           src={resolveMediaUrl(currentImage)}
         />
       </Modal>

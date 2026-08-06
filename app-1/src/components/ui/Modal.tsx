@@ -27,6 +27,7 @@ export type ModalProps = Omit<
   readonly children: ReactNode;
   readonly closeLabel?: string;
   readonly closeButtonClassName?: string;
+  readonly backdropClassName?: string;
   /** Optional action row rendered below the scrollable body. */
   readonly footer?: ReactNode;
   readonly headerContent?: ReactNode;
@@ -42,6 +43,7 @@ export type ModalProps = Omit<
 export const Modal = ({
   children,
   className,
+  backdropClassName,
   closeButtonClassName,
   closeLabel = "Close",
   footer,
@@ -113,7 +115,10 @@ export const Modal = ({
         {open && (
           <m.div
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 grid min-h-[100dvh] place-items-center overflow-y-auto overscroll-contain bg-page-foreground/35 p-2 backdrop-blur-sm in-data-[theme=dark]:bg-page/75 sm:p-4"
+            className={cn(
+              "fixed inset-0 z-50 grid min-h-[100dvh] place-items-center overflow-y-auto overscroll-contain bg-page-foreground/35 p-2 backdrop-blur-sm in-data-[theme=dark]:bg-page/75 sm:p-4",
+              backdropClassName,
+            )}
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             key="modal-backdrop"
