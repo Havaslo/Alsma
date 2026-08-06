@@ -355,7 +355,7 @@ export const BookingPage = () => {
                               />
                             </div>
                           </div>
-                          <div className="p-5 pt-0 sm:pt-5 sm:pr-5 sm:pl-2 sm:text-right">
+                          <div className="flex flex-col justify-end p-5 pt-0 sm:h-full sm:pt-5 sm:pr-5 sm:pl-2 sm:text-right">
                             <p className="text-sm text-muted-ui-foreground">
                               от
                             </p>
