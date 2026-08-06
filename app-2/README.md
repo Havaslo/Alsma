@@ -24,6 +24,8 @@ The public widget is mounted on public site pages. Staff open a row in **Обр�
 
 Configure `EPTERA_API_KEY` and `EPTERA_HOTEL_ID` through the Eptera Booking API integration in project settings. Values remain server-side and must not be added to the frontend or exposed in `VITE_*` variables.
 
+Reservation requests sent to Eptera include the configured numeric `hotel-id`, the guest nationality, the selected offer identifiers and price, room/guest counts, contacts, and the guest list. The backend validates the selected offer again immediately before creation so stale prices cannot be submitted. Eptera errors are kept behind the backend's stable error response.
+
 ## Development
 
 ```bash

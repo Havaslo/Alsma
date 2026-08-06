@@ -18,7 +18,6 @@ const normalizePhone = (value: string): string => {
 };
 
 const date = (value: string): Date => new Date(`${value}T00:00:00.000Z`);
-const splitName = (name: string) => name.trim().split(/\s+/, 2);
 const record = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -102,6 +101,7 @@ export const createBookingService = (
         "title-id":
           guestEntry.type === "adult" ? 0 : guestEntry.type === "child" ? 2 : 3,
       })),
+      nationality: input.nationality,
       "payment-type": 2,
       "price-agency-id": offer.priceAgencyId,
       "rate-code-id": offer.rateCodeId,
@@ -111,6 +111,7 @@ export const createBookingService = (
       "room-type-id": offer.roomTypeId,
       "total-price": offer.discountedPrice || offer.price,
       "younger-child-count": input.childAges.filter((age) => age < 7).length,
+      "baby-count": input.childAges.filter((age) => age < 1).length,
     });
     const epteraResult = record(response);
     const reservationId = epteraResult

@@ -343,7 +343,6 @@ export const createEpteraClient = ({
       definitions = { expiresAt: Date.now() + 5 * 60_000, rooms };
       return rooms;
     } catch {
-      // Room metadata is optional: an outage must not hide available prices.
       return new Map();
     }
   };
@@ -424,7 +423,10 @@ export const createEpteraClient = ({
     createReservation: (body: Record<string, unknown>) => {
       const { hotelId: configuredHotelId } = requireConfiguration();
       return request<unknown>(`/hotel/${configuredHotelId}/createReservation`, {
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          "hotel-id": Number(configuredHotelId),
+          ...body,
+        }),
         method: "POST",
       });
     },
