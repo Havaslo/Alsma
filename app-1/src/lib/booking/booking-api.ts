@@ -17,6 +17,7 @@ export type BookingOffer = {
   readonly roomToSell: number;
   readonly roomType: string;
   readonly roomImageUrl: string | null;
+  readonly roomImageUrls: readonly string[];
   readonly roomArea: number | null;
   readonly roomCount: number | null;
   readonly roomCapacity: number | null;

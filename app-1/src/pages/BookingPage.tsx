@@ -304,10 +304,10 @@ export const BookingPage = () => {
                     <div className="space-y-4">
                       {rooms.map((item) => (
                         <article
-                          className="grid gap-5 rounded-3xl border border-line bg-page p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+                          className="grid overflow-hidden rounded-3xl border border-line bg-page sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-center"
                           key={item.roomType}
                         >
-                          <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-brand/10 text-brand sm:h-28 sm:w-40">
+                          <div className="relative min-h-52 w-full bg-brand/10 text-brand sm:h-full sm:min-h-40">
                             {item.roomImageUrl ? (
                               <img
                                 alt={item.roomType}
@@ -321,7 +321,7 @@ export const BookingPage = () => {
                               </div>
                             )}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 p-5 sm:py-5 sm:pr-3">
                             <h3 className="text-xl font-semibold">
                               {item.roomType}
                             </h3>
@@ -355,7 +355,7 @@ export const BookingPage = () => {
                               Подробнее
                             </button>
                           </div>
-                          <div className="sm:text-right">
+                          <div className="p-5 pt-0 sm:pt-5 sm:pr-5 sm:pl-2 sm:text-right">
                             <p className="text-sm text-muted-ui-foreground">
                               от
                             </p>
@@ -552,8 +552,13 @@ export const BookingPage = () => {
         )}
       </section>
       <RoomDetailsModal
+        key={detailsRoom?.id ?? "closed"}
         room={detailsRoom}
         onClose={() => setDetailsRoom(null)}
+        onSelect={(selected) => {
+          setDetailsRoom(null);
+          selectRoom(selected);
+        }}
       />
     </main>
   );
@@ -581,54 +586,118 @@ const plainRoomDescription = (value: string | null) =>
 const RoomDetailsModal = ({
   room,
   onClose,
+  onSelect,
 }: {
   readonly room: BookingOffer | null;
   readonly onClose: () => void;
-}) => (
-  <Modal
-    open={Boolean(room)}
-    onClose={onClose}
-    title={room?.roomType ?? "Описание номера"}
-    className="max-w-3xl"
-    closeLabel="Закрыть"
-  >
-    {room && (
-      <div>
-        {room.roomImageUrl && (
-          <img
-            alt={room.roomType}
-            className="-mx-4 mb-5 h-56 w-[calc(100%+2rem)] object-cover sm:-mx-6 sm:w-[calc(100%+3rem)]"
-            src={room.roomImageUrl}
-          />
-        )}
-        <div className="grid gap-3 rounded-2xl bg-muted-ui/30 p-4 sm:grid-cols-3">
-          <RoomFact
-            icon={<Maximize2 />}
-            value={room.roomArea ? `${room.roomArea} м²` : "Площадь уточняется"}
-          />
-          <RoomFact
-            icon={<DoorOpen />}
-            value={`${room.roomCount ?? 1} ${roomWord(room.roomCount ?? 1)}`}
-          />
-          <RoomFact
-            icon={<UsersRound />}
-            value={`до ${room.roomCapacity ?? "—"} гостей`}
-          />
+  readonly onSelect: (room: BookingOffer) => void;
+}) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const images = room?.roomImageUrls.length
+    ? room.roomImageUrls
+    : room?.roomImageUrl
+      ? [room.roomImageUrl]
+      : [];
+  const activeImage =
+    images[Math.min(activeIndex, Math.max(images.length - 1, 0))];
+
+  return (
+    <Modal
+      open={Boolean(room)}
+      onClose={onClose}
+      title={room?.roomType ?? "Описание номера"}
+      className="max-w-5xl"
+      closeLabel="Закрыть"
+    >
+      {room && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
+          <div className="min-w-0">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand/10 text-brand">
+              {activeImage ? (
+                <img
+                  alt={room.roomType}
+                  className="size-full object-cover"
+                  src={activeImage}
+                />
+              ) : (
+                <div className="grid size-full place-items-center">
+                  <BedDouble className="size-10" />
+                </div>
+              )}
+            </div>
+            {images.length > 1 && (
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {images.map((image, index) => (
+                  <button
+                    aria-label={`Показать фото ${index + 1}`}
+                    className={cn(
+                      "aspect-square overflow-hidden rounded-xl border-2 bg-brand/5",
+                      index === activeIndex
+                        ? "border-brand"
+                        : "border-transparent",
+                    )}
+                    key={`${image}-${index}`}
+                    onClick={() => setActiveIndex(index)}
+                    type="button"
+                  >
+                    <img
+                      alt=""
+                      className="size-full object-cover"
+                      src={image}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <p className="text-sm font-semibold tracking-[0.16em] text-brand uppercase">
+              Номер
+            </p>
+            <h3 className="mt-2 font-heading text-3xl font-semibold">
+              {room.roomType}
+            </h3>
+            <div className="mt-6 grid gap-3 rounded-2xl bg-muted-ui/30 p-4">
+              <RoomFact
+                icon={<Maximize2 />}
+                value={
+                  room.roomArea ? `${room.roomArea} м²` : "Площадь уточняется"
+                }
+              />
+              <RoomFact
+                icon={<DoorOpen />}
+                value={`${room.roomCount ?? 1} ${roomWord(room.roomCount ?? 1)}`}
+              />
+              <RoomFact
+                icon={<UsersRound />}
+                value={`до ${room.roomCapacity ?? "—"} гостей`}
+              />
+            </div>
+            {room.bedOptions && (
+              <p className="mt-5 text-sm">
+                <strong>Спальные места:</strong> {room.bedOptions}
+              </p>
+            )}
+            <div className="mt-6">
+              <h4 className="text-lg font-semibold">Описание номера</h4>
+              <p className="mt-2 text-sm leading-7 whitespace-pre-line text-muted-ui-foreground">
+                {plainRoomDescription(room.roomDescription) ||
+                  "Подробное описание для этого номера пока не предоставлено отелем."}
+              </p>
+            </div>
+            <button
+              className="mt-8 w-full rounded-xl bg-brand px-5 py-3.5 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90"
+              onClick={() => onSelect(room)}
+              type="button"
+            >
+              Выбрать номер
+            </button>
+          </div>
         </div>
-        {room.bedOptions && (
-          <p className="mt-5">
-            <strong>Спальные места:</strong> {room.bedOptions}
-          </p>
-        )}
-        <h3 className="mt-6 text-lg font-semibold">Описание номера</h3>
-        <p className="mt-2 text-sm leading-7 whitespace-pre-line text-muted-ui-foreground">
-          {plainRoomDescription(room.roomDescription) ||
-            "Подробное описание для этого номера пока не предоставлено отелем."}
-        </p>
-      </div>
-    )}
-  </Modal>
-);
+      )}
+    </Modal>
+  );
+};
 
 const RoomsPicker = ({
   rooms,

@@ -32,6 +32,7 @@ export type EpteraOffer = {
   readonly roomToSell: number;
   readonly cancellationPenalty: unknown;
   readonly roomImageUrl: string | null;
+  readonly roomImageUrls: readonly string[];
   readonly roomArea: number | null;
   readonly roomCount: number | null;
   readonly roomCapacity: number | null;
@@ -91,12 +92,38 @@ const readTokenExpiry = (token: string): number | null => {
 };
 
 type RoomDefinition = {
-  readonly imageUrl: string | null;
+  readonly imageUrls: readonly string[];
   readonly area: number | null;
   readonly count: number | null;
   readonly capacity: number | null;
   readonly description: string | null;
   readonly bedOptions: string | null;
+};
+
+const readImageUrls = (room: Record<string, unknown>): string[] => {
+  const values = [
+    room["room-image-urls"],
+    room["room-images"],
+    room.images,
+    room.gallery,
+  ];
+  const urls = values.flatMap((value) => {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item) => {
+      if (typeof item === "string") return [item];
+      const record = asRecord(item);
+      const url = record?.url ?? record?.["image-url"];
+      return typeof url === "string" ? [url] : [];
+    });
+  });
+  const primary = room["room-image-url"];
+  return Array.from(
+    new Set(
+      [...(typeof primary === "string" ? [primary] : []), ...urls].filter(
+        Boolean,
+      ),
+    ),
+  );
 };
 
 const readDefinitions = (payload: unknown): Map<number, RoomDefinition> => {
@@ -124,10 +151,7 @@ const readDefinitions = (payload: unknown): Map<number, RoomDefinition> => {
         [
           id,
           {
-            imageUrl:
-              typeof room["room-image-url"] === "string"
-                ? room["room-image-url"]
-                : null,
+            imageUrls: readImageUrls(room),
             area: readNullableNumber("room-area"),
             count,
             capacity: rules ? Number(rules["max-pax-capacity"]) || null : null,
@@ -373,7 +397,8 @@ export const createEpteraClient = ({
             discountedPrice: number(offer, "discounted-price"),
             roomToSell: number(offer, "room-tosell"),
             cancellationPenalty: offer["cancellation-penalty"] ?? null,
-            roomImageUrl: room?.imageUrl ?? null,
+            roomImageUrl: room?.imageUrls[0] ?? null,
+            roomImageUrls: room?.imageUrls ?? [],
             roomArea: room?.area ?? null,
             roomCount: room?.count ?? null,
             roomCapacity: room?.capacity ?? null,
