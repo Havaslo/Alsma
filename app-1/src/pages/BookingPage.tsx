@@ -120,12 +120,22 @@ export const BookingPage = () => {
     setStep(0);
   };
   const selectRoom = (selected: BookingOffer) => {
-    const nextIndex = selectedOffers.findIndex((item) => item === null);
-    const roomIndex = nextIndex === -1 ? 0 : nextIndex;
-    setSelectedRoomIndex(roomIndex);
     setRoomName(selected.roomType);
     setOffer(selected);
     setStep(1);
+  };
+  const openRoomSelection = (roomIndex: number) => {
+    setSelectedRoomIndex(roomIndex);
+    const selected = selectedOffers[roomIndex];
+    if (selected) {
+      setRoomName(selected.roomType);
+      setOffer(selected);
+      setStep(1);
+    } else {
+      setRoomName(null);
+      setOffer(null);
+      setStep(0);
+    }
   };
   const submit = async () => {
     if (!offer) return;
@@ -284,6 +294,12 @@ export const BookingPage = () => {
               </section>
               {step === 0 && (
                 <section className="mt-6">
+                  <RoomSelectionProgress
+                    roomCount={roomGuests.length}
+                    selectedOffers={selectedOffers}
+                    selectedRoomIndex={selectedRoomIndex}
+                    onSelect={openRoomSelection}
+                  />
                   <div className="mb-5 flex items-end justify-between">
                     <div>
                       <h2 className="font-heading text-3xl font-semibold">
@@ -390,6 +406,12 @@ export const BookingPage = () => {
               )}
               {step === 1 && (
                 <section className="mt-6">
+                  <RoomSelectionProgress
+                    roomCount={roomGuests.length}
+                    selectedOffers={selectedOffers}
+                    selectedRoomIndex={selectedRoomIndex}
+                    onSelect={openRoomSelection}
+                  />
                   <button
                     className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-brand"
                     onClick={() => setStep(0)}
@@ -568,6 +590,7 @@ export const BookingPage = () => {
               checkOut={search.checkOut}
               nights={nights}
               offer={offer}
+              onSelectRoom={openRoomSelection}
             />
           </div>
         )}
@@ -584,6 +607,54 @@ export const BookingPage = () => {
     </main>
   );
 };
+
+const RoomSelectionProgress = ({
+  roomCount,
+  selectedOffers,
+  selectedRoomIndex,
+  onSelect,
+}: {
+  readonly roomCount: number;
+  readonly selectedOffers: (BookingOffer | null)[];
+  readonly selectedRoomIndex: number;
+  readonly onSelect: (index: number) => void;
+}) => (
+  <div className="mb-5 rounded-2xl border border-line bg-panel p-3">
+    <p className="mb-2 text-xs font-semibold tracking-[0.12em] text-muted-ui-foreground uppercase">
+      Выбор по номерам
+    </p>
+    <div className="grid gap-2 sm:grid-cols-2">
+      {Array.from({ length: roomCount }, (_, index) => {
+        const selected = selectedOffers[index];
+        return (
+          <button
+            className={cn(
+              "flex items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition",
+              selectedRoomIndex === index
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-line bg-page hover:border-brand/50",
+            )}
+            key={index}
+            onClick={() => onSelect(index)}
+            type="button"
+          >
+            <span className="min-w-0 truncate">
+              <strong>Номер {index + 1}</strong>
+              <span className="ml-2 text-xs text-muted-ui-foreground">
+                {selected ? selected.roomType : "выберите категорию"}
+              </span>
+            </span>
+            {selected ? (
+              <Check className="size-4 shrink-0 text-brand" />
+            ) : (
+              <span className="text-xs text-brand">Выбрать</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const RoomFact = ({
   icon,
@@ -993,6 +1064,7 @@ const BookingSummary = ({
   checkOut,
   nights,
   offer,
+  onSelectRoom,
 }: {
   readonly roomGuests: RoomGuests[];
   readonly selectedOffers: (BookingOffer | null)[];
@@ -1000,6 +1072,7 @@ const BookingSummary = ({
   readonly checkOut: string;
   readonly nights: number;
   readonly offer: BookingOffer | null;
+  readonly onSelectRoom: (index: number) => void;
 }) => (
   <aside className="sticky top-28 rounded-3xl border border-line bg-panel p-6">
     <h2 className="font-heading text-2xl font-semibold">Ваше бронирование</h2>
@@ -1024,10 +1097,20 @@ const BookingSummary = ({
           className="rounded-2xl border border-line bg-page p-3 text-sm"
           key={index}
         >
-          <div className="flex items-center justify-between gap-2">
+          <button
+            className="flex w-full items-center justify-between gap-2 text-left"
+            onClick={() => onSelectRoom(index)}
+            type="button"
+          >
             <strong>Номер {index + 1}</strong>
-            {selectedOffers[index] && <Check className="size-4 text-brand" />}
-          </div>
+            {selectedOffers[index] ? (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand">
+                Изменить <Check className="size-4" />
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-brand">Выбрать</span>
+            )}
+          </button>
           <p className="mt-1 text-muted-ui-foreground">
             {room.adults} взрослых ·{" "}
             {room.childAges.filter((age) => age >= 0).length} детей
