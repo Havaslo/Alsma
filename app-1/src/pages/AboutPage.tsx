@@ -60,10 +60,9 @@ export const AboutPage = () => {
         className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
       >
-        <div className="mx-auto text-center">
+        <div className="mx-auto max-w-4xl text-center">
           <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
-            «АЛСМА» — загородный SPA-отель с большой территорией, бассейнами и
-            отдыхом для всей семьи
+            «АЛСМА» — загородный отдых среди природы
           </h2>
           <p className="mt-6 text-lg leading-8 text-muted-ui-foreground">
             Мы находимся в сосновом лесу у слияния рек Линда и АЛСМА — всего в
