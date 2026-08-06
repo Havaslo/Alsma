@@ -16,6 +16,12 @@ export type BookingOffer = {
   readonly rateType: string;
   readonly roomToSell: number;
   readonly roomType: string;
+  readonly roomImageUrl: string | null;
+  readonly roomArea: number | null;
+  readonly roomCount: number | null;
+  readonly roomCapacity: number | null;
+  readonly roomDescription: string | null;
+  readonly bedOptions: string | null;
 };
 
 export type BookingSearch = {

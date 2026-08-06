@@ -31,6 +31,12 @@ export type EpteraOffer = {
   readonly discountedPrice: number;
   readonly roomToSell: number;
   readonly cancellationPenalty: unknown;
+  readonly roomImageUrl: string | null;
+  readonly roomArea: number | null;
+  readonly roomCount: number | null;
+  readonly roomCapacity: number | null;
+  readonly roomDescription: string | null;
+  readonly bedOptions: string | null;
 };
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
@@ -84,6 +90,62 @@ const readTokenExpiry = (token: string): number | null => {
   }
 };
 
+type RoomDefinition = {
+  readonly imageUrl: string | null;
+  readonly area: number | null;
+  readonly count: number | null;
+  readonly capacity: number | null;
+  readonly description: string | null;
+  readonly bedOptions: string | null;
+};
+
+const readDefinitions = (payload: unknown): Map<number, RoomDefinition> => {
+  const response = asRecord(payload);
+  const items = response?.roomtype;
+  if (!Array.isArray(items)) return new Map();
+  return new Map(
+    items.flatMap((item) => {
+      const room = asRecord(item);
+      if (!room) return [];
+      const id = number(room, "room-id");
+      if (!Number.isInteger(id) || id < 1) return [];
+      const rules = asRecord(room["room-rules"]);
+      const readNullableNumber = (key: string) => {
+        const value = room[key];
+        return typeof value === "number" && Number.isFinite(value)
+          ? value
+          : null;
+      };
+      const count =
+        ["room-count", "room-counts", "number-of-rooms"]
+          .map((key) => readNullableNumber(key))
+          .find((value) => value !== null) ?? null;
+      return [
+        [
+          id,
+          {
+            imageUrl:
+              typeof room["room-image-url"] === "string"
+                ? room["room-image-url"]
+                : null,
+            area: readNullableNumber("room-area"),
+            count,
+            capacity: rules ? Number(rules["max-pax-capacity"]) || null : null,
+            description:
+              typeof room["room-property"] === "string"
+                ? room["room-property"]
+                : null,
+            bedOptions:
+              typeof room["room-bed-options"] === "string"
+                ? room["room-bed-options"]
+                : null,
+          } satisfies RoomDefinition,
+        ],
+      ] as const;
+    }),
+  );
+};
+
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
@@ -93,6 +155,8 @@ export const createEpteraClient = ({
 }: EpteraClientOptions) => {
   let session: Session | undefined;
   let loginPromise: Promise<Session> | undefined;
+  let definitions:
+    { expiresAt: number; rooms: Map<number, RoomDefinition> } | undefined;
 
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
     const normalizedApiKey = apiKey?.trim();
@@ -240,6 +304,24 @@ export const createEpteraClient = ({
     return payload as T;
   };
 
+  const getDefinitions = async (): Promise<Map<number, RoomDefinition>> => {
+    if (definitions && definitions.expiresAt > Date.now())
+      return definitions.rooms;
+    const { hotelId: configuredHotelId } = requireConfiguration();
+    const query = new URLSearchParams({ language: "ru" });
+    try {
+      const payload = await request<unknown>(
+        `/hotel/${configuredHotelId}/hotel-definitions?${query}`,
+      );
+      const rooms = readDefinitions(payload);
+      definitions = { expiresAt: Date.now() + 5 * 60_000, rooms };
+      return rooms;
+    } catch {
+      // Room metadata is optional: an outage must not hide available prices.
+      return new Map();
+    }
+  };
+
   return {
     getOffers: async (input: {
       adults: number;
@@ -251,6 +333,7 @@ export const createEpteraClient = ({
       nationality: string;
       roomCount: number;
     }): Promise<EpteraOffer[]> => {
+      const rooms = await getDefinitions();
       const { hotelId: configuredHotelId } = requireConfiguration();
       const query = new URLSearchParams({
         adult: String(input.adults),
@@ -272,6 +355,7 @@ export const createEpteraClient = ({
         if (!offer) return [];
         const id = string(offer, "id");
         if (!id) return [];
+        const room = rooms.get(number(offer, "room-type-id"));
         return [
           {
             id,
@@ -289,6 +373,12 @@ export const createEpteraClient = ({
             discountedPrice: number(offer, "discounted-price"),
             roomToSell: number(offer, "room-tosell"),
             cancellationPenalty: offer["cancellation-penalty"] ?? null,
+            roomImageUrl: room?.imageUrl ?? null,
+            roomArea: room?.area ?? null,
+            roomCount: room?.count ?? null,
+            roomCapacity: room?.capacity ?? null,
+            roomDescription: room?.description ?? null,
+            bedOptions: room?.bedOptions ?? null,
           },
         ];
       });
