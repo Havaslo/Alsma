@@ -307,7 +307,7 @@ export const BookingPage = () => {
                           className="grid overflow-hidden rounded-3xl border border-line bg-page sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-center"
                           key={item.roomType}
                         >
-                          <div className="relative min-h-52 w-full bg-brand/10 text-brand sm:h-full sm:min-h-40">
+                          <div className="relative aspect-square w-full bg-brand/10 text-brand">
                             {item.roomImageUrl ? (
                               <img
                                 alt={item.roomType}
@@ -321,13 +321,24 @@ export const BookingPage = () => {
                               </div>
                             )}
                           </div>
-                          <div className="min-w-0 p-5 sm:py-5 sm:pr-3">
+                          <div className="flex min-w-0 flex-col p-5 sm:py-4 sm:pr-3">
                             <h3 className="text-xl font-semibold">
                               {item.roomType}
                             </h3>
-                            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-ui-foreground sm:grid-cols-3">
+                            <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-ui-foreground">
+                              {plainRoomDescription(item.roomDescription) ||
+                                "Выберите категорию — на следующем шаге покажем все доступные тарифы и условия."}
+                            </p>
+                            <button
+                              className="mt-2 w-fit text-sm font-semibold text-brand underline-offset-4 hover:underline"
+                              onClick={() => setDetailsRoom(item)}
+                              type="button"
+                            >
+                              Подробнее
+                            </button>
+                            <div className="mt-auto grid grid-cols-2 gap-x-3 gap-y-2 pt-4 text-sm text-muted-ui-foreground sm:grid-cols-3">
                               <RoomFact
-                                icon={<Maximize2 />}
+                                icon={<Maximize2 className="size-5" />}
                                 value={
                                   item.roomArea
                                     ? `${item.roomArea} м²`
@@ -335,25 +346,14 @@ export const BookingPage = () => {
                                 }
                               />
                               <RoomFact
-                                icon={<DoorOpen />}
+                                icon={<DoorOpen className="size-5" />}
                                 value={`${item.roomCount ?? 1} ${roomWord(item.roomCount ?? 1)}`}
                               />
                               <RoomFact
-                                icon={<UsersRound />}
+                                icon={<UsersRound className="size-5" />}
                                 value={`до ${item.roomCapacity ?? search.adults} гостей`}
                               />
                             </div>
-                            <p className="mt-3 line-clamp-2 text-sm text-muted-ui-foreground">
-                              {plainRoomDescription(item.roomDescription) ||
-                                "Выберите категорию — на следующем шаге покажем все доступные тарифы и условия."}
-                            </p>
-                            <button
-                              className="mt-3 text-sm font-semibold text-brand underline-offset-4 hover:underline"
-                              onClick={() => setDetailsRoom(item)}
-                              type="button"
-                            >
-                              Подробнее
-                            </button>
                           </div>
                           <div className="p-5 pt-0 sm:pt-5 sm:pr-5 sm:pl-2 sm:text-right">
                             <p className="text-sm text-muted-ui-foreground">
