@@ -606,13 +606,14 @@ const RoomDetailsModal = ({
       open={Boolean(room)}
       onClose={onClose}
       title={room?.roomType ?? "Описание номера"}
-      className="max-w-5xl"
+      className="max-w-6xl"
       closeLabel="Закрыть"
+      hideHeader
     >
       {room && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.28fr)_minmax(18rem,0.72fr)]">
           <div className="min-w-0">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand/10 text-brand">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand/10 text-brand lg:aspect-auto lg:min-h-[34rem]">
               {activeImage ? (
                 <img
                   alt={room.roomType}
