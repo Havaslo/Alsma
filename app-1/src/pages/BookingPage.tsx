@@ -117,7 +117,16 @@ export const BookingPage = () => {
   const performSearch = () => {
     if (search.checkOut <= search.checkIn)
       return toast.error("Укажите дату выезда позже даты заезда.");
-    setSubmittedSearch(search);
+    const nextSearch = {
+      ...search,
+      adults: roomGuests.reduce((total, room) => total + room.adults, 0),
+      childAges: roomGuests.flatMap((room) =>
+        room.childAges.filter((age) => age >= 0),
+      ),
+      roomCount: roomGuests.length,
+    };
+    setSearch(nextSearch);
+    setSubmittedSearch(nextSearch);
     setOffer(null);
     setRoomName(null);
     setSelectedRoomIndex(0);
@@ -126,15 +135,24 @@ export const BookingPage = () => {
     setStep(0);
   };
   const selectRoom = (selected: BookingOffer) => {
-    const nextRooms = selectedRooms.map((room, index) =>
+    const roomCount = roomGuests.length;
+    const currentRooms =
+      selectedRooms.length === roomCount
+        ? selectedRooms
+        : Array.from(
+            { length: roomCount },
+            (_, index) => selectedRooms[index] ?? null,
+          );
+    const nextRooms = currentRooms.map((room, index) =>
       index === selectedRoomIndex ? selected : room,
     );
+    const nextIndex = nextRooms.findIndex((room) => room === null);
     setSelectedRooms(nextRooms);
     setRoomName(selected.roomType);
     setOffer(null);
-    const nextIndex = nextRooms.findIndex((room) => room === null);
-    if (nextIndex !== -1) {
+    if (roomCount > 1 && nextIndex !== -1) {
       setSelectedRoomIndex(nextIndex);
+      setStep(0);
       return;
     }
     setSelectedRoomIndex(0);
