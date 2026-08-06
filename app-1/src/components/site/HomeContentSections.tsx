@@ -36,7 +36,7 @@ export const HomeRestSection = ({
             <h3 className="font-heading text-4xl font-semibold">
               {card.title}
             </h3>
-            <p className="mt-4 leading-7 text-muted-ui-foreground">
+            <p className="mt-4 leading-7 whitespace-pre-line text-muted-ui-foreground">
               {card.description}
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
