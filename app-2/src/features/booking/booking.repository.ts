@@ -23,6 +23,26 @@ export const createBookingRepository = (database: Database) => ({
         status: "awaiting_payment",
       },
     }),
+  updatePayment: (input: {
+    bookingId: string;
+    paymentAmount: number;
+    paymentId: string;
+    paymentStatus: string;
+    status: string;
+  }) =>
+    database.client.guestBooking.update({
+      data: {
+        paymentAmount: input.paymentAmount,
+        paymentId: input.paymentId,
+        paymentStatus: input.paymentStatus,
+        status: input.status,
+      },
+      where: { id: input.bookingId },
+    }),
+  findBookingByPaymentId: (paymentId: string) =>
+    database.client.guestBooking.findUnique({ where: { paymentId } }),
+  findBooking: (bookingId: string) =>
+    database.client.guestBooking.findUnique({ where: { id: bookingId } }),
   findOrCreateGuest: (input: {
     email: string;
     fullName: string;

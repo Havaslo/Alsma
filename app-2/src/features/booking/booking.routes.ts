@@ -5,6 +5,7 @@ import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createOffersHandler,
   createReservationHandler,
+  paymentWebhookHandler,
 } from "./booking.handlers.js";
 import { createBookingRepository } from "./booking.repository.js";
 import {
@@ -13,15 +14,18 @@ import {
 } from "./booking.schemas.js";
 import { createBookingService } from "./booking.service.js";
 import type { EpteraClient } from "./eptera.client.js";
+import type { YooKassaClient } from "./yookassa.client.js";
 
 export const createBookingRouter = (
   database: Database,
   eptera: EpteraClient,
+  yookassa: YooKassaClient,
 ): Router => {
   const router = Router();
   const service = createBookingService(
     createBookingRepository(database),
     eptera,
+    yookassa,
   );
   router.get(
     "/offers",
@@ -33,5 +37,6 @@ export const createBookingRouter = (
     validateRequest({ body: createReservationBodySchema }),
     createReservationHandler(service),
   );
+  router.post("/payments/webhook", paymentWebhookHandler(service, yookassa));
   return router;
 };

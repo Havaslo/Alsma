@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
-  CircleAlert,
   DoorOpen,
   LoaderCircle,
   Maximize2,
@@ -85,6 +84,9 @@ export const BookingPage = () => {
     phone: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"full" | "first_night">(
+    "full",
+  );
   const [completed, setCompleted] = useState<{
     id: string;
     voucherNumber: string | null;
@@ -203,7 +205,13 @@ export const BookingPage = () => {
         ],
         notes: contact.notes || undefined,
         offerId: (selectedOffers.find(Boolean) ?? offer).id,
+        paymentMethod,
+        returnUrl: `${window.location.origin}${ROUTES.booking}?payment=return`,
       });
+      if (result.data.payment.confirmationUrl) {
+        window.location.assign(result.data.payment.confirmationUrl);
+        return;
+      }
       setCompleted(result.data.booking);
       setStep(3);
     } catch (error) {
@@ -259,8 +267,8 @@ export const BookingPage = () => {
               Бронирование создано
             </h2>
             <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
-              Мы зафиксировали ваш выбор. Оплата будет доступна на следующем
-              этапе после подключения платёжного сервиса.
+              Бронь создана в Eptera. Если оплата ещё не завершена, её можно
+              продолжить по ссылке ЮKassa.
             </p>
             <p className="mt-6 text-sm text-muted-ui-foreground">
               Номер брони:{" "}
@@ -596,10 +604,51 @@ export const BookingPage = () => {
                       value={contact.notes}
                     />
                   </label>
-                  <div className="mt-6 rounded-2xl border border-accent-ui/30 bg-accent-ui/10 p-4 text-sm leading-6 text-page-foreground">
-                    <CircleAlert className="mr-2 inline size-4 text-accent-ui-foreground" />
-                    Онлайн-оплата пока не подключена. После создания
-                    бронирование получит статус «Ожидает оплаты».
+                  <div className="mt-6 rounded-2xl border border-line bg-page p-4">
+                    <p className="font-semibold">Как оплатить</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {(
+                        [
+                          [
+                            "full",
+                            "Полная стоимость",
+                            "Оплатить всю сумму бронирования",
+                          ],
+                          [
+                            "first_night",
+                            "Первые сутки",
+                            "Оплатить предоплату за первые сутки",
+                          ],
+                        ] as const
+                      ).map(([value, title, description]) => (
+                        <label
+                          className={cn(
+                            "cursor-pointer rounded-2xl border p-4",
+                            paymentMethod === value
+                              ? "border-brand bg-brand/5"
+                              : "border-line",
+                          )}
+                          key={value}
+                        >
+                          <input
+                            className="mr-2"
+                            checked={paymentMethod === value}
+                            name="paymentMethod"
+                            onChange={() => setPaymentMethod(value)}
+                            type="radio"
+                            value={value}
+                          />
+                          <span className="font-semibold">{title}</span>
+                          <span className="mt-1 block pl-6 text-sm text-muted-ui-foreground">
+                            {description}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-sm text-muted-ui-foreground">
+                      После создания брони вы перейдёте на защищённую страницу
+                      ЮKassa.
+                    </p>
                   </div>
                   <button
                     className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 font-semibold text-brand-foreground disabled:opacity-60"
@@ -610,7 +659,7 @@ export const BookingPage = () => {
                     {submitting && (
                       <LoaderCircle className="size-4 animate-spin" />
                     )}
-                    Подтвердить бронирование
+                    Перейти к оплате
                   </button>
                 </section>
               )}

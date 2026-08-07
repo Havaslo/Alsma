@@ -1,7 +1,8 @@
 import { HttpError } from "../../lib/http/http-error.js";
 import type { BookingRepository } from "./booking.repository.js";
 import type { CreateReservationBody, OffersQuery } from "./booking.schemas.js";
-import type { EpteraClient, EpteraOffer } from "./eptera.client.js";
+import type { EpteraClient } from "./eptera.client.js";
+import type { YooKassaClient, YooPayment } from "./yookassa.client.js";
 
 const normalizePhone = (value: string): string => {
   let digits = value.replace(/\D/g, "");
@@ -22,10 +23,19 @@ const record = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+const nightsBetween = (checkIn: string, checkOut: string) =>
+  Math.max(
+    1,
+    Math.round(
+      (date(checkOut).getTime() - date(checkIn).getTime()) / 86_400_000,
+    ),
+  );
+const amountText = (value: number) => value.toFixed(2);
 
 export const createBookingService = (
   repository: BookingRepository,
   eptera: EpteraClient,
+  yookassa: YooKassaClient,
 ) => ({
   offers: async (input: OffersQuery) => {
     if (date(input.checkOut) <= date(input.checkIn)) {
@@ -35,10 +45,7 @@ export const createBookingService = (
         "Дата выезда должна быть позже даты заезда.",
       );
     }
-    return {
-      offers: await eptera.getOffers(input),
-      search: input,
-    };
+    return { offers: await eptera.getOffers(input), search: input };
   },
   createReservation: async (input: CreateReservationBody) => {
     if (date(input.checkOut) <= date(input.checkIn)) {
@@ -82,8 +89,9 @@ export const createBookingService = (
       fullName: `${input.contact.firstName} ${input.contact.lastName}`,
       phone,
     });
-    const response = await eptera.createReservation({
+    const epteraResponse = await eptera.createReservation({
       "adult-count": input.adults,
+      "baby-count": input.childAges.filter((age) => age < 1).length,
       "board-type-id": offer.boardTypeId,
       "check-in": input.checkIn,
       "check-out": input.checkOut,
@@ -110,10 +118,11 @@ export const createBookingService = (
       "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
       "total-price": offer.discountedPrice || offer.price,
-      "younger-child-count": input.childAges.filter((age) => age < 7).length,
-      "baby-count": input.childAges.filter((age) => age < 1).length,
+      "younger-child-count": input.childAges.filter(
+        (age) => age >= 1 && age < 7,
+      ).length,
     });
-    const epteraResult = record(response);
+    const epteraResult = record(epteraResponse);
     const reservationId = epteraResult
       ? String(
           epteraResult["reservation-id"] ??
@@ -126,6 +135,8 @@ export const createBookingService = (
       ? String(epteraResult["voucher-no"] ?? epteraResult.voucherNo ?? "") ||
         null
       : null;
+    const totalAmount =
+      (offer.discountedPrice || offer.price) * input.roomCount;
     const booking = await repository.createGuestBooking({
       checkInDate: date(input.checkIn),
       checkOutDate: date(input.checkOut),
@@ -136,17 +147,55 @@ export const createBookingService = (
       guestsCount: input.guests.length,
       roomName: offer.roomType,
       selectedOffer: JSON.parse(JSON.stringify(offer)),
-      totalAmount: (offer.discountedPrice || offer.price) * input.roomCount,
+      totalAmount,
       userId: guest.id,
       voucherNumber,
     });
+    const paymentAmount =
+      input.paymentMethod === "first_night"
+        ? totalAmount / nightsBetween(input.checkIn, input.checkOut)
+        : totalAmount;
+    const payment = await yookassa.createPayment({
+      amount: amountText(paymentAmount),
+      bookingId: booking.id,
+      currency: offer.currency,
+      description: `Бронирование ${voucherNumber ?? booking.id}`,
+      returnUrl: input.returnUrl,
+    });
+    const savedBooking = await repository.updatePayment({
+      bookingId: booking.id,
+      paymentAmount,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      status: "awaiting_payment",
+    });
     return {
       booking: {
-        ...booking,
-        totalAmount: booking.totalAmount?.toString() ?? null,
+        ...savedBooking,
+        totalAmount: savedBooking.totalAmount?.toString() ?? null,
       },
-      payment: { status: "payment_pending" },
+      payment: {
+        amount: payment.amount,
+        confirmationUrl: payment.confirmation?.confirmation_url ?? null,
+        id: payment.id,
+        status: payment.status,
+      },
     };
+  },
+  reconcilePayment: async (payment: YooPayment) => {
+    const bookingId = payment.metadata?.bookingId;
+    const booking = bookingId
+      ? await repository.findBooking(bookingId)
+      : await repository.findBookingByPaymentId(payment.id);
+    if (!booking || booking.paymentId !== payment.id) return null;
+    const paid = payment.status === "succeeded" && payment.paid;
+    return repository.updatePayment({
+      bookingId: booking.id,
+      paymentAmount: Number(payment.amount.value),
+      paymentId: payment.id,
+      paymentStatus: paid ? "succeeded" : payment.status,
+      status: paid ? "confirmed" : booking.status,
+    });
   },
 });
 

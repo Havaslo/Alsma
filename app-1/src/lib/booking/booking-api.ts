@@ -55,6 +55,8 @@ export type CreateBookingInput = Omit<BookingSearch, "language"> & {
   readonly guests: BookingGuest[];
   readonly notes?: string;
   readonly offerId: string;
+  readonly paymentMethod: "full" | "first_night";
+  readonly returnUrl: string;
 };
 
 export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
@@ -66,5 +68,5 @@ export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
 export const createBookingReservation = (input: CreateBookingInput) =>
   apiClient.post<{
     booking: { id: string; voucherNumber: string | null };
-    payment: { status: string };
+    payment: { confirmationUrl: string | null; status: string };
   }>("/booking/reservations", input);

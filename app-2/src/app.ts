@@ -14,6 +14,8 @@ type CreateAppOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
+  readonly yooKassaSecretKey?: string;
+  readonly yooKassaShopId?: string;
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: {
@@ -35,16 +37,13 @@ export const createApp = ({
   logger,
   managedStorage,
   openaiApiKey,
+  yooKassaSecretKey,
+  yooKassaShopId,
 }: CreateAppOptions): Express => {
   const app = express();
-
   app.disable("x-powered-by");
   app.use(publicCorsMiddleware);
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: "cross-origin" },
-    }),
-  );
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(
     pinoHttp({
       autoLogging: {
@@ -55,10 +54,7 @@ export const createApp = ({
     }),
   );
   app.use(express.json({ limit: "1mb" }));
-
-  app.get("/health", (_request, response) => {
-    response.json({ status: "ok" });
-  });
+  app.get("/health", (_request, response) => response.json({ status: "ok" }));
   app.use(
     "/api",
     createApiRouter({
@@ -67,11 +63,11 @@ export const createApp = ({
       epteraHotelId,
       managedStorage,
       openaiApiKey,
+      yooKassaSecretKey,
+      yooKassaShopId,
     }),
   );
-
   app.use(notFoundHandler);
   app.use(errorHandler);
-
   return app;
 };

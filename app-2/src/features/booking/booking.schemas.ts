@@ -42,6 +42,8 @@ export const createReservationBodySchema = z.object({
   nationality: z.string().trim().length(2).default("RU"),
   notes: z.string().trim().max(1000).optional(),
   offerId: z.string().trim().min(1).max(300),
+  paymentMethod: z.enum(["full", "first_night"]).default("full"),
+  returnUrl: z.string().url().max(2000),
   roomCount: z.number().int().min(1).max(2).default(1),
 });
 

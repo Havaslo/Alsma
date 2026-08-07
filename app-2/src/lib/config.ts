@@ -4,9 +4,7 @@ import { z } from "zod";
 
 const GENERATED_ENV_PATH = "AMAZI_ENV_GENERATED.env";
 
-if (existsSync(GENERATED_ENV_PATH)) {
-  loadEnvFile(GENERATED_ENV_PATH);
-}
+if (existsSync(GENERATED_ENV_PATH)) loadEnvFile(GENERATED_ENV_PATH);
 
 const databaseUrlSchema = z
   .string()
@@ -27,6 +25,8 @@ const environmentSchema = z.object({
   EPTERA_API_KEY: z.string().min(1).optional(),
   EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+  YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+  YOOKASSA_SHOP_ID: z.string().min(1).optional(),
 });
 
 export type AppConfig = {
@@ -40,6 +40,8 @@ export type AppConfig = {
   readonly nodeEnv: z.infer<typeof environmentSchema>["NODE_ENV"];
   readonly port: number;
   readonly openaiApiKey?: string;
+  readonly yooKassaSecretKey?: string;
+  readonly yooKassaShopId?: string;
 };
 
 export const readConfig = (
@@ -57,5 +59,7 @@ export const readConfig = (
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
     openaiApiKey: parsed.OPENAI_API_KEY,
+    yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
+    yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
   };
 };

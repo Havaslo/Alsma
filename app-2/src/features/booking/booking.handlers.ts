@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 
 import type { CreateReservationBody, OffersQuery } from "./booking.schemas.js";
 import type { BookingService } from "./booking.service.js";
+import type { YooKassaClient } from "./yookassa.client.js";
 
 export const createOffersHandler =
   (service: BookingService): RequestHandler =>
@@ -21,4 +22,22 @@ export const createReservationHandler =
           response.locals.input.body as CreateReservationBody,
         ),
       );
+  };
+
+export const paymentWebhookHandler =
+  (service: BookingService, yookassa: YooKassaClient): RequestHandler =>
+  async (request, response) => {
+    const body = request.body as { event?: unknown; object?: { id?: unknown } };
+    const paymentId =
+      typeof body.object?.id === "string" ? body.object.id : null;
+    if (
+      body.event !== "payment.succeeded" &&
+      body.event !== "payment.canceled"
+    ) {
+      response.sendStatus(204);
+      return;
+    }
+    if (paymentId)
+      await service.reconcilePayment(await yookassa.getPayment(paymentId));
+    response.sendStatus(204);
   };

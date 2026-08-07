@@ -12,14 +12,12 @@ const start = async (): Promise<void> => {
   const logger = createLogger();
   const database = createDatabase(config.databaseUrl);
   const managedStorage = createManagedStorage(config.managedStorage);
-
   try {
     await runDatabaseMigrations(database);
   } catch (error) {
     await database.close().catch(() => undefined);
     throw error;
   }
-
   const app = createApp({
     database,
     logger,
@@ -27,11 +25,12 @@ const start = async (): Promise<void> => {
     epteraHotelId: config.epteraHotelId,
     managedStorage,
     openaiApiKey: config.openaiApiKey,
+    yooKassaSecretKey: config.yooKassaSecretKey,
+    yooKassaShopId: config.yooKassaShopId,
   });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
   });
-
   let isShuttingDown = false;
   const shutdown = (signal: NodeJS.Signals) => {
     if (isShuttingDown) return;
@@ -52,7 +51,6 @@ const start = async (): Promise<void> => {
         });
     });
   };
-
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
 };

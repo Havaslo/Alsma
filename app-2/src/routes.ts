@@ -7,6 +7,7 @@ import { createAdminSettingsRouter } from "./features/admin-settings/admin-setti
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
 import { createBookingRouter } from "./features/booking/booking.routes.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
+import { createYooKassaClient } from "./features/booking/yookassa.client.js";
 import { createChatRouter } from "./features/chat/chat.routes.js";
 import { createChatService } from "./features/chat/chat.service.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
@@ -24,6 +25,8 @@ type CreateApiRouterOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
+  readonly yooKassaShopId?: string;
+  readonly yooKassaSecretKey?: string;
   readonly managedStorage: {
     readonly upload: (input: {
       readonly content: Uint8Array;
@@ -42,6 +45,8 @@ export const createApiRouter = ({
   epteraHotelId,
   managedStorage,
   openaiApiKey,
+  yooKassaSecretKey,
+  yooKassaShopId,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService();
@@ -57,6 +62,10 @@ export const createApiRouter = ({
     createBookingRouter(
       database,
       createEpteraClient({ apiKey: epteraApiKey, hotelId: epteraHotelId }),
+      createYooKassaClient({
+        secretKey: yooKassaSecretKey,
+        shopId: yooKassaShopId,
+      }),
     ),
   );
   router.use("/chat", createChatRouter(database, chat));
