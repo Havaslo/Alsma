@@ -47,11 +47,9 @@ export const HomePage = () => {
     .map((item) => ({
       ...item,
       href: item.buttonLink,
-      image:
-        item.title === "Корпоративные заезды" ||
-        item.title === "Корпоративные выезды и тимбилдинги"
-          ? corporateCheckinsImage
-          : item.image,
+      image: item.title.toLocaleLowerCase().includes("корпоратив")
+        ? corporateCheckinsImage
+        : item.image,
     }));
   const reviews = getSiteCollection<HomeReview>(
     content.data?.items,
