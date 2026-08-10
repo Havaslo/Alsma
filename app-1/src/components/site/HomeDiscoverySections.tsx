@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import corporateImage from "@/assets/alsma/corporate-hall.webp";
+import corporateImage from "@/assets/alsma/corporate-checkins.jpg";
 import entertainmentAnimation from "@/assets/alsma/entertainment-animation.webp";
 import entertainmentMusic from "@/assets/alsma/entertainment-music.jpg";
 import entertainmentRental from "@/assets/alsma/entertainment-rental-new.webp";
