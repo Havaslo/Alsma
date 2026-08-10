@@ -1,6 +1,6 @@
+import corporateCheckinsImage from "@/assets/alsma/corporate-checkins.jpg";
 import familyImage from "@/assets/alsma/family-holiday.png";
 import romanticImage from "@/assets/alsma/romantic-escape.png";
-import summerImage from "@/assets/alsma/season-summer.jpg";
 import wellnessImage from "@/assets/alsma/spa-wellness.png";
 import { ROUTES } from "@/route-constants";
 
@@ -71,7 +71,7 @@ export const HOME_REST_CARDS: readonly HomeRestCard[] = [
     description:
       "Выезды для команд с проживанием, банкетом, локациями для встреч и программой отдыха на природе.",
     href: ROUTES.celebrations,
-    image: summerImage,
+    image: corporateCheckinsImage,
     price: "по запросу",
     tags: ["15–150 гостей", "Тимбилдинг", "Банкет и SPA"],
     title: "Корпоративные заезды",

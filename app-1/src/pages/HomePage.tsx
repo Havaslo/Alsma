@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 
+import corporateCheckinsImage from "@/assets/alsma/corporate-checkins.jpg";
 import heroImage from "@/assets/alsma/hero.jpg";
 import { HomeBookingBar } from "@/components/site/HomeBookingBar";
 import {
@@ -46,6 +47,11 @@ export const HomePage = () => {
     .map((item) => ({
       ...item,
       href: item.buttonLink,
+      image:
+        item.title === "Корпоративные заезды" ||
+        item.title === "Корпоративные выезды и тимбилдинги"
+          ? corporateCheckinsImage
+          : item.image,
     }));
   const reviews = getSiteCollection<HomeReview>(
     content.data?.items,
