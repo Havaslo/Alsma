@@ -14,6 +14,7 @@ type CreateAppOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
+  readonly openaiBaseUrl?: string;
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
   readonly database: Database;
@@ -37,6 +38,7 @@ export const createApp = ({
   logger,
   managedStorage,
   openaiApiKey,
+  openaiBaseUrl,
   yooKassaSecretKey,
   yooKassaShopId,
 }: CreateAppOptions): Express => {
@@ -63,6 +65,7 @@ export const createApp = ({
       epteraHotelId,
       managedStorage,
       openaiApiKey,
+      openaiBaseUrl,
       yooKassaSecretKey,
       yooKassaShopId,
     }),

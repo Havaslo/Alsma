@@ -25,6 +25,7 @@ const start = async (): Promise<void> => {
     epteraHotelId: config.epteraHotelId,
     managedStorage,
     openaiApiKey: config.openaiApiKey,
+    openaiBaseUrl: config.openaiBaseUrl,
     yooKassaSecretKey: config.yooKassaSecretKey,
     yooKassaShopId: config.yooKassaShopId,
   });

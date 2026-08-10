@@ -25,6 +25,8 @@ const environmentSchema = z.object({
   EPTERA_API_KEY: z.string().min(1).optional(),
   EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+  AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
+  AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
   YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
   YOOKASSA_SHOP_ID: z.string().min(1).optional(),
 });
@@ -40,6 +42,7 @@ export type AppConfig = {
   readonly nodeEnv: z.infer<typeof environmentSchema>["NODE_ENV"];
   readonly port: number;
   readonly openaiApiKey?: string;
+  readonly openaiBaseUrl?: string;
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
 };
@@ -58,7 +61,9 @@ export const readConfig = (
     },
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
-    openaiApiKey: parsed.OPENAI_API_KEY,
+    openaiApiKey:
+      parsed.AMAZI_AI_GATEWAY_OPENAI_API_KEY ?? parsed.OPENAI_API_KEY,
+    openaiBaseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
   };

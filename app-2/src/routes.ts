@@ -5,6 +5,7 @@ import { createAdminLeadsRouter } from "./features/admin-leads/admin-leads.route
 import { createAdminOperationsRouter } from "./features/admin-operations/admin-operations.routes.js";
 import { createAdminSettingsRouter } from "./features/admin-settings/admin-settings.routes.js";
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
+import { createAiAgentService } from "./features/agent/agent.service.js";
 import { createBookingRouter } from "./features/booking/booking.routes.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
 import { createYooKassaClient } from "./features/booking/yookassa.client.js";
@@ -25,6 +26,7 @@ type CreateApiRouterOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
+  readonly openaiBaseUrl?: string;
   readonly yooKassaShopId?: string;
   readonly yooKassaSecretKey?: string;
   readonly managedStorage: {
@@ -45,11 +47,23 @@ export const createApiRouter = ({
   epteraHotelId,
   managedStorage,
   openaiApiKey,
+  openaiBaseUrl,
   yooKassaSecretKey,
   yooKassaShopId,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService();
+  const agent = createAiAgentService({
+    apiKey: openaiApiKey,
+    baseUrl: openaiBaseUrl,
+    bookingUrl: "",
+    chat,
+    database,
+    eptera: createEpteraClient({
+      apiKey: epteraApiKey,
+      hotelId: epteraHotelId,
+    }),
+  });
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
@@ -68,7 +82,7 @@ export const createApiRouter = ({
       }),
     ),
   );
-  router.use("/chat", createChatRouter(database, chat));
+  router.use("/chat", createChatRouter(database, chat, agent));
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));
