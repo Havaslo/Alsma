@@ -8,6 +8,8 @@ import { createRequireAdmin } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import type { AiAgentService } from "../agent/agent.service.js";
+import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
+import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
 import type { ChatService } from "./chat.service.js";
 
 const conversationSchema = z.object({
@@ -50,6 +52,9 @@ export const createChatRouter = (
   agent: AiAgentService,
 ): Router => {
   const router = Router();
+  const knowledge = createKnowledgeBaseService(
+    createKnowledgeBaseRepository(database),
+  );
   router.get(
     "/messages",
     validateRequest({ query: conversationSchema }),
@@ -83,7 +88,18 @@ export const createChatRouter = (
         },
       });
       const published = chat.publish(input.conversationId, "guest", input.text);
-      void agent.reply(input.conversationId, input.text);
+      void agent
+        .reply(input.conversationId, input.text)
+        .then(async (result) => {
+          if (!result) {
+            const fallback = await knowledge.answer({
+              channel: "text",
+              question: input.text,
+            });
+            chat.publish(input.conversationId, "manager", fallback.answer);
+          }
+        })
+        .catch(() => undefined);
       response.status(201).json({ message: published });
     },
   );
@@ -108,11 +124,9 @@ export const createChatRouter = (
     validateRequest({ body: managerMessageSchema }),
     (_request, response) => {
       const input = response.locals.input.body;
-      response
-        .status(201)
-        .json({
-          message: chat.publish(input.conversationId, "manager", input.text),
-        });
+      response.status(201).json({
+        message: chat.publish(input.conversationId, "manager", input.text),
+      });
     },
   );
   admin.get("/stream", (request, response, next) => {
