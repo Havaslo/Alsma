@@ -179,11 +179,13 @@ export const ChatWidget = () => {
         },
       );
       knownIds.current.add(data.message.id);
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === temporaryId ? data.message : message,
+      setMessages((current) => [
+        ...current.filter(
+          (message) =>
+            message.id !== temporaryId && message.id !== data.message.id,
         ),
-      );
+        data.message,
+      ]);
     } catch {
       setAgentTyping(false);
       setMessages((current) =>
