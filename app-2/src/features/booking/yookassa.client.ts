@@ -53,6 +53,18 @@ const readPayment = (value: unknown): YooPayment => {
   };
 };
 
+const paymentErrorDetails = (value: unknown) => {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const details = ["type", "code", "description", "parameter"].reduce<
+    Record<string, string>
+  >((result, key) => {
+    if (typeof record[key] === "string") result[key] = record[key] as string;
+    return result;
+  }, {});
+  return Object.keys(details).length > 0 ? details : undefined;
+};
+
 export const createYooKassaClient = ({
   shopId,
   secretKey,
@@ -97,7 +109,7 @@ export const createYooKassaClient = ({
         response.status >= 500 ? 502 : 400,
         "YOOKASSA_REQUEST_FAILED",
         "Платёжный сервис не смог обработать запрос.",
-        { status: response.status },
+        { status: response.status, ...paymentErrorDetails(payload) },
       );
     }
     return payload as T;
@@ -110,6 +122,7 @@ export const createYooKassaClient = ({
       description: string;
       bookingId: string;
       returnUrl: string;
+      customer: { email: string; phone: string };
     }) =>
       readPayment(
         await request<unknown>("/payments", {
@@ -121,6 +134,19 @@ export const createYooKassaClient = ({
             capture: true,
             description: input.description,
             metadata: { bookingId: input.bookingId },
+            receipt: {
+              customer: input.customer,
+              items: [
+                {
+                  amount: { value: input.amount, currency: input.currency },
+                  description: input.description,
+                  payment_mode: "full",
+                  payment_subject: "service",
+                  quantity: "1.00",
+                  vat_code: 1,
+                },
+              ],
+            },
           }),
         }),
       ),

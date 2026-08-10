@@ -100,7 +100,6 @@ export const createBookingService = (
       "contact-last-name": input.contact.lastName,
       "contact-phone": phone,
       "currency-code": offer.currency,
-      "elder-child-count": input.childAges.filter((age) => age >= 7).length,
       "guest-list": input.guests.map((guestEntry) => ({
         birthday: guestEntry.birthDate,
         country: input.nationality,
@@ -160,6 +159,7 @@ export const createBookingService = (
       bookingId: booking.id,
       currency: offer.currency,
       description: `Бронирование ${voucherNumber ?? booking.id}`,
+      customer: { email: input.contact.email.toLowerCase(), phone },
       returnUrl: input.returnUrl,
     });
     const savedBooking = await repository.updatePayment({
