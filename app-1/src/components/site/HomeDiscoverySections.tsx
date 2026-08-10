@@ -6,8 +6,8 @@ import entertainmentAnimation from "@/assets/alsma/entertainment-animation.webp"
 import entertainmentMusic from "@/assets/alsma/entertainment-music.jpg";
 import entertainmentRental from "@/assets/alsma/entertainment-rental-new.webp";
 import entertainmentThemed from "@/assets/alsma/entertainment-themed-new.webp";
-import animationImage from "@/assets/alsma/feature-animation.png";
 import natureImage from "@/assets/alsma/feature-nature.png";
+import restaurantNewImage from "@/assets/alsma/feature-restaurant-new.jpg";
 import restaurantImage from "@/assets/alsma/feature-restaurant.png";
 import ctaImage from "@/assets/alsma/home-cta.jpg";
 import spaProcedures from "@/assets/alsma/spa-procedures.png";
@@ -50,7 +50,7 @@ const features = [
   [
     "Ресторан / кухня",
     ["Шведский стол", "Гастрономические истории"],
-    animationImage,
+    restaurantNewImage,
     ROUTES.allInclusive,
   ],
   [
