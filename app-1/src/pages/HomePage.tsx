@@ -17,7 +17,11 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { getSiteCollection } from "@/lib/site/content-collections";
-import { HOME_REVIEWS, type HomeReview } from "@/lib/site/home-content";
+import {
+  HOME_REST_CARDS,
+  HOME_REVIEWS,
+  type HomeReview,
+} from "@/lib/site/home-content";
 import {
   ACTIVE_OFFERS,
   type ActiveOffer,
@@ -37,11 +41,29 @@ export const HomePage = () => {
   const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const restCards = getSiteCollection<ReadyScenario>(
+  const configuredRestCards = getSiteCollection<ReadyScenario>(
     offersContent.data?.items,
     "ready-scenarios",
     READY_SCENARIOS,
-  )
+  );
+  const corporateCard = HOME_REST_CARDS.find((item) =>
+    item.title.toLocaleLowerCase().includes("корпоратив"),
+  );
+  const restCards = [
+    ...configuredRestCards,
+    ...(corporateCard &&
+    !configuredRestCards.some((item) =>
+      item.title.toLocaleLowerCase().includes("корпоратив"),
+    )
+      ? [
+          {
+            ...corporateCard,
+            image: corporateCheckinsImage,
+            buttonLink: corporateCard.href,
+          },
+        ]
+      : []),
+  ]
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
     .map((item) => ({
