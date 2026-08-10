@@ -4,6 +4,10 @@ import { Plus } from "lucide-react";
 
 import { AdminAgentScenarioCard } from "@/components/admin/AdminAgentScenarioCard";
 import { AdminAgentTransferRuleCard } from "@/components/admin/AdminAgentTransferRuleCard";
+import {
+  type AgentSettingsTab,
+  AgentSettingsTabPanel,
+} from "@/components/admin/AgentSettingsTabPanel";
 import { Button } from "@/components/ui/Button";
 import {
   MOCK_AGENT_SCENARIOS,
@@ -13,13 +17,22 @@ import {
 } from "@/lib/admin/admin-agent-scenario-mocks";
 import { cn } from "@/lib/cn";
 
-type AgentScenariosTab = "rules" | "scenarios";
+type AgentScenariosTab = AgentSettingsTab | "rules" | "scenarios";
 
 const SUMMARY_CARDS = [
   { key: "scenarios", label: "Сценариев ответов" },
   { key: "rules", label: "Правил перевода" },
   { key: "active", label: "Активно сейчас" },
 ] as const;
+
+const TABS: Array<{ label: string; value: AgentScenariosTab }> = [
+  { label: "Сценарии ответов", value: "scenarios" },
+  { label: "Правила перевода", value: "rules" },
+  { label: "Общие настройки", value: "general" },
+  { label: "Возможности агента", value: "capabilities" },
+  { label: "Данные клиента", value: "data" },
+  { label: "Уведомления", value: "notifications" },
+];
 
 export const AdminAgentScenariosPanel = () => {
   const [tab, setTab] = useState<AgentScenariosTab>("scenarios");
@@ -38,7 +51,7 @@ export const AdminAgentScenariosPanel = () => {
     scenarios: scenarios.length,
   };
 
-  const addScenario = () => {
+  const addScenario = () =>
     setScenarios((current) => [
       {
         enabled: true,
@@ -50,9 +63,7 @@ export const AdminAgentScenariosPanel = () => {
       },
       ...current,
     ]);
-  };
-
-  const addRule = () => {
+  const addRule = () =>
     setRules((current) => [
       {
         condition: "direct-request",
@@ -64,15 +75,15 @@ export const AdminAgentScenariosPanel = () => {
       },
       ...current,
     ]);
-  };
+  const isListTab = tab === "scenarios" || tab === "rules";
 
   return (
     <div className="space-y-6">
       <section>
         <h1 className="text-3xl font-semibold text-brand">Сценарии агентов</h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-          Управляйте готовыми ответами и правилами перевода, чтобы агент говорил
-          в нужном тоне и вовремя подключал менеджера.
+          Настройте поведение AI-агента: ответы, передачу диалога, доступные
+          действия, сбор данных и обязательное уведомление клиента.
         </p>
       </section>
 
@@ -90,87 +101,97 @@ export const AdminAgentScenariosPanel = () => {
         ))}
       </section>
 
-      <section className="border-b border-line">
-        <div className="flex items-end gap-8">
-          {[
-            ["scenarios", "Сценарии ответов"],
-            ["rules", "Правила перевода"],
-          ].map(([value, label]) => (
-            <button
-              className={cn(
-                "border-b-2 pb-3 text-base font-semibold transition",
-                tab === value
-                  ? "border-brand text-brand"
-                  : "border-transparent text-muted-ui-foreground",
-              )}
-              key={value}
-              onClick={() => setTab(value as AgentScenariosTab)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+      <nav className="flex gap-8 overflow-x-auto border-b border-line">
+        {TABS.map((item) => (
+          <button
+            className={cn(
+              "shrink-0 border-b-2 pb-3 text-sm font-semibold transition",
+              tab === item.value
+                ? "border-brand text-brand"
+                : "border-transparent text-muted-ui-foreground hover:text-page-foreground",
+            )}
+            key={item.value}
+            onClick={() => setTab(item.value)}
+            type="button"
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
-      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-brand">
-              {tab === "scenarios" ? "Сценарии ответов" : "Правила перевода"}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
-              {tab === "scenarios"
-                ? "Изменяйте текст ответов и дополнительные указания для новых обращений."
-                : "Определяйте, когда разговор нужно перевести менеджеру или поставить в обратный звонок."}
-            </p>
+      {isListTab ? (
+        <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-brand">
+                {tab === "scenarios" ? "Сценарии ответов" : "Правила перевода"}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
+                {tab === "scenarios"
+                  ? "Изменяйте тексты ответов и инструкции для новых обращений."
+                  : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку на обратную связь."}
+              </p>
+            </div>
+            <Button onClick={tab === "scenarios" ? addScenario : addRule}>
+              <Plus className="size-4" />
+              {tab === "scenarios" ? "Добавить сценарий" : "Добавить правило"}
+            </Button>
+          </header>
+          <div className="mt-6 space-y-4">
+            {tab === "scenarios"
+              ? scenarios.map((item) => (
+                  <AdminAgentScenarioCard
+                    item={item}
+                    key={item.id}
+                    onDelete={() =>
+                      setScenarios((current) =>
+                        current.filter((scenario) => scenario.id !== item.id),
+                      )
+                    }
+                    onSave={(updatedItem) =>
+                      setScenarios((current) =>
+                        current.map((scenario) =>
+                          scenario.id === updatedItem.id
+                            ? updatedItem
+                            : scenario,
+                        ),
+                      )
+                    }
+                  />
+                ))
+              : rules.map((item) => (
+                  <AdminAgentTransferRuleCard
+                    item={item}
+                    key={item.id}
+                    onDelete={() =>
+                      setRules((current) =>
+                        current.filter((rule) => rule.id !== item.id),
+                      )
+                    }
+                    onSave={(updatedItem) =>
+                      setRules((current) =>
+                        current.map((rule) =>
+                          rule.id === updatedItem.id ? updatedItem : rule,
+                        ),
+                      )
+                    }
+                  />
+                ))}
           </div>
-          <Button onClick={tab === "scenarios" ? addScenario : addRule}>
-            <Plus className="size-4" />
-            {tab === "scenarios" ? "Добавить сценарий" : "Добавить правило"}
-          </Button>
-        </header>
-
-        <div className="mt-6 space-y-4">
-          {tab === "scenarios"
-            ? scenarios.map((item) => (
-                <AdminAgentScenarioCard
-                  item={item}
-                  key={item.id}
-                  onDelete={() =>
-                    setScenarios((current) =>
-                      current.filter((scenario) => scenario.id !== item.id),
-                    )
-                  }
-                  onSave={(updatedItem) =>
-                    setScenarios((current) =>
-                      current.map((scenario) =>
-                        scenario.id === updatedItem.id ? updatedItem : scenario,
-                      ),
-                    )
-                  }
-                />
-              ))
-            : rules.map((item) => (
-                <AdminAgentTransferRuleCard
-                  item={item}
-                  key={item.id}
-                  onDelete={() =>
-                    setRules((current) =>
-                      current.filter((rule) => rule.id !== item.id),
-                    )
-                  }
-                  onSave={(updatedItem) =>
-                    setRules((current) =>
-                      current.map((rule) =>
-                        rule.id === updatedItem.id ? updatedItem : rule,
-                      ),
-                    )
-                  }
-                />
-              ))}
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+          <header className="mb-6">
+            <h2 className="text-xl font-semibold text-brand">
+              {TABS.find((item) => item.value === tab)?.label}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+              Настройки применяются ко всем новым диалогам AI-агента на сайте.
+            </p>
+          </header>
+          <AgentSettingsTabPanel tab={tab as AgentSettingsTab} />
+        </section>
+      )}
     </div>
   );
 };
