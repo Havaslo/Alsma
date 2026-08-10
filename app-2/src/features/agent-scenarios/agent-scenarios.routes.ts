@@ -9,10 +9,7 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { createAgentScenariosRepository } from "./agent-scenarios.repository.js";
-import {
-  agentScenarioBodySchema,
-  agentTransferRuleBodySchema,
-} from "./agent-scenarios.schemas.js";
+import { agentScenarioBodySchema, agentSettingsSchema, agentTransferRuleBodySchema } from "./agent-scenarios.schemas.js";
 
 export const createAgentScenariosRouter = (database: Database): Router => {
   const router = Router();
@@ -23,8 +20,18 @@ export const createAgentScenariosRouter = (database: Database): Router => {
   router.use(requireAdmin);
   router.use(createRequireAdminPermission("scenarios.access"));
   router.get("/", async (_request, response) => {
-    response.json(await repository.list());
+    response.json({ ...(await repository.list()), settings: await repository.getSettings() });
   });
+  router.get("/settings", async (_request, response) => {
+    response.json({ settings: await repository.getSettings() });
+  });
+  router.put(
+    "/settings",
+    validateRequest({ body: agentSettingsSchema }),
+    async (request, response) => {
+      response.json({ settings: await repository.saveSettings(request.body) });
+    },
+  );
   router.post(
     "/scenarios",
     validateRequest({ body: agentScenarioBodySchema }),
@@ -36,9 +43,7 @@ export const createAgentScenariosRouter = (database: Database): Router => {
     "/transfer-rules",
     validateRequest({ body: agentTransferRuleBodySchema }),
     async (request, response) => {
-      response.json({
-        transferRule: await repository.saveTransferRule(request.body),
-      });
+      response.json({ transferRule: await repository.saveTransferRule(request.body) });
     },
   );
   return router;

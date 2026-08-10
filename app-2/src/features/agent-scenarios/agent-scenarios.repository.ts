@@ -1,8 +1,11 @@
 import type { Database } from "../../lib/database/database.js";
 import type {
   AgentScenarioBody,
+  AgentSettingsBody,
   AgentTransferRuleBody,
 } from "./agent-scenarios.schemas.js";
+
+const SETTINGS_KEY = "agent.settings";
 
 export const createAgentScenariosRepository = (database: Database) => ({
   list: async () => ({
@@ -13,6 +16,22 @@ export const createAgentScenariosRepository = (database: Database) => ({
       orderBy: { updatedAt: "desc" },
     }),
   }),
+  getSettings: async () =>
+    (
+      await database.client.appSetting.findUnique({
+        select: { value: true },
+        where: { key: SETTINGS_KEY },
+      })
+    )?.value ?? null,
+  saveSettings: async (input: AgentSettingsBody) =>
+    (
+      await database.client.appSetting.upsert({
+        create: { key: SETTINGS_KEY, value: input },
+        select: { value: true },
+        update: { value: input },
+        where: { key: SETTINGS_KEY },
+      })
+    ).value,
   saveScenario: (input: AgentScenarioBody) =>
     input.id
       ? database.client.agentScenario.update({

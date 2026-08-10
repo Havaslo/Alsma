@@ -16,5 +16,27 @@ export const agentTransferRuleBodySchema = z.object({
   title: z.string().trim().min(1).max(255),
 });
 
+export const agentSettingsSchema = z
+  .object({
+    enabled: z.boolean(),
+    tone: z.string().trim().min(1).max(2_000),
+    language: z.string().trim().min(1).max(500),
+    greeting: z.string().trim().min(1).max(2_000),
+    bookingUrl: z.string().trim().min(1).max(2_000),
+    canCheckAvailability: z.boolean(),
+    canCreateRequest: z.boolean(),
+    canTransferToEmployee: z.boolean(),
+    canCreateBooking: z.literal(false),
+    collectName: z.boolean(),
+    collectPhone: z.boolean(),
+    collectGuestsCount: z.boolean(),
+    collectDates: z.boolean(),
+    showAiDisclosure: z.boolean(),
+    notifyOnAiReply: z.boolean(),
+    disclosureText: z.string().trim().min(1).max(500),
+  })
+  .strict();
+
 export type AgentScenarioBody = z.infer<typeof agentScenarioBodySchema>;
 export type AgentTransferRuleBody = z.infer<typeof agentTransferRuleBodySchema>;
+export type AgentSettingsBody = z.infer<typeof agentSettingsSchema>;

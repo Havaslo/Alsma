@@ -10,3 +10,7 @@
 Платёж хранится в `guest_bookings` по `paymentId`, а сумма — по `paymentAmount`. Для POST-запроса используется идемпотентный ключ, связанный с ID брони. Статус не считается успешным по одному редиректу: webhook `POST /api/booking/payments/webhook` получает уведомление, затем backend запрашивает актуальный платёж в ЮKassa и только после этого переводит бронь в `confirmed` при `payment.succeeded`. Настройте этот URL как webhook в кабинете ЮKassa.
 
 `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` настраиваются в интеграциях проекта и используются только backend. Вебхуки и платежи не логируют секреты или данные банковских карт. При отказе ЮKassa backend возвращает только безопасные диагностические поля (`status`, `code`, `description`, `parameter`); секретный ключ и заголовок авторизации никогда не попадают в ответ.
+
+## Настройки AI-агента
+
+`/api/admin/agent-scenarios/settings` хранит конфигурацию вкладок AI-агента в существующей таблице `app_settings` по ключу `agent.settings`. GET и PUT защищены админской авторизацией и permission `scenarios.access`. Схема backend принудительно принимает `canCreateBooking: false`, поэтому клиентский интерфейс не может включить самостоятельное создание брони.
