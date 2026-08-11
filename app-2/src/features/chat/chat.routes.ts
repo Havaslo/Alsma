@@ -23,6 +23,16 @@ const guestMessageSchema = conversationSchema.extend({
 const managerMessageSchema = conversationSchema.extend({
   text: z.string().trim().min(1).max(2_000),
 });
+const modeSchema = conversationSchema.extend({
+  mode: z.enum(["agent", "manager"]),
+});
+type ChatMode = z.infer<typeof modeSchema>["mode"];
+const readDetails = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+const readChatMode = (value: unknown): ChatMode =>
+  readDetails(value).chatMode === "manager" ? "manager" : "agent";
 const writeEvent = (
   response: { write: (value: string) => void },
   payload: unknown,
@@ -54,6 +64,32 @@ export const createChatRouter = (
   const router = Router();
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(database),
+  );
+  const getMode = async (conversationId: string): Promise<ChatMode> => {
+    const request = await database.client.adminRequest.findUnique({
+      where: { id: conversationId },
+      select: { details: true },
+    });
+    return readChatMode(request?.details);
+  };
+  const setMode = async (conversationId: string, mode: ChatMode) => {
+    const request = await database.client.adminRequest.findUnique({
+      where: { id: conversationId },
+      select: { details: true },
+    });
+    if (!request) return;
+    await database.client.adminRequest.update({
+      where: { id: conversationId },
+      data: { details: { ...readDetails(request.details), chatMode: mode } },
+    });
+  };
+  router.get(
+    "/mode",
+    validateRequest({ query: conversationSchema }),
+    async (_request, response) =>
+      response.json({
+        mode: await getMode(response.locals.input.query.conversationId),
+      }),
   );
   router.get(
     "/messages",
@@ -88,9 +124,17 @@ export const createChatRouter = (
         },
       });
       const published = chat.publish(input.conversationId, "guest", input.text);
+      if ((await getMode(input.conversationId)) === "manager") {
+        response.status(201).json({ message: published });
+        return;
+      }
       void agent
         .reply(input.conversationId, input.text)
         .then(async (result) => {
+          if (result?.action === "transfer") {
+            await setMode(input.conversationId, "manager");
+            return;
+          }
           if (!result) {
             const fallback = await knowledge.answer({
               channel: "text",
@@ -100,7 +144,7 @@ export const createChatRouter = (
               input.conversationId,
               "manager",
               fallback.status === "answered"
-                ? "Не удалось сформировать ответ прямо сейчас. Я уже передал ваш вопрос сотруднику — он ответит в этом чате."
+                ? "Не удалось сформировать ответ прямо сейчас. Я уже передал ваш вопрос сотруднику — менеджер ответит в этом чате."
                 : fallback.answer,
             );
           }
@@ -126,10 +170,20 @@ export const createChatRouter = (
     response.json({ items: chat.list() }),
   );
   admin.post(
+    "/mode",
+    validateRequest({ body: modeSchema }),
+    async (_request, response) => {
+      const input = response.locals.input.body;
+      await setMode(input.conversationId, input.mode);
+      response.json({ mode: input.mode });
+    },
+  );
+  admin.post(
     "/messages",
     validateRequest({ body: managerMessageSchema }),
-    (_request, response) => {
+    async (_request, response) => {
       const input = response.locals.input.body;
+      await setMode(input.conversationId, "manager");
       response.status(201).json({
         message: chat.publish(input.conversationId, "manager", input.text),
       });

@@ -40,6 +40,7 @@ export const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [agentTyping, setAgentTyping] = useState(false);
+  const [chatMode, setChatMode] = useState<"agent" | "manager">("agent");
   const [text, setText] = useState("");
   const [identity, setIdentity] = useState<Identity | null>(() =>
     getIdentity(),
@@ -92,10 +93,15 @@ export const ChatWidget = () => {
   useEffect(() => {
     let ready = false;
     const load = async () => {
-      const { data } = await apiClient.get<{ items: ChatMessage[] }>(
-        "/chat/messages",
-        { params: { conversationId } },
-      );
+      const [{ data }, { data: modeData }] = await Promise.all([
+        apiClient.get<{ items: ChatMessage[] }>("/chat/messages", {
+          params: { conversationId },
+        }),
+        apiClient.get<{ mode: "agent" | "manager" }>("/chat/mode", {
+          params: { conversationId },
+        }),
+      ]);
+      setChatMode(modeData.mode);
       if (!ready) {
         data.items.forEach((item) => knownIds.current.add(item.id));
         setMessages(data.items);
@@ -203,7 +209,9 @@ export const ChatWidget = () => {
             <div>
               <strong className="block">Помощь АЛСМА</strong>
               <span className="text-xs text-brand-foreground/70">
-                Отвечаем в реальном времени
+                {chatMode === "manager"
+                  ? "Сейчас отвечает менеджер"
+                  : "Сейчас отвечает AI-ассистент"}
               </span>
             </div>
             <button aria-label="Закрыть чат" onClick={closeChat} type="button">
@@ -276,7 +284,11 @@ export const ChatWidget = () => {
                   aria-label="Сообщение"
                   className="min-w-0 flex-1 rounded-xl border border-line bg-page px-3 py-2 text-sm outline-none focus:border-focus"
                   onChange={(event) => setText(event.target.value)}
-                  placeholder="Ваш вопрос"
+                  placeholder={
+                    chatMode === "manager"
+                      ? "Сообщение менеджеру"
+                      : "Ваш вопрос"
+                  }
                   value={text}
                 />
                 <button
