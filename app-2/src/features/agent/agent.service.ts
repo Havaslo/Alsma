@@ -8,6 +8,13 @@ import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
 
 const settingsKey = "agent.settings";
+const bookingSchema = z.object({
+  checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  adults: z.number().int().min(1).max(12),
+  childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
+  roomCount: z.number().int().min(1).max(2),
+});
 const actionSchema = z.object({
   action: z.enum(["answer", "create_request", "transfer"]),
   name: z.string().trim().max(160).optional(),
@@ -23,15 +30,7 @@ const actionSchema = z.object({
     .optional(),
   guestsCount: z.number().int().min(1).max(20).optional(),
   answer: z.string().trim().min(1).max(4_000),
-  booking: z
-    .object({
-      checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      adults: z.number().int().min(1).max(12),
-      childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
-      roomCount: z.number().int().min(1).max(2),
-    })
-    .optional(),
+  booking: z.unknown().optional(),
 });
 type AgentOptions = {
   readonly apiKey?: string;
@@ -219,29 +218,30 @@ export const createAiAgentService = (options: AgentOptions) => {
         },
       });
     let bookingUrl: string | undefined;
-    if (result.booking) {
+    const booking = bookingSchema.safeParse(result.booking);
+    if (booking.success) {
       try {
         const offers = await options.eptera.getOffers({
-          adults: result.booking.adults,
-          checkIn: result.booking.checkInDate,
-          checkOut: result.booking.checkOutDate,
-          childAges: result.booking.childAges,
+          adults: booking.data.adults,
+          checkIn: booking.data.checkInDate,
+          checkOut: booking.data.checkOutDate,
+          childAges: booking.data.childAges,
           currency: "RUB",
           language: "ru",
           nationality: "RU",
-          roomCount: result.booking.roomCount,
+          roomCount: booking.data.roomCount,
         });
         if (
-          offers.some((offer) => offer.roomToSell >= result.booking!.roomCount)
+          offers.some((offer) => offer.roomToSell >= booking.data.roomCount)
         ) {
           const base = settings.bookingUrl || options.bookingUrl;
           const url = new URL(base, "https://alsma.ru");
           url.search = new URLSearchParams({
-            checkIn: result.booking.checkInDate,
-            checkOut: result.booking.checkOutDate,
-            adults: String(result.booking.adults),
-            childAges: result.booking.childAges.join(","),
-            roomCount: String(result.booking.roomCount),
+            checkIn: booking.data.checkInDate,
+            checkOut: booking.data.checkOutDate,
+            adults: String(booking.data.adults),
+            childAges: booking.data.childAges.join(","),
+            roomCount: String(booking.data.roomCount),
           }).toString();
           bookingUrl = /^https?:/u.test(base)
             ? url.toString()
