@@ -96,7 +96,13 @@ export const createChatRouter = (
               channel: "text",
               question: input.text,
             });
-            chat.publish(input.conversationId, "manager", fallback.answer);
+            chat.publish(
+              input.conversationId,
+              "manager",
+              fallback.status === "answered"
+                ? "Сейчас AI-ассистент временно недоступен. Я уже передал ваш вопрос сотруднику — он ответит в этом чате."
+                : fallback.answer,
+            );
           }
         })
         .catch(() => undefined);

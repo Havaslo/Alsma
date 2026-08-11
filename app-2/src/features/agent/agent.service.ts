@@ -106,7 +106,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       settings.showAiDisclosure
         ? `При первом ответе уместно сообщи: ${settings.disclosureText}`
         : "",
-      "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия.",
+      "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст; сформулируй короткий прямой ответ именно на вопрос гостя. Если в контексте нет ответа, честно скажи об этом и предложи помощь сотрудника.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Вместо брони предложи ссылку: ${settings.bookingUrl || options.bookingUrl}.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer.",
       "Верни только JSON без markdown в формате: {action:'answer'|'create_request'|'transfer', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, answer:string}.",
