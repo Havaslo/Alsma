@@ -51,20 +51,47 @@ const dateText = (value: string) =>
 const steps = ["Номера", "Тарифы", "Контакты"];
 type RoomGuests = { adults: number; childAges: number[] };
 const initialRooms: RoomGuests[] = [{ adults: 2, childAges: [] }];
+const getInitialBooking = () => {
+  const params = new URLSearchParams(
+    typeof window === "undefined" ? "" : window.location.search,
+  );
+  const adults = Math.max(1, Number(params.get("adults")) || 2);
+  const roomCount = Math.min(
+    2,
+    Math.max(1, Number(params.get("roomCount")) || 1),
+  );
+  const childAges = (params.get("childAges") || "")
+    .split(",")
+    .map(Number)
+    .filter((age) => Number.isInteger(age) && age >= 0 && age <= 17);
+  const checkIn = params.get("checkIn") || iso(start);
+  const checkOut = params.get("checkOut") || iso(end);
+  const rooms = Array.from({ length: roomCount }, (_, index) => ({
+    adults: index === 0 ? Math.max(1, adults - (roomCount - 1)) : 1,
+    childAges: index === 0 ? childAges : [],
+  }));
+  return {
+    rooms,
+    search: {
+      adults,
+      checkIn,
+      checkOut,
+      childAges,
+      currency: "RUB",
+      language: "ru",
+      nationality: "RU",
+      roomCount,
+    } satisfies BookingSearch,
+  };
+};
 
 export const BookingPage = () => {
-  const [roomGuests, setRoomGuests] = useState<RoomGuests[]>(initialRooms);
-  const [search, setSearch] = useState<BookingSearch>({
-    adults: 2,
-    checkIn: iso(start),
-    checkOut: iso(end),
-    childAges: [],
-    currency: "RUB",
-    language: "ru",
-    nationality: "RU",
-    roomCount: 1,
-  });
-  const [submittedSearch, setSubmittedSearch] = useState(search);
+  const initialBooking = useMemo(getInitialBooking, []);
+  const [roomGuests, setRoomGuests] = useState<RoomGuests[]>(
+    initialBooking.rooms,
+  );
+  const [search, setSearch] = useState<BookingSearch>(initialBooking.search);
+  const [submittedSearch, setSubmittedSearch] = useState(initialBooking.search);
   const [step, setStep] = useState(0);
   const [roomName, setRoomName] = useState<string | null>(null);
   const [offer, setOffer] = useState<BookingOffer | null>(null);

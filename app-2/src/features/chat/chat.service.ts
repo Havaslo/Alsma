@@ -6,6 +6,7 @@ export type ChatMessage = {
   readonly author: "guest" | "manager";
   readonly text: string;
   readonly createdAt: string;
+  readonly bookingUrl?: string;
 };
 
 type Subscriber = (message: ChatMessage) => void;
@@ -18,6 +19,7 @@ export const createChatService = () => {
     conversationId: string,
     author: ChatMessage["author"],
     text: string,
+    bookingUrl?: string,
   ) => {
     const message: ChatMessage = {
       id: randomUUID(),
@@ -25,6 +27,7 @@ export const createChatService = () => {
       author,
       text,
       createdAt: new Date().toISOString(),
+      ...(bookingUrl ? { bookingUrl } : {}),
     };
     const conversation = messages.get(conversationId) ?? [];
     conversation.push(message);

@@ -13,6 +13,7 @@ export type ChatMessage = {
   author: "guest" | "manager";
   text: string;
   createdAt: string;
+  bookingUrl?: string;
 };
 type Identity = { requester: string; contact: string };
 const STORAGE_KEY = "alsma-chat-conversation";
@@ -254,7 +255,15 @@ export const ChatWidget = () => {
                     )}
                     key={message.id}
                   >
-                    {message.text}
+                    <p>{message.text}</p>
+                    {message.bookingUrl && (
+                      <a
+                        className="mt-3 inline-flex rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground no-underline"
+                        href={message.bookingUrl}
+                      >
+                        Открыть бронирование
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
