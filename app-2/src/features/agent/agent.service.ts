@@ -110,9 +110,6 @@ export const createAiAgentService = (options: AgentOptions) => {
           "\nАктуальная проверка Eptera сейчас недоступна; не утверждай наличие.";
       }
     }
-    const hadAgentReply = options.chat
-      .list(conversationId)
-      .some((item) => item.author === "manager");
     const context = (
       knowledgeResult.sources.map((source) => source.content).join("\n\n") +
       availability
@@ -125,9 +122,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       .join("\n");
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
-      settings.showAiDisclosure && !hadAgentReply
-        ? "Это первый ответ в разговоре. Не добавляй отдельное служебное приветствие в ответ: оно будет добавлено сервером один раз."
-        : "Не упоминай, что ты AI-ассистент, и не добавляй служебное раскрытие в этот ответ.",
+      "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст; сформулируй короткий прямой ответ именно на вопрос гостя. Если в контексте нет ответа, честно скажи об этом и предложи помощь сотрудника.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Вместо брони предложи ссылку: ${settings.bookingUrl || options.bookingUrl}.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer.",
@@ -264,11 +259,15 @@ export const createAiAgentService = (options: AgentOptions) => {
       !result.answer.includes(transferNotice)
         ? `${result.answer} ${transferNotice}`
         : result.answer;
-    const disclosure =
-      settings.showAiDisclosure && !hadAgentReply
-        ? `${settings.disclosureText.trim()} `
-        : "";
-    const answer = `${disclosure}${answerWithTransfer}`.trim();
+    const withoutDisclosure = answerWithTransfer
+      .replace(
+        /В этом чате отвечает AI-ассистент\.\s*При необходимости подключим сотрудника\.\s*/iu,
+        "",
+      )
+      .replace(/^Здравствуйте!\s*/iu, "")
+      .trim();
+    const answer =
+      withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
     options.chat.publish(conversationId, "manager", answer, bookingUrl);
     return { action: result.action, answer };
   };
