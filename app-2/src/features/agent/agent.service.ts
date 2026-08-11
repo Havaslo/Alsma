@@ -56,6 +56,47 @@ const asSettings = (value: unknown) => ({
 });
 const normalizeBaseUrl = (value?: string) => (value ?? "").replace(/\/$/u, "");
 
+const monthNumbers: Record<string, string> = {
+  января: "01",
+  февраля: "02",
+  марта: "03",
+  апреля: "04",
+  мая: "05",
+  июня: "06",
+  июля: "07",
+  августа: "08",
+  сентября: "09",
+  октября: "10",
+  ноября: "11",
+  декабря: "12",
+};
+
+const extractBooking = (text: string) => {
+  const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
+    (match) => match[1],
+  );
+  const russianRange = text.match(
+    /(?:с\s*)?(\d{1,2})\s*(?:[-–]\s*|по\s+)(\d{1,2})\s+([а-яё]+)\s+(\d{4})/iu,
+  );
+  const dates = russianRange
+    ? [
+        `${russianRange[4]!}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[1]!)).padStart(2, "0")}`,
+        `${russianRange[4]!}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
+      ]
+    : isoDates.slice(-2);
+  const adultsMatch = text.match(/(\d{1,2})\s*(?:взросл\w*|человек\w*)/iu);
+  const roomsMatch = text.match(/(\d{1,2})\s*номер\w*/iu);
+  if (dates.length < 2 || !adultsMatch || !roomsMatch) return null;
+  const candidate = {
+    checkInDate: dates[0] ?? "",
+    checkOutDate: dates[1] ?? "",
+    adults: Number(adultsMatch[1]),
+    childAges: [],
+    roomCount: Number(roomsMatch[1]),
+  };
+  return bookingSchema.safeParse(candidate).success ? candidate : null;
+};
+
 export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
@@ -67,14 +108,17 @@ export const createAiAgentService = (options: AgentOptions) => {
     });
     const settings = asSettings(setting?.value);
     if (!settings.enabled || !options.apiKey || !options.baseUrl) return null;
-    const history = options.chat
-      .list(conversationId)
-      .slice(-12)
+    const conversationMessages = options.chat.list(conversationId).slice(-20);
+    const conversationText = conversationMessages
+      .map((item) => item.text)
+      .join("\n");
+    const history = conversationMessages
       .map(
         (item) =>
-          `${item.author === "guest" ? "Гость" : "Ассистент"}: ${item.text}`,
+          `${item.author === "guest" ? "Гость" : item.author === "manager" ? "Менеджер" : "AI-ассистент"}: ${item.text}`,
       )
       .join("\n");
+    const extractedBooking = extractBooking(conversationText);
     const [knowledgeResult, scenarios, transferRules, knowledgeRules] =
       await Promise.all([
         knowledge.answer({ channel: "text", question: message }),
@@ -91,39 +135,11 @@ export const createAiAgentService = (options: AgentOptions) => {
           orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
         }),
       ]);
-    const dates = message.match(/\d{4}-\d{2}-\d{2}/gu) ?? [];
-    const guests = message.match(
-      /(?:гост\w*|челов\w*|взросл\w*)\D{0,8}(\d{1,2})/iu,
-    );
-    let availability = "";
-    if (settings.canCheckAvailability && dates.length >= 2 && guests) {
-      options.chat.publishStatus(
-        conversationId,
-        "checking_availability",
-        "Проверяю наличие в Eptera",
-      );
-      try {
-        const offers = await options.eptera.getOffers({
-          adults: Math.max(1, Number(guests[1])),
-          checkIn: dates[0] ?? "",
-          checkOut: dates[1] ?? "",
-          childAges: [],
-          currency: "RUB",
-          language: "ru",
-          nationality: "RU",
-          roomCount: 1,
-        });
-        availability = `\nАктуальная проверка Eptera: найдено вариантов ${offers.filter((offer) => offer.roomToSell > 0).length}.`;
-      } catch {
-        availability =
-          "\nАктуальная проверка Eptera сейчас недоступна; не утверждай наличие.";
-      }
-    }
     options.chat.publishStatus(conversationId, "composing", "Формирую ответ");
-    const context = (
-      knowledgeResult.sources.map((source) => source.content).join("\n\n") +
-      availability
-    ).slice(0, 9_000);
+    const context = knowledgeResult.sources
+      .map((source) => source.content)
+      .join("\n\n")
+      .slice(0, 9_000);
     const scenarioContext = scenarios
       .map((item) => `${item.title}: ${item.trigger} => ${item.response}`)
       .join("\n");
@@ -237,7 +253,12 @@ export const createAiAgentService = (options: AgentOptions) => {
     let bookingUrl: string | undefined;
     let availabilityResult: "available" | "unavailable" | "error" | null = null;
     let availableOfferCount = 0;
-    const booking = bookingSchema.safeParse(result.booking);
+    const modelBooking = bookingSchema.safeParse(result.booking);
+    const booking = modelBooking.success
+      ? modelBooking
+      : extractedBooking
+        ? { success: true as const, data: extractedBooking }
+        : modelBooking;
     if (booking.success) {
       options.chat.publishStatus(
         conversationId,
@@ -297,14 +318,12 @@ export const createAiAgentService = (options: AgentOptions) => {
     let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
     if (booking.success && availabilityResult === "available") {
-      answer =
-        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} Нашёл ${availableOfferCount} подходящих вариантов в системе бронирования. Откройте подборку по вашим параметрам по кнопке ниже.`.trim();
+      answer = `По вашим параметрам в Eptera найдено подходящих вариантов: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
     } else if (booking.success && availabilityResult === "unavailable") {
-      answer =
-        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} К сожалению, по этим параметрам свободных вариантов сейчас не найдено.`.trim();
+      answer = "По вашим параметрам в Eptera свободных номеров не найдено.";
     } else if (booking.success && availabilityResult === "error") {
       answer =
-        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} Не удалось получить актуальное наличие из Eptera. Попробуйте ещё раз или я передам вопрос сотруднику.`.trim();
+        "Не удалось получить актуальное наличие из Eptera. Попробуйте ещё раз или я передам вопрос сотруднику.";
     }
     options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: result.action, answer };
