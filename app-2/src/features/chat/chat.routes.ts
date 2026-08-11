@@ -142,22 +142,30 @@ export const createChatRouter = (
             return;
           }
           if (!result) {
-            chat.publishStatus(input.conversationId, "idle", "");
-            const fallback = await knowledge.answer({
-              channel: "text",
-              question: input.text,
-            });
-            chat.publish(
-              input.conversationId,
-              "agent",
-              fallback.status === "answered"
-                ? "Не удалось сформировать ответ прямо сейчас. Я уже передал ваш вопрос сотруднику — менеджер ответит в этом чате."
-                : fallback.answer,
-            );
+            let fallbackText =
+              "Не удалось сформировать ответ автоматически. Я передал вопрос сотруднику — менеджер ответит в этом чате.";
+            try {
+              const fallback = await knowledge.answer({
+                channel: "text",
+                question: input.text,
+              });
+              fallbackText =
+                fallback.status === "answered"
+                  ? "Не удалось сформировать ответ автоматически. Я передал вопрос сотруднику — менеджер ответит в этом чате."
+                  : fallback.answer;
+            } catch {
+              // The fallback itself must never prevent a final chat message.
+            }
+            chat.publish(input.conversationId, "agent", fallbackText);
           }
           chat.publishStatus(input.conversationId, "idle", "");
         })
         .catch(() => {
+          chat.publish(
+            input.conversationId,
+            "agent",
+            "Не удалось получить ответ автоматически. Я передал вопрос сотруднику — менеджер ответит в этом чате.",
+          );
           chat.publishStatus(input.conversationId, "idle", "");
         });
       response.status(201).json({ message: published });
