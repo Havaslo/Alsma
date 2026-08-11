@@ -276,9 +276,14 @@ export const createAiAgentService = (options: AgentOptions) => {
           nationality: "RU",
           roomCount: booking.data.roomCount,
         });
-        availableOfferCount = offers.filter(
-          (offer) => offer.roomToSell >= booking.data.roomCount,
-        ).length;
+        const availableOffers = offers.filter(
+          (offer) =>
+            offer.roomToSell === null ||
+            offer.roomToSell >= booking.data.roomCount,
+        );
+        availableOfferCount = new Set(
+          availableOffers.map((offer) => offer.roomTypeId),
+        ).size;
         availabilityResult = availableOfferCount ? "available" : "unavailable";
         if (availabilityResult === "available") {
           const base = settings.bookingUrl || options.bookingUrl || "/booking";
@@ -318,7 +323,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
     if (booking.success && availabilityResult === "available") {
-      answer = `По вашим параметрам в Eptera найдено подходящих вариантов: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
+      answer = `По вашим параметрам в Eptera найдено подходящих типов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
     } else if (booking.success && availabilityResult === "unavailable") {
       answer = "По вашим параметрам в Eptera свободных номеров не найдено.";
     } else if (booking.success && availabilityResult === "error") {

@@ -76,7 +76,7 @@ export const createBookingService = (
       roomCount: input.roomCount,
     });
     const offer = offers.find((candidate) => candidate.id === input.offerId);
-    if (!offer || offer.roomToSell < 1) {
+    if (!offer || offer.roomToSell === 0) {
       throw new HttpError(
         409,
         "OFFER_UNAVAILABLE",

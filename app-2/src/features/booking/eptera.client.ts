@@ -29,7 +29,7 @@ export type EpteraOffer = {
   readonly currency: string;
   readonly price: number;
   readonly discountedPrice: number;
-  readonly roomToSell: number;
+  readonly roomToSell: number | null;
   readonly cancellationPenalty: unknown;
   readonly rateDescription: string | null;
   readonly benefits: readonly string[];
@@ -50,6 +50,15 @@ const string = (record: Record<string, unknown>, key: string): string =>
   typeof record[key] === "string" ? record[key] : "";
 const number = (record: Record<string, unknown>, key: string): number =>
   typeof record[key] === "number" ? record[key] : Number(record[key]);
+const nullableNumber = (
+  record: Record<string, unknown>,
+  key: string,
+): number | null => {
+  const value = record[key];
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const readOfferItems = (payload: unknown): unknown[] => {
   if (Array.isArray(payload)) return payload;
@@ -396,7 +405,7 @@ export const createEpteraClient = ({
             currency: string(offer, "currency"),
             price: number(offer, "price"),
             discountedPrice: number(offer, "discounted-price"),
-            roomToSell: number(offer, "room-tosell"),
+            roomToSell: nullableNumber(offer, "room-tosell"),
             cancellationPenalty: offer["cancellation-penalty"] ?? null,
             rateDescription:
               typeof offer["rate-description"] === "string"
