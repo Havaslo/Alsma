@@ -1,3 +1,4 @@
+import type { Logger } from "pino";
 import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
@@ -30,6 +31,7 @@ type AgentOptions = {
   readonly chat: ChatService;
   readonly database: Database;
   readonly eptera: EpteraClient;
+  readonly logger: Logger;
 };
 const asSettings = (value: unknown) => ({
   enabled: true,
@@ -126,21 +128,42 @@ export const createAiAgentService = (options: AgentOptions) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-5.4-mini",
           temperature: 0.2,
           ...(responseFormat ? { response_format: responseFormat } : {}),
           messages: [{ role: "user", content: prompt }],
         }),
         signal: AbortSignal.timeout(20_000),
       });
+    const logGatewayFailure = async (response: Response) => {
+      const body = (await response.text().catch(() => "")).slice(0, 1_000);
+      options.logger.warn(
+        {
+          gatewayError: body || undefined,
+          gatewayStatus: response.status,
+          gatewayStatusText: response.statusText,
+        },
+        "AI Gateway request failed",
+      );
+    };
     let response: Response;
     try {
       response = await request({ type: "json_object" });
-      if (!response.ok) response = await request();
-    } catch {
+      if (!response.ok) {
+        await logGatewayFailure(response);
+        response = await request();
+      }
+    } catch (error) {
+      options.logger.warn(
+        { error: error instanceof Error ? error.message : "Unknown error" },
+        "AI Gateway request could not be completed",
+      );
       return null;
     }
-    if (!response.ok) return null;
+    if (!response.ok) {
+      await logGatewayFailure(response);
+      return null;
+    }
     const payload = (await response.json().catch(() => null)) as {
       choices?: Array<{ message?: { content?: string } }>;
     } | null;

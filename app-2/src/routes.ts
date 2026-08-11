@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Logger } from "pino";
 
 import { createAdminAuthRouter } from "./features/admin-auth/admin-auth.routes.js";
 import { createAdminLeadsRouter } from "./features/admin-leads/admin-leads.routes.js";
@@ -29,6 +30,7 @@ type CreateApiRouterOptions = {
   readonly openaiBaseUrl?: string;
   readonly yooKassaShopId?: string;
   readonly yooKassaSecretKey?: string;
+  readonly logger: Logger;
   readonly managedStorage: {
     readonly upload: (input: {
       readonly content: Uint8Array;
@@ -45,6 +47,7 @@ export const createApiRouter = ({
   database,
   epteraApiKey,
   epteraHotelId,
+  logger,
   managedStorage,
   openaiApiKey,
   openaiBaseUrl,
@@ -63,6 +66,7 @@ export const createApiRouter = ({
       apiKey: epteraApiKey,
       hotelId: epteraHotelId,
     }),
+    logger,
   });
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));

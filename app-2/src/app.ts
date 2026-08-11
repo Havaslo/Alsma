@@ -63,6 +63,7 @@ export const createApp = ({
       database,
       epteraApiKey,
       epteraHotelId,
+      logger,
       managedStorage,
       openaiApiKey,
       openaiBaseUrl,
