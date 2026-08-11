@@ -9,7 +9,7 @@ import { apiClient } from "@/lib/api/api-client";
 export type RequestChatMessage = {
   readonly id: string;
   readonly conversationId: string;
-  readonly author: "guest" | "manager";
+  readonly author: "guest" | "agent" | "manager";
   readonly text: string;
   readonly createdAt: string;
 };
@@ -28,6 +28,7 @@ export const RequestChat = ({
 }: RequestChatProps) => {
   const [messages, setMessages] = useState<RequestChatMessage[]>([]);
   const [mode, setMode] = useState<"agent" | "manager">("agent");
+  const [agentStatus, setAgentStatus] = useState("");
   const [text, setText] = useState("");
   const adminHeaders = { Authorization: `Bearer ${readAdminSession() ?? ""}` };
 
@@ -66,7 +67,13 @@ export const RequestChat = ({
       `/api/chat/stream?conversationId=${encodeURIComponent(conversationId)}`,
     );
     events.onmessage = (event) => {
-      const message = JSON.parse(event.data) as RequestChatMessage;
+      const eventData = JSON.parse(event.data) as
+        RequestChatMessage | { type: "status"; label: string };
+      if ("type" in eventData && eventData.type === "status") {
+        setAgentStatus(eventData.label);
+        return;
+      }
+      const message = eventData as RequestChatMessage;
       if (message.id)
         setMessages((current) =>
           current.some((item) => item.id === message.id)
@@ -125,6 +132,11 @@ export const RequestChat = ({
           </button>
         </div>
       </header>
+      {agentStatus && mode === "agent" && (
+        <p className="border-b border-line px-5 py-3 text-xs font-medium text-muted-ui-foreground">
+          {agentStatus}…
+        </p>
+      )}
       <div className="max-h-96 space-y-3 overflow-y-auto p-5">
         {messages.map((message) => (
           <article
@@ -132,7 +144,11 @@ export const RequestChat = ({
             key={message.id}
           >
             <p className="mb-1 text-xs font-semibold opacity-70">
-              {message.author === "manager" ? "Менеджер" : "Гость"}
+              {message.author === "manager"
+                ? "Менеджер"
+                : message.author === "agent"
+                  ? "AI-ассистент"
+                  : "Гость"}
             </p>
             <p>{message.text}</p>
           </article>

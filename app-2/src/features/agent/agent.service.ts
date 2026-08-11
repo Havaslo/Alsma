@@ -92,6 +92,11 @@ export const createAiAgentService = (options: AgentOptions) => {
     );
     let availability = "";
     if (settings.canCheckAvailability && dates.length >= 2 && guests) {
+      options.chat.publishStatus(
+        conversationId,
+        "checking_availability",
+        "Проверяю наличие в Eptera",
+      );
       try {
         const offers = await options.eptera.getOffers({
           adults: Math.max(1, Number(guests[1])),
@@ -109,6 +114,7 @@ export const createAiAgentService = (options: AgentOptions) => {
           "\nАктуальная проверка Eptera сейчас недоступна; не утверждай наличие.";
       }
     }
+    options.chat.publishStatus(conversationId, "composing", "Формирую ответ");
     const context = (
       knowledgeResult.sources.map((source) => source.content).join("\n\n") +
       availability
@@ -222,6 +228,11 @@ export const createAiAgentService = (options: AgentOptions) => {
     let bookingUrl: string | undefined;
     const booking = bookingSchema.safeParse(result.booking);
     if (booking.success) {
+      options.chat.publishStatus(
+        conversationId,
+        "checking_availability",
+        "Проверяю подтверждённые параметры в Eptera",
+      );
       try {
         const offers = await options.eptera.getOffers({
           adults: booking.data.adults,
@@ -271,7 +282,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     const answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
-    options.chat.publish(conversationId, "manager", answer, bookingUrl);
+    options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: result.action, answer };
   };
   return { reply };

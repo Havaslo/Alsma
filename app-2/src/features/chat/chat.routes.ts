@@ -128,28 +128,38 @@ export const createChatRouter = (
         response.status(201).json({ message: published });
         return;
       }
+      chat.publishStatus(
+        input.conversationId,
+        "thinking",
+        "Анализирую ваш запрос",
+      );
       void agent
         .reply(input.conversationId, input.text)
         .then(async (result) => {
           if (result?.action === "transfer") {
             await setMode(input.conversationId, "manager");
+            chat.publishStatus(input.conversationId, "idle", "");
             return;
           }
           if (!result) {
+            chat.publishStatus(input.conversationId, "idle", "");
             const fallback = await knowledge.answer({
               channel: "text",
               question: input.text,
             });
             chat.publish(
               input.conversationId,
-              "manager",
+              "agent",
               fallback.status === "answered"
                 ? "Не удалось сформировать ответ прямо сейчас. Я уже передал ваш вопрос сотруднику — менеджер ответит в этом чате."
                 : fallback.answer,
             );
           }
+          chat.publishStatus(input.conversationId, "idle", "");
         })
-        .catch(() => undefined);
+        .catch(() => {
+          chat.publishStatus(input.conversationId, "idle", "");
+        });
       response.status(201).json({ message: published });
     },
   );

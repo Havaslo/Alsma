@@ -8,9 +8,10 @@ import { apiClient } from "@/lib/api/api-client";
 import { cn } from "@/lib/cn";
 
 export type ChatMessage = {
+  type: "message";
   id: string;
   conversationId: string;
-  author: "guest" | "manager";
+  author: "guest" | "agent" | "manager";
   text: string;
   createdAt: string;
   bookingUrl?: string;
@@ -39,7 +40,7 @@ const getIdentity = (): Identity | null => {
 export const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [agentTyping, setAgentTyping] = useState(false);
+  const [agentStatus, setAgentStatus] = useState("");
   const [chatMode, setChatMode] = useState<"agent" | "manager">("agent");
   const [text, setText] = useState("");
   const [identity, setIdentity] = useState<Identity | null>(() =>
@@ -76,8 +77,13 @@ export const ChatWidget = () => {
       /* Audio is optional. */
     }
   };
-  const receive = (incoming: ChatMessage) => {
-    if (incoming.author === "manager") setAgentTyping(false);
+  const receive = (
+    incoming: ChatMessage | { type: "status"; status: string; label: string },
+  ) => {
+    if (incoming.type === "status") {
+      setAgentStatus(incoming.label);
+      return;
+    }
     if (!incoming.id || knownIds.current.has(incoming.id)) return;
     knownIds.current.add(incoming.id);
     setMessages((current) =>
@@ -124,7 +130,10 @@ export const ChatWidget = () => {
       ),
     );
     events.onmessage = (event) =>
-      receive(JSON.parse(event.data) as ChatMessage);
+      receive(
+        JSON.parse(event.data) as
+          ChatMessage | { type: "status"; status: string; label: string },
+      );
     return () => {
       window.clearInterval(poll);
       events.close();
@@ -165,9 +174,10 @@ export const ChatWidget = () => {
     const value = text.trim();
     if (!value || !identity) return;
     setText("");
-    setAgentTyping(chatMode === "agent");
+    setAgentStatus(chatMode === "agent" ? "Ожидаю ответ агента" : "");
     const temporaryId = `sending-${Date.now()}`;
     const temporaryMessage: ChatMessage = {
+      type: "message",
       id: temporaryId,
       conversationId,
       author: "guest",
@@ -194,7 +204,7 @@ export const ChatWidget = () => {
         data.message,
       ]);
     } catch {
-      setAgentTyping(false);
+      setAgentStatus("");
       setMessages((current) =>
         current.filter((message) => message.id !== temporaryId),
       );
@@ -264,6 +274,13 @@ export const ChatWidget = () => {
                     )}
                     key={message.id}
                   >
+                    {message.author !== "guest" && (
+                      <p className="mb-1 text-xs font-semibold opacity-60">
+                        {message.author === "agent"
+                          ? "AI-ассистент"
+                          : "Менеджер"}
+                      </p>
+                    )}
                     <p>{message.text}</p>
                     {message.bookingUrl && (
                       <a
@@ -275,13 +292,14 @@ export const ChatWidget = () => {
                     )}
                   </div>
                 ))}
-                {agentTyping && chatMode === "agent" && (
+                {agentStatus && chatMode === "agent" && (
                   <div
-                    aria-label="AI-ассистент печатает"
+                    aria-label={agentStatus}
+
                     className="flex w-fit items-center gap-2 rounded-2xl bg-page px-4 py-3 text-sm text-muted-ui-foreground"
                     role="status"
                   >
-                    <span>AI-ассистент печатает</span>
+                    <span>{agentStatus}</span>
                     <span className="inline-flex gap-1" aria-hidden="true">
                       <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
                       <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
