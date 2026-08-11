@@ -93,6 +93,9 @@ export const createAiAgentService = (options: AgentOptions) => {
           "\nАктуальная проверка Eptera сейчас недоступна; не утверждай наличие.";
       }
     }
+    const hadAgentReply = options.chat
+      .list(conversationId)
+      .some((item) => item.author === "manager");
     const context = (
       knowledgeResult.sources.map((source) => source.content).join("\n\n") +
       availability
@@ -105,9 +108,9 @@ export const createAiAgentService = (options: AgentOptions) => {
       .join("\n");
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
-      settings.showAiDisclosure
-        ? `При первом ответе уместно сообщи: ${settings.disclosureText}`
-        : "",
+      settings.showAiDisclosure && !hadAgentReply
+        ? "Это первый ответ в разговоре. Не добавляй отдельное служебное приветствие в ответ: оно будет добавлено сервером один раз."
+        : "Не упоминай, что ты AI-ассистент, и не добавляй служебное раскрытие в этот ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст; сформулируй короткий прямой ответ именно на вопрос гостя. Если в контексте нет ответа, честно скажи об этом и предложи помощь сотрудника.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Вместо брони предложи ссылку: ${settings.bookingUrl || options.bookingUrl}.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer.",
@@ -201,10 +204,19 @@ export const createAiAgentService = (options: AgentOptions) => {
           },
         },
       });
-    const answer =
-      result.action === "transfer" && settings.canTransferToEmployee
-        ? `${result.answer} Я передал диалог сотруднику — он подключится к вам.`
+    const transferNotice =
+      "Я передал диалог сотруднику — он подключится к вам.";
+    const answerWithTransfer =
+      result.action === "transfer" &&
+      settings.canTransferToEmployee &&
+      !result.answer.includes(transferNotice)
+        ? `${result.answer} ${transferNotice}`
         : result.answer;
+    const disclosure =
+      settings.showAiDisclosure && !hadAgentReply
+        ? `${settings.disclosureText.trim()} `
+        : "";
+    const answer = `${disclosure}${answerWithTransfer}`.trim();
     options.chat.publish(conversationId, "manager", answer);
     return { action: result.action, answer };
   };
