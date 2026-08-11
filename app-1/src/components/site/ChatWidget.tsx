@@ -165,7 +165,7 @@ export const ChatWidget = () => {
     const value = text.trim();
     if (!value || !identity) return;
     setText("");
-    setAgentTyping(true);
+    setAgentTyping(chatMode === "agent");
     const temporaryId = `sending-${Date.now()}`;
     const temporaryMessage: ChatMessage = {
       id: temporaryId,
@@ -275,6 +275,20 @@ export const ChatWidget = () => {
                     )}
                   </div>
                 ))}
+                {agentTyping && chatMode === "agent" && (
+                  <div
+                    aria-label="AI-ассистент печатает"
+                    className="flex w-fit items-center gap-2 rounded-2xl bg-page px-4 py-3 text-sm text-muted-ui-foreground"
+                    role="status"
+                  >
+                    <span>AI-ассистент печатает</span>
+                    <span className="inline-flex gap-1" aria-hidden="true">
+                      <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+                      <span className="size-1.5 animate-bounce rounded-full bg-current" />
+                    </span>
+                  </div>
+                )}
               </div>
               <form
                 className="flex gap-2 border-t border-line bg-brand-foreground p-3"
