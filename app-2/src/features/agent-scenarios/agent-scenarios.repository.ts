@@ -46,4 +46,8 @@ export const createAgentScenariosRepository = (database: Database) => ({
           where: { id: input.id },
         })
       : database.client.agentTransferRule.create({ data: input }),
+  deleteScenario: (id: string) =>
+    database.client.agentScenario.delete({ where: { id } }),
+  deleteTransferRule: (id: string) =>
+    database.client.agentTransferRule.delete({ where: { id } }),
 });

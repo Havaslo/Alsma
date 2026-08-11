@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Plus } from "lucide-react";
 
@@ -9,22 +9,25 @@ import {
   AgentSettingsTabPanel,
 } from "@/components/admin/AgentSettingsTabPanel";
 import { Button } from "@/components/ui/Button";
+import type {
+  AgentScenario,
+  AgentTransferRule,
+} from "@/lib/admin/agent-scenarios-api";
 import {
-  MOCK_AGENT_SCENARIOS,
-  MOCK_TRANSFER_RULES,
-  type MockAgentScenario,
-  type MockTransferRule,
-} from "@/lib/admin/admin-agent-scenario-mocks";
+  useAgentScenarios,
+  useDeleteAgentScenario,
+  useDeleteAgentTransferRule,
+  useSaveAgentScenario,
+  useSaveAgentTransferRule,
+} from "@/lib/admin/useAgentScenarios";
 import { cn } from "@/lib/cn";
 
 type AgentScenariosTab = AgentSettingsTab | "rules" | "scenarios";
-
 const SUMMARY_CARDS = [
   { key: "scenarios", label: "Сценариев ответов" },
   { key: "rules", label: "Правил перевода" },
   { key: "active", label: "Активно сейчас" },
 ] as const;
-
 const TABS: Array<{ label: string; value: AgentScenariosTab }> = [
   { label: "Сценарии ответов", value: "scenarios" },
   { label: "Правила перевода", value: "rules" },
@@ -36,45 +39,36 @@ const TABS: Array<{ label: string; value: AgentScenariosTab }> = [
 
 export const AdminAgentScenariosPanel = () => {
   const [tab, setTab] = useState<AgentScenariosTab>("scenarios");
-  const [scenarios, setScenarios] = useState<MockAgentScenario[]>(() => [
-    ...MOCK_AGENT_SCENARIOS,
-  ]);
-  const [rules, setRules] = useState<MockTransferRule[]>(() => [
-    ...MOCK_TRANSFER_RULES,
-  ]);
-  const activeCount =
-    scenarios.filter((item) => item.enabled).length +
-    rules.filter((item) => item.enabled).length;
+  const scenariosQuery = useAgentScenarios();
+  const saveScenario = useSaveAgentScenario();
+  const saveRule = useSaveAgentTransferRule();
+  const deleteScenario = useDeleteAgentScenario();
+  const deleteRule = useDeleteAgentTransferRule();
+  const scenarios = scenariosQuery.data?.scenarios ?? [];
+  const rules = scenariosQuery.data?.transferRules ?? [];
+  const activeCount = useMemo(
+    () => [...scenarios, ...rules].filter((item) => item.enabled).length,
+    [rules, scenarios],
+  );
   const summaryValues = {
     active: activeCount,
     rules: rules.length,
     scenarios: scenarios.length,
   };
-
   const addScenario = () =>
-    setScenarios((current) => [
-      {
-        enabled: true,
-        id: `scenario-${Date.now()}`,
-        instructions: "",
-        response: "",
-        title: "Новый сценарий",
-        trigger: "consultation",
-      },
-      ...current,
-    ]);
+    saveScenario.mutate({
+      enabled: true,
+      response: "",
+      title: "Новый сценарий",
+      trigger: "consultation",
+    });
   const addRule = () =>
-    setRules((current) => [
-      {
-        condition: "direct-request",
-        description: "",
-        enabled: true,
-        id: `rule-${Date.now()}`,
-        priority: 50,
-        title: "Новое правило",
-      },
-      ...current,
-    ]);
+    saveRule.mutate({
+      condition: "",
+      destination: "booking-manager",
+      enabled: true,
+      title: "Новое правило",
+    });
   const isListTab = tab === "scenarios" || tab === "rules";
 
   return (
@@ -82,11 +76,10 @@ export const AdminAgentScenariosPanel = () => {
       <section>
         <h1 className="text-3xl font-semibold text-brand">Сценарии агентов</h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-          Настройте поведение AI-агента: ответы, передачу диалога, доступные
-          действия, сбор данных и обязательное уведомление клиента.
+          Настройте поведение AI-агента. Изменения сценариев и правил
+          сохраняются в backend и применяются к новым ответам.
         </p>
       </section>
-
       <section className="grid gap-5 xl:grid-cols-3">
         {SUMMARY_CARDS.map(({ key, label }) => (
           <article
@@ -100,7 +93,6 @@ export const AdminAgentScenariosPanel = () => {
           </article>
         ))}
       </section>
-
       <nav className="flex gap-8 overflow-x-auto border-b border-line">
         {TABS.map((item) => (
           <button
@@ -118,7 +110,6 @@ export const AdminAgentScenariosPanel = () => {
           </button>
         ))}
       </nav>
-
       {isListTab ? (
         <section className="rounded-3xl border border-line bg-brand-foreground p-6">
           <header className="flex flex-wrap items-start justify-between gap-4">
@@ -129,7 +120,7 @@ export const AdminAgentScenariosPanel = () => {
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
                 {tab === "scenarios"
                   ? "Изменяйте тексты ответов и инструкции для новых обращений."
-                  : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку на обратную связь."}
+                  : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку."}
               </p>
             </div>
             <Button onClick={tab === "scenarios" ? addScenario : addRule}>
@@ -139,44 +130,28 @@ export const AdminAgentScenariosPanel = () => {
           </header>
           <div className="mt-6 space-y-4">
             {tab === "scenarios"
-              ? scenarios.map((item) => (
+              ? scenarios.map((item: AgentScenario) => (
                   <AdminAgentScenarioCard
                     item={item}
                     key={item.id}
-                    onDelete={() =>
-                      setScenarios((current) =>
-                        current.filter((scenario) => scenario.id !== item.id),
-                      )
-                    }
-                    onSave={(updatedItem) =>
-                      setScenarios((current) =>
-                        current.map((scenario) =>
-                          scenario.id === updatedItem.id
-                            ? updatedItem
-                            : scenario,
-                        ),
-                      )
-                    }
+                    onDelete={() => deleteScenario.mutate(item.id)}
+                    onSave={(updated) => saveScenario.mutate(updated)}
                   />
                 ))
-              : rules.map((item) => (
+              : rules.map((item: AgentTransferRule) => (
                   <AdminAgentTransferRuleCard
                     item={item}
                     key={item.id}
-                    onDelete={() =>
-                      setRules((current) =>
-                        current.filter((rule) => rule.id !== item.id),
-                      )
-                    }
-                    onSave={(updatedItem) =>
-                      setRules((current) =>
-                        current.map((rule) =>
-                          rule.id === updatedItem.id ? updatedItem : rule,
-                        ),
-                      )
-                    }
+                    onDelete={() => deleteRule.mutate(item.id)}
+                    onSave={(updated) => saveRule.mutate(updated)}
                   />
                 ))}
+            {!scenariosQuery.isLoading &&
+              !(tab === "scenarios" ? scenarios.length : rules.length) && (
+                <p className="rounded-2xl bg-page p-5 text-sm text-muted-ui-foreground">
+                  Пока нет сохранённых записей.
+                </p>
+              )}
           </div>
         </section>
       ) : (

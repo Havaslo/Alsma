@@ -1,36 +1,29 @@
 import { useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { Save, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Form } from "@/components/Form";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import {
   CheckboxField,
   TextAreaField,
   TextField,
 } from "@/components/ui/FormField";
-import {
-  type MockTransferRule,
-  TRANSFER_CONDITION_LABELS,
-  TRANSFER_CONDITION_OPTIONS,
-} from "@/lib/admin/admin-agent-scenario-mocks";
+import type { AgentTransferRule } from "@/lib/admin/agent-scenarios-api";
 
 export const AdminAgentTransferRuleCard = ({
   item,
   onDelete,
   onSave,
 }: {
-  readonly item: MockTransferRule;
+  readonly item: AgentTransferRule;
   readonly onDelete: () => void;
-  readonly onSave: (item: MockTransferRule) => void;
+  readonly onSave: (item: AgentTransferRule) => void;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const form = useForm<MockTransferRule>({ values: item });
-  const condition = useWatch({ control: form.control, name: "condition" });
+  const form = useForm<AgentTransferRule>({ values: item });
   const enabled = useWatch({ control: form.control, name: "enabled" });
 
   return (
@@ -39,8 +32,7 @@ export const AdminAgentTransferRuleCard = ({
         <div>
           <h3 className="text-lg font-semibold text-brand">{item.title}</h3>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Условие: {TRANSFER_CONDITION_LABELS[condition]} · Приоритет:{" "}
-            {item.priority}
+            Назначение: {item.destination}
           </p>
         </div>
         <Button
@@ -51,49 +43,19 @@ export const AdminAgentTransferRuleCard = ({
           <Trash2 className="size-4" /> Удалить
         </Button>
       </header>
-      <Form
-        className="mt-5 space-y-5"
-        form={form}
-        onSubmit={(values) => {
-          onSave(values);
-          toast.success("Правило сохранено");
-        }}
-      >
+      <Form className="mt-5 space-y-5" form={form} onSubmit={onSave}>
         <TextField
           label="Название правила"
-          placeholder="..."
           {...form.register("title", { required: true })}
         />
-        <div className="grid gap-5 lg:grid-cols-2">
-          <label className="block text-sm font-medium text-panel-foreground">
-            <span>Когда срабатывает</span>
-            <span className="mt-2 block rounded-xl border border-line bg-brand-foreground px-4 py-2.5">
-              <Controller
-                control={form.control}
-                name="condition"
-                render={({ field }) => (
-                  <DropdownSelect
-                    ariaLabel={`Условие правила ${item.title}`}
-                    onChange={field.onChange}
-                    options={TRANSFER_CONDITION_OPTIONS}
-                    value={field.value}
-                  />
-                )}
-              />
-            </span>
-          </label>
-          <TextField
-            label="Приоритет"
-            min={0}
-            type="number"
-            {...form.register("priority", { valueAsNumber: true })}
-          />
-        </div>
         <TextAreaField
-          label="Условия правила"
-          placeholder="..."
+          label="Условие передачи менеджеру"
           rows={5}
-          {...form.register("description", { required: true })}
+          {...form.register("condition", { required: true })}
+        />
+        <TextField
+          label="Назначение"
+          {...form.register("destination", { required: true })}
         />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CheckboxField
@@ -119,7 +81,7 @@ export const AdminAgentTransferRuleCard = ({
         open={confirmDelete}
         title="Удалить правило?"
       >
-        Правило будет удалено из текущего набора моковых данных.
+        <p>Правило будет удалено из базы данных.</p>
       </ConfirmModal>
     </article>
   );

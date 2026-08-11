@@ -19,8 +19,12 @@ export type AgentScenariosData = {
   readonly scenarios: AgentScenario[];
   readonly transferRules: AgentTransferRule[];
 };
-export type AgentScenarioInput = Omit<AgentScenario, "id"> & { readonly id?: string };
-export type AgentTransferRuleInput = Omit<AgentTransferRule, "id"> & { readonly id?: string };
+export type AgentScenarioInput = Omit<AgentScenario, "id"> & {
+  readonly id?: string;
+};
+export type AgentTransferRuleInput = Omit<AgentTransferRule, "id"> & {
+  readonly id?: string;
+};
 export type AgentSettings = {
   readonly enabled: boolean;
   readonly tone: string;
@@ -41,8 +45,39 @@ export type AgentSettings = {
 };
 
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
-export const loadAgentScenarios = (signal?: AbortSignal) => apiClient.get<AgentScenariosData>("/admin/agent-scenarios", { headers: headers(), signal });
-export const saveAgentScenario = (input: AgentScenarioInput) => apiClient.post<{ scenario: AgentScenario }>("/admin/agent-scenarios/scenarios", input, { headers: headers() });
-export const saveAgentTransferRule = (input: AgentTransferRuleInput) => apiClient.post<{ transferRule: AgentTransferRule }>("/admin/agent-scenarios/transfer-rules", input, { headers: headers() });
-export const loadAgentSettings = (signal?: AbortSignal) => apiClient.get<{ settings: AgentSettings | null }>("/admin/agent-scenarios/settings", { headers: headers(), signal });
-export const saveAgentSettings = (input: AgentSettings) => apiClient.put<{ settings: AgentSettings }>("/admin/agent-scenarios/settings", input, { headers: headers() });
+export const loadAgentScenarios = (signal?: AbortSignal) =>
+  apiClient.get<AgentScenariosData>("/admin/agent-scenarios", {
+    headers: headers(),
+    signal,
+  });
+export const saveAgentScenario = (input: AgentScenarioInput) =>
+  apiClient.post<{ scenario: AgentScenario }>(
+    "/admin/agent-scenarios/scenarios",
+    input,
+    { headers: headers() },
+  );
+export const saveAgentTransferRule = (input: AgentTransferRuleInput) =>
+  apiClient.post<{ transferRule: AgentTransferRule }>(
+    "/admin/agent-scenarios/transfer-rules",
+    input,
+    { headers: headers() },
+  );
+export const deleteAgentScenario = (id: string) =>
+  apiClient.delete(`/admin/agent-scenarios/scenarios/${id}`, {
+    headers: headers(),
+  });
+export const deleteAgentTransferRule = (id: string) =>
+  apiClient.delete(`/admin/agent-scenarios/transfer-rules/${id}`, {
+    headers: headers(),
+  });
+export const loadAgentSettings = (signal?: AbortSignal) =>
+  apiClient.get<{ settings: AgentSettings | null }>(
+    "/admin/agent-scenarios/settings",
+    { headers: headers(), signal },
+  );
+export const saveAgentSettings = (input: AgentSettings) =>
+  apiClient.put<{ settings: AgentSettings }>(
+    "/admin/agent-scenarios/settings",
+    input,
+    { headers: headers() },
+  );

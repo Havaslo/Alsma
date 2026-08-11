@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Save, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Form } from "@/components/Form";
 import { Button } from "@/components/ui/Button";
@@ -16,20 +15,20 @@ import {
 import {
   AGENT_SCENARIO_TRIGGER_LABELS,
   AGENT_SCENARIO_TRIGGER_OPTIONS,
-  type MockAgentScenario,
 } from "@/lib/admin/admin-agent-scenario-mocks";
+import type { AgentScenario } from "@/lib/admin/agent-scenarios-api";
 
 export const AdminAgentScenarioCard = ({
   item,
   onDelete,
   onSave,
 }: {
-  readonly item: MockAgentScenario;
+  readonly item: AgentScenario;
   readonly onDelete: () => void;
-  readonly onSave: (item: MockAgentScenario) => void;
+  readonly onSave: (item: AgentScenario) => void;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const form = useForm<MockAgentScenario>({ values: item });
+  const form = useForm<AgentScenario>({ values: item });
   const enabled = useWatch({ control: form.control, name: "enabled" });
   const trigger = useWatch({ control: form.control, name: "trigger" });
 
@@ -39,7 +38,10 @@ export const AdminAgentScenarioCard = ({
         <div>
           <h3 className="text-lg font-semibold text-brand">{item.title}</h3>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Применение: {AGENT_SCENARIO_TRIGGER_LABELS[trigger]}
+            Применение:{" "}
+            {AGENT_SCENARIO_TRIGGER_LABELS[
+              trigger as keyof typeof AGENT_SCENARIO_TRIGGER_LABELS
+            ] ?? trigger}
           </p>
         </div>
         <Button
@@ -50,18 +52,10 @@ export const AdminAgentScenarioCard = ({
           <Trash2 className="size-4" /> Удалить
         </Button>
       </header>
-      <Form
-        className="mt-5 space-y-5"
-        form={form}
-        onSubmit={(values) => {
-          onSave(values);
-          toast.success("Сценарий сохранён");
-        }}
-      >
+      <Form className="mt-5 space-y-5" form={form} onSubmit={onSave}>
         <div className="grid gap-5 lg:grid-cols-2">
           <TextField
             label="Название сценария"
-            placeholder="..."
             {...form.register("title", { required: true })}
           />
           <label className="block text-sm font-medium text-panel-foreground">
@@ -84,15 +78,8 @@ export const AdminAgentScenarioCard = ({
         </div>
         <TextAreaField
           label="Текст сценария"
-          placeholder="..."
-          rows={5}
+          rows={7}
           {...form.register("response", { required: true })}
-        />
-        <TextAreaField
-          label="Дополнительные указания"
-          placeholder="..."
-          rows={4}
-          {...form.register("instructions")}
         />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CheckboxField
@@ -118,7 +105,7 @@ export const AdminAgentScenarioCard = ({
         open={confirmDelete}
         title="Удалить сценарий?"
       >
-        Сценарий будет удалён из текущего набора моковых данных.
+        Сценарий будет удалён из базы данных.
       </ConfirmModal>
     </article>
   );
