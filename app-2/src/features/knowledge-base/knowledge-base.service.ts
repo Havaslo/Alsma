@@ -56,7 +56,17 @@ const scoreText = (question: string, content: string) => {
   if (!questionTokens.size) return 0;
   let matches = 0;
   for (const token of questionTokens) {
-    if (contentTokens.has(token)) matches += 1;
+    const stem = token.length >= 5 ? token.slice(0, 5) : token;
+    if (
+      [...contentTokens].some(
+        (contentToken) =>
+          contentToken === token ||
+          (contentToken.length >= 5 &&
+            (contentToken.startsWith(stem) ||
+              token.startsWith(contentToken.slice(0, 5)))),
+      )
+    )
+      matches += 1;
   }
   return matches / questionTokens.size;
 };
@@ -69,11 +79,20 @@ export const createKnowledgeBaseService = (
     const matches = chunks
       .map((chunk) => ({
         chunk,
-        score: scoreText(input.question, chunk.content),
+        score: scoreText(
+          input.question,
+          [
+            chunk.article.title,
+            chunk.article.summary,
+            chunk.article.category,
+            chunk.article.tags.join(" "),
+            chunk.content,
+          ].join("\n"),
+        ),
       }))
       .filter(({ score }) => score > 0)
       .sort((left, right) => right.score - left.score)
-      .slice(0, 3);
+      .slice(0, 8);
     const answered = (matches[0]?.score ?? 0) >= 0.18;
     const answer = answered
       ? input.channel === "voice"

@@ -75,17 +75,22 @@ export const createAiAgentService = (options: AgentOptions) => {
           `${item.author === "guest" ? "Гость" : "Ассистент"}: ${item.text}`,
       )
       .join("\n");
-    const [knowledgeResult, scenarios, transferRules] = await Promise.all([
-      knowledge.answer({ channel: "text", question: message }),
-      options.database.client.agentScenario.findMany({
-        where: { enabled: true },
-        orderBy: { updatedAt: "desc" },
-      }),
-      options.database.client.agentTransferRule.findMany({
-        where: { enabled: true },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
+    const [knowledgeResult, scenarios, transferRules, knowledgeRules] =
+      await Promise.all([
+        knowledge.answer({ channel: "text", question: message }),
+        options.database.client.agentScenario.findMany({
+          where: { enabled: true },
+          orderBy: { updatedAt: "desc" },
+        }),
+        options.database.client.agentTransferRule.findMany({
+          where: { enabled: true },
+          orderBy: { createdAt: "asc" },
+        }),
+        options.database.client.agentRule.findMany({
+          where: { enabled: true, channels: { has: "text" } },
+          orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+        }),
+      ]);
     const dates = message.match(/\d{4}-\d{2}-\d{2}/gu) ?? [];
     const guests = message.match(
       /(?:гост\w*|челов\w*|взросл\w*)\D{0,8}(\d{1,2})/iu,
@@ -125,6 +130,9 @@ export const createAiAgentService = (options: AgentOptions) => {
     const transferContext = transferRules
       .map((item) => `${item.title}: ${item.condition} => ${item.destination}`)
       .join("\n");
+    const knowledgeRuleContext = knowledgeRules
+      .map((item) => `${item.title}: ${item.content}`)
+      .join("\n");
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
@@ -138,6 +146,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Сценарии:\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
+      `Активные правила базы знаний:\n${knowledgeRuleContext || "Нет дополнительных правил."}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
     ]
@@ -226,6 +235,8 @@ export const createAiAgentService = (options: AgentOptions) => {
         },
       });
     let bookingUrl: string | undefined;
+    let availabilityResult: "available" | "unavailable" | "error" | null = null;
+    let availableOfferCount = 0;
     const booking = bookingSchema.safeParse(result.booking);
     if (booking.success) {
       options.chat.publishStatus(
@@ -244,10 +255,12 @@ export const createAiAgentService = (options: AgentOptions) => {
           nationality: "RU",
           roomCount: booking.data.roomCount,
         });
-        if (
-          offers.some((offer) => offer.roomToSell >= booking.data.roomCount)
-        ) {
-          const base = settings.bookingUrl || options.bookingUrl;
+        availableOfferCount = offers.filter(
+          (offer) => offer.roomToSell >= booking.data.roomCount,
+        ).length;
+        availabilityResult = availableOfferCount ? "available" : "unavailable";
+        if (availabilityResult === "available") {
+          const base = settings.bookingUrl || options.bookingUrl || "/booking";
           const url = new URL(base, "https://alsma.ru");
           url.search = new URLSearchParams({
             checkIn: booking.data.checkInDate,
@@ -261,6 +274,7 @@ export const createAiAgentService = (options: AgentOptions) => {
             : url.pathname + url.search;
         }
       } catch {
+        availabilityResult = "error";
         bookingUrl = undefined;
       }
     }
@@ -280,8 +294,18 @@ export const createAiAgentService = (options: AgentOptions) => {
       .replace(/^Здравствуйте!\s*/iu, "")
       .replace(/\/?booking(?:\?[^\s]*)?/giu, "после уточнения параметров")
       .trim();
-    const answer =
+    let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
+    if (booking.success && availabilityResult === "available") {
+      answer =
+        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} Нашёл ${availableOfferCount} подходящих вариантов в системе бронирования. Откройте подборку по вашим параметрам по кнопке ниже.`.trim();
+    } else if (booking.success && availabilityResult === "unavailable") {
+      answer =
+        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} К сожалению, по этим параметрам свободных вариантов сейчас не найдено.`.trim();
+    } else if (booking.success && availabilityResult === "error") {
+      answer =
+        `${answer.replace(/сейчас проверю[^.]*\.?/iu, "").trim()} Не удалось получить актуальное наличие из Eptera. Попробуйте ещё раз или я передам вопрос сотруднику.`.trim();
+    }
     options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: result.action, answer };
   };
