@@ -202,6 +202,10 @@ export const createChatRouter = (
     async (_request, response) => {
       const input = response.locals.input.body;
       await setMode(input.conversationId, "manager");
+      await database.client.adminRequest.updateMany({
+        where: { id: input.conversationId },
+        data: { updatedAt: new Date() },
+      });
       response.status(201).json({
         message: chat.publish(input.conversationId, "manager", input.text),
       });

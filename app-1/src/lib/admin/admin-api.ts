@@ -10,7 +10,10 @@ export type AdminUser = {
 };
 export type SiteLead = {
   readonly createdAt: string;
+  readonly updatedAt: string;
   readonly details: {
+    channelType?: string;
+    conversationId?: string;
     checkInDate?: string;
     checkOutDate?: string;
     comment?: string;
