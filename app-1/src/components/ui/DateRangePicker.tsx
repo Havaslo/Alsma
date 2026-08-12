@@ -174,9 +174,6 @@ export const DateRangePicker = ({
               );
             })}
           </div>
-          <p className="mt-3 text-[0.68rem] text-muted-ui-foreground">
-            Цена и наличие зависят от периода, гостей и выбранного номера.
-          </p>
         </div>
       )}
     </div>
