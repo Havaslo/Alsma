@@ -92,13 +92,24 @@ const formatFullDate = (value: string) => {
   return `${Number(day)} ${monthNames[month - 1] ?? ""} ${year}`;
 };
 
+const hasDateInMessage = (text: string) =>
+  /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s*(?:[-–]\s*|по\s+)\d{1,2}\s+[а-яё]+(?:\s+\d{4})?/iu.test(
+    text,
+  );
+const asksForOtherDates = (text: string) =>
+  /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
+    text,
+  );
+
 const extractBooking = (text: string) => {
   const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
     (match) => match[1],
   );
-  const russianRange = text.match(
-    /(?:с\s*)?(\d{1,2})\s*(?:[-–]\s*|по\s+)(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?/iu,
-  );
+  const russianRange = [
+    ...text.matchAll(
+      /(?:с\s*)?(\d{1,2})\s*(?:[-–]\s*|по\s+)(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?/giu,
+    ),
+  ].at(-1);
   const inferredYear = String(new Date().getFullYear());
   const dates = russianRange
     ? [
@@ -144,6 +155,12 @@ export const createAiAgentService = (options: AgentOptions) => {
       )
       .join("\n");
     const extractedBooking = extractBooking(conversationText);
+    const currentMessageHasDate = hasDateInMessage(message);
+    const previousAvailabilityResult = conversationMessages.some(
+      (item) =>
+        item.author === "agent" &&
+        /Eptera.*(?:свободных|найдено|наличие)/iu.test(item.text),
+    );
     const [knowledgeResult, scenarios, transferRules, knowledgeRules] =
       await Promise.all([
         knowledge.answer({ channel: "text", question: message }),
@@ -180,7 +197,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
       "Распознавай этап диалога. Для SPA уточни: с проживанием или на один день. Для аппаратных процедур уточни цель. Для проживания собери недостающие параметры и проверь наличие. Если клиент готов смотреть страницу SPA или процедур, используй action open_page и соответствующий page; не вставляй URL в текст.",
-      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer.",
+      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer. Если ранее уже проверял даты и гость просит другие даты без новых дат, не повторяй старый результат: попроси назвать новые даты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa или hardware-procedures.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
@@ -286,9 +303,12 @@ export const createAiAgentService = (options: AgentOptions) => {
     let availabilityResult: "available" | "unavailable" | "error" | null = null;
     let availableOfferCount = 0;
     const modelBooking = bookingSchema.safeParse(result.booking);
-    const booking = extractedBooking
-      ? { success: true as const, data: extractedBooking }
-      : modelBooking;
+    const booking =
+      previousAvailabilityResult && !currentMessageHasDate
+        ? bookingSchema.safeParse(undefined)
+        : extractedBooking
+          ? { success: true as const, data: extractedBooking }
+          : modelBooking;
     if (booking.success) {
       options.chat.publishStatus(
         conversationId,
@@ -352,6 +372,15 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
+    if (
+      previousAvailabilityResult &&
+      !currentMessageHasDate &&
+      asksForOtherDates(message) &&
+      result.action !== "transfer"
+    ) {
+      answer =
+        "Назовите, пожалуйста, новые даты заезда и выезда — я проверю их в Eptera.";
+    }
     if (booking.success && availabilityResult) {
       const dateRange = `${formatFullDate(booking.data.checkInDate)} — ${formatFullDate(booking.data.checkOutDate)}`;
       if (availabilityResult === "available") {
@@ -362,8 +391,10 @@ export const createAiAgentService = (options: AgentOptions) => {
         answer = `Не удалось получить актуальное наличие в Eptera на даты ${dateRange}. Попробуйте ещё раз или я передам вопрос сотруднику.`;
       }
     }
+    const finalAction =
+      availabilityResult === "error" ? "transfer" : result.action;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
-    return { action: result.action, answer };
+    return { action: finalAction, answer };
   };
   return { reply };
 };

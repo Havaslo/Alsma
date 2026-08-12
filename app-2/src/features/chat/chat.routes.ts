@@ -179,6 +179,7 @@ export const createChatRouter = (
               // The fallback itself must never prevent a final chat message.
             }
             await chat.publish(input.conversationId, "agent", fallbackText);
+            await setMode(input.conversationId, "manager", true);
           }
           chat.publishStatus(input.conversationId, "idle", "");
         })
@@ -188,6 +189,7 @@ export const createChatRouter = (
             "agent",
             "Не удалось получить ответ автоматически. Я передал вопрос сотруднику — менеджер ответит в этом чате.",
           );
+          await setMode(input.conversationId, "manager", true);
           chat.publishStatus(input.conversationId, "idle", "");
         });
       response.status(201).json({ message: published });
