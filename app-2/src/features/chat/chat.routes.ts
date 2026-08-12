@@ -33,6 +33,8 @@ const readDetails = (value: unknown): Record<string, unknown> =>
     : {};
 const readChatMode = (value: unknown): ChatMode =>
   readDetails(value).chatMode === "manager" ? "manager" : "agent";
+const readManagerRequested = (value: unknown) =>
+  readDetails(value).managerRequested === true;
 const writeEvent = (
   response: { write: (value: string) => void },
   payload: unknown,
@@ -72,7 +74,11 @@ export const createChatRouter = (
     });
     return readChatMode(request?.details);
   };
-  const setMode = async (conversationId: string, mode: ChatMode) => {
+  const setMode = async (
+    conversationId: string,
+    mode: ChatMode,
+    managerRequested = false,
+  ) => {
     const request = await database.client.adminRequest.findUnique({
       where: { id: conversationId },
       select: { details: true },
@@ -80,7 +86,13 @@ export const createChatRouter = (
     if (!request) return;
     await database.client.adminRequest.update({
       where: { id: conversationId },
-      data: { details: { ...readDetails(request.details), chatMode: mode } },
+      data: {
+        details: {
+          ...readDetails(request.details),
+          chatMode: mode,
+          managerRequested,
+        },
+      },
     });
   };
   router.get(
@@ -89,6 +101,12 @@ export const createChatRouter = (
     async (_request, response) =>
       response.json({
         mode: await getMode(response.locals.input.query.conversationId),
+        managerRequested: await database.client.adminRequest
+          .findUnique({
+            where: { id: response.locals.input.query.conversationId },
+            select: { details: true },
+          })
+          .then((request) => readManagerRequested(request?.details)),
       }),
   );
   router.get(
@@ -137,7 +155,7 @@ export const createChatRouter = (
         .reply(input.conversationId, input.text)
         .then(async (result) => {
           if (result?.action === "transfer") {
-            await setMode(input.conversationId, "manager");
+            await setMode(input.conversationId, "manager", true);
             chat.publishStatus(input.conversationId, "idle", "");
             return;
           }
@@ -192,7 +210,7 @@ export const createChatRouter = (
     validateRequest({ body: modeSchema }),
     async (_request, response) => {
       const input = response.locals.input.body;
-      await setMode(input.conversationId, input.mode);
+      await setMode(input.conversationId, input.mode, false);
       response.json({ mode: input.mode });
     },
   );
@@ -201,7 +219,7 @@ export const createChatRouter = (
     validateRequest({ body: managerMessageSchema }),
     async (_request, response) => {
       const input = response.locals.input.body;
-      await setMode(input.conversationId, "manager");
+      await setMode(input.conversationId, "manager", false);
       await database.client.adminRequest.updateMany({
         where: { id: input.conversationId },
         data: { updatedAt: new Date() },

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { useNavigate } from "@tanstack/react-router";
-import { Eye, Search } from "lucide-react";
+import { Bot, Eye, Search, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
@@ -18,12 +18,6 @@ const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
   completed: "Выполнено",
   new: "Новое",
   processing: "В работе",
-};
-const statusTones: Record<Exclude<StatusFilter, "all">, string> = {
-  cancelled: "bg-muted-ui text-muted-ui-foreground",
-  completed: "bg-brand/10 text-brand",
-  new: "bg-accent-ui/20 text-accent-ui-foreground",
-  processing: "bg-supporting/25 text-accent-ui-foreground",
 };
 const statusOptions: { label: string; value: StatusFilter }[] = [
   { label: "Все статусы", value: "all" },
@@ -54,6 +48,26 @@ const sourceLabel = (source: string | undefined) => {
   return "Сайт";
 };
 const readKey = (id: string) => `alsma-admin-request-read-${id}`;
+
+const assignee = (item: AdminRequest) => {
+  if (item.details.managerRequested)
+    return {
+      label: "Запрошен менеджер",
+      className: "bg-destructive/10 text-destructive",
+      Icon: UserRound,
+    };
+  if (item.details.chatMode === "manager")
+    return {
+      label: "Менеджер",
+      className: "bg-supporting/25 text-accent-ui-foreground",
+      Icon: UserRound,
+    };
+  return {
+    label: "AI-агент",
+    className: "bg-brand/10 text-brand",
+    Icon: Bot,
+  };
+};
 
 export const AdminRequestsPanel = () => {
   const [search, setSearch] = useState("");
@@ -132,7 +146,7 @@ export const AdminRequestsPanel = () => {
         </label>
         <label>
           <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-            Статус
+            Статус обращения
           </span>
           <DropdownSelect<StatusFilter>
             ariaLabel="Фильтр обращений по статусу"
@@ -155,7 +169,7 @@ export const AdminRequestsPanel = () => {
                 <th className="px-5 py-4">Последняя активность</th>
                 <th className="px-5 py-4">Клиент</th>
                 <th className="px-5 py-4">Обращение</th>
-                <th className="px-5 py-4">Статус</th>
+                <th className="px-5 py-4">Кто отвечает</th>
                 <th className="px-5 py-4 text-right">Действие</th>
               </tr>
             </thead>
@@ -163,6 +177,8 @@ export const AdminRequestsPanel = () => {
               {items.map((item) => {
                 const currentType = requestType(item);
                 const newMessage = isNewMessage(item);
+                const currentAssignee = assignee(item);
+                const AssigneeIcon = currentAssignee.Icon;
                 return (
                   <tr
                     className={cn(
@@ -202,11 +218,12 @@ export const AdminRequestsPanel = () => {
                     <td className="px-5 py-4">
                       <span
                         className={cn(
-                          "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
-                          statusTones[item.status],
+                          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+                          currentAssignee.className,
                         )}
                       >
-                        {statusLabels[item.status]}
+                        <AssigneeIcon className="size-3.5" />
+                        {currentAssignee.label}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">

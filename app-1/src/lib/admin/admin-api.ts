@@ -68,7 +68,13 @@ export type AdminRequest = {
   readonly contact: string | null;
   readonly createdAt: string;
   readonly description: string | null;
-  readonly details: Record<string, string>;
+  readonly details: {
+    readonly channelType?: string;
+    readonly chatMode?: "agent" | "manager";
+    readonly managerRequested?: boolean;
+    readonly source?: string;
+    readonly [key: string]: string | boolean | undefined;
+  };
   readonly id: string;
   readonly requester: string | null;
   readonly status: SiteLead["status"];

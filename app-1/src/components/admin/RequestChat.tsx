@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { Send } from "lucide-react";
@@ -28,28 +28,44 @@ export const RequestChat = ({
 }: RequestChatProps) => {
   const [messages, setMessages] = useState<RequestChatMessage[]>([]);
   const [mode, setMode] = useState<"agent" | "manager">("agent");
+  const [managerRequested, setManagerRequested] = useState(false);
   const [agentStatus, setAgentStatus] = useState("");
   const [text, setText] = useState("");
-  const adminHeaders = { Authorization: `Bearer ${readAdminSession() ?? ""}` };
+  const adminHeaders = useMemo(
+    () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` }),
+    [],
+  );
 
   useEffect(() => {
     const loadMode = () =>
       apiClient
-        .get<{ mode: "agent" | "manager" }>("/chat/mode", {
-          params: { conversationId },
-          headers: adminHeaders,
-        })
-        .then(({ data }) => setMode(data.mode));
+        .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
+          "/chat/mode",
+          {
+            params: { conversationId },
+            headers: adminHeaders,
+          },
+        )
+        .then(({ data }) => {
+          setMode(data.mode);
+          setManagerRequested(data.managerRequested);
+        });
     void Promise.all([
       apiClient.get<{ items: RequestChatMessage[] }>("/chat/messages", {
         params: { conversationId },
       }),
       apiClient
-        .get<{ mode: "agent" | "manager" }>("/chat/mode", {
-          params: { conversationId },
-          headers: adminHeaders,
-        })
-        .then(({ data }) => setMode(data.mode)),
+        .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
+          "/chat/mode",
+          {
+            params: { conversationId },
+            headers: adminHeaders,
+          },
+        )
+        .then(({ data }) => {
+          setMode(data.mode);
+          setManagerRequested(data.managerRequested);
+        }),
     ]).then(([{ data }]) => {
       setMessages(
         data.items.length
@@ -85,7 +101,7 @@ export const RequestChat = ({
       window.clearInterval(modePoll);
       events.close();
     };
-  }, [conversationId, initialMessages]);
+  }, [adminHeaders, conversationId, initialMessages]);
 
   const send = async (event: FormEvent) => {
     event.preventDefault();
@@ -113,7 +129,11 @@ export const RequestChat = ({
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-supporting/30 px-3 py-1 text-xs font-semibold text-supporting-foreground">
-            {mode === "manager" ? "Менеджер отвечает" : "AI-агент отвечает"}
+            {managerRequested
+              ? "Запрошен менеджер"
+              : mode === "manager"
+                ? "Менеджер отвечает"
+                : "AI-агент отвечает"}
           </span>
           <button
             className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold"
@@ -125,6 +145,7 @@ export const RequestChat = ({
                 { headers: adminHeaders },
               );
               setMode(nextMode);
+              setManagerRequested(false);
             }}
             type="button"
           >
