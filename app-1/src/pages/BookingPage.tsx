@@ -320,8 +320,11 @@ export const BookingPage = () => {
                       Даты проживания
                     </span>
                     <DateRangePicker
+                      adults={search.adults}
+                      childAges={search.childAges}
                       checkIn={search.checkIn}
                       checkOut={search.checkOut}
+                      roomCount={search.roomCount}
                       onChange={({ checkIn, checkOut }) =>
                         setSearch((v) => ({ ...v, checkIn, checkOut }))
                       }

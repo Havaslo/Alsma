@@ -19,6 +19,22 @@ export const offersQuerySchema = z.object({
   roomCount: z.coerce.number().int().min(1).max(2).default(1),
 });
 
+export const calendarPricesQuerySchema = z.object({
+  adults: z.coerce.number().int().min(1).max(12).default(1),
+  childAges: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value ? value.split(",").map((age) => Number(age.trim())) : [],
+    )
+    .pipe(z.array(z.number().int().min(0).max(17)).max(8)),
+  currency: z.string().trim().length(3).default("RUB"),
+  language: z.string().trim().length(2).default("ru"),
+  month: z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/),
+  nationality: z.string().trim().length(2).default("RU"),
+  roomCount: z.coerce.number().int().min(1).max(2).default(1),
+});
+
 const guestSchema = z.object({
   birthDate: isoDate.optional(),
   firstName: z.string().trim().min(1).max(80),
@@ -47,5 +63,6 @@ export const createReservationBodySchema = z.object({
   roomCount: z.number().int().min(1).max(2).default(1),
 });
 
+export type CalendarPricesQuery = z.infer<typeof calendarPricesQuerySchema>;
 export type CreateReservationBody = z.infer<typeof createReservationBodySchema>;
 export type OffersQuery = z.infer<typeof offersQuerySchema>;

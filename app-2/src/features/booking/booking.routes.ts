@@ -9,6 +9,7 @@ import {
 } from "./booking.handlers.js";
 import { createBookingRepository } from "./booking.repository.js";
 import {
+  calendarPricesQuerySchema,
   createReservationBodySchema,
   offersQuerySchema,
 } from "./booking.schemas.js";
@@ -31,6 +32,12 @@ export const createBookingRouter = (
     "/offers",
     validateRequest({ query: offersQuerySchema }),
     createOffersHandler(service),
+  );
+  router.get(
+    "/calendar-prices",
+    validateRequest({ query: calendarPricesQuerySchema }),
+    async (_request, response) =>
+      response.json(await service.calendarPrices(response.locals.input.query)),
   );
   router.post(
     "/reservations",

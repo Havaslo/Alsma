@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
+import { loadBookingCalendarPrices } from "@/lib/booking/booking-api";
 import { cn } from "@/lib/cn";
 
 const weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -17,6 +18,9 @@ const displayFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
 });
+const priceFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 0,
+});
 const parseDate = (value: string) => new Date(`${value}T12:00:00`);
 const serializeDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -26,9 +30,15 @@ export const DateRangePicker = ({
   onChange,
   panelClassName,
   triggerClassName,
+  adults,
+  childAges,
+  roomCount,
 }: {
   readonly checkIn: string;
   readonly checkOut: string;
+  readonly adults: number;
+  readonly childAges: readonly number[];
+  readonly roomCount: number;
   readonly onChange: (range: { checkIn: string; checkOut: string }) => void;
   readonly panelClassName?: string;
   readonly triggerClassName?: string;
@@ -39,7 +49,41 @@ export const DateRangePicker = ({
     return new Date(date.getFullYear(), date.getMonth(), 1);
   });
   const [pendingStart, setPendingStart] = useState<string | null>(null);
+  const [prices, setPrices] = useState<
+    Record<string, { discount: boolean; price: number }>
+  >({});
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    void loadBookingCalendarPrices(
+      {
+        adults,
+        childAges: [...childAges],
+        currency: "RUB",
+        language: "ru",
+        month: monthKey,
+        nationality: "RU",
+        roomCount,
+      },
+      controller.signal,
+    )
+      .then(({ data }) =>
+        setPrices(
+          Object.fromEntries(
+            data.items.map((item) => [
+              item.date,
+              { discount: item.discount, price: item.price },
+            ]),
+          ),
+        ),
+      )
+      .catch(() => {
+        if (!controller.signal.aborted) setPrices({});
+      });
+    return () => controller.abort();
+  }, [adults, childAges, month, roomCount]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,7 +182,7 @@ export const DateRangePicker = ({
             {pendingStart ? "Выберите дату выезда" : "Выберите дату заезда"}
           </p>
           <p className="mt-1 text-xs text-muted-ui-foreground">
-            Стоимость и наличие покажем после выбора периода
+            Минимальная цена за ночь по доступным тарифам Eptera
           </p>
           <div className="mt-3 grid grid-cols-7 text-center text-xs font-semibold text-muted-ui-foreground">
             {weekdays.map((day) => (
@@ -155,6 +199,7 @@ export const DateRangePicker = ({
                 value === checkOut ||
                 value === pendingStart;
               const inRange = value > checkIn && value < checkOut;
+              const meta = prices[value];
               return (
                 <button
                   aria-label={`Выбрать ${date.getDate()} число`}
@@ -170,6 +215,22 @@ export const DateRangePicker = ({
                   type="button"
                 >
                   <span>{date.getDate()}</span>
+                  {meta && (
+                    <small
+                      className={cn(
+                        "text-[0.58rem] leading-none text-muted-ui-foreground",
+                        selected && "text-brand-foreground/80",
+                      )}
+                    >
+                      {priceFormatter.format(meta.price)} ₽
+                    </small>
+                  )}
+                  {meta?.discount && (
+                    <span
+                      aria-label="Есть скидка"
+                      className="absolute top-1 right-1 size-1.5 rounded-full bg-red-500"
+                    />
+                  )}
                 </button>
               );
             })}

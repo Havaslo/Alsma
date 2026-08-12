@@ -1,7 +1,11 @@
 import { HttpError } from "../../lib/http/http-error.js";
 import type { BookingRepository } from "./booking.repository.js";
-import type { CreateReservationBody, OffersQuery } from "./booking.schemas.js";
-import type { EpteraClient } from "./eptera.client.js";
+import type {
+  CalendarPricesQuery,
+  CreateReservationBody,
+  OffersQuery,
+} from "./booking.schemas.js";
+import type { EpteraClient, EpteraOffer } from "./eptera.client.js";
 import type { YooKassaClient, YooPayment } from "./yookassa.client.js";
 
 const normalizePhone = (value: string): string => {
@@ -32,6 +36,19 @@ const nightsBetween = (checkIn: string, checkOut: string) =>
   );
 const amountText = (value: number) => value.toFixed(2);
 
+type CalendarPrice = {
+  readonly date: string;
+  readonly discount: boolean;
+  readonly price: number;
+};
+const calendarCache = new Map<
+  string,
+  { expiresAt: number; items: CalendarPrice[] }
+>();
+const dateKey = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+const nextDate = (date: Date) => new Date(date.getTime() + 86_400_000);
+
 export const createBookingService = (
   repository: BookingRepository,
   eptera: EpteraClient,
@@ -46,6 +63,68 @@ export const createBookingService = (
       );
     }
     return { offers: await eptera.getOffers(input), search: input };
+  },
+  calendarPrices: async (input: CalendarPricesQuery) => {
+    const cacheKey = JSON.stringify(input);
+    const cached = calendarCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return { items: cached.items };
+    const [yearText, monthText] = input.month.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const dates = Array.from(
+      { length: daysInMonth },
+      (_, index) => new Date(Date.UTC(year, month - 1, index + 1)),
+    );
+    const items: CalendarPrice[] = [];
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < dates.length) {
+        const current = dates[cursor++];
+        if (!current) return;
+        try {
+          const offers = await eptera.getOffers({
+            adults: input.adults,
+            checkIn: dateKey(current),
+            checkOut: dateKey(nextDate(current)),
+            childAges: input.childAges,
+            currency: input.currency,
+            language: input.language,
+            nationality: input.nationality,
+            roomCount: input.roomCount,
+          });
+          const available = offers.filter(
+            (offer) =>
+              offer.roomToSell === null || offer.roomToSell >= input.roomCount,
+          );
+          const cheapest = available.reduce<EpteraOffer | null>(
+            (lowest, offer) => {
+              const value = offer.discountedPrice || offer.price;
+              const lowestValue = lowest
+                ? lowest.discountedPrice || lowest.price
+                : Number.POSITIVE_INFINITY;
+              return value < lowestValue ? offer : lowest;
+            },
+            null,
+          );
+          if (cheapest) {
+            items.push({
+              date: dateKey(current),
+              discount:
+                cheapest.discountedPrice > 0 &&
+                cheapest.discountedPrice < cheapest.price,
+              price: cheapest.discountedPrice || cheapest.price,
+            });
+          }
+        } catch {
+          // A missing daily price must not make the whole calendar unavailable.
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: 4 }, () => worker()));
+    items.sort((left, right) => left.date.localeCompare(right.date));
+    calendarCache.set(cacheKey, { expiresAt: Date.now() + 5 * 60_000, items });
+    return { items };
   },
   createReservation: async (input: CreateReservationBody) => {
     if (date(input.checkOut) <= date(input.checkIn)) {

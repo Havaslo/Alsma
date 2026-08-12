@@ -27,6 +27,12 @@ export type BookingOffer = {
   readonly bedOptions: string | null;
 };
 
+export type BookingCalendarPrice = {
+  readonly date: string;
+  readonly discount: boolean;
+  readonly price: number;
+};
+
 export type BookingSearch = {
   readonly adults: number;
   readonly checkIn: string;
@@ -64,6 +70,23 @@ export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
     "/booking/offers",
     { params: { ...input, childAges: input.childAges.join(",") }, signal },
   );
+
+export const loadBookingCalendarPrices = (
+  input: Pick<
+    BookingSearch,
+    | "adults"
+    | "childAges"
+    | "currency"
+    | "language"
+    | "nationality"
+    | "roomCount"
+  > & { month: string },
+  signal: AbortSignal,
+) =>
+  apiClient.get<{ items: BookingCalendarPrice[] }>("/booking/calendar-prices", {
+    params: { ...input, childAges: input.childAges.join(",") },
+    signal,
+  });
 
 export const createBookingReservation = (input: CreateBookingInput) =>
   apiClient.post<{
