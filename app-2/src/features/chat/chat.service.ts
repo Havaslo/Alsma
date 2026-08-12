@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import type { Database } from "../../lib/database/database.js";
 
 export type ChatMessage = {
   readonly type: "message";
@@ -19,43 +19,61 @@ export type ChatStatus = {
 
 export type ChatEvent = ChatMessage | ChatStatus;
 type Subscriber = (event: ChatEvent) => void;
+type ChatAuthor = ChatMessage["author"];
 
-const messages = new Map<string, ChatMessage[]>();
 const subscribers = new Map<string, Set<Subscriber>>();
 
-export const createChatService = () => {
+const toMessage = (message: {
+  id: string;
+  conversationId: string;
+  author: string;
+  text: string;
+  bookingUrl: string | null;
+  createdAt: Date;
+}): ChatMessage => ({
+  type: "message",
+  id: message.id,
+  conversationId: message.conversationId,
+  author: message.author as ChatAuthor,
+  text: message.text,
+  createdAt: message.createdAt.toISOString(),
+  ...(message.bookingUrl ? { bookingUrl: message.bookingUrl } : {}),
+});
+
+export const createChatService = (database: Database) => {
   const emit = (conversationId: string, event: ChatEvent) =>
     subscribers.get(conversationId)?.forEach((subscriber) => subscriber(event));
 
-  const publish = (
+  const publish = async (
     conversationId: string,
-    author: ChatMessage["author"],
+    author: ChatAuthor,
     text: string,
     bookingUrl?: string,
   ) => {
-    const message: ChatMessage = {
-      type: "message",
-      id: randomUUID(),
-      conversationId,
-      author,
-      text,
-      createdAt: new Date().toISOString(),
-      ...(bookingUrl ? { bookingUrl } : {}),
-    };
-    const conversation = messages.get(conversationId) ?? [];
-    conversation.push(message);
-    messages.set(conversationId, conversation.slice(-100));
-    emit(conversationId, message);
-    return message;
+    const message = await database.client.$transaction(async (transaction) => {
+      const created = await transaction.chatMessage.create({
+        data: { author, bookingUrl, conversationId, text },
+      });
+      await transaction.adminRequest.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
+      return created;
+    });
+    const event = toMessage(message);
+    emit(conversationId, event);
+    return event;
   };
 
   return {
-    list: (conversationId?: string) => {
-      if (conversationId) return messages.get(conversationId) ?? [];
-      return [...messages.values()]
-        .flat()
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    },
+    list: async (conversationId?: string) =>
+      (
+        await database.client.chatMessage.findMany({
+          ...(conversationId ? { where: { conversationId } } : {}),
+          orderBy: { createdAt: conversationId ? "asc" : "desc" },
+          ...(conversationId ? {} : { take: 100 }),
+        })
+      ).map(toMessage),
     publish,
     publishStatus: (
       conversationId: string,

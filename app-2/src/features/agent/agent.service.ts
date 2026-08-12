@@ -108,7 +108,9 @@ export const createAiAgentService = (options: AgentOptions) => {
     });
     const settings = asSettings(setting?.value);
     if (!settings.enabled || !options.apiKey || !options.baseUrl) return null;
-    const conversationMessages = options.chat.list(conversationId).slice(-20);
+    const conversationMessages = (
+      await options.chat.list(conversationId)
+    ).slice(-20);
     const conversationText = conversationMessages
       .map((item) => item.text)
       .join("\n");
@@ -330,7 +332,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       answer =
         "Не удалось получить актуальное наличие из Eptera. Попробуйте ещё раз или я передам вопрос сотруднику.";
     }
-    options.chat.publish(conversationId, "agent", answer, bookingUrl);
+    await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: result.action, answer };
   };
   return { reply };

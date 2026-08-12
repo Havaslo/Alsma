@@ -112,9 +112,9 @@ export const createChatRouter = (
   router.get(
     "/messages",
     validateRequest({ query: conversationSchema }),
-    (_request, response) =>
+    async (_request, response) =>
       response.json({
-        items: chat.list(response.locals.input.query.conversationId),
+        items: await chat.list(response.locals.input.query.conversationId),
       }),
   );
   router.post(
@@ -141,7 +141,11 @@ export const createChatRouter = (
           updatedAt: new Date(),
         },
       });
-      const published = chat.publish(input.conversationId, "guest", input.text);
+      const published = await chat.publish(
+        input.conversationId,
+        "guest",
+        input.text,
+      );
       if ((await getMode(input.conversationId)) === "manager") {
         response.status(201).json({ message: published });
         return;
@@ -174,12 +178,12 @@ export const createChatRouter = (
             } catch {
               // The fallback itself must never prevent a final chat message.
             }
-            chat.publish(input.conversationId, "agent", fallbackText);
+            await chat.publish(input.conversationId, "agent", fallbackText);
           }
           chat.publishStatus(input.conversationId, "idle", "");
         })
-        .catch(() => {
-          chat.publish(
+        .catch(async () => {
+          await chat.publish(
             input.conversationId,
             "agent",
             "Не удалось получить ответ автоматически. Я передал вопрос сотруднику — менеджер ответит в этом чате.",
@@ -202,8 +206,8 @@ export const createChatRouter = (
       createAdminAuthService(createAdminAuthRepository(database)),
     ),
   );
-  admin.get("/messages", (_request, response) =>
-    response.json({ items: chat.list() }),
+  admin.get("/messages", async (_request, response) =>
+    response.json({ items: await chat.list() }),
   );
   admin.post(
     "/mode",
@@ -220,12 +224,12 @@ export const createChatRouter = (
     async (_request, response) => {
       const input = response.locals.input.body;
       await setMode(input.conversationId, "manager", false);
-      await database.client.adminRequest.updateMany({
-        where: { id: input.conversationId },
-        data: { updatedAt: new Date() },
-      });
       response.status(201).json({
-        message: chat.publish(input.conversationId, "manager", input.text),
+        message: await chat.publish(
+          input.conversationId,
+          "manager",
+          input.text,
+        ),
       });
     },
   );

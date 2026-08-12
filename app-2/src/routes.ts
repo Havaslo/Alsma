@@ -55,7 +55,7 @@ export const createApiRouter = ({
   yooKassaShopId,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
-  const chat = createChatService();
+  const chat = createChatService(database);
   const agent = createAiAgentService({
     apiKey: openaiApiKey,
     baseUrl: openaiBaseUrl,
