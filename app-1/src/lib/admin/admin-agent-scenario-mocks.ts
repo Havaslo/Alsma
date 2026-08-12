@@ -1,4 +1,5 @@
-export type MockAgentScenarioTrigger = "booking" | "consultation" | "fallback";
+export type MockAgentScenarioTrigger =
+  "booking" | "consultation" | "fallback" | "spa" | "hardware-procedures";
 
 export type MockAgentScenario = {
   readonly enabled: boolean;
@@ -88,6 +89,8 @@ export const AGENT_SCENARIO_TRIGGER_OPTIONS = [
   { label: "Консультации", value: "consultation" },
   { label: "Бронирование", value: "booking" },
   { label: "Запасной ответ", value: "fallback" },
+  { label: "SPA-отдых", value: "spa" },
+  { label: "Аппаратные процедуры", value: "hardware-procedures" },
 ] as const;
 
 export const TRANSFER_CONDITION_OPTIONS = [
@@ -103,6 +106,8 @@ export const AGENT_SCENARIO_TRIGGER_LABELS: Record<
   booking: "Бронирование",
   consultation: "Консультации",
   fallback: "Запасной ответ",
+  spa: "SPA-отдых",
+  "hardware-procedures": "Аппаратные процедуры",
 };
 
 export const TRANSFER_CONDITION_LABELS: Record<MockTransferCondition, string> =

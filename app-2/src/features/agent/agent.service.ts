@@ -6,6 +6,7 @@ import type { EpteraClient } from "../booking/eptera.client.js";
 import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
+import { ensureDefaultAgentPlaybook } from "./agent-playbook.js";
 
 const settingsKey = "agent.settings";
 const bookingSchema = z.object({
@@ -16,7 +17,8 @@ const bookingSchema = z.object({
   roomCount: z.number().int().min(1).max(2),
 });
 const actionSchema = z.object({
-  action: z.enum(["answer", "create_request", "transfer"]),
+  action: z.enum(["answer", "open_page", "create_request", "transfer"]),
+  page: z.enum(["spa", "hardware-procedures"]).optional(),
   name: z.string().trim().max(160).optional(),
   phone: z.string().trim().max(40).optional(),
   email: z.string().trim().max(320).optional(),
@@ -102,6 +104,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     createKnowledgeBaseRepository(options.database),
   );
   const reply = async (conversationId: string, message: string) => {
+    await ensureDefaultAgentPlaybook(options.database);
     const setting = await options.database.client.appSetting.findUnique({
       where: { key: settingsKey },
       select: { value: true },
@@ -154,13 +157,16 @@ export const createAiAgentService = (options: AgentOptions) => {
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
-      "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст; сформулируй короткий прямой ответ именно на вопрос гостя. Если в контексте нет ответа, честно скажи об этом и предложи помощь сотрудника.",
+      "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
+      "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
+      "Распознавай этап диалога. Для SPA уточни: с проживанием или на один день. Для аппаратных процедур уточни цель. Для проживания собери недостающие параметры и проверь наличие. Если клиент готов смотреть страницу SPA или процедур, используй action open_page и соответствующий page; не вставляй URL в текст.",
+      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
-      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer.",
+      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa или hardware-procedures.",
       `Для ссылки на бронирование используй текущий год ${new Date().getFullYear()} только как справочную информацию, но не подставляй год сам: если гость назвал день и месяц без года или год неоднозначен, задай короткий вопрос о годе. Когда год подтверждён, преобразуй русские даты вроде «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Собери даты заезда/выезда, общее число взрослых и количество номеров. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
-      "Верни только JSON без markdown в формате: {action:'answer'|'create_request'|'transfer', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}.",
+      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Сценарии:\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
@@ -253,6 +259,10 @@ export const createAiAgentService = (options: AgentOptions) => {
         },
       });
     let bookingUrl: string | undefined;
+    if (result.action === "open_page") {
+      bookingUrl =
+        result.page === "hardware-procedures" ? "/hardware-procedures" : "/spa";
+    }
     let availabilityResult: "available" | "unavailable" | "error" | null = null;
     let availableOfferCount = 0;
     const modelBooking = bookingSchema.safeParse(result.booking);

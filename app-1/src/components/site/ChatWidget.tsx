@@ -287,7 +287,11 @@ export const ChatWidget = () => {
                         className="mt-3 inline-flex rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground no-underline"
                         href={message.bookingUrl}
                       >
-                        Открыть бронирование
+                        {message.bookingUrl.includes("hardware-procedures")
+                          ? "Открыть аппаратные процедуры"
+                          : message.bookingUrl === "/spa"
+                            ? "Открыть страницу SPA"
+                            : "Открыть бронирование"}
                       </a>
                     )}
                   </div>
