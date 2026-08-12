@@ -114,25 +114,25 @@ model GuestBonusProgram {
 }
 
 model GuestBooking {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  user         GuestUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roomName               String    @map("room_name")
-  checkInDate            DateTime  @map("check_in_date") @db.Date
-  checkOutDate           DateTime  @map("check_out_date") @db.Date
-  guestsCount            Int       @map("guests_count")
-  status                 String    @default("confirmed")
-  totalAmount            Decimal?  @map("total_amount") @db.Decimal(12, 2)
-  currency               String    @default("RUB")
-  paymentStatus          String    @default("payment_pending") @map("payment_status")
-  paymentAmount          Decimal?  @map("payment_amount") @db.Decimal(12, 2)
-  paymentId              String?   @unique @map("payment_id")
-  epteraReservationId    String?   @unique @map("eptera_reservation_id")
-  voucherNumber          String?   @map("voucher_number")
-  contactPhone           String?   @map("contact_phone")
-  contactEmail           String?   @map("contact_email")
-  selectedOffer          Json?     @map("selected_offer")
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  user                GuestUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomName            String    @map("room_name")
+  checkInDate         DateTime  @map("check_in_date") @db.Date
+  checkOutDate        DateTime  @map("check_out_date") @db.Date
+  guestsCount         Int       @map("guests_count")
+  status              String    @default("confirmed")
+  totalAmount         Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  currency            String    @default("RUB")
+  paymentStatus       String    @default("payment_pending") @map("payment_status")
+  paymentAmount       Decimal?  @map("payment_amount") @db.Decimal(12, 2)
+  paymentId           String?   @unique @map("payment_id")
+  epteraReservationId String?   @unique @map("eptera_reservation_id")
+  voucherNumber       String?   @map("voucher_number")
+  contactPhone        String?   @map("contact_phone")
+  contactEmail        String?   @map("contact_email")
+  selectedOffer       Json?     @map("selected_offer")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([userId, checkInDate])
   @@map("guest_bookings")
