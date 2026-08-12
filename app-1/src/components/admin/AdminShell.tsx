@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Link } from "@tanstack/react-router";
@@ -18,8 +19,13 @@ import {
 import logoWhite from "@/assets/alsma/logo-white.svg";
 import { AdminSiteNavigationMenu } from "@/components/admin/AdminSiteNavigationMenu";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
-import type { AdminUser } from "@/lib/admin/admin-api";
+import {
+  type AdminNotification,
+  type AdminUser,
+  loadAdminNotifications,
+} from "@/lib/admin/admin-api";
 import { cn } from "@/lib/cn";
+import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const navigation = [
@@ -101,6 +107,34 @@ const adminPageTitle = (path: string): string => {
   return getAdminSiteTitle(path);
 };
 
+const notificationReadKey = (userId: string) =>
+  `alsma-admin-notifications-read-${userId}`;
+const readNotificationIds = (userId: string): Set<string> => {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem(notificationReadKey(userId)) ?? "[]",
+    );
+    return new Set(
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string")
+        : [],
+    );
+  } catch {
+    return new Set();
+  }
+};
+const notificationHref = (item: AdminNotification) => {
+  if (item.type === "lead") return ROUTES.adminSiteLeads;
+  if (item.type === "booking") return ROUTES.adminBookingRequests;
+  return buildRoute(ROUTES.adminRequest, { requestId: item.entityId });
+};
+const notificationLabel = (type: AdminNotification["type"]) =>
+  type === "lead"
+    ? "Заявка сайта"
+    : type === "booking"
+      ? "Бронирование"
+      : "Обращение";
+
 export const AdminShell = ({
   children,
   onLogout,
@@ -113,6 +147,82 @@ export const AdminShell = ({
   readonly user: AdminUser;
 }) => {
   const title = adminPageTitle(path);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(() =>
+    readNotificationIds(user.id),
+  );
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const knownNotificationIds = useRef(new Set<string>());
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !readIds.has(item.id)).length,
+    [notifications, readIds],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async (initial = false) => {
+      try {
+        const { data } = await loadAdminNotifications();
+        if (!mounted) return;
+        const newItems = data.items.filter(
+          (item) => !knownNotificationIds.current.has(item.id),
+        );
+        if (!initial && newItems.length) {
+          try {
+            const context = new AudioContext();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.frequency.value = 880;
+            gain.gain.setValueAtTime(0.0001, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(
+              0.12,
+              context.currentTime + 0.02,
+            );
+            gain.gain.exponentialRampToValueAtTime(
+              0.0001,
+              context.currentTime + 0.2,
+            );
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.21);
+            window.setTimeout(() => void context.close(), 300);
+          } catch {
+            // Browsers may block audio until the administrator interacts with the page.
+          }
+        }
+        data.items.forEach((item) => knownNotificationIds.current.add(item.id));
+        setNotifications(data.items);
+      } catch {
+        // The header must not interrupt the admin workspace if notifications are unavailable.
+      }
+    };
+    void load(true);
+    const interval = window.setInterval(() => void load(), 10_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [user.id]);
+  const markRead = (id: string) => {
+    setReadIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      localStorage.setItem(
+        notificationReadKey(user.id),
+        JSON.stringify([...next]),
+      );
+      return next;
+    });
+  };
+  const markAllRead = () => {
+    const next = new Set(notifications.map((item) => item.id));
+    setReadIds(next);
+    localStorage.setItem(
+      notificationReadKey(user.id),
+      JSON.stringify([...next]),
+    );
+  };
 
   return (
     <main className="flex min-h-screen bg-page text-page-foreground">
@@ -198,14 +308,76 @@ export const AdminShell = ({
             <span className="font-semibold">{title}</span>
           </nav>
           <div className="flex items-center gap-3">
-            <button
-              aria-label="Уведомления"
-              className="relative grid size-11 place-items-center rounded-full border border-line bg-brand-foreground text-brand transition hover:bg-muted-ui/30"
-              type="button"
-            >
-              <Bell className="size-5" />
-              <span className="absolute top-2 right-2 size-2.5 rounded-full bg-destructive" />
-            </button>
+            <div className="relative">
+              <button
+                aria-expanded={notificationsOpen}
+                aria-label={`Уведомления${unreadCount ? `: ${unreadCount} новых` : ""}`}
+                className="relative grid size-11 place-items-center rounded-full border border-line bg-brand-foreground text-brand transition hover:bg-muted-ui/30"
+                onClick={() => setNotificationsOpen((current) => !current)}
+                type="button"
+              >
+                <Bell className="size-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="absolute top-14 right-0 z-50 w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                    <strong className="text-sm text-brand">Уведомления</strong>
+                    <button
+                      className="text-xs font-semibold text-muted-ui-foreground hover:text-brand"
+                      onClick={markAllRead}
+                      type="button"
+                    >
+                      Прочитать все
+                    </button>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {!notifications.length && (
+                      <p className="p-5 text-sm text-muted-ui-foreground">
+                        Новых событий нет.
+                      </p>
+                    )}
+                    {notifications.map((item) => (
+                      <Link
+                        className={cn(
+                          "block border-b border-line px-4 py-3 transition hover:bg-page",
+                          !readIds.has(item.id) && "bg-page/70",
+                        )}
+                        key={item.id}
+                        onClick={() => {
+                          markRead(item.id);
+                          setNotificationsOpen(false);
+                        }}
+                        to={notificationHref(item)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-[11px] font-semibold tracking-wide text-brand uppercase">
+                            {notificationLabel(item.type)}
+                          </span>
+                          <time className="shrink-0 text-[11px] text-muted-ui-foreground">
+                            {new Date(item.createdAt).toLocaleString("ru-RU", {
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                        </div>
+                        <p className="mt-1 text-sm font-semibold text-page-foreground">
+                          {item.title}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-ui-foreground">
+                          {item.description}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3 rounded-full border border-line bg-brand-foreground px-3 py-2">
               <span className="grid size-9 place-items-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">
                 AI

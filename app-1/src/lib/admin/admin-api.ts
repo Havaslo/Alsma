@@ -72,6 +72,16 @@ export type AdminRequest = {
   readonly title: string;
   readonly updatedAt: string;
 };
+export type AdminNotification = {
+  readonly id: string;
+  readonly entityId: string;
+  readonly type: "lead" | "request" | "booking";
+  readonly title: string;
+  readonly description: string;
+  readonly status: string;
+  readonly createdAt: string;
+};
+
 export type ManagerTask = {
   readonly completedAt: string | null;
   readonly description: string | null;
@@ -103,6 +113,11 @@ export const loadAdmin = (signal?: AbortSignal) =>
   });
 export const logoutAdmin = () =>
   apiClient.post("/admin/auth/logout", {}, { headers: headers() });
+export const loadAdminNotifications = (signal?: AbortSignal) =>
+  apiClient.get<{ items: AdminNotification[]; unreadCount: number }>(
+    "/admin/notifications",
+    { headers: headers(), signal },
+  );
 export const loadAdminLeads = (signal?: AbortSignal) =>
   apiClient.get<{
     items: SiteLead[];

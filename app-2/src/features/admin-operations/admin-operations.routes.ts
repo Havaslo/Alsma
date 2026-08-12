@@ -41,6 +41,24 @@ export const createAdminOperationsRouter = (database: Database): Router => {
     ),
   );
   router.get(
+    "/notifications",
+    createRequireAdminPermission(
+      "leads.access",
+      "requests.access",
+      "dashboard.access",
+    ),
+    async (_request, response) => {
+      const result = await repository.listNotifications();
+      response.json({
+        ...result,
+        items: result.items.map((item) => ({
+          ...item,
+          createdAt: item.createdAt.toISOString(),
+        })),
+      });
+    },
+  );
+  router.get(
     "/bookings",
     createRequireAdminPermission("dashboard.access"),
     validateRequest({ query: adminOperationsQuerySchema }),

@@ -16,6 +16,64 @@ const clientSource = (
     : "Личный кабинет";
 
 export const createAdminOperationsRepository = (database: Database) => ({
+  listNotifications: async () => {
+    const [leads, requests, bookings] = await Promise.all([
+      database.client.siteLead.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      database.client.adminRequest.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      database.client.bookingRequest.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+    ]);
+    const items = [
+      ...leads.map((item) => ({
+        id: `lead:${item.id}`,
+        entityId: item.id,
+        type: "lead" as const,
+        title: item.formTitle,
+        description:
+          item.name ?? item.phone ?? item.email ?? "Новая заявка сайта",
+        status: item.status,
+        createdAt: item.createdAt,
+      })),
+      ...requests.map((item) => ({
+        id: `request:${item.id}`,
+        entityId: item.id,
+        type: "request" as const,
+        title: item.title,
+        description:
+          item.requester ??
+          item.contact ??
+          item.description ??
+          "Новое обращение",
+        status: item.status,
+        createdAt: item.createdAt,
+      })),
+      ...bookings.map((item) => ({
+        id: `booking:${item.id}`,
+        entityId: item.id,
+        type: "booking" as const,
+        title: "Новая заявка на бронирование",
+        description: item.guestName,
+        status: item.status,
+        createdAt: item.createdAt,
+      })),
+    ]
+      .sort(
+        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+      )
+      .slice(0, 30);
+    return {
+      items,
+      unreadCount: items.filter((item) => item.status === "new").length,
+    };
+  },
   createBooking: (input: CreateBookingBody) =>
     database.client.bookingRequest.create({ data: input }),
   deleteClient: (recordId: string) =>
