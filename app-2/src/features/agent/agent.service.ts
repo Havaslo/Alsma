@@ -72,18 +72,38 @@ const monthNumbers: Record<string, string> = {
   ноября: "11",
   декабря: "12",
 };
+const monthNames = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+] as const;
+const formatFullDate = (value: string) => {
+  const [year = "", monthText = "", day = ""] = value.split("-");
+  const month = Number(monthText);
+  return `${Number(day)} ${monthNames[month - 1] ?? ""} ${year}`;
+};
 
 const extractBooking = (text: string) => {
   const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
     (match) => match[1],
   );
   const russianRange = text.match(
-    /(?:с\s*)?(\d{1,2})\s*(?:[-–]\s*|по\s+)(\d{1,2})\s+([а-яё]+)\s+(\d{4})/iu,
+    /(?:с\s*)?(\d{1,2})\s*(?:[-–]\s*|по\s+)(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?/iu,
   );
+  const inferredYear = String(new Date().getFullYear());
   const dates = russianRange
     ? [
-        `${russianRange[4]!}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[1]!)).padStart(2, "0")}`,
-        `${russianRange[4]!}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
+        `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[1]!)).padStart(2, "0")}`,
+        `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
       ]
     : isoDates.slice(-2);
   const adultsMatch = text.match(/(\d{1,2})\s*(?:взросл\w*|человек\w*)/iu);
@@ -163,7 +183,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa или hardware-procedures.",
-      `Для ссылки на бронирование используй текущий год ${new Date().getFullYear()} только как справочную информацию, но не подставляй год сам: если гость назвал день и месяц без года или год неоднозначен, задай короткий вопрос о годе. Когда год подтверждён, преобразуй русские даты вроде «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
+      `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Собери даты заезда/выезда, общее число взрослых и количество номеров. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
@@ -266,11 +286,9 @@ export const createAiAgentService = (options: AgentOptions) => {
     let availabilityResult: "available" | "unavailable" | "error" | null = null;
     let availableOfferCount = 0;
     const modelBooking = bookingSchema.safeParse(result.booking);
-    const booking = modelBooking.success
-      ? modelBooking
-      : extractedBooking
-        ? { success: true as const, data: extractedBooking }
-        : modelBooking;
+    const booking = extractedBooking
+      ? { success: true as const, data: extractedBooking }
+      : modelBooking;
     if (booking.success) {
       options.chat.publishStatus(
         conversationId,
@@ -334,13 +352,15 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
-    if (booking.success && availabilityResult === "available") {
-      answer = `По вашим параметрам в Eptera найдено подходящих типов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
-    } else if (booking.success && availabilityResult === "unavailable") {
-      answer = "По вашим параметрам в Eptera свободных номеров не найдено.";
-    } else if (booking.success && availabilityResult === "error") {
-      answer =
-        "Не удалось получить актуальное наличие из Eptera. Попробуйте ещё раз или я передам вопрос сотруднику.";
+    if (booking.success && availabilityResult) {
+      const dateRange = `${formatFullDate(booking.data.checkInDate)} — ${formatFullDate(booking.data.checkOutDate)}`;
+      if (availabilityResult === "available") {
+        answer = `На даты ${dateRange} в Eptera найдено подходящих типов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
+      } else if (availabilityResult === "unavailable") {
+        answer = `На даты ${dateRange} в Eptera свободных номеров не найдено. Могу проверить другие даты или передать вопрос менеджеру.`;
+      } else {
+        answer = `Не удалось получить актуальное наличие в Eptera на даты ${dateRange}. Попробуйте ещё раз или я передам вопрос сотруднику.`;
+      }
     }
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: result.action, answer };
