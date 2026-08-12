@@ -2,7 +2,6 @@ import { type ReactNode, useMemo, useState } from "react";
 
 import { AdminSiteLeadModal } from "@/components/admin/AdminSiteLeadModal";
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
-import { RequestChat } from "@/components/admin/RequestChat";
 import {
   formatLeadDate,
   getLeadDetailsSummary,
@@ -12,9 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { TextField } from "@/components/ui/FormField";
 import { Loader } from "@/components/ui/Loader";
-import type { AdminRequest, SiteLead } from "@/lib/admin/admin-api";
+import type { SiteLead } from "@/lib/admin/admin-api";
 import { ADMIN_STATUS_OPTIONS } from "@/lib/admin/admin-status";
-import { useAdminLeads, useAdminRequests } from "@/lib/admin/useAdmin";
+import { useAdminLeads } from "@/lib/admin/useAdmin";
 
 type FilterValue = string | "all";
 const ALL_STATUS_OPTIONS = [
@@ -24,7 +23,6 @@ const ALL_STATUS_OPTIONS = [
 
 export const AdminSiteLeadsTable = () => {
   const leads = useAdminLeads();
-  const requests = useAdminRequests();
   const [selectedLead, setSelectedLead] = useState<SiteLead | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState<FilterValue>("all");
@@ -32,7 +30,11 @@ export const AdminSiteLeadsTable = () => {
   const [status, setStatus] = useState<SiteLead["status"] | "all">("all");
   const [applied, setApplied] = useState({ form, page, search, status });
   const sourceItems = useMemo(
-    () => leads.data?.items ?? [],
+    () =>
+      (leads.data?.items ?? []).filter(
+        (lead) =>
+          lead.sourcePage !== "chat" && lead.formCode !== "ai-agent-request",
+      ),
     [leads.data?.items],
   );
   const pageOptions = useMemo(
@@ -58,59 +60,29 @@ export const AdminSiteLeadsTable = () => {
     ],
     [sourceItems],
   );
-  const chatRequests = useMemo(
-    () =>
-      (requests.data?.items ?? [])
-        .filter((request) => request.details.channelType === "chat")
-        .sort(
-          (left, right) =>
-            new Date(right.updatedAt).getTime() -
-            new Date(left.updatedAt).getTime(),
-        ),
-    [requests.data?.items],
-  );
-  const latestChat = chatRequests[0] ?? null;
-  const chatActivity = useMemo(
-    () => new Map(chatRequests.map((request) => [request.id, request])),
-    [chatRequests],
-  );
 
   const items = useMemo(() => {
     const term = applied.search.trim().toLocaleLowerCase("ru-RU");
-    return sourceItems
-      .filter((lead) => {
-        const haystack = [
-          lead.name,
-          lead.phone,
-          lead.email,
-          lead.formTitle,
-          lead.sourcePage,
-          JSON.stringify(lead.details),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLocaleLowerCase("ru-RU");
-        return (
-          (applied.status === "all" || lead.status === applied.status) &&
-          (applied.page === "all" || lead.sourcePage === applied.page) &&
-          (applied.form === "all" || lead.formCode === applied.form) &&
-          (!term || haystack.includes(term))
-        );
-      })
-      .sort((left, right) => {
-        const leftChat = left.details.conversationId
-          ? chatActivity.get(left.details.conversationId)
-          : undefined;
-        const rightChat = right.details.conversationId
-          ? chatActivity.get(right.details.conversationId)
-          : undefined;
-        const leftDate =
-          leftChat?.updatedAt ?? left.updatedAt ?? left.createdAt;
-        const rightDate =
-          rightChat?.updatedAt ?? right.updatedAt ?? right.createdAt;
-        return new Date(rightDate).getTime() - new Date(leftDate).getTime();
-      });
-  }, [applied, chatActivity, sourceItems]);
+    return sourceItems.filter((lead) => {
+      const haystack = [
+        lead.name,
+        lead.phone,
+        lead.email,
+        lead.formTitle,
+        lead.sourcePage,
+        JSON.stringify(lead.details),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("ru-RU");
+      return (
+        (applied.status === "all" || lead.status === applied.status) &&
+        (applied.page === "all" || lead.sourcePage === applied.page) &&
+        (applied.form === "all" || lead.formCode === applied.form) &&
+        (!term || haystack.includes(term))
+      );
+    });
+  }, [applied, sourceItems]);
 
   return (
     <div className="space-y-5">
@@ -126,36 +98,11 @@ export const AdminSiteLeadsTable = () => {
           <span className="text-sm text-muted-ui-foreground">
             Всего заявок:{" "}
             <strong className="text-page-foreground">
-              {leads.data?.pagination.totalItems ?? 0}
+              {sourceItems.length}
             </strong>
           </span>
         </div>
       </section>
-
-      {latestChat && (
-        <section className="overflow-hidden rounded-3xl border border-brand/25 bg-brand-foreground shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-4">
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-brand uppercase">
-                Самое новое обращение
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">
-                {latestChat.requester ?? latestChat.contact ?? "Без имени"}
-              </h2>
-              <p className="mt-1 text-sm text-muted-ui-foreground">
-                Обновлено{" "}
-                {new Date(latestChat.updatedAt).toLocaleString("ru-RU")}
-              </p>
-            </div>
-            <span className="rounded-full bg-accent-ui/20 px-3 py-1 text-xs font-semibold text-accent-ui-foreground">
-              Новое сообщение
-            </span>
-          </div>
-          <div className="p-5">
-            <RequestChat conversationId={latestChat.id} initialMessages={[]} />
-          </div>
-        </section>
-      )}
 
       <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
         <div className="grid gap-4 border-b border-line p-5 xl:grid-cols-[minmax(16rem,1fr)_14rem_16rem_14rem_auto] xl:items-end">
@@ -250,17 +197,6 @@ export const AdminSiteLeadsTable = () => {
                   </td>
                   <td className="px-5 py-4">
                     <AdminStatusBadge status={lead.status} />
-                    {lead.details.conversationId &&
-                      chatActivity.get(lead.details.conversationId) &&
-                      (lead.status === "new" ||
-                        new Date(
-                          chatActivity.get(lead.details.conversationId)!
-                            .updatedAt,
-                        ).getTime() > new Date(lead.updatedAt).getTime()) && (
-                        <span className="mt-2 inline-flex rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
-                          Новое сообщение
-                        </span>
-                      )}
                   </td>
                   <td className="px-5 py-4 whitespace-nowrap text-muted-ui-foreground">
                     {formatLeadDate(lead.createdAt)}
