@@ -17,19 +17,9 @@ const displayFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
 });
-const priceFormatter = new Intl.NumberFormat("ru-RU", {
-  maximumFractionDigits: 0,
-});
 const parseDate = (value: string) => new Date(`${value}T12:00:00`);
 const serializeDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const dayPrice = (date: Date) => {
-  const day = date.getDate();
-  if (day % 11 === 0) return { price: 9_900, discount: true };
-  if (day % 5 === 0) return { price: 9_630, discount: true };
-  return { price: 10_000, discount: false };
-};
-
 export const DateRangePicker = ({
   checkIn,
   checkOut,
@@ -147,6 +137,9 @@ export const DateRangePicker = ({
           <p className="mt-2 text-xs text-muted-ui-foreground">
             {pendingStart ? "Выберите дату выезда" : "Выберите дату заезда"}
           </p>
+          <p className="mt-1 text-xs text-muted-ui-foreground">
+            Стоимость и наличие покажем после выбора периода
+          </p>
           <div className="mt-3 grid grid-cols-7 text-center text-xs font-semibold text-muted-ui-foreground">
             {weekdays.map((day) => (
               <span className="py-2" key={day}>
@@ -162,10 +155,9 @@ export const DateRangePicker = ({
                 value === checkOut ||
                 value === pendingStart;
               const inRange = value > checkIn && value < checkOut;
-              const meta = dayPrice(date);
               return (
                 <button
-                  aria-label={`${date.getDate()} — ${priceFormatter.format(meta.price)} рублей${meta.discount ? ", скидка" : ""}`}
+                  aria-label={`Выбрать ${date.getDate()} число`}
                   className={cn(
                     "relative grid min-h-14 place-items-center rounded-xl pt-1 text-sm transition hover:bg-muted-ui/20",
                     date.getMonth() !== month.getMonth() &&
@@ -178,30 +170,13 @@ export const DateRangePicker = ({
                   type="button"
                 >
                   <span>{date.getDate()}</span>
-                  <small
-                    className={cn(
-                      "text-[0.58rem] leading-none text-muted-ui-foreground",
-                      selected && "text-brand-foreground/80",
-                    )}
-                  >
-                    {priceFormatter.format(meta.price)} ₽
-                  </small>
-                  {meta.discount && (
-                    <span
-                      aria-label="Есть скидка"
-                      className="absolute top-1 right-1 size-1.5 rounded-full bg-red-500"
-                    />
-                  )}
                 </button>
               );
             })}
           </div>
-          <div className="mt-3 flex items-center gap-3 text-[0.68rem] text-muted-ui-foreground">
-            <span className="inline-flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-red-500" /> скидка
-            </span>
-            <span>Цена за ночь</span>
-          </div>
+          <p className="mt-3 text-[0.68rem] text-muted-ui-foreground">
+            Цена и наличие зависят от периода, гостей и выбранного номера.
+          </p>
         </div>
       )}
     </div>
