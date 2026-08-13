@@ -24,7 +24,7 @@ const socialLinks = [
   [
     "MAX",
     "Быстрые обновления и связь",
-    "https://web.max.ru/158586418",
+    "https://max.ru/u/f9LHodD0cOL0VewR62PaaLMctALvpuEzyx7CKLU-LDIX6YeVuhIHhVcc6SMA",
     MaxIcon,
   ],
 ] as const;

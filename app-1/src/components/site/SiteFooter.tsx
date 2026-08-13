@@ -74,7 +74,7 @@ export const SiteFooter = () => (
           <a
             aria-label="MAX"
             className="grid size-11 place-items-center rounded-full bg-brand-foreground/10 transition hover:bg-brand-foreground/20"
-            href="https://web.max.ru/158586418"
+            href="https://max.ru/u/f9LHodD0cOL0VewR62PaaLMctALvpuEzyx7CKLU-LDIX6YeVuhIHhVcc6SMA"
             rel="noreferrer"
             target="_blank"
             title="MAX"
