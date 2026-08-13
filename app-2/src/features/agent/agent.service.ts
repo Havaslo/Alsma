@@ -385,7 +385,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       options.chat.publishStatus(
         conversationId,
         "checking_availability",
-        "Проверяю подтверждённые параметры в Eptera",
+        "Проверяю актуальное наличие номеров",
       );
       try {
         const offers = await options.eptera.getOffers({
@@ -462,8 +462,12 @@ export const createAiAgentService = (options: AgentOptions) => {
       .replace(/^Здравствуйте!\s*/iu, "")
       .replace(/\/?booking(?:\?[^\s]*)?/giu, "после уточнения параметров")
       .trim();
+    const guestSafeAnswer = withoutDisclosure
+      .replace(/\bEptera(?:\s+Booking\s+API)?\b/giu, "система бронирования")
+      .replace(/\bЭптера\b/giu, "система бронирования")
+      .trim();
     let answer =
-      withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
+      guestSafeAnswer || "Подскажите, пожалуйста, чем я могу помочь?";
     if (requestedOtherDates && result.action !== "transfer") {
       answer =
         "Назовите, пожалуйста, новые даты заезда и выезда — я проверю их в Eptera.";
@@ -471,11 +475,11 @@ export const createAiAgentService = (options: AgentOptions) => {
     if (booking.success && availabilityResult) {
       const dateRange = `${formatFullDate(booking.data.checkInDate)} — ${formatFullDate(booking.data.checkOutDate)}`;
       if (availabilityResult === "available") {
-        answer = `На даты ${dateRange} в Eptera найдено подходящих типов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
+        answer = `На даты ${dateRange} найдено подходящих вариантов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
       } else if (availabilityResult === "unavailable") {
-        answer = `На даты ${dateRange} в Eptera свободных номеров не найдено. Могу проверить другие даты или передать вопрос менеджеру.`;
+        answer = `На даты ${dateRange} свободных номеров не найдено. Могу проверить другие даты или передать вопрос менеджеру.`;
       } else {
-        answer = `Не удалось получить актуальное наличие в Eptera на даты ${dateRange}. Попробуйте ещё раз или я передам вопрос сотруднику.`;
+        answer = `Не удалось получить актуальное наличие на даты ${dateRange}. Попробуйте ещё раз или я передам вопрос сотруднику.`;
       }
     }
     const finalAction =
