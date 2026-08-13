@@ -100,10 +100,41 @@ const asksForOtherDates = (text: string) =>
   /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
     text,
   );
+const serviceMention = (text: string): "spa" | "hardware-procedures" | null => {
+  if (/аппаратн|процедур|оздоровлен/iu.test(text)) return "hardware-procedures";
+  if (/spa|спа|массаж|хаммам|саун|бассейн/iu.test(text)) return "spa";
+  return null;
+};
 
-const extractBooking = (text: string) => {
+type BookingContext = Partial<z.infer<typeof bookingSchema>> & {
+  lastCheckedDates?: string;
+  awaitingNewDates?: boolean;
+};
+type ConversationState = {
+  booking?: BookingContext;
+  serviceContext?: "spa" | "hardware-procedures";
+};
+const asConversationState = (value: unknown): ConversationState => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const details = value as Record<string, unknown>;
+  const bookingValue = details.bookingContext;
+  return {
+    booking:
+      bookingValue &&
+      typeof bookingValue === "object" &&
+      !Array.isArray(bookingValue)
+        ? (bookingValue as BookingContext)
+        : undefined,
+    serviceContext:
+      details.serviceContext === "spa" ||
+      details.serviceContext === "hardware-procedures"
+        ? details.serviceContext
+        : undefined,
+  };
+};
+const extractEntities = (text: string) => {
   const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
-    (match) => match[1],
+    (match) => match[1]!,
   );
   const russianRange = [
     ...text.matchAll(
@@ -117,17 +148,32 @@ const extractBooking = (text: string) => {
         `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
       ]
     : isoDates.slice(-2);
-  const adultsMatch = text.match(/(\d{1,2})\s*(?:взросл\w*|человек\w*)/iu);
+  const adultsMatch = text.match(
+    /(?:нас\s+)?(\d{1,2})\s*(?:взросл\w*|человек\w*|гост\w*)/iu,
+  );
+  const wordAdults = /\b(один|одна|двое|трое|четверо)\b/iu
+    .exec(text)?.[1]
+    ?.toLocaleLowerCase("ru-RU");
+  const adults = adultsMatch
+    ? Number(adultsMatch[1])
+    : wordAdults
+      ? { один: 1, одна: 1, двое: 2, трое: 3, четверо: 4 }[wordAdults]
+      : undefined;
   const roomsMatch = text.match(/(\d{1,2})\s*номер\w*/iu);
-  if (dates.length < 2 || !adultsMatch || !roomsMatch) return null;
-  const candidate = {
-    checkInDate: dates[0] ?? "",
-    checkOutDate: dates[1] ?? "",
-    adults: Number(adultsMatch[1]),
-    childAges: [],
-    roomCount: Number(roomsMatch[1]),
-  };
-  return bookingSchema.safeParse(candidate).success ? candidate : null;
+  const result: BookingContext = {};
+  if (dates.length >= 2 && dates.every(Boolean)) {
+    result.checkInDate = dates[0];
+    result.checkOutDate = dates[1];
+    result.awaitingNewDates = false;
+  }
+  if (adults) result.adults = adults;
+  if (roomsMatch) result.roomCount = Number(roomsMatch[1]);
+  if (adults && !roomsMatch) result.roomCount = 1;
+  return result;
+};
+const bookingFromContext = (context?: BookingContext) => {
+  const parsed = bookingSchema.safeParse(context);
+  return parsed.success ? parsed.data : null;
 };
 
 export const createAiAgentService = (options: AgentOptions) => {
@@ -145,22 +191,47 @@ export const createAiAgentService = (options: AgentOptions) => {
     const conversationMessages = (
       await options.chat.list(conversationId)
     ).slice(-20);
-    const conversationText = conversationMessages
-      .map((item) => item.text)
-      .join("\n");
     const history = conversationMessages
       .map(
         (item) =>
           `${item.author === "guest" ? "Гость" : item.author === "manager" ? "Менеджер" : "AI-ассистент"}: ${item.text}`,
       )
       .join("\n");
-    const extractedBooking = extractBooking(conversationText);
+    const requestState = await options.database.client.adminRequest.findUnique({
+      where: { id: conversationId },
+      select: { details: true },
+    });
+    const previousState = asConversationState(requestState?.details);
     const currentMessageHasDate = hasDateInMessage(message);
-    const previousAvailabilityResult = conversationMessages.some(
-      (item) =>
-        item.author === "agent" &&
-        /Eptera.*(?:свободных|найдено|наличие)/iu.test(item.text),
-    );
+    const requestedOtherDates =
+      asksForOtherDates(message) && !currentMessageHasDate;
+    const entities = extractEntities(message);
+    const nextBooking: BookingContext = requestedOtherDates
+      ? {
+          ...previousState.booking,
+          checkInDate: undefined,
+          checkOutDate: undefined,
+          lastCheckedDates: undefined,
+          awaitingNewDates: true,
+        }
+      : currentMessageHasDate
+        ? { ...previousState.booking, ...entities, lastCheckedDates: undefined }
+        : { ...previousState.booking, ...entities };
+    const nextServiceContext =
+      serviceMention(message) ?? previousState.serviceContext;
+    await options.database.client.adminRequest.update({
+      where: { id: conversationId },
+      data: {
+        details: {
+          ...(requestState?.details && typeof requestState.details === "object"
+            ? requestState.details
+            : {}),
+          bookingContext: nextBooking,
+          serviceContext: nextServiceContext,
+        },
+      },
+    });
+    const extractedBooking = bookingFromContext(nextBooking);
     const [knowledgeResult, scenarios, transferRules, knowledgeRules] =
       await Promise.all([
         knowledge.answer({ channel: "text", question: message }),
@@ -196,18 +267,19 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
-      "Распознавай этап диалога. Для SPA уточни: с проживанием или на один день. Для аппаратных процедур уточни цель. Для проживания собери недостающие параметры и проверь наличие. Если клиент готов смотреть страницу SPA или процедур, используй action open_page и соответствующий page; не вставляй URL в текст.",
-      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer. Если ранее уже проверял даты и гость просит другие даты без новых дат, не повторяй старый результат: попроси назвать новые даты.",
+      "Разделяй контексты: проживание хранится отдельно от SPA и процедур. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему, давай конкретную информацию, ссылку или прайс из базы знаний. Для проживания собери недостающие параметры и проверь наличие. Если клиент готов смотреть страницу SPA или процедур, используй action open_page и соответствующий page; не вставляй URL в текст.",
+      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa или hardware-procedures.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
-      "Собери даты заезда/выезда, общее число взрослых и количество номеров. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
+      "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Сценарии:\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
       `Активные правила базы знаний:\n${knowledgeRuleContext || "Нет дополнительных правил."}`,
+      `Сохранённое состояние диалога:\n${JSON.stringify({ booking: nextBooking, serviceContext: nextServiceContext })}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
     ]
@@ -304,7 +376,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     let availableOfferCount = 0;
     const modelBooking = bookingSchema.safeParse(result.booking);
     const booking =
-      previousAvailabilityResult && !currentMessageHasDate
+      requestedOtherDates || nextBooking.awaitingNewDates
         ? bookingSchema.safeParse(undefined)
         : extractedBooking
           ? { success: true as const, data: extractedBooking }
@@ -354,6 +426,26 @@ export const createAiAgentService = (options: AgentOptions) => {
         bookingUrl = undefined;
       }
     }
+    if (booking.success && availabilityResult) {
+      await options.database.client.adminRequest.update({
+        where: { id: conversationId },
+        data: {
+          details: {
+            ...(requestState?.details &&
+            typeof requestState.details === "object"
+              ? requestState.details
+              : {}),
+            bookingContext: {
+              ...nextBooking,
+              ...booking.data,
+              lastCheckedDates: `${booking.data.checkInDate}/${booking.data.checkOutDate}`,
+              awaitingNewDates: false,
+            },
+            serviceContext: nextServiceContext,
+          },
+        },
+      });
+    }
     const transferNotice =
       "Я передал диалог сотруднику — он подключится к вам.";
     const answerWithTransfer =
@@ -372,12 +464,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     let answer =
       withoutDisclosure || "Подскажите, пожалуйста, чем я могу помочь?";
-    if (
-      previousAvailabilityResult &&
-      !currentMessageHasDate &&
-      asksForOtherDates(message) &&
-      result.action !== "transfer"
-    ) {
+    if (requestedOtherDates && result.action !== "transfer") {
       answer =
         "Назовите, пожалуйста, новые даты заезда и выезда — я проверю их в Eptera.";
     }
