@@ -18,6 +18,17 @@ import {
 } from "@/lib/admin/admin-agent-scenario-mocks";
 import type { AgentScenario } from "@/lib/admin/agent-scenarios-api";
 
+const ACTION_OPTIONS = [
+  { label: "Ответить текстом", value: "answer" },
+  { label: "Открыть страницу", value: "open_page" },
+  { label: "Передать менеджеру", value: "transfer" },
+] as const;
+const PAGE_OPTIONS = [
+  { label: "SPA", value: "spa" },
+  { label: "Аппаратные процедуры", value: "hardware-procedures" },
+  { label: "Акции и скидки", value: "offers" },
+] as const;
+
 export const AdminAgentScenarioCard = ({
   item,
   onDelete,
@@ -31,6 +42,7 @@ export const AdminAgentScenarioCard = ({
   const form = useForm<AgentScenario>({ values: item });
   const enabled = useWatch({ control: form.control, name: "enabled" });
   const trigger = useWatch({ control: form.control, name: "trigger" });
+  const action = useWatch({ control: form.control, name: "action" });
 
   return (
     <article className="rounded-3xl border border-line bg-page p-5">
@@ -75,6 +87,44 @@ export const AdminAgentScenarioCard = ({
               />
             </span>
           </label>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <label className="block text-sm font-medium text-panel-foreground">
+            <span>Следующее действие</span>
+            <span className="mt-2 block rounded-xl border border-line bg-brand-foreground px-4 py-2.5">
+              <Controller
+                control={form.control}
+                name="action"
+                render={({ field }) => (
+                  <DropdownSelect
+                    ariaLabel={`Действие сценария ${item.title}`}
+                    onChange={field.onChange}
+                    options={ACTION_OPTIONS}
+                    value={field.value}
+                  />
+                )}
+              />
+            </span>
+          </label>
+          {action === "open_page" && (
+            <label className="block text-sm font-medium text-panel-foreground">
+              <span>Страница перехода</span>
+              <span className="mt-2 block rounded-xl border border-line bg-brand-foreground px-4 py-2.5">
+                <Controller
+                  control={form.control}
+                  name="page"
+                  render={({ field }) => (
+                    <DropdownSelect
+                      ariaLabel={`Страница сценария ${item.title}`}
+                      onChange={field.onChange}
+                      options={PAGE_OPTIONS}
+                      value={field.value ?? "offers"}
+                    />
+                  )}
+                />
+              </span>
+            </label>
+          )}
         </div>
         <TextAreaField
           label="Текст сценария"

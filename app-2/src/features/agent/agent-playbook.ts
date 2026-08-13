@@ -44,7 +44,9 @@ const defaultScenarios = [
     trigger: "service-context",
   },
   {
+    action: "open_page",
     enabled: true,
+    page: "offers",
     response:
       "Если гость спрашивает об акциях, скидках или специальных предложениях, сначала используй опубликованные данные базы знаний. Дай краткий ответ и предложи кнопку на страницу акций через action open_page с page offers. Не придумывай срок действия или размер скидки; если данных недостаточно, передай вопрос менеджеру.",
     title: "Акции и скидки",
@@ -102,9 +104,22 @@ export const ensureDefaultAgentPlaybook = async (database: Database) => {
     ...defaultScenarios.map(async (item) => {
       const existing = await database.client.agentScenario.findFirst({
         where: { title: item.title },
-        select: { id: true },
+        select: { action: true, id: true, page: true, response: true },
       });
-      if (!existing) await database.client.agentScenario.create({ data: item });
+      if (!existing) {
+        await database.client.agentScenario.create({ data: item });
+      } else if (
+        item.title === "Акции и скидки" &&
+        existing.action === "answer" &&
+        existing.page === null &&
+        existing.response === item.response
+      ) {
+        // Migrate the previously seeded offers scenario without overwriting admin edits.
+        await database.client.agentScenario.update({
+          data: { action: item.action, page: item.page },
+          where: { id: existing.id },
+        });
+      }
     }),
     ...defaultTransferRules.map(async (item) => {
       const existing = await database.client.agentTransferRule.findFirst({

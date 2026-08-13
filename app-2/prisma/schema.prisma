@@ -298,6 +298,8 @@ model AgentScenario {
   title     String
   trigger   String
   response  String
+  action    String   @default("answer")
+  page      String?
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

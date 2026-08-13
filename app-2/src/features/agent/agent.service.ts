@@ -267,6 +267,12 @@ export const createAiAgentService = (options: AgentOptions) => {
     const knowledgeRuleContext = knowledgeRules
       .map((item) => `${item.title}: ${item.content}`)
       .join("\n");
+    const scenarioTrigger =
+      serviceMention(message) ??
+      (currentMessageHasDate || extractedBooking ? "booking" : undefined);
+    const selectedScenario = scenarioTrigger
+      ? scenarios.find((item) => item.trigger === scenarioTrigger)
+      : undefined;
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
@@ -279,9 +285,10 @@ export const createAiAgentService = (options: AgentOptions) => {
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
-      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
+      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен. Если выбранный сценарий задаёт action или page, следуй ему.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
-      `Сценарии:\n${scenarioContext || "Нет дополнительных сценариев."}`,
+      `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
+      `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
       `Активные правила базы знаний:\n${knowledgeRuleContext || "Нет дополнительных правил."}`,
       `Сохранённое состояние диалога:\n${JSON.stringify({ booking: nextBooking, serviceContext: nextServiceContext })}`,
@@ -372,10 +379,21 @@ export const createAiAgentService = (options: AgentOptions) => {
           },
         },
       });
+    const scenarioAction = selectedScenario?.action ?? "answer";
+    const effectiveAction =
+      scenarioAction === "answer" ? result.action : scenarioAction;
+    const effectivePage =
+      scenarioAction === "open_page"
+        ? (selectedScenario?.page ?? result.page)
+        : result.page;
     let bookingUrl: string | undefined;
-    if (result.action === "open_page") {
+    if (effectiveAction === "open_page") {
       bookingUrl =
-        result.page === "hardware-procedures" ? "/hardware-procedures" : "/spa";
+        effectivePage === "hardware-procedures"
+          ? "/hardware-procedures"
+          : effectivePage === "offers"
+            ? "/offers"
+            : "/spa";
     }
     let availabilityResult: "available" | "unavailable" | "error" | null = null;
     let availableOfferCount = 0;
@@ -454,7 +472,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     const transferNotice =
       "Я передал диалог сотруднику — он подключится к вам.";
     const answerWithTransfer =
-      result.action === "transfer" &&
+      effectiveAction === "transfer" &&
       settings.canTransferToEmployee &&
       !result.answer.includes(transferNotice)
         ? `${result.answer} ${transferNotice}`
@@ -488,7 +506,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     }
     const finalAction =
-      availabilityResult === "error" ? "transfer" : result.action;
+      availabilityResult === "error" ? "transfer" : effectiveAction;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
   };

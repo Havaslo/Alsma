@@ -2,8 +2,10 @@ import { readAdminSession } from "@/lib/admin/admin-session";
 import { apiClient } from "@/lib/api/api-client";
 
 export type AgentScenario = {
+  readonly action: "answer" | "open_page" | "transfer";
   readonly enabled: boolean;
   readonly id: string;
+  readonly page: "spa" | "hardware-procedures" | "offers" | null;
   readonly response: string;
   readonly title: string;
   readonly trigger: string;

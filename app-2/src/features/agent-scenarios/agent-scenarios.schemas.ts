@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 export const agentScenarioBodySchema = z.object({
+  action: z.enum(["answer", "open_page", "transfer"]).default("answer"),
   enabled: z.boolean().default(true),
   id: z.string().uuid().optional(),
+  page: z.enum(["spa", "hardware-procedures", "offers"]).nullable().optional(),
   response: z.string().trim().min(1).max(10_000),
   title: z.string().trim().min(1).max(255),
   trigger: z.string().trim().min(1).max(255),

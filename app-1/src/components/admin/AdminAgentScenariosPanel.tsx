@@ -57,7 +57,9 @@ export const AdminAgentScenariosPanel = () => {
   };
   const addScenario = () =>
     saveScenario.mutate({
+      action: "answer",
       enabled: true,
+      page: null,
       response: "",
       title: "Новый сценарий",
       trigger: "consultation",
@@ -119,7 +121,7 @@ export const AdminAgentScenariosPanel = () => {
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
                 {tab === "scenarios"
-                  ? "Изменяйте тексты ответов и инструкции для новых обращений."
+                  ? "Изменяйте тексты, триггеры и следующее действие сценария для новых обращений."
                   : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку."}
               </p>
             </div>
