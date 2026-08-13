@@ -1,5 +1,10 @@
 export type MockAgentScenarioTrigger =
-  "booking" | "consultation" | "fallback" | "spa" | "hardware-procedures";
+  | "booking"
+  | "consultation"
+  | "fallback"
+  | "spa"
+  | "hardware-procedures"
+  | "offers";
 
 export type MockAgentScenario = {
   readonly enabled: boolean;
@@ -53,6 +58,16 @@ export const MOCK_AGENT_SCENARIOS: readonly MockAgentScenario[] = [
     title: "Первичный ответ по консультации",
     trigger: "consultation",
   },
+  {
+    enabled: true,
+    id: "scenario-offers",
+    instructions:
+      "Не придумывать размер или срок действия скидки. Дать краткую информацию из базы и предложить страницу акций.",
+    response:
+      "Если гость спрашивает об акциях или скидках, ответьте по опубликованным данным и предложите открыть страницу акций.",
+    title: "Акции и скидки",
+    trigger: "offers",
+  },
 ] as const;
 
 export const MOCK_TRANSFER_RULES: readonly MockTransferRule[] = [
@@ -91,6 +106,7 @@ export const AGENT_SCENARIO_TRIGGER_OPTIONS = [
   { label: "Запасной ответ", value: "fallback" },
   { label: "SPA-отдых", value: "spa" },
   { label: "Аппаратные процедуры", value: "hardware-procedures" },
+  { label: "Акции и скидки", value: "offers" },
 ] as const;
 
 export const TRANSFER_CONDITION_OPTIONS = [
@@ -108,6 +124,7 @@ export const AGENT_SCENARIO_TRIGGER_LABELS: Record<
   fallback: "Запасной ответ",
   spa: "SPA-отдых",
   "hardware-procedures": "Аппаратные процедуры",
+  offers: "Акции и скидки",
 };
 
 export const TRANSFER_CONDITION_LABELS: Record<MockTransferCondition, string> =

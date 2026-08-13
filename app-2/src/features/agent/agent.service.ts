@@ -18,7 +18,7 @@ const bookingSchema = z.object({
 });
 const actionSchema = z.object({
   action: z.enum(["answer", "open_page", "create_request", "transfer"]),
-  page: z.enum(["spa", "hardware-procedures"]).optional(),
+  page: z.enum(["spa", "hardware-procedures", "offers"]).optional(),
   name: z.string().trim().max(160).optional(),
   phone: z.string().trim().max(40).optional(),
   email: z.string().trim().max(320).optional(),
@@ -100,7 +100,11 @@ const asksForOtherDates = (text: string) =>
   /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
     text,
   );
-const serviceMention = (text: string): "spa" | "hardware-procedures" | null => {
+const serviceMention = (
+  text: string,
+): "spa" | "hardware-procedures" | "offers" | null => {
+  if (/акци|скидк|спецпредлож|выгодн|пакетн.*предлож/iu.test(text))
+    return "offers";
   if (/аппаратн|процедур|оздоровлен/iu.test(text)) return "hardware-procedures";
   if (/spa|спа|массаж|хаммам|саун|бассейн/iu.test(text)) return "spa";
   return null;
@@ -112,7 +116,7 @@ type BookingContext = Partial<z.infer<typeof bookingSchema>> & {
 };
 type ConversationState = {
   booking?: BookingContext;
-  serviceContext?: "spa" | "hardware-procedures";
+  serviceContext?: "spa" | "hardware-procedures" | "offers";
 };
 const asConversationState = (value: unknown): ConversationState => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -127,7 +131,8 @@ const asConversationState = (value: unknown): ConversationState => {
         : undefined,
     serviceContext:
       details.serviceContext === "spa" ||
-      details.serviceContext === "hardware-procedures"
+      details.serviceContext === "hardware-procedures" ||
+      details.serviceContext === "offers"
         ? details.serviceContext
         : undefined,
   };
@@ -267,14 +272,14 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
-      "Разделяй контексты: проживание хранится отдельно от SPA и процедур. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему, давай конкретную информацию, ссылку или прайс из базы знаний. Для проживания собери недостающие параметры и проверь наличие. Если клиент готов смотреть страницу SPA или процедур, используй action open_page и соответствующий page; не вставляй URL в текст.",
+      "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для проживания собери недостающие параметры и проверь наличие; URL в текст не вставляй.",
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
-      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa или hardware-procedures.",
+      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
-      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
+      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Сценарии:\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
@@ -470,7 +475,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       guestSafeAnswer || "Подскажите, пожалуйста, чем я могу помочь?";
     if (requestedOtherDates && result.action !== "transfer") {
       answer =
-        "Назовите, пожалуйста, новые даты заезда и выезда — я проверю их в Eptera.";
+        "Назовите, пожалуйста, новые даты заезда и выезда — я проверю актуальное наличие.";
     }
     if (booking.success && availabilityResult) {
       const dateRange = `${formatFullDate(booking.data.checkInDate)} — ${formatFullDate(booking.data.checkOutDate)}`;

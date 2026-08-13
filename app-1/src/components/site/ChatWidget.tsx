@@ -291,7 +291,9 @@ export const ChatWidget = () => {
                           ? "Открыть аппаратные процедуры"
                           : message.bookingUrl === "/spa"
                             ? "Открыть страницу SPA"
-                            : "Открыть бронирование"}
+                            : message.bookingUrl === "/offers"
+                              ? "Посмотреть акции"
+                              : "Открыть бронирование"}
                       </a>
                     )}
                   </div>
