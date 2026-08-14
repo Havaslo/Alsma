@@ -15,6 +15,11 @@ type CreateAppOptions = {
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly maxBot: {
+    readonly token?: string;
+    readonly webhookSecret?: string;
+    readonly webhookUrl?: string;
+  };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
@@ -47,6 +52,7 @@ export const createApp = ({
   managedStorage,
   openaiApiKey,
   openaiBaseUrl,
+  maxBot,
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
@@ -76,6 +82,7 @@ export const createApp = ({
       managedStorage,
       openaiApiKey,
       openaiBaseUrl,
+      maxBot,
       yooKassaSecretKey,
       yooKassaShopId,
       voiceIntegration,

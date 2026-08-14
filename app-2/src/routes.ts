@@ -15,6 +15,8 @@ import { createChatService } from "./features/chat/chat.service.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
+import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
+import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
@@ -28,6 +30,11 @@ type CreateApiRouterOptions = {
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly maxBot: {
+    readonly token?: string;
+    readonly webhookSecret?: string;
+    readonly webhookUrl?: string;
+  };
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
     readonly mangoApiBaseUrl?: string;
@@ -59,6 +66,7 @@ export const createApiRouter = ({
   managedStorage,
   openaiApiKey,
   openaiBaseUrl,
+  maxBot,
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
@@ -96,6 +104,17 @@ export const createApiRouter = ({
     ),
   );
   router.use("/chat", createChatRouter(database, chat, agent));
+  router.use(
+    "/max",
+    createMaxBotRouter({
+      agent,
+      chat,
+      database,
+      logger,
+      max: createMaxBotClient({ logger, token: maxBot.token }),
+      webhookSecret: maxBot.webhookSecret,
+    }),
+  );
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));

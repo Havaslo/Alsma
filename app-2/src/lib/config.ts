@@ -40,6 +40,9 @@ const environmentSchema = z.object({
   OPENAI_REALTIME_SIP_PROJECT_ID: z.string().min(1).optional(),
   T2_TRANSFER_NUMBER: z.string().min(3).optional(),
   VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
+  MAX_BOT_TOKEN: z.string().min(1).optional(),
+  MAX_BOT_WEBHOOK_SECRET: z.string().min(16).optional(),
+  MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
 });
 
 export type AppConfig = {
@@ -54,6 +57,11 @@ export type AppConfig = {
   readonly port: number;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly maxBot: {
+    readonly token?: string;
+    readonly webhookSecret?: string;
+    readonly webhookUrl?: string;
+  };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
@@ -83,6 +91,11 @@ export const readConfig = (
     openaiApiKey:
       parsed.AMAZI_AI_GATEWAY_OPENAI_API_KEY ?? parsed.OPENAI_API_KEY,
     openaiBaseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
+    maxBot: {
+      token: parsed.MAX_BOT_TOKEN,
+      webhookSecret: parsed.MAX_BOT_WEBHOOK_SECRET,
+      webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
+    },
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
     voiceIntegration: {

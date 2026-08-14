@@ -26,6 +26,7 @@ const start = async (): Promise<void> => {
     managedStorage,
     openaiApiKey: config.openaiApiKey,
     openaiBaseUrl: config.openaiBaseUrl,
+    maxBot: config.maxBot,
     yooKassaSecretKey: config.yooKassaSecretKey,
     yooKassaShopId: config.yooKassaShopId,
     voiceIntegration: config.voiceIntegration,
