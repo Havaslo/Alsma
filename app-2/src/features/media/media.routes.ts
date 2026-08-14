@@ -30,6 +30,7 @@ const allowedTypes = new Set([
   "image/svg+xml",
   "video/mp4",
   "video/webm",
+  "application/pdf",
 ]);
 
 const maxUploadBytes = 50 * 1_024 * 1_024;
@@ -118,7 +119,7 @@ export const createMediaRouter = (
         throw new HttpError(
           400,
           "MEDIA_TYPE_INVALID",
-          "Поддерживаются изображения и MP4/WebM-видео.",
+          "Поддерживаются изображения, PDF и MP4/WebM-видео.",
         );
       if (!Buffer.isBuffer(request.body) || request.body.length === 0)
         throw new HttpError(400, "MEDIA_EMPTY", "Выберите непустой файл.");

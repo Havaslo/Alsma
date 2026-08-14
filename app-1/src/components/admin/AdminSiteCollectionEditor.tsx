@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { ChevronDown, Save } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { ChevronDown, Save, Trash2, Upload } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { SITE_COLLECTIONS } from "@/lib/site/content-collections";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
+import { uploadSiteMedia } from "@/lib/site/site-content-api";
 import { useSaveAdminSiteContent } from "@/lib/site/useSiteContent";
 
 type CollectionSection = keyof typeof SITE_COLLECTIONS;
@@ -47,6 +49,17 @@ export const AdminSiteCollectionEditor = ({
     },
   });
   const save = useSaveAdminSiteContent();
+  const upload = useMutation({
+    mutationFn: uploadSiteMedia,
+    onSuccess: (asset) => {
+      const next = [
+        ...previewItems,
+        { title: asset.fileName, fileName: asset.fileName, href: asset.url },
+      ];
+      setPreviewItems(next);
+      form.setValue("json", JSON.stringify(next, null, 2));
+    },
+  });
   const selectCollection = (key: string) => {
     form.setValue("itemKey", key);
     const item = items.find((entry) => entry.itemKey === key);
@@ -117,9 +130,36 @@ export const AdminSiteCollectionEditor = ({
             <p className="mt-2 line-clamp-2 font-semibold">
               {getItemLabel(item, index)}
             </p>
+            <button
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-destructive"
+              onClick={() => {
+                const next = previewItems.filter(
+                  (_, itemIndex) => itemIndex !== index,
+                );
+                setPreviewItems(next);
+                form.setValue("json", JSON.stringify(next, null, 2));
+              }}
+              type="button"
+            >
+              <Trash2 className="size-3" /> Удалить
+            </button>
           </article>
         ))}
       </div>
+
+      <label className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold text-brand">
+        <Upload className="size-4" /> Загрузить файл
+        <input
+          accept=".pdf,application/pdf"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) upload.mutate(file);
+            event.target.value = "";
+          }}
+          type="file"
+        />
+      </label>
 
       <button
         className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand"

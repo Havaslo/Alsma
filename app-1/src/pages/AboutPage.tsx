@@ -23,6 +23,11 @@ import {
   HOTEL_SERVICE_HOURS,
   TRANSFER_OPTIONS,
 } from "@/lib/site/about";
+import {
+  ABOUT_DOCUMENTS,
+  type AboutDocument,
+} from "@/lib/site/about-documents";
+import { getSiteCollection } from "@/lib/site/content-collections";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -45,6 +50,11 @@ export const AboutPage = () => {
   const title = typeof hero?.title === "string" ? hero.title : "О нас";
   const description =
     typeof hero?.description === "string" ? hero.description : page.description;
+  const documents = getSiteCollection<AboutDocument>(
+    content.data?.items,
+    "documents",
+    ABOUT_DOCUMENTS,
+  );
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -151,6 +161,39 @@ export const AboutPage = () => {
               src="https://yandex.ru/map-widget/v1/?rtext=56.535555%2C44.114214~56.355104%2C43.924790&rtt=auto"
               title="Отель АЛСМА на карте"
             />
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 pb-24 sm:px-8">
+        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
+              Документы
+            </h2>
+            <p className="mt-4 text-muted-ui-foreground">
+              Официальные документы и лицензии отеля. Нажмите на карточку, чтобы
+              открыть файл.
+            </p>
+          </div>
+          <div className="mx-auto mt-10 grid max-w-5xl justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {documents.map((document) => (
+              <a
+                className="flex min-h-44 w-full max-w-xs flex-col items-center justify-center rounded-3xl border border-line bg-brand-foreground p-6 text-center transition hover:-translate-y-1 hover:border-brand hover:shadow-lg"
+                href={document.href}
+                key={document.href}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <span className="grid size-14 place-items-center rounded-2xl bg-brand/10 text-brand">
+                  PDF
+                </span>
+                <span className="mt-5 font-semibold">{document.title}</span>
+                <span className="mt-2 text-xs text-muted-ui-foreground">
+                  Открыть документ
+                </span>
+              </a>
+            ))}
           </div>
         </div>
       </section>

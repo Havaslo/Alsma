@@ -1,3 +1,4 @@
+import { ABOUT_DOCUMENTS } from "@/lib/site/about-documents";
 import { NEWS_ITEMS } from "@/lib/site/editorial";
 import { BLOG_ITEMS } from "@/lib/site/editorial";
 import {
@@ -17,6 +18,7 @@ import { ROOM_CATEGORIES, ROOM_COMPARISON } from "@/lib/site/rooms";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
 
 export const SITE_COLLECTIONS = {
+  about: { documents: ABOUT_DOCUMENTS },
   entertainment: {
     "active-zones": ACTIVE_ZONES,
     "animation-programs": ANIMATION_PROGRAM,
