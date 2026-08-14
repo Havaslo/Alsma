@@ -57,7 +57,9 @@ const start = async (): Promise<void> => {
   process.once("SIGTERM", () => shutdown("SIGTERM"));
 };
 
-void start().catch(() => {
-  process.stderr.write("Backend startup failed.\n");
+void start().catch((error: unknown) => {
+  const message =
+    error instanceof Error ? error.message : "Unknown startup error.";
+  process.stderr.write(`Backend startup failed: ${message}\n`);
   process.exitCode = 1;
 });
