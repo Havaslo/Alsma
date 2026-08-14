@@ -43,6 +43,7 @@ const environmentSchema = z.object({
   MAX_BOT_TOKEN: z.string().min(1).optional(),
   MAX_BOT_WEBHOOK_SECRET: z.string().min(16).optional(),
   MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
+  MAX_BOT_SITE_URL: z.string().url().optional(),
 });
 
 export type AppConfig = {
@@ -61,6 +62,7 @@ export type AppConfig = {
     readonly token?: string;
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
+    readonly siteUrl?: string;
   };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
@@ -95,6 +97,7 @@ export const readConfig = (
       token: parsed.MAX_BOT_TOKEN,
       webhookSecret: parsed.MAX_BOT_WEBHOOK_SECRET,
       webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
+      siteUrl: parsed.MAX_BOT_SITE_URL,
     },
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,

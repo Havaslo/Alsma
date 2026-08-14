@@ -34,6 +34,7 @@ type CreateApiRouterOptions = {
     readonly token?: string;
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
+    readonly siteUrl?: string;
   };
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
@@ -113,6 +114,7 @@ export const createApiRouter = ({
       logger,
       max: createMaxBotClient({ logger, token: maxBot.token }),
       webhookSecret: maxBot.webhookSecret,
+      siteUrl: maxBot.siteUrl,
     }),
   );
   router.use("/site-leads", createLeadsRouter(database));

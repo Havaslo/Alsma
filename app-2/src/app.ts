@@ -19,6 +19,7 @@ type CreateAppOptions = {
     readonly token?: string;
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
+    readonly siteUrl?: string;
   };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;

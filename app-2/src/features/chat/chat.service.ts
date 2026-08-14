@@ -22,6 +22,7 @@ type Subscriber = (event: ChatEvent) => void;
 type ChatAuthor = ChatMessage["author"];
 
 const subscribers = new Map<string, Set<Subscriber>>();
+const globalSubscribers = new Set<Subscriber>();
 
 const toMessage = (message: {
   id: string;
@@ -41,8 +42,10 @@ const toMessage = (message: {
 });
 
 export const createChatService = (database: Database) => {
-  const emit = (conversationId: string, event: ChatEvent) =>
+  const emit = (conversationId: string, event: ChatEvent) => {
     subscribers.get(conversationId)?.forEach((subscriber) => subscriber(event));
+    globalSubscribers.forEach((subscriber) => subscriber(event));
+  };
 
   const publish = async (
     conversationId: string,
@@ -89,6 +92,10 @@ export const createChatService = (database: Database) => {
         set.delete(subscriber);
         if (!set.size) subscribers.delete(conversationId);
       };
+    },
+    subscribeAll: (subscriber: Subscriber) => {
+      globalSubscribers.add(subscriber);
+      return () => globalSubscribers.delete(subscriber);
     },
   };
 };
