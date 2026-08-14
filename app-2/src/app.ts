@@ -17,6 +17,14 @@ type CreateAppOptions = {
   readonly openaiBaseUrl?: string;
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
+  readonly voiceIntegration: {
+    readonly mangoApiBaseUrl?: string;
+    readonly mangoConfigured: boolean;
+    readonly sbcConfigured: boolean;
+    readonly realtimeSipConfigured: boolean;
+    readonly t2TransferConfigured: boolean;
+    readonly publicWebhookConfigured: boolean;
+  };
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: {
@@ -41,6 +49,7 @@ export const createApp = ({
   openaiBaseUrl,
   yooKassaSecretKey,
   yooKassaShopId,
+  voiceIntegration,
 }: CreateAppOptions): Express => {
   const app = express();
   app.disable("x-powered-by");
@@ -69,6 +78,7 @@ export const createApp = ({
       openaiBaseUrl,
       yooKassaSecretKey,
       yooKassaShopId,
+      voiceIntegration,
     }),
   );
   app.use(notFoundHandler);

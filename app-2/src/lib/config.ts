@@ -29,6 +29,17 @@ const environmentSchema = z.object({
   AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
   YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
   YOOKASSA_SHOP_ID: z.string().min(1).optional(),
+  MANGO_API_BASE_URL: z.string().url().optional(),
+  MANGO_API_KEY: z.string().min(1).optional(),
+  MANGO_API_SECRET: z.string().min(1).optional(),
+  MANGO_SIP_TRUNK_URI: z.string().min(1).optional(),
+  SBC_PUBLIC_BASE_URL: z.string().url().optional(),
+  SBC_WEBHOOK_SECRET: z.string().min(1).optional(),
+  OPENAI_REALTIME_SIP_BASE_URL: z.string().url().optional(),
+  OPENAI_REALTIME_SIP_API_KEY: z.string().min(1).optional(),
+  OPENAI_REALTIME_SIP_PROJECT_ID: z.string().min(1).optional(),
+  T2_TRANSFER_NUMBER: z.string().min(3).optional(),
+  VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
 });
 
 export type AppConfig = {
@@ -45,6 +56,14 @@ export type AppConfig = {
   readonly openaiBaseUrl?: string;
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
+  readonly voiceIntegration: {
+    readonly mangoApiBaseUrl?: string;
+    readonly mangoConfigured: boolean;
+    readonly sbcConfigured: boolean;
+    readonly realtimeSipConfigured: boolean;
+    readonly t2TransferConfigured: boolean;
+    readonly publicWebhookConfigured: boolean;
+  };
 };
 
 export const readConfig = (
@@ -66,5 +85,23 @@ export const readConfig = (
     openaiBaseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
+    voiceIntegration: {
+      mangoApiBaseUrl: parsed.MANGO_API_BASE_URL,
+      mangoConfigured: Boolean(
+        parsed.MANGO_API_BASE_URL &&
+        parsed.MANGO_API_KEY &&
+        parsed.MANGO_API_SECRET,
+      ),
+      sbcConfigured: Boolean(
+        parsed.SBC_PUBLIC_BASE_URL && parsed.SBC_WEBHOOK_SECRET,
+      ),
+      realtimeSipConfigured: Boolean(
+        parsed.OPENAI_REALTIME_SIP_BASE_URL &&
+        parsed.OPENAI_REALTIME_SIP_API_KEY &&
+        parsed.OPENAI_REALTIME_SIP_PROJECT_ID,
+      ),
+      t2TransferConfigured: Boolean(parsed.T2_TRANSFER_NUMBER),
+      publicWebhookConfigured: Boolean(parsed.VOICE_AGENT_PUBLIC_WEBHOOK_URL),
+    },
   };
 };

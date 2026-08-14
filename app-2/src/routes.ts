@@ -29,6 +29,14 @@ type CreateApiRouterOptions = {
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
   readonly yooKassaShopId?: string;
+  readonly voiceIntegration: {
+    readonly mangoApiBaseUrl?: string;
+    readonly mangoConfigured: boolean;
+    readonly sbcConfigured: boolean;
+    readonly realtimeSipConfigured: boolean;
+    readonly t2TransferConfigured: boolean;
+    readonly publicWebhookConfigured: boolean;
+  };
   readonly yooKassaSecretKey?: string;
   readonly logger: Logger;
   readonly managedStorage: {
@@ -53,6 +61,7 @@ export const createApiRouter = ({
   openaiBaseUrl,
   yooKassaSecretKey,
   yooKassaShopId,
+  voiceIntegration,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService(database);
@@ -91,6 +100,9 @@ export const createApiRouter = ({
   router.use("/site-content", createSiteContentRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
+  router.get("/voice-agent/readiness", (_request, response) =>
+    response.json({ provider: "mango", ...voiceIntegration }),
+  );
   router.use("/voice-agent", createVoiceAgentRouter(database, openaiApiKey));
   return router;
 };

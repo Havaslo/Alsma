@@ -28,6 +28,7 @@ const start = async (): Promise<void> => {
     openaiBaseUrl: config.openaiBaseUrl,
     yooKassaSecretKey: config.yooKassaSecretKey,
     yooKassaShopId: config.yooKassaShopId,
+    voiceIntegration: config.voiceIntegration,
   });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
