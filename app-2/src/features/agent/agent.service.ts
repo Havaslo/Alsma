@@ -7,6 +7,7 @@ import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
 import { ensureDefaultAgentPlaybook } from "./agent-playbook.js";
+import { loadPublishedOffersContext } from "./offers-context.js";
 
 const settingsKey = "agent.settings";
 const bookingSchema = z.object({
@@ -237,22 +238,28 @@ export const createAiAgentService = (options: AgentOptions) => {
       },
     });
     const extractedBooking = bookingFromContext(nextBooking);
-    const [knowledgeResult, scenarios, transferRules, knowledgeRules] =
-      await Promise.all([
-        knowledge.answer({ channel: "text", question: message }),
-        options.database.client.agentScenario.findMany({
-          where: { enabled: true },
-          orderBy: { updatedAt: "desc" },
-        }),
-        options.database.client.agentTransferRule.findMany({
-          where: { enabled: true },
-          orderBy: { createdAt: "asc" },
-        }),
-        options.database.client.agentRule.findMany({
-          where: { enabled: true, channels: { has: "text" } },
-          orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
-        }),
-      ]);
+    const [
+      knowledgeResult,
+      scenarios,
+      transferRules,
+      knowledgeRules,
+      offersContext,
+    ] = await Promise.all([
+      knowledge.answer({ channel: "text", question: message }),
+      options.database.client.agentScenario.findMany({
+        where: { enabled: true },
+        orderBy: { updatedAt: "desc" },
+      }),
+      options.database.client.agentTransferRule.findMany({
+        where: { enabled: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      options.database.client.agentRule.findMany({
+        where: { enabled: true, channels: { has: "text" } },
+        orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+      }),
+      loadPublishedOffersContext(options.database),
+    ]);
     options.chat.publishStatus(conversationId, "composing", "Формирую ответ");
     const context = knowledgeResult.sources
       .map((source) => source.content)
@@ -279,7 +286,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
       "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для проживания собери недостающие параметры и проверь наличие; URL в текст не вставляй.",
-      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
+      "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. Используй transfer только если гость прямо попросил менеджера/сотрудника или выполнено конкретное правило передачи; фраза «попробуйте ещё раз» сама по себе НЕ является передачей. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
@@ -287,6 +294,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен. Если выбранный сценарий задаёт action или page, следуй ему.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
+      `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
       `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
@@ -502,11 +510,10 @@ export const createAiAgentService = (options: AgentOptions) => {
       } else if (availabilityResult === "unavailable") {
         answer = `На даты ${dateRange} свободных номеров не найдено. Могу проверить другие даты или передать вопрос менеджеру.`;
       } else {
-        answer = `Не удалось получить актуальное наличие на даты ${dateRange}. Попробуйте ещё раз или я передам вопрос сотруднику.`;
+        answer = `Не удалось получить актуальное наличие на даты ${dateRange}. Попробуйте ещё раз — я повторю проверку, когда вы отправите запрос снова.`;
       }
     }
-    const finalAction =
-      availabilityResult === "error" ? "transfer" : effectiveAction;
+    const finalAction = effectiveAction;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
   };
