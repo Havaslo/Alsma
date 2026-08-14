@@ -116,15 +116,22 @@ export const HomePage = () => {
             className="flex flex-1 flex-col items-center justify-center pt-36 pb-24 text-center"
             id="top"
           >
-            <a
-              className="mb-6 inline-flex items-center gap-3 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-brand uppercase transition hover:opacity-90"
-              href="https://yandex.ru/maps/org/26910883729"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <Star className="size-4 fill-current" />
-              4.9 в Яндекс Картах
-            </a>
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+              <a
+                className="inline-flex items-center gap-3 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-brand uppercase transition hover:opacity-90"
+                href="https://yandex.ru/maps/org/26910883729"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <Star className="size-4 fill-current" />
+                4.9 в Яндекс Картах
+              </a>
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-brand uppercase">
+                4
+                <Star aria-hidden="true" className="size-4 fill-current" />
+                Загородный спа-отель премиум класса
+              </span>
+            </div>
             <h1 className="max-w-4xl font-heading text-4xl leading-[1.02] font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
               {typeof hero?.title === "string"
                 ? hero.title
