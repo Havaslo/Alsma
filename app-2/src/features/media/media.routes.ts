@@ -111,10 +111,32 @@ export const createMediaRouter = (
   router.get(
     "/managed/:objectToken",
     validateRequest({ params: managedFileParamsSchema }),
-    async (_request, response) => {
+    async (request, response) => {
       const objectId = decodeObjectId(response.locals.input.params.objectToken);
       const download = await managedStorage.getDownload(objectId);
-      response.redirect(307, download.downloadUrl);
+      const storageResponse = await fetch(download.downloadUrl);
+      if (!storageResponse.ok) {
+        request.log.error(
+          { status: storageResponse.status },
+          "Managed media download failed",
+        );
+        throw new HttpError(
+          502,
+          "MEDIA_STORAGE_DOWNLOAD_FAILED",
+          "Не удалось получить файл из хранилища.",
+        );
+      }
+
+      const contentType =
+        storageResponse.headers.get("content-type") ??
+        "application/octet-stream";
+      const contentLength = storageResponse.headers.get("content-length");
+      response.setHeader("Content-Type", contentType);
+      if (contentLength) response.setHeader("Content-Length", contentLength);
+      response.setHeader("Content-Disposition", "inline");
+      response.setHeader("Cache-Control", "public, max-age=3600");
+      response.setHeader("X-Content-Type-Options", "nosniff");
+      response.send(Buffer.from(await storageResponse.arrayBuffer()));
     },
   );
   router.get(
