@@ -32,20 +32,24 @@ export const createAgentScenariosRepository = (database: Database) => ({
         where: { key: SETTINGS_KEY },
       })
     ).value,
-  saveScenario: (input: AgentScenarioBody) =>
-    input.id
+  saveScenario: (input: AgentScenarioBody) => {
+    const { id, ...data } = input;
+    return id
       ? database.client.agentScenario.update({
-          data: input,
-          where: { id: input.id },
+          data,
+          where: { id },
         })
-      : database.client.agentScenario.create({ data: input }),
-  saveTransferRule: (input: AgentTransferRuleBody) =>
-    input.id
+      : database.client.agentScenario.create({ data });
+  },
+  saveTransferRule: (input: AgentTransferRuleBody) => {
+    const { id, ...data } = input;
+    return id
       ? database.client.agentTransferRule.update({
-          data: input,
-          where: { id: input.id },
+          data,
+          where: { id },
         })
-      : database.client.agentTransferRule.create({ data: input }),
+      : database.client.agentTransferRule.create({ data });
+  },
   deleteScenario: (id: string) =>
     database.client.agentScenario.delete({ where: { id } }),
   deleteTransferRule: (id: string) =>

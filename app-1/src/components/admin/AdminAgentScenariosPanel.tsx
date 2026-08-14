@@ -60,7 +60,7 @@ export const AdminAgentScenariosPanel = () => {
       action: "answer",
       enabled: true,
       page: null,
-      response: "",
+      response: "Опишите правило поведения ассистента для этого сценария.",
       title: "Новый сценарий",
       trigger: "consultation",
     });
