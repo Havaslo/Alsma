@@ -187,8 +187,8 @@ export const AboutPage = () => {
               >
                 <span className="block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-brand group-hover:shadow-lg">
                   <iframe
-                    className="pointer-events-none aspect-[3/4] w-full"
-                    src={`${document.href}#page=1&view=FitH`}
+                    className="pointer-events-none h-[32rem] w-full"
+                    src={`${document.href}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
                     title={`Превью документа «${document.title}»`}
                   />
                 </span>
