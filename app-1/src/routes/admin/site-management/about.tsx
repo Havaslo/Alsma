@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute } from "@tanstack/react-router";
 
-import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
+import { ROUTES } from "@/route-constants";
 
 export const Route = createFileRoute("/admin/site-management/about")({
-  component: AdminDashboardPage,
+  component: () => (
+    <Navigate replace to={ROUTES.adminSiteManagementDocuments} />
+  ),
 });

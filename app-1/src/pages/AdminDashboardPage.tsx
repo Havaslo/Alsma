@@ -11,6 +11,7 @@ import { AdminBookingRequestsPanel } from "@/components/admin/AdminBookingReques
 import { AdminClientDetail } from "@/components/admin/AdminClientDetail";
 import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
+import { AdminDocumentsEditor } from "@/components/admin/AdminDocumentsEditor";
 import { AdminEntertainmentEditor } from "@/components/admin/AdminEntertainmentEditor";
 import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
@@ -68,6 +69,7 @@ export const AdminDashboardPage = () => {
     ROUTES.adminSiteManagementOffers,
     ROUTES.adminSiteManagementNews,
     ROUTES.adminSiteManagementBlog,
+    ROUTES.adminSiteManagementDocuments,
   ];
   return (
     <AdminShell onLogout={() => void logout()} path={path} user={user}>
@@ -114,6 +116,8 @@ export const AdminDashboardPage = () => {
         (can("site.access") || can("site.manage")) && <AdminNewsEditor />}
       {path === ROUTES.adminSiteManagementBlog &&
         (can("site.access") || can("site.manage")) && <AdminBlogEditor />}
+      {path === ROUTES.adminSiteManagementDocuments &&
+        (can("site.access") || can("site.manage")) && <AdminDocumentsEditor />}
       {isSiteManagement &&
         !implementedSiteSections.includes(path as never) &&
         (can("site.access") || can("site.manage")) && (

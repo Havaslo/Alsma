@@ -44,6 +44,7 @@ import { Route as AdminSiteManagementAboutRouteImport } from './routes/admin/sit
 import { Route as AdminSiteManagementAllInclusiveRouteImport } from './routes/admin/site-management/all-inclusive'
 import { Route as AdminSiteManagementBlogRouteImport } from './routes/admin/site-management/blog'
 import { Route as AdminSiteManagementCelebrationsRouteImport } from './routes/admin/site-management/celebrations'
+import { Route as AdminSiteManagementDocumentsRouteImport } from './routes/admin/site-management/documents'
 import { Route as AdminSiteManagementEntertainmentRouteImport } from './routes/admin/site-management/entertainment'
 import { Route as AdminSiteManagementGeneralRouteImport } from './routes/admin/site-management/general'
 import { Route as AdminSiteManagementHomeRouteImport } from './routes/admin/site-management/home'
@@ -232,6 +233,12 @@ const AdminSiteManagementCelebrationsRoute =
     path: '/admin/site-management/celebrations',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminSiteManagementDocumentsRoute =
+  AdminSiteManagementDocumentsRouteImport.update({
+    id: '/admin/site-management/documents',
+    path: '/admin/site-management/documents',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminSiteManagementEntertainmentRoute =
   AdminSiteManagementEntertainmentRouteImport.update({
     id: '/admin/site-management/entertainment',
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
   '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
@@ -349,6 +357,7 @@ export interface FileRoutesByTo {
   '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
   '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
@@ -394,6 +403,7 @@ export interface FileRoutesById {
   '/admin/site-management/all-inclusive': typeof AdminSiteManagementAllInclusiveRoute
   '/admin/site-management/blog': typeof AdminSiteManagementBlogRoute
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
+  '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
@@ -440,6 +450,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/all-inclusive'
     | '/admin/site-management/blog'
     | '/admin/site-management/celebrations'
+    | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/all-inclusive'
     | '/admin/site-management/blog'
     | '/admin/site-management/celebrations'
+    | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
@@ -528,6 +540,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/all-inclusive'
     | '/admin/site-management/blog'
     | '/admin/site-management/celebrations'
+    | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
@@ -572,6 +585,7 @@ export interface RootRouteChildren {
   AdminSiteManagementAllInclusiveRoute: typeof AdminSiteManagementAllInclusiveRoute
   AdminSiteManagementBlogRoute: typeof AdminSiteManagementBlogRoute
   AdminSiteManagementCelebrationsRoute: typeof AdminSiteManagementCelebrationsRoute
+  AdminSiteManagementDocumentsRoute: typeof AdminSiteManagementDocumentsRoute
   AdminSiteManagementEntertainmentRoute: typeof AdminSiteManagementEntertainmentRoute
   AdminSiteManagementGeneralRoute: typeof AdminSiteManagementGeneralRoute
   AdminSiteManagementHomeRoute: typeof AdminSiteManagementHomeRoute
@@ -831,6 +845,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSiteManagementCelebrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/site-management/documents': {
+      id: '/admin/site-management/documents'
+      path: '/admin/site-management/documents'
+      fullPath: '/admin/site-management/documents'
+      preLoaderRoute: typeof AdminSiteManagementDocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/site-management/entertainment': {
       id: '/admin/site-management/entertainment'
       path: '/admin/site-management/entertainment'
@@ -926,6 +947,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSiteManagementAllInclusiveRoute: AdminSiteManagementAllInclusiveRoute,
   AdminSiteManagementBlogRoute: AdminSiteManagementBlogRoute,
   AdminSiteManagementCelebrationsRoute: AdminSiteManagementCelebrationsRoute,
+  AdminSiteManagementDocumentsRoute: AdminSiteManagementDocumentsRoute,
   AdminSiteManagementEntertainmentRoute: AdminSiteManagementEntertainmentRoute,
   AdminSiteManagementGeneralRoute: AdminSiteManagementGeneralRoute,
   AdminSiteManagementHomeRoute: AdminSiteManagementHomeRoute,

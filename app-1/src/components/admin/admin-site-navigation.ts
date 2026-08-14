@@ -38,8 +38,8 @@ export const adminSiteNavigation = [
     to: ROUTES.adminSiteManagementAllInclusive,
   },
   {
-    label: "О нас",
-    to: ROUTES.adminSiteManagementAbout,
+    label: "Документы",
+    to: ROUTES.adminSiteManagementDocuments,
   },
   {
     label: "Общее",
