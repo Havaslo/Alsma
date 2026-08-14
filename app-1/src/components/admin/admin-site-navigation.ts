@@ -30,14 +30,6 @@ export const adminSiteNavigation = [
     to: ROUTES.adminSiteManagementBlog,
   },
   {
-    label: "Торжества",
-    to: ROUTES.adminSiteManagementCelebrations,
-  },
-  {
-    label: "Все включено",
-    to: ROUTES.adminSiteManagementAllInclusive,
-  },
-  {
     label: "Документы",
     to: ROUTES.adminSiteManagementDocuments,
   },
