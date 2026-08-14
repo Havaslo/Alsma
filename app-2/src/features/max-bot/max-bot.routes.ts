@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import type { AiAgentService } from "../agent/agent.service.js";
 import type { ChatEvent, ChatService } from "../chat/chat.service.js";
-import type { MaxBotClient } from "./max-bot.client.js";
+import { MaxApiError, type MaxBotClient } from "./max-bot.client.js";
 
 const updateSchema = z.record(z.string(), z.unknown());
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -206,11 +206,29 @@ export const createMaxBotRouter = ({
 
   router.get("/readiness", async (_request, response) => {
     let credentialsVerified = false;
+    let credentialsStatus: number | null = null;
+    let credentialsError: string | null = null;
+    let credentialsNetworkCode: string | null = null;
     if (max.configured) {
       try {
         await max.verifyCredentials();
         credentialsVerified = true;
-      } catch {
+      } catch (error) {
+        credentialsStatus = error instanceof MaxApiError ? error.status : null;
+        credentialsError =
+          error instanceof MaxApiError
+            ? "http"
+            : error instanceof TypeError
+              ? "network"
+              : "unknown";
+        const cause = error instanceof Error ? error.cause : undefined;
+        if (
+          cause &&
+          typeof cause === "object" &&
+          "code" in cause &&
+          typeof cause.code === "string"
+        )
+          credentialsNetworkCode = cause.code;
         // The response intentionally exposes configuration state only.
       }
     }
@@ -218,6 +236,9 @@ export const createMaxBotRouter = ({
       provider: "max",
       configured: max.configured,
       credentialsVerified,
+      credentialsStatus,
+      credentialsError,
+      credentialsNetworkCode,
       webhookProtectionConfigured: Boolean(webhookSecret),
       webhookUrlConfigured: Boolean(webhookUrl),
       siteLinksConfigured: Boolean(siteUrl),

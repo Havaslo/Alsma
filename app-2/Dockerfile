@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1.7
 FROM node:22-alpine AS development
 
+RUN apk add --no-cache ca-certificates
+
 ENV HOME=/tmp/amazi-home
 ENV NODE_ENV=development
 
@@ -13,6 +15,8 @@ USER 65532:65532
 CMD ["sh", "-c", "pnpm install --frozen-lockfile --ignore-scripts --store-dir /tmp/pnpm-store && exec pnpm run dev"]
 
 FROM node:22-alpine AS build
+
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
@@ -30,6 +34,8 @@ RUN --mount=type=secret,id=application_environment,required=false \
   pnpm prune --prod
 
 FROM node:22-alpine AS production
+
+RUN apk add --no-cache ca-certificates
 
 ENV NODE_ENV=production
 
