@@ -33,10 +33,6 @@ export const adminSiteNavigation = [
     label: "Документы",
     to: ROUTES.adminSiteManagementDocuments,
   },
-  {
-    label: "Общее",
-    to: ROUTES.adminSiteManagementGeneral,
-  },
 ] as const;
 
 export const getAdminSiteTitle = (path: string): string =>
