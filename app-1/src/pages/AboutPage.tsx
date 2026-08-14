@@ -166,31 +166,34 @@ export const AboutPage = () => {
       </section>
 
       <section className="px-5 pb-24 sm:px-8">
-        <div className="mx-auto max-w-[100rem] rounded-4xl bg-panel px-6 py-12 sm:px-10 lg:px-12">
+        <div className="mx-auto max-w-[100rem]">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-4xl font-semibold sm:text-5xl">
               Документы
             </h2>
             <p className="mt-4 text-muted-ui-foreground">
-              Официальные документы и лицензии отеля. Нажмите на карточку, чтобы
+              Официальные документы и лицензии отеля. Нажмите на превью, чтобы
               открыть файл.
             </p>
           </div>
-          <div className="mx-auto mt-10 grid max-w-5xl justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mx-auto mt-10 grid max-w-6xl justify-items-center gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {documents.map((document) => (
               <a
-                className="flex min-h-44 w-full max-w-xs flex-col items-center justify-center rounded-3xl border border-line bg-brand-foreground p-6 text-center transition hover:-translate-y-1 hover:border-brand hover:shadow-lg"
+                className="group w-full max-w-sm text-center"
                 href={document.href}
                 key={document.href}
                 rel="noreferrer"
                 target="_blank"
               >
-                <span className="grid size-14 place-items-center rounded-2xl bg-brand/10 text-brand">
-                  PDF
+                <span className="block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-brand group-hover:shadow-lg">
+                  <iframe
+                    className="pointer-events-none aspect-[3/4] w-full"
+                    src={`${document.href}#page=1&view=FitH`}
+                    title={`Превью документа «${document.title}»`}
+                  />
                 </span>
-                <span className="mt-5 font-semibold">{document.title}</span>
-                <span className="mt-2 text-xs text-muted-ui-foreground">
-                  Открыть документ
+                <span className="mt-4 block font-semibold transition group-hover:text-brand">
+                  {document.title}
                 </span>
               </a>
             ))}
