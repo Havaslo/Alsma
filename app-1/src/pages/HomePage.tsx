@@ -118,24 +118,28 @@ export const HomePage = () => {
           >
             <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
               <a
-                className="inline-flex items-center gap-3 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-page-foreground uppercase transition hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-page-foreground uppercase transition hover:opacity-90"
                 href="https://yandex.ru/maps/org/26910883729"
                 rel="noreferrer"
                 target="_blank"
               >
-                4.9
-                <Star
-                  aria-hidden="true"
-                  className="size-4 fill-current text-orange-500"
-                />
+                <span className="inline-flex items-center gap-1">
+                  4.9
+                  <Star
+                    aria-hidden="true"
+                    className="size-4 fill-current text-orange-500"
+                  />
+                </span>
                 в Яндекс Картах
               </a>
               <span className="inline-flex items-center gap-2 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-page-foreground uppercase">
-                4
-                <Star
-                  aria-hidden="true"
-                  className="size-4 fill-current text-orange-500"
-                />
+                <span className="inline-flex items-center gap-1">
+                  4
+                  <Star
+                    aria-hidden="true"
+                    className="size-4 fill-current text-orange-500"
+                  />
+                </span>
                 Загородный спа-отель премиум класса
               </span>
             </div>
