@@ -90,3 +90,12 @@ export const uploadSiteMedia = (file: File) =>
       params: { fileName: file.name },
     })
     .then((response) => response.data.asset);
+
+export const regenerateSitePdfPreview = (objectToken: string) =>
+  apiClient
+    .post<{ previewUrl: string }>(
+      "/media/admin/pdf-preview",
+      { objectToken },
+      { headers: adminHeaders() },
+    )
+    .then((response) => response.data);

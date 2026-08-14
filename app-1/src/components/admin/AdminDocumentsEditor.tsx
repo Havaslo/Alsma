@@ -1,16 +1,19 @@
 import { useState } from "react";
 
 import { useMutation } from "@tanstack/react-query";
-import { FileText, Save, Trash2, Upload } from "lucide-react";
+import { FileText, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 
 import { Loader } from "@/components/ui/Loader";
 import {
   ABOUT_DOCUMENTS,
   type AboutDocument,
 } from "@/lib/site/about-documents";
-import { resolveMediaUrl } from "@/lib/site/media-url";
+import { canonicalMediaUrl, resolveMediaUrl } from "@/lib/site/media-url";
 import type { SiteContentItem } from "@/lib/site/site-content-api";
-import { uploadSiteMedia } from "@/lib/site/site-content-api";
+import {
+  regenerateSitePdfPreview,
+  uploadSiteMedia,
+} from "@/lib/site/site-content-api";
 import {
   useAdminSiteContent,
   useSaveAdminSiteContent,
@@ -41,6 +44,12 @@ const getDocuments = (
     : [...ABOUT_DOCUMENTS];
 };
 
+const getManagedObjectToken = (href: string): string | undefined => {
+  const path = canonicalMediaUrl(href).split("?", 1)[0];
+  const prefix = "/api/media/managed/";
+  return path.startsWith(prefix) ? path.slice(prefix.length) : undefined;
+};
+
 const DocumentPreview = ({
   document,
 }: {
@@ -69,6 +78,19 @@ const DocumentsForm = ({
   const [documents, setDocuments] =
     useState<EditableDocument[]>(initialDocuments);
   const save = useSaveAdminSiteContent();
+  const regeneratePreview = useMutation({
+    mutationFn: ({ objectToken }: { objectToken: string; index: number }) =>
+      regenerateSitePdfPreview(objectToken),
+    onSuccess: (asset, variables) => {
+      setDocuments((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === variables.index
+            ? { ...item, previewHref: asset.previewUrl }
+            : item,
+        ),
+      );
+    },
+  });
   const upload = useMutation({
     mutationFn: uploadSiteMedia,
     onSuccess: (asset) => {
@@ -147,7 +169,7 @@ const DocumentsForm = ({
               >
                 {document.fileName}
               </p>
-              <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <a
                   className="text-sm font-semibold text-brand hover:underline"
                   href={resolveMediaUrl(document.href)}
@@ -156,6 +178,26 @@ const DocumentsForm = ({
                 >
                   Открыть PDF
                 </a>
+                {getManagedObjectToken(document.href) && (
+                  <button
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+                    disabled={regeneratePreview.isPending}
+                    onClick={() => {
+                      const objectToken = getManagedObjectToken(document.href);
+                      if (objectToken) {
+                        regeneratePreview.mutate({ objectToken, index });
+                      }
+                    }}
+                    type="button"
+                  >
+                    <RefreshCw
+                      className={`size-4 ${regeneratePreview.isPending ? "animate-spin" : ""}`}
+                    />
+                    {document.previewHref
+                      ? "Обновить превью"
+                      : "Создать превью"}
+                  </button>
+                )}
                 <button
                   className="inline-flex items-center gap-1 text-sm font-semibold text-destructive hover:underline"
                   onClick={() =>
@@ -176,7 +218,9 @@ const DocumentsForm = ({
       <div className="mt-7 flex justify-end border-t border-line pt-5">
         <button
           className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground disabled:opacity-60"
-          disabled={save.isPending || upload.isPending}
+          disabled={
+            save.isPending || upload.isPending || regeneratePreview.isPending
+          }
           onClick={() =>
             save.mutate({
               content: { items: documents },

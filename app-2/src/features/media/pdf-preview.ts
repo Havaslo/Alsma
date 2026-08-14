@@ -1,37 +1,47 @@
-import { inflateSync } from "node:zlib";
+import { createCanvas } from "@napi-rs/canvas";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
-const imageMarker = Buffer.from("/Image");
-const streamMarker = Buffer.from("stream");
-const endStreamMarker = Buffer.from("endstream");
-const jpegStartMarker = Buffer.from([0xff, 0xd8]);
-const jpegEndMarker = Buffer.from([0xff, 0xd9]);
-const flateMarker = Buffer.from("/FlateDecode");
+const maxPreviewPixels = 4_000_000;
+const maxPreviewScale = 1.5;
 
-export const extractFirstPdfImage = (
+/**
+ * Renders the first PDF page, including its text, vector content and images.
+ * This intentionally does not extract an embedded PDF image: embedded images
+ * can be only a background layer or a fragment of the actual page.
+ */
+export const renderFirstPdfPage = async (
   content: Uint8Array,
-): Uint8Array | undefined => {
-  const source = Buffer.from(content);
-  const imagePosition = source.indexOf(imageMarker);
-  if (imagePosition < 0) return undefined;
+): Promise<Uint8Array> => {
+  const loadingTask = getDocument({
+    data: Uint8Array.from(content),
+    isImageDecoderSupported: false,
+    isOffscreenCanvasSupported: false,
+  });
+  const pdf = await loadingTask.promise;
 
-  const dictionaryEnd = source.indexOf(streamMarker, imagePosition);
-  if (dictionaryEnd < 0) return undefined;
-  const streamStart = source.indexOf(0x0a, dictionaryEnd);
-  const streamEnd = source.indexOf(endStreamMarker, streamStart);
-  if (streamStart < 0 || streamEnd < 0) return undefined;
+  try {
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(
+      maxPreviewScale,
+      Math.sqrt(maxPreviewPixels / (baseViewport.width * baseViewport.height)),
+    );
+    const viewport = page.getViewport({ scale });
+    const canvas = createCanvas(
+      Math.ceil(viewport.width),
+      Math.ceil(viewport.height),
+    );
 
-  let stream = source.subarray(streamStart + 1, streamEnd);
-  const dictionaryStart = Math.max(0, imagePosition - 256);
-  if (source.subarray(dictionaryStart, dictionaryEnd).includes(flateMarker)) {
-    try {
-      stream = inflateSync(stream);
-    } catch {
-      return undefined;
-    }
+    await page.render({
+      canvas: canvas as unknown as HTMLCanvasElement,
+      canvasContext: canvas.getContext(
+        "2d",
+      ) as unknown as CanvasRenderingContext2D,
+      viewport,
+    }).promise;
+
+    return Uint8Array.from(await canvas.encode("jpeg", 86));
+  } finally {
+    await loadingTask.destroy();
   }
-
-  const jpegStart = stream.indexOf(jpegStartMarker);
-  const jpegEnd = stream.indexOf(jpegEndMarker, jpegStart + 2);
-  if (jpegStart < 0 || jpegEnd < 0) return undefined;
-  return Uint8Array.from(stream.subarray(jpegStart, jpegEnd + 2));
 };

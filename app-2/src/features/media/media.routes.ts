@@ -11,7 +11,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
-import { extractFirstPdfImage } from "./pdf-preview.js";
+import { renderFirstPdfPage } from "./pdf-preview.js";
 
 const fileParamsSchema = z.object({ fileId: z.uuid() });
 const managedFileParamsSchema = z.object({
@@ -22,6 +22,12 @@ const managedFileParamsSchema = z.object({
 });
 const managedUploadQuerySchema = z.object({
   fileName: z.string().trim().min(1).max(255),
+});
+const managedPreviewBodySchema = z.object({
+  objectToken: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .max(4_096),
 });
 const allowedTypes = new Set([
   "image/jpeg",
@@ -80,8 +86,13 @@ const createPdfPreviewAsset = async (
     readonly log: { readonly warn: (data: unknown, message: string) => void };
   },
 ): Promise<{ readonly previewUrl: string } | undefined> => {
-  const preview = extractFirstPdfImage(content);
-  if (!preview) return undefined;
+  let preview: Uint8Array;
+  try {
+    preview = await renderFirstPdfPage(content);
+  } catch (error) {
+    request.log.warn({ error }, "PDF first-page rendering failed");
+    return undefined;
+  }
   try {
     const previewUpload = await managedStorage.upload({
       content: preview,
@@ -136,6 +147,8 @@ export const createMediaRouter = (
       response.setHeader("Content-Disposition", "inline");
       response.setHeader("Cache-Control", "public, max-age=3600");
       response.setHeader("X-Content-Type-Options", "nosniff");
+      response.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+      response.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       response.send(Buffer.from(await storageResponse.arrayBuffer()));
     },
   );
@@ -154,6 +167,38 @@ export const createMediaRouter = (
         "public, max-age=31536000, immutable",
       );
       response.send(Buffer.from(file.content));
+    },
+  );
+  router.post(
+    "/admin/pdf-preview",
+    requireAdmin,
+    requireSiteManagement,
+    validateRequest({ body: managedPreviewBodySchema }),
+    async (request, response) => {
+      const objectId = decodeObjectId(response.locals.input.body.objectToken);
+      const download = await managedStorage.getDownload(objectId);
+      const storageResponse = await fetch(download.downloadUrl);
+      if (!storageResponse.ok) {
+        throw new HttpError(
+          502,
+          "MEDIA_STORAGE_DOWNLOAD_FAILED",
+          "Не удалось получить PDF из хранилища.",
+        );
+      }
+      const preview = await createPdfPreviewAsset(
+        managedStorage,
+        Buffer.from(await storageResponse.arrayBuffer()),
+        "document.pdf",
+        request,
+      );
+      if (!preview) {
+        throw new HttpError(
+          422,
+          "MEDIA_PDF_PREVIEW_FAILED",
+          "Не удалось отрендерить первую страницу PDF.",
+        );
+      }
+      response.json(preview);
     },
   );
   router.post(
