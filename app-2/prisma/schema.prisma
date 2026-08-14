@@ -354,3 +354,13 @@ model VoiceCall {
   @@index([callerPhone, createdAt])
   @@map("voice_calls")
 }
+
+model MaxWebhookUpdate {
+  id        String   @id
+  status    String   @default("processing")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("max_webhook_updates")
+}

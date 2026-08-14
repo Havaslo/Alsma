@@ -41,7 +41,7 @@ const environmentSchema = z.object({
   T2_TRANSFER_NUMBER: z.string().min(3).optional(),
   VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
   MAX_BOT_TOKEN: z.string().min(1).optional(),
-  MAX_BOT_WEBHOOK_SECRET: z.string().min(16).optional(),
+  MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
   MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
   MAX_BOT_SITE_URL: z.string().url().optional(),
 });
@@ -95,7 +95,7 @@ export const readConfig = (
     openaiBaseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
     maxBot: {
       token: parsed.MAX_BOT_TOKEN,
-      webhookSecret: parsed.MAX_BOT_WEBHOOK_SECRET,
+      webhookSecret: parsed.MAX_WEBHOOK_SECRET,
       webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
       siteUrl: parsed.MAX_BOT_SITE_URL,
     },

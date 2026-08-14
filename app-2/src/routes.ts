@@ -114,6 +114,7 @@ export const createApiRouter = ({
       logger,
       max: createMaxBotClient({ logger, token: maxBot.token }),
       webhookSecret: maxBot.webhookSecret,
+      webhookUrl: maxBot.webhookUrl,
       siteUrl: maxBot.siteUrl,
     }),
   );

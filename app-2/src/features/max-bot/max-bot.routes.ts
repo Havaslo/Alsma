@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { Logger } from "pino";
 import { z } from "zod";
 
@@ -16,10 +16,12 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 const firstString = (...values: unknown[]) =>
   values
     .find(
-      (value): value is string =>
-        typeof value === "string" && Boolean(value.trim()),
+      (value): value is string | number =>
+        (typeof value === "string" && Boolean(value.trim())) ||
+        typeof value === "number",
     )
-    ?.trim();
+    ?.toString()
+    .trim();
 const conversationIdFor = (chatId: string) => {
   const digest = createHash("md5").update(`max:${chatId}`).digest();
   digest[6] = (digest[6]! & 0x0f) | 0x30;
@@ -33,11 +35,12 @@ const extractMessage = (payload: Record<string, unknown>) => {
   const recipient = asRecord(message.recipient);
   const sender = asRecord(message.sender);
   return {
-    chatId: firstString(
-      recipient.chat_id,
-      message.chat_id,
-      payload.chat_id,
-      payload.user_id,
+    chatId: firstString(recipient.chat_id, message.chat_id, payload.chat_id),
+    eventId: firstString(
+      payload.update_id,
+      payload.id,
+      message.id,
+      message.mid,
     ),
     senderId: firstString(sender.user_id, sender.id, payload.user_id),
     text: firstString(body.text, message.text, payload.text),
@@ -48,14 +51,19 @@ const detailsFor = (value: unknown) => asRecord(value);
 const isMaxRequest = (value: unknown) => detailsFor(value).source === "MAX";
 const isManagerMode = (value: unknown) =>
   detailsFor(value).chatMode === "manager";
+const secureEqual = (received: string | undefined, expected: string) => {
+  if (!received) return false;
+  const left = Buffer.from(received);
+  const right = Buffer.from(expected);
+  return left.length === right.length && timingSafeEqual(left, right);
+};
 const makePublicUrl = (
   url: string | undefined,
   siteUrl: string | undefined,
 ) => {
   if (!url) return undefined;
   if (/^https?:\/\//u.test(url)) return url;
-  if (!siteUrl) return undefined;
-  return new URL(url, siteUrl).toString();
+  return siteUrl ? new URL(url, siteUrl).toString() : undefined;
 };
 const messageForMax = (
   event: Extract<ChatEvent, { type: "message" }>,
@@ -73,6 +81,7 @@ export const createMaxBotRouter = ({
   max,
   siteUrl,
   webhookSecret,
+  webhookUrl,
 }: {
   readonly agent: AiAgentService;
   readonly chat: ChatService;
@@ -81,9 +90,20 @@ export const createMaxBotRouter = ({
   readonly max: MaxBotClient;
   readonly siteUrl?: string;
   readonly webhookSecret?: string;
+  readonly webhookUrl?: string;
 }): Router => {
   const router = Router();
-
+  if (max.configured && webhookSecret && webhookUrl) {
+    const callbackUrl = new URL("/api/max/webhook", webhookUrl).toString();
+    void max
+      .registerWebhook({ secret: webhookSecret, url: callbackUrl })
+      .catch((error: unknown) =>
+        logger.error(
+          { error: error instanceof Error ? error.message : "Unknown error" },
+          "MAX webhook subscription registration failed",
+        ),
+      );
+  }
   chat.subscribeAll((event) => {
     if (event.type !== "message" || event.author === "guest" || !max.configured)
       return;
@@ -105,45 +125,21 @@ export const createMaxBotRouter = ({
       );
   });
 
-  router.get("/readiness", (_request, response) =>
-    response.json({
-      provider: "max",
-      configured: max.configured,
-      webhookProtectionConfigured: Boolean(webhookSecret),
-      siteLinksConfigured: Boolean(siteUrl),
-    }),
-  );
-
-  router.post("/webhook", async (request, response, next) => {
+  const handleUpdate = async (payload: Record<string, unknown>) => {
+    const { chatId, eventId, senderId, text, updateType } =
+      extractMessage(payload);
+    if (updateType && updateType !== "message_created") return;
+    if (!chatId || !text || !senderId) return;
+    if (eventId) {
+      try {
+        await database.client.maxWebhookUpdate.create({
+          data: { id: eventId },
+        });
+      } catch {
+        return;
+      }
+    }
     try {
-      if (
-        webhookSecret &&
-        (request.header("x-max-webhook-secret") ??
-          request.header("x-max-bot-secret-token")) !== webhookSecret
-      ) {
-        response.status(401).json({ error: "MAX webhook is not authorized." });
-        return;
-      }
-      if (!max.configured) {
-        response.status(503).json({ error: "MAX bot is not configured." });
-        return;
-      }
-      const parsed = updateSchema.safeParse(request.body);
-      if (!parsed.success) {
-        response.status(400).json({ error: "Invalid MAX webhook payload." });
-        return;
-      }
-      const { chatId, senderId, text, updateType } = extractMessage(
-        parsed.data,
-      );
-      if (updateType && updateType !== "message_created") {
-        response.sendStatus(200);
-        return;
-      }
-      if (!chatId || !text || !senderId) {
-        response.sendStatus(200);
-        return;
-      }
       const conversationId = conversationIdFor(chatId);
       const existing = await database.client.adminRequest.findUnique({
         where: { id: conversationId },
@@ -166,43 +162,86 @@ export const createMaxBotRouter = ({
           contact: `max:${senderId}`,
           description: text,
           details: { ...currentDetails, maxChatId: chatId, source: "MAX" },
-          updatedAt: new Date(),
         },
       });
       await chat.publish(conversationId, "guest", text);
-      if (isManagerMode(currentDetails)) {
-        response.sendStatus(200);
-        return;
-      }
-      const result = await agent.reply(conversationId, text);
-      if (result?.action === "transfer") {
-        await database.client.adminRequest.update({
-          where: { id: conversationId },
-          data: {
-            details: {
-              ...currentDetails,
-              chatMode: "manager",
-              managerRequested: true,
-              maxChatId: chatId,
-              source: "MAX",
+      if (!isManagerMode(currentDetails)) {
+        const result = await agent.reply(conversationId, text);
+        if (result?.action === "transfer")
+          await database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: {
+                ...currentDetails,
+                chatMode: "manager",
+                managerRequested: true,
+                maxChatId: chatId,
+                source: "MAX",
+              },
             },
-          },
-        });
+          });
+        if (!result)
+          await chat.publish(
+            conversationId,
+            "agent",
+            "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
+          );
       }
-      if (!result)
-        await chat.publish(
-          conversationId,
-          "agent",
-          "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
-        );
-      response.sendStatus(200);
+      if (eventId)
+        await database.client.maxWebhookUpdate.update({
+          where: { id: eventId },
+          data: { status: "completed" },
+        });
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : "Unknown error" },
         "MAX webhook processing failed",
       );
-      next(error);
+      if (eventId)
+        await database.client.maxWebhookUpdate
+          .update({ where: { id: eventId }, data: { status: "failed" } })
+          .catch(() => undefined);
     }
+  };
+
+  router.get("/readiness", async (_request, response) => {
+    let credentialsVerified = false;
+    if (max.configured) {
+      try {
+        await max.verifyCredentials();
+        credentialsVerified = true;
+      } catch {
+        // The response intentionally exposes configuration state only.
+      }
+    }
+    response.json({
+      provider: "max",
+      configured: max.configured,
+      credentialsVerified,
+      webhookProtectionConfigured: Boolean(webhookSecret),
+      webhookUrlConfigured: Boolean(webhookUrl),
+      siteLinksConfigured: Boolean(siteUrl),
+    });
+  });
+  router.post("/webhook", (request, response) => {
+    if (
+      !webhookSecret ||
+      !secureEqual(request.header("x-max-bot-api-secret"), webhookSecret)
+    ) {
+      response.status(401).json({ error: "MAX webhook is not authorized." });
+      return;
+    }
+    if (!max.configured) {
+      response.status(503).json({ error: "MAX bot is not configured." });
+      return;
+    }
+    const parsed = updateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      response.status(400).json({ error: "Invalid MAX webhook payload." });
+      return;
+    }
+    response.sendStatus(200);
+    void handleUpdate(parsed.data);
   });
   return router;
 };
