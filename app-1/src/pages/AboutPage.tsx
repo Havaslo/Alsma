@@ -28,6 +28,7 @@ import {
   type AboutDocument,
 } from "@/lib/site/about-documents";
 import { getSiteCollection } from "@/lib/site/content-collections";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -180,7 +181,7 @@ export const AboutPage = () => {
             {documents.map((document) => (
               <a
                 className="group w-full max-w-sm text-center"
-                href={document.href}
+                href={resolveMediaUrl(document.href)}
                 key={document.href}
                 rel="noreferrer"
                 target="_blank"
@@ -190,7 +191,7 @@ export const AboutPage = () => {
                     <img
                       alt={`Первая страница документа «${document.title}»`}
                       className="block aspect-[0.707] w-full object-cover object-top"
-                      src={document.previewHref}
+                      src={resolveMediaUrl(document.previewHref)}
                     />
                   ) : (
                     <span className="flex aspect-[0.707] items-center justify-center px-6 text-sm text-muted-ui-foreground">
