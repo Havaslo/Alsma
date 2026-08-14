@@ -54,7 +54,12 @@ export const AdminSiteCollectionEditor = ({
     onSuccess: (asset) => {
       const next = [
         ...previewItems,
-        { title: asset.fileName, fileName: asset.fileName, href: asset.url },
+        {
+          title: asset.fileName,
+          fileName: asset.fileName,
+          href: asset.url,
+          previewHref: asset.previewUrl,
+        },
       ];
       setPreviewItems(next);
       form.setValue("json", JSON.stringify(next, null, 2));

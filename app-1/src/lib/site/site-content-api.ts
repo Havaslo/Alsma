@@ -78,6 +78,7 @@ export const uploadSiteMedia = (file: File) =>
         readonly contentType: string;
         readonly fileName: string;
         readonly objectId: string;
+        readonly previewUrl?: string;
         readonly sizeBytes: number;
         readonly url: string;
       };

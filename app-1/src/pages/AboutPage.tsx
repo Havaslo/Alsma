@@ -185,12 +185,18 @@ export const AboutPage = () => {
                 rel="noreferrer"
                 target="_blank"
               >
-                <span className="block h-[32rem] overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-brand group-hover:shadow-lg">
-                  <iframe
-                    className="pointer-events-none h-[calc(32rem+56px)] w-full -translate-y-14"
-                    src={`${document.href}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
-                    title={`Первая страница документа «${document.title}»`}
-                  />
+                <span className="block overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition group-hover:-translate-y-1 group-hover:border-brand group-hover:shadow-lg">
+                  {document.previewHref ? (
+                    <img
+                      alt={`Первая страница документа «${document.title}»`}
+                      className="block aspect-[0.707] w-full object-cover object-top"
+                      src={document.previewHref}
+                    />
+                  ) : (
+                    <span className="flex aspect-[0.707] items-center justify-center px-6 text-sm text-muted-ui-foreground">
+                      Превью появится после обработки файла
+                    </span>
+                  )}
                 </span>
                 <span className="mt-4 block font-semibold transition group-hover:text-brand">
                   {document.title}

@@ -11,6 +11,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import { extractFirstPdfImage } from "./pdf-preview.js";
 
 const fileParamsSchema = z.object({ fileId: z.uuid() });
 const managedFileParamsSchema = z.object({
@@ -68,6 +69,32 @@ const decodeObjectId = (token: string): string => {
       "MEDIA_OBJECT_INVALID",
       "Некорректный идентификатор файла.",
     );
+  }
+};
+
+const createPdfPreviewAsset = async (
+  managedStorage: ManagedStorage,
+  content: Buffer,
+  fileName: string,
+  request: {
+    readonly log: { readonly warn: (data: unknown, message: string) => void };
+  },
+): Promise<{ readonly previewUrl: string } | undefined> => {
+  const preview = extractFirstPdfImage(content);
+  if (!preview) return undefined;
+  try {
+    const previewUpload = await managedStorage.upload({
+      content: preview,
+      contentType: "image/jpeg",
+      name: `${getStorageFileName(fileName)}.preview.jpg`,
+    });
+    const previewToken = encodeObjectId(previewUpload.objectId);
+    return {
+      previewUrl: `/api/media/managed/${previewToken}?contentType=image%2Fjpeg`,
+    };
+  } catch (error) {
+    request.log.warn({ error }, "Managed PDF preview upload failed");
+    return undefined;
   }
 };
 
@@ -141,17 +168,24 @@ export const createMediaRouter = (
         );
       }
       const objectToken = encodeObjectId(upload.objectId);
-      response.status(201).json({
-        asset: {
+      const asset = {
+        contentType,
+        fileName,
+        objectId: upload.objectId,
+        sizeBytes: request.body.length,
+        url: `/api/media/managed/${objectToken}?contentType=${encodeURIComponent(
           contentType,
-          fileName,
-          objectId: upload.objectId,
-          sizeBytes: request.body.length,
-          url: `/api/media/managed/${objectToken}?contentType=${encodeURIComponent(
-            contentType,
-          )}`,
-        },
-      });
+        )}`,
+        ...(contentType === "application/pdf"
+          ? await createPdfPreviewAsset(
+              managedStorage,
+              request.body,
+              fileName,
+              request,
+            )
+          : {}),
+      };
+      response.status(201).json({ asset });
     },
   );
   return router;
