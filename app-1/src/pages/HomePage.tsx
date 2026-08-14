@@ -123,8 +123,12 @@ export const HomePage = () => {
                 rel="noreferrer"
                 target="_blank"
               >
-                <Star className="size-4 fill-current text-orange-500" />
-                4.9 в Яндекс Картах
+                4.9
+                <Star
+                  aria-hidden="true"
+                  className="size-4 fill-current text-orange-500"
+                />
+                в Яндекс Картах
               </a>
               <span className="inline-flex items-center gap-2 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-page-foreground uppercase">
                 4
