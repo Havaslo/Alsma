@@ -35,6 +35,12 @@ export class MaxApiError extends Error {
 const shouldRetry = (status: number) => status === 429 || status >= 500;
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+const maxMessageLength = 4_000;
+const maxChatId = (value: string) => {
+  const chatId = value.trim();
+  if (!/^\d+$/u.test(chatId)) throw new Error("MAX chat ID is invalid");
+  return chatId;
+};
 
 export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
   const normalizedToken = normalizeToken(token);
@@ -96,9 +102,14 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
     },
     sendMessage: async ({ chatId, text }: MaxSendMessage) =>
       enqueue(async () => {
-        await request("/messages", {
+        const normalizedText = text.trim();
+        if (!normalizedText || normalizedText.length > maxMessageLength)
+          throw new Error("MAX message text is invalid");
+        const search = new URLSearchParams({ chat_id: maxChatId(chatId) });
+        await request(`/messages?${search.toString()}`, {
           method: "POST",
-          body: JSON.stringify({ chat_id: chatId, text }),
+          // MAX accepts the destination exclusively as a query parameter.
+          body: JSON.stringify({ text: normalizedText }),
         });
       }),
   };
