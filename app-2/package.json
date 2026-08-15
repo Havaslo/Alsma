@@ -13,7 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "tsx src/lib/database/migrate-command.ts",
     "db:seed:reference": "tsx src/lib/database/seed-reference-data-command.ts",
-    "dev": "prisma generate && tsx watch src/server.ts",
+    "dev": "prisma generate && NODE_EXTRA_CA_CERTS=\"$PWD/certificates/russian-trusted-root-ca.pem\" tsx watch src/server.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
