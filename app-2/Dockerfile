@@ -1,13 +1,18 @@
 # syntax=docker/dockerfile:1.7
 FROM node:22-alpine AS development
 
-RUN apk add --no-cache ca-certificates wget \
-  && wget -qO /app/russian-trusted-root-ca.crt \
-    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt
+RUN apk add --no-cache ca-certificates openssl wget \
+  && wget -qO /usr/local/share/ca-certificates/russian-trusted-root-ca.crt \
+    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt \
+  && printf '' | openssl s_client -connect platform-api2.max.ru:443 \
+    -servername platform-api2.max.ru -showcerts 2>/dev/null \
+    | awk 'BEGIN { certificate = 0 } /BEGIN CERTIFICATE/ { certificate += 1 } certificate == 2 { print } /END CERTIFICATE/ && certificate == 2 { exit }' \
+    > /usr/local/share/ca-certificates/russian-trusted-sub-ca.crt \
+  && update-ca-certificates
 
 ENV HOME=/tmp/amazi-home
 ENV NODE_ENV=development
-ENV NODE_EXTRA_CA_CERTS=/app/russian-trusted-root-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
@@ -19,17 +24,19 @@ CMD ["sh", "-c", "pnpm install --frozen-lockfile --ignore-scripts --store-dir /t
 
 FROM node:22-alpine AS build
 
-RUN apk add --no-cache ca-certificates wget \
-  && wget -qO /tmp/russian-trusted-root-ca.crt \
-    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt
-ENV NODE_EXTRA_CA_CERTS=/tmp/russian-trusted-root-ca.crt
+RUN apk add --no-cache ca-certificates openssl wget \
+  && wget -qO /usr/local/share/ca-certificates/russian-trusted-root-ca.crt \
+    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt \
+  && printf '' | openssl s_client -connect platform-api2.max.ru:443 \
+    -servername platform-api2.max.ru -showcerts 2>/dev/null \
+    | awk 'BEGIN { certificate = 0 } /BEGIN CERTIFICATE/ { certificate += 1 } certificate == 2 { print } /END CERTIFICATE/ && certificate == 2 { exit }' \
+    > /usr/local/share/ca-certificates/russian-trusted-sub-ca.crt \
+  && update-ca-certificates
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
 COPY . .
-
-RUN cp /tmp/russian-trusted-root-ca.crt /app/russian-trusted-root-ca.crt \
-  && rm /tmp/russian-trusted-root-ca.crt
 
 RUN --mount=type=secret,id=application_environment,required=false \
   set -eu; \
@@ -47,11 +54,12 @@ FROM node:22-alpine AS production
 RUN apk add --no-cache ca-certificates
 
 ENV NODE_ENV=production
-ENV NODE_EXTRA_CA_CERTS=/app/russian-trusted-root-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
 COPY --from=build --chown=65532:65532 /app ./
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 USER 65532:65532
 
