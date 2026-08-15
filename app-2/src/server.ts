@@ -6,18 +6,17 @@ import { createLogger } from "./lib/logger.js";
 import { createManagedStorage } from "./lib/storage/managed-storage.js";
 
 const host = "0.0.0.0";
+const databaseRetryDelayMilliseconds = 5_000;
+
+const wait = async (milliseconds: number): Promise<void> => {
+  await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+};
 
 const start = async (): Promise<void> => {
   const config = readConfig();
   const logger = createLogger();
   const database = createDatabase(config.databaseUrl);
   const managedStorage = createManagedStorage(config.managedStorage);
-  try {
-    await runDatabaseMigrations(database);
-  } catch (error) {
-    await database.close().catch(() => undefined);
-    throw error;
-  }
   const app = createApp({
     database,
     logger,
@@ -34,6 +33,24 @@ const start = async (): Promise<void> => {
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
   });
+  const keepDatabaseReady = async (): Promise<void> => {
+    for (;;) {
+      try {
+        await runDatabaseMigrations(database);
+        logger.info("Managed database is ready and migrations are applied");
+        return;
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          "Managed database is unavailable; retrying migration startup",
+        );
+        await wait(databaseRetryDelayMilliseconds);
+      }
+    }
+  };
+  void keepDatabaseReady();
   let isShuttingDown = false;
   const shutdown = (signal: NodeJS.Signals) => {
     if (isShuttingDown) return;
