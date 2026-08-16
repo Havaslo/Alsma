@@ -210,7 +210,7 @@ export const createVkRouter = ({
       response.status(401).send("unauthorized");
       return;
     }
-    response.send("ok");
+    response.status(200).type("text/plain").send("ok");
     void processEvent(parsed.data);
   });
   return router;
