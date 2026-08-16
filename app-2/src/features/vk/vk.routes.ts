@@ -136,12 +136,37 @@ export const createVkRouter = ({
     )
       return;
     if (id) {
-      try {
-        await database.client.vkWebhookUpdate.create({
-          data: { id, groupId: groupId! },
+      // VK can redeliver an event after a timeout, and an earlier attempt may
+      // have failed after the durable webhook marker was created.  A unique
+      // insert alone incorrectly treats every redelivery as a duplicate and
+      // permanently drops failed messages.  Only a completed marker is a
+      // terminal state; processing/failed markers must be claimable again.
+      const existingUpdate = await database.client.vkWebhookUpdate.findUnique({
+        where: { id },
+        select: { groupId: true, status: true },
+      });
+      if (existingUpdate?.groupId !== undefined) {
+        if (existingUpdate.groupId !== groupId) return;
+        if (existingUpdate.status === "completed") return;
+        await database.client.vkWebhookUpdate.update({
+          where: { id },
+          data: { status: "processing", updatedAt: new Date() },
         });
-      } catch {
-        return;
+      } else {
+        try {
+          await database.client.vkWebhookUpdate.create({
+            data: {
+              id,
+              groupId: groupId!,
+              payload: JSON.parse(JSON.stringify(event)),
+              status: "processing",
+            },
+          });
+        } catch {
+          // A concurrent delivery may have created the marker. It is safe to
+          // continue: the message-level externalId check below is the final
+          // idempotency guard before the agent is invoked.
+        }
       }
     }
     const previous = conversationQueues.get(peerId) ?? Promise.resolve();

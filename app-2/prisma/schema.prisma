@@ -371,6 +371,7 @@ model VkWebhookUpdate {
   id        String   @id
   groupId   String   @map("group_id")
   status    String   @default("processing")
+  payload   Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([createdAt])
