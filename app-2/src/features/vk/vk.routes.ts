@@ -196,12 +196,15 @@ export const createVkRouter = ({
       !groupId ||
       textOf(parsed.data.group_id) !== groupId
     ) {
-      response.status(400).send("bad request");
+      response.status(400).type("text/plain").send("bad request");
       return;
     }
     if (parsed.data.type === "confirmation") {
       if (!confirmationCode) {
-        response.status(503).send("confirmation is not configured");
+        response
+          .status(503)
+          .type("text/plain")
+          .send("confirmation is not configured");
         return;
       }
       // VK compares the confirmation body byte-for-byte. Explicitly use a
@@ -213,7 +216,11 @@ export const createVkRouter = ({
       !callbackSecret ||
       !secretMatches(textOf(parsed.data.secret), callbackSecret)
     ) {
-      response.status(401).send("unauthorized");
+      // VK retries callback deliveries when it receives 401. A rejected
+      // event must never be enqueued, but a plain 200 prevents VK from
+      // turning a stale/misconfigured subscription into a retry storm. The
+      // secret check remains mandatory for processing.
+      response.status(200).type("text/plain").send("ok");
       return;
     }
     response.status(200).type("text/plain").send("ok");
