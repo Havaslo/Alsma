@@ -26,6 +26,7 @@ const start = async (): Promise<void> => {
     openaiApiKey: config.openaiApiKey,
     openaiBaseUrl: config.openaiBaseUrl,
     maxBot: config.maxBot,
+    vk: config.vk,
     yooKassaSecretKey: config.yooKassaSecretKey,
     yooKassaShopId: config.yooKassaShopId,
     voiceIntegration: config.voiceIntegration,

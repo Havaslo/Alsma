@@ -20,6 +20,8 @@ import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
+import { createVkClient } from "./features/vk/vk.client.js";
+import { createVkRouter } from "./features/vk/vk.routes.js";
 import { createVoiceAgentRouter } from "./features/voice-agent/voice-agent.routes.js";
 import type { Database } from "./lib/database/database.js";
 import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
@@ -35,6 +37,12 @@ type CreateApiRouterOptions = {
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
+  };
+  readonly vk: {
+    readonly accessToken?: string;
+    readonly groupId?: string;
+    readonly callbackSecret?: string;
+    readonly confirmationCode?: string;
   };
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
@@ -68,6 +76,7 @@ export const createApiRouter = ({
   openaiApiKey,
   openaiBaseUrl,
   maxBot,
+  vk,
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
@@ -116,6 +125,19 @@ export const createApiRouter = ({
       webhookSecret: maxBot.webhookSecret,
       webhookUrl: maxBot.webhookUrl,
       siteUrl: maxBot.siteUrl,
+    }),
+  );
+  router.use(
+    "/vk",
+    createVkRouter({
+      agent,
+      chat,
+      database,
+      groupId: vk.groupId,
+      callbackSecret: vk.callbackSecret,
+      confirmationCode: vk.confirmationCode,
+      logger,
+      vk: createVkClient({ accessToken: vk.accessToken, logger }),
     }),
   );
   router.use("/site-leads", createLeadsRouter(database));

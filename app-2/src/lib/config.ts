@@ -44,6 +44,10 @@ const environmentSchema = z.object({
   MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
   MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
   MAX_BOT_SITE_URL: z.string().url().optional(),
+  VK_ACCESS_TOKEN: z.string().min(1).optional(),
+  VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
+  VK_CALLBACK_SECRET: z.string().min(1).optional(),
+  VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
 });
 
 export type AppConfig = {
@@ -63,6 +67,12 @@ export type AppConfig = {
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
+  };
+  readonly vk: {
+    readonly accessToken?: string;
+    readonly groupId?: string;
+    readonly callbackSecret?: string;
+    readonly confirmationCode?: string;
   };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
@@ -98,6 +108,12 @@ export const readConfig = (
       webhookSecret: parsed.MAX_WEBHOOK_SECRET,
       webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
       siteUrl: parsed.MAX_BOT_SITE_URL,
+    },
+    vk: {
+      accessToken: parsed.VK_ACCESS_TOKEN,
+      groupId: parsed.VK_GROUP_ID,
+      callbackSecret: parsed.VK_CALLBACK_SECRET,
+      confirmationCode: parsed.VK_CALLBACK_CONFIRMATION_CODE,
     },
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,

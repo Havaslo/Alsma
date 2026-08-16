@@ -21,6 +21,12 @@ type CreateAppOptions = {
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
   };
+  readonly vk: {
+    readonly accessToken?: string;
+    readonly groupId?: string;
+    readonly callbackSecret?: string;
+    readonly confirmationCode?: string;
+  };
   readonly yooKassaSecretKey?: string;
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
@@ -54,6 +60,7 @@ export const createApp = ({
   openaiApiKey,
   openaiBaseUrl,
   maxBot,
+  vk,
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
@@ -84,6 +91,7 @@ export const createApp = ({
       openaiApiKey,
       openaiBaseUrl,
       maxBot,
+      vk,
       yooKassaSecretKey,
       yooKassaShopId,
       voiceIntegration,
