@@ -78,9 +78,15 @@ export const createVkRouter = ({
     if (event.type !== "message_new" || textOf(event.group_id) !== groupId)
       return;
     const object = record(event.object);
-    const peerId = textOf(object.peer_id || object.from_id);
-    const senderId = textOf(object.from_id);
-    const text = textOf(object.text);
+    // VK Callback API sends message_new payloads with the message fields
+    // nested under object.message. Keep the flat fallback for compatible
+    // payloads, but prefer the canonical nested message object.
+    const message = record(object.message);
+    const peerId = textOf(
+      message.peer_id || object.peer_id || message.from_id || object.from_id,
+    );
+    const senderId = textOf(message.from_id || object.from_id);
+    const text = textOf(message.text || object.text);
     const id = textOf(event.event_id);
     // Only handle one-to-one messages from a user. Community-originated
     // message_new events and group conversations must not enter the agent
