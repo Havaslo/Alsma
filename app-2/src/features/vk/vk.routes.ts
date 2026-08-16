@@ -82,7 +82,18 @@ export const createVkRouter = ({
     const senderId = textOf(object.from_id);
     const text = textOf(object.text);
     const id = textOf(event.event_id);
-    if (!peerId || !senderId || !text) return;
+    // Only handle one-to-one messages from a user. Community-originated
+    // message_new events and group conversations must not enter the agent
+    // loop or be answered by the bot.
+    if (
+      !peerId ||
+      !senderId ||
+      !text ||
+      senderId.startsWith("-") ||
+      senderId === groupId ||
+      peerId !== senderId
+    )
+      return;
     if (id) {
       try {
         await database.client.vkWebhookUpdate.create({

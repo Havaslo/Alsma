@@ -15,6 +15,14 @@ export class VkApiError extends Error {
   }
 }
 const shouldRetry = (code: number) => code === 6 || code === 10 || code === 29;
+const randomIdFor = (value: string) => {
+  let hash = 2_166_136_261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return String(((hash >>> 0) % 2_147_483_646) + 1);
+};
 
 export const createVkClient = ({
   accessToken,
@@ -67,7 +75,7 @@ export const createVkClient = ({
     sendMessage: async (userId: string, text: string, randomId: string) => {
       await request("messages.send", {
         peer_id: userId,
-        random_id: randomId,
+        random_id: randomIdFor(randomId),
         message: text.slice(0, 4_096),
       });
     },
