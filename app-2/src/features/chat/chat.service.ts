@@ -8,6 +8,7 @@ export type ChatMessage = {
   readonly text: string;
   readonly createdAt: string;
   readonly bookingUrl?: string;
+  readonly externalId?: string;
 };
 
 export type ChatStatus = {
@@ -30,6 +31,7 @@ const toMessage = (message: {
   author: string;
   text: string;
   bookingUrl: string | null;
+  externalId: string | null;
   createdAt: Date;
 }): ChatMessage => ({
   type: "message",
@@ -39,6 +41,7 @@ const toMessage = (message: {
   text: message.text,
   createdAt: message.createdAt.toISOString(),
   ...(message.bookingUrl ? { bookingUrl: message.bookingUrl } : {}),
+  ...(message.externalId ? { externalId: message.externalId } : {}),
 });
 
 export const createChatService = (database: Database) => {
@@ -52,11 +55,20 @@ export const createChatService = (database: Database) => {
     author: ChatAuthor,
     text: string,
     bookingUrl?: string,
+    externalId?: string,
   ) => {
     const message = await database.client.$transaction(async (transaction) => {
-      const created = await transaction.chatMessage.create({
-        data: { author, bookingUrl, conversationId, text },
-      });
+      const created = externalId
+        ? await transaction.chatMessage.upsert({
+            where: {
+              conversationId_externalId: { conversationId, externalId },
+            },
+            create: { author, bookingUrl, conversationId, externalId, text },
+            update: {},
+          })
+        : await transaction.chatMessage.create({
+            data: { author, bookingUrl, conversationId, text },
+          });
       await transaction.adminRequest.update({
         where: { id: conversationId },
         data: { updatedAt: new Date() },
@@ -78,6 +90,26 @@ export const createChatService = (database: Database) => {
         })
       ).map(toMessage),
     publish,
+    importMessage: async (
+      conversationId: string,
+      author: ChatAuthor,
+      text: string,
+      externalId: string,
+      createdAt?: Date,
+    ) =>
+      database.client.chatMessage.upsert({
+        where: {
+          conversationId_externalId: { conversationId, externalId },
+        },
+        create: {
+          author,
+          conversationId,
+          createdAt,
+          externalId,
+          text,
+        },
+        update: {},
+      }),
     publishStatus: (
       conversationId: string,
       status: ChatStatus["status"],

@@ -198,9 +198,11 @@ model ChatMessage {
   author         String
   text           String
   bookingUrl     String?      @map("booking_url")
+  externalId     String?      @map("external_id")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([conversationId, createdAt])
+  @@unique([conversationId, externalId])
   @@map("chat_messages")
 }
 

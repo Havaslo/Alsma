@@ -48,6 +48,7 @@ export const createVkRouter = ({
   readonly vk: VkClient;
 }): Router => {
   const router = Router();
+  const conversationQueues = new Map<string, Promise<void>>();
   chat.subscribeAll((event) => {
     if (
       event.type !== "message" ||
@@ -109,6 +110,14 @@ export const createVkRouter = ({
         return;
       }
     }
+    const previous = conversationQueues.get(peerId) ?? Promise.resolve();
+    let release!: () => void;
+    const turn = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => turn);
+    conversationQueues.set(peerId, queued);
+    await previous;
     try {
       const conversationId = conversationIdFor(peerId);
       const existing = await database.client.adminRequest.findUnique({
@@ -144,14 +153,67 @@ export const createVkRouter = ({
           },
         },
       });
-      await chat.publish(conversationId, "guest", text);
-      const result = await agent.reply(conversationId, text);
-      if (!result)
-        await chat.publish(
-          conversationId,
-          "agent",
-          "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
-        );
+      if (details.vkHistorySynced !== true) {
+        try {
+          const history = await vk.getHistory(peerId);
+          for (const item of history) {
+            const author =
+              item.fromId === `-${groupId}` || item.fromId === groupId
+                ? "agent"
+                : "guest";
+            await chat.importMessage(
+              conversationId,
+              author,
+              item.text,
+              `vk:${item.id}`,
+              new Date(item.date * 1_000),
+            );
+          }
+          await database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: { ...details, vkHistorySynced: true },
+            },
+          });
+        } catch (error) {
+          logger.warn(
+            { error: error instanceof Error ? error.message : "Unknown error" },
+            "VK history synchronization failed",
+          );
+        }
+      }
+      await chat.publish(
+        conversationId,
+        "guest",
+        text,
+        undefined,
+        id ? `vk:${id}` : undefined,
+      );
+      const managerMode = details.chatMode === "manager";
+      if (!managerMode) {
+        const result = await agent.reply(conversationId, text);
+        if (result?.action === "transfer") {
+          await database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: {
+                ...details,
+                chatMode: "manager",
+                managerRequested: true,
+                source: "VK",
+                vkPeerId: peerId,
+                vkUserId: senderId,
+              },
+            },
+          });
+        }
+        if (!result)
+          await chat.publish(
+            conversationId,
+            "agent",
+            "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
+          );
+      }
       if (id)
         await database.client.vkWebhookUpdate.update({
           where: { id },
@@ -166,6 +228,10 @@ export const createVkRouter = ({
         await database.client.vkWebhookUpdate
           .update({ where: { id }, data: { status: "failed" } })
           .catch(() => undefined);
+    } finally {
+      release();
+      if (conversationQueues.get(peerId) === queued)
+        conversationQueues.delete(peerId);
     }
   };
   router.get("/readiness", async (_request, response) => {
