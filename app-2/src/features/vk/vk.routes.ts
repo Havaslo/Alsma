@@ -169,6 +169,9 @@ export const createVkRouter = ({
       confirmationConfigured: Boolean(confirmationCode),
     });
   });
+  router.get("/callback", (_request, response) => {
+    response.type("text/plain").send("VK callback endpoint is ready");
+  });
   router.post("/callback", (request, response) => {
     const parsed = schema.safeParse(request.body);
     if (
@@ -184,7 +187,9 @@ export const createVkRouter = ({
         response.status(503).send("confirmation is not configured");
         return;
       }
-      response.send(confirmationCode);
+      // VK compares the confirmation body byte-for-byte. Explicitly use a
+      // plain-text response so preview HTML decoration is not triggered.
+      response.status(200).type("text/plain").send(confirmationCode);
       return;
     }
     if (
