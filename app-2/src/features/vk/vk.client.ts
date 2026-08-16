@@ -79,9 +79,13 @@ export const createVkClient = ({
     verifyCredentials: async (groupId: string) => {
       await request("groups.getById", { group_id: groupId });
     },
-    getHistory: async (peerId: string): Promise<VkHistoryMessage[]> => {
+    getHistory: async (
+      peerId: string,
+      full = false,
+    ): Promise<VkHistoryMessage[]> => {
       const history: VkHistoryMessage[] = [];
-      for (let offset = 0; offset < 2_000; offset += 200) {
+      const maxMessages = full ? 2_000 : 200;
+      for (let offset = 0; offset < maxMessages; offset += 200) {
         const result = (await request("messages.getHistory", {
           peer_id: peerId,
           count: "200",
@@ -97,16 +101,17 @@ export const createVkClient = ({
           }))
           .filter((item) => item.id && item.text && item.date);
         history.push(...page);
-        if (page.length < 200) break;
+        if (page.length < 200 || !full) break;
       }
       return history.sort((left, right) => left.date - right.date);
     },
     sendMessage: async (userId: string, text: string, randomId: string) => {
-      await request("messages.send", {
+      const result = await request("messages.send", {
         peer_id: userId,
         random_id: randomIdFor(randomId),
         message: text.slice(0, 4_096),
       });
+      return String(result);
     },
     logConfigurationError: () => logger.warn("VK API client is not configured"),
   };

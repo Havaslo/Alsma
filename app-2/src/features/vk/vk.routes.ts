@@ -66,7 +66,31 @@ export const createVkRouter = ({
         const details = record(request?.details);
         const peerId = textOf(details.vkPeerId);
         if (!request || details.source !== "VK" || !peerId) return;
-        await vk.sendMessage(peerId, event.text, event.id);
+        const messageId = await vk.sendMessage(peerId, event.text, event.id);
+        await database.client.chatMessage
+          .update({
+            where: { id: event.id },
+            data: { externalId: `vk:${messageId}` },
+          })
+          .catch(async () => {
+            const pending = await database.client.chatMessage.findFirst({
+              where: {
+                conversationId: event.conversationId,
+                author: event.author,
+                text: event.text,
+                externalId: null,
+              },
+              orderBy: { createdAt: "desc" },
+              select: { id: true },
+            });
+            if (pending)
+              await database.client.chatMessage
+                .update({
+                  where: { id: pending.id },
+                  data: { externalId: `vk:${messageId}` },
+                })
+                .catch(() => undefined);
+          });
       })
       .catch((error: unknown) =>
         logger.error(
@@ -89,6 +113,16 @@ export const createVkRouter = ({
     const senderId = textOf(message.from_id || object.from_id);
     const text = textOf(message.text || object.text);
     const id = textOf(event.event_id);
+    const messageId = textOf(
+      message.conversation_message_id ||
+        message.id ||
+        object.conversation_message_id,
+    );
+    const externalId = messageId
+      ? `vk:${messageId}`
+      : id
+        ? `vk:event:${id}`
+        : "";
     // Only handle one-to-one messages from a user. Community-originated
     // message_new events and group conversations must not enter the agent
     // loop or be answered by the bot.
@@ -125,6 +159,21 @@ export const createVkRouter = ({
         select: { details: true },
       });
       const details = record(existing?.details);
+      if (externalId) {
+        const alreadyStored = await database.client.chatMessage.findUnique({
+          where: {
+            conversationId_externalId: { conversationId, externalId },
+          },
+          select: { id: true },
+        });
+        if (alreadyStored) {
+          if (id)
+            await database.client.vkWebhookUpdate
+              .update({ where: { id }, data: { status: "completed" } })
+              .catch(() => undefined);
+          return;
+        }
+      }
       await database.client.adminRequest.upsert({
         where: { id: conversationId },
         create: {
@@ -155,7 +204,7 @@ export const createVkRouter = ({
       });
       if (details.vkHistorySynced !== true) {
         try {
-          const history = await vk.getHistory(peerId);
+          const history = await vk.getHistory(peerId, true);
           for (const item of history) {
             const author =
               item.fromId === `-${groupId}` || item.fromId === groupId
@@ -181,13 +230,28 @@ export const createVkRouter = ({
             "VK history synchronization failed",
           );
         }
+      } else {
+        const recentHistory = await vk.getHistory(peerId).catch(() => []);
+        for (const item of recentHistory) {
+          const author =
+            item.fromId === `-${groupId}` || item.fromId === groupId
+              ? "agent"
+              : "guest";
+          await chat.importMessage(
+            conversationId,
+            author,
+            item.text,
+            `vk:${item.id}`,
+            new Date(item.date * 1_000),
+          );
+        }
       }
       await chat.publish(
         conversationId,
         "guest",
         text,
         undefined,
-        id ? `vk:${id}` : undefined,
+        externalId || undefined,
       );
       const managerMode = details.chatMode === "manager";
       if (!managerMode) {
