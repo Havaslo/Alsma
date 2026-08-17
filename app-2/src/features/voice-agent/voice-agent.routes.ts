@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { randomUUID } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -23,7 +22,12 @@ import {
   transcriptBodySchema,
   voiceTestTurnBodySchema,
 } from "./voice-agent.schemas.js";
-import { createVoiceAgentService } from "./voice-agent.service.js";
+import {
+  createVoiceAgentService,
+  recordingDisclosure,
+  voiceAgentSystemPrompt,
+} from "./voice-agent.service.js";
+import { createOpenAiSipHandler } from "./voice-agent.sip.js";
 
 export const createVoiceAgentRouter = (
   database: Database,
@@ -35,6 +39,11 @@ export const createVoiceAgentRouter = (
     readonly destination?: string;
   },
   managedStorage?: ManagedStorage,
+  openaiSip?: {
+    readonly apiKey?: string;
+    readonly baseUrl: string;
+    readonly webhookSecret?: string;
+  },
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -44,29 +53,27 @@ export const createVoiceAgentRouter = (
     transfer,
     managedStorage,
   );
+  const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);
   router.get("/sip/status", (_request, response) =>
     response.json({
-      ready: false,
-      provider: "amazi-ai-gateway",
+      ready: sipReady,
+      provider: "openai",
       realtimeWebSocket: true,
-      sipCallsApi: false,
-      reason:
-        "Текущий Gateway подтверждает v1/realtime WebSocket, но не подтверждает SIP Calls API.",
-      nextStep:
-        "Для SIP-входа нужен провайдерский endpoint realtime.call.incoming и accept для call_id.",
+      sipCallsApi: true,
+      reason: sipReady ? undefined : "Прямой OpenAI SIP не настроен.",
     }),
   );
-  router.post("/sip/incoming", (_request, response) =>
-    response.status(501).json({
-      type: "amazi.gateway.error",
-      error: {
-        code: "sip_calls_api_not_supported",
-        message:
-          "SIP-вход через текущий Amazi AI Gateway пока не поддерживается.",
-        requestId: randomUUID(),
-        stage: "sip_ingress",
-        retryable: false,
+  router.post(
+    "/sip/incoming",
+    createOpenAiSipHandler({
+      apiKey: openaiSip?.apiKey,
+      baseUrl: openaiSip?.baseUrl ?? "https://api.openai.com/v1",
+      getInstructions: async () => {
+        const knowledge =
+          await createVoiceAgentRepository(database).getKnowledgeContext();
+        return `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}`;
       },
+      webhookSecret: openaiSip?.webhookSecret,
     }),
   );
   router.post(

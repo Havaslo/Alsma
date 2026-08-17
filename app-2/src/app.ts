@@ -15,6 +15,11 @@ type CreateAppOptions = {
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly openaiSip: {
+    readonly apiKey?: string;
+    readonly baseUrl: string;
+    readonly webhookSecret?: string;
+  };
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -51,6 +56,7 @@ export const createApp = ({
   managedStorage,
   openaiApiKey,
   openaiBaseUrl,
+  openaiSip,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -70,7 +76,16 @@ export const createApp = ({
       logger,
     }),
   );
-  app.use(express.json({ limit: "12mb" }));
+  app.use(
+    express.json({
+      limit: "12mb",
+      verify: (request, _response, buffer) => {
+        if (request.url === "/api/voice-agent/sip/incoming")
+          (request as typeof request & { rawBody?: Buffer }).rawBody =
+            Buffer.from(buffer);
+      },
+    }),
+  );
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
   app.use(
     "/api",
@@ -82,6 +97,7 @@ export const createApp = ({
       managedStorage,
       openaiApiKey,
       openaiBaseUrl,
+      openaiSip,
       maxBot,
       vk,
       yooKassaSecretKey,

@@ -27,6 +27,9 @@ const environmentSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
+  OPENAI_SIP_API_KEY: z.string().min(1).optional(),
+  OPENAI_SIP_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+  OPENAI_SIP_WEBHOOK_SECRET: z.string().min(1).optional(),
   YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
   YOOKASSA_SHOP_ID: z.string().min(1).optional(),
   MANGO_API_BASE_URL: z.string().url().optional(),
@@ -58,6 +61,11 @@ export type AppConfig = {
   readonly port: number;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly openaiSip: {
+    readonly apiKey?: string;
+    readonly baseUrl: string;
+    readonly webhookSecret?: string;
+  };
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -100,6 +108,11 @@ export const readConfig = (
     openaiApiKey:
       parsed.AMAZI_AI_GATEWAY_OPENAI_API_KEY ?? parsed.OPENAI_API_KEY,
     openaiBaseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
+    openaiSip: {
+      apiKey: parsed.OPENAI_SIP_API_KEY,
+      baseUrl: parsed.OPENAI_SIP_BASE_URL,
+      webhookSecret: parsed.OPENAI_SIP_WEBHOOK_SECRET,
+    },
     maxBot: {
       token: parsed.MAX_BOT_TOKEN,
       webhookSecret: parsed.MAX_WEBHOOK_SECRET,

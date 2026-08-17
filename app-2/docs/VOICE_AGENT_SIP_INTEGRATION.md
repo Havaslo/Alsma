@@ -53,15 +53,12 @@ Mango API для перевода на номер менеджера.
 
 ## Текущий статус SIP
 
-Подключённый Amazi AI Gateway подтверждает серверный WebSocket `v1/realtime`
-для модели `gpt-realtime`. Он не подтверждает SIP Calls API: событие
-`realtime.call.incoming` и метод принятия вызова для `call_id` через Gateway
-недоступны в текущем контракте. Поэтому backend намеренно не публикует
-фиктивный SIP URI, не имитирует принятие SIP-вызова и не возвращает успешный
-ответ на SIP webhook.
+Для временного прямого подключения OpenAI SIP используются
+`OPENAI_SIP_API_KEY`, `OPENAI_SIP_BASE_URL` и `OPENAI_SIP_WEBHOOK_SECRET`.
+OpenAI отправляет `realtime.call.incoming` на
+`POST /api/voice-agent/sip/incoming`; backend проверяет подпись и принимает
+звонок через Calls API с моделью `gpt-realtime`.
 
-Диагностика доступна на `GET /api/voice-agent/sip/status`, а попытка передать
-входящий SIP webhook на `POST /api/voice-agent/sip/incoming` завершается
-безопасным `501` с кодом `sip_calls_api_not_supported`. Ограничение не
-затрагивает WebSocket-мост для внутреннего аудиотеста, webhook Mango,
-обработку заявок или перевод существующего вызова через Mango API.
+Диагностика доступна на `GET /api/voice-agent/sip/status`. SIP URI для Mango:
+`sip:<OPENAI_PROJECT_ID>@sip.api.openai.com;transport=tls`. Обычные HTTP-запросы
+и внутренний WebSocket-тест продолжают работать через Amazi AI Gateway.

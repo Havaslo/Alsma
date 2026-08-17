@@ -35,6 +35,11 @@ type CreateApiRouterOptions = {
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
+  readonly openaiSip: {
+    readonly apiKey?: string;
+    readonly baseUrl: string;
+    readonly webhookSecret?: string;
+  };
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -70,6 +75,7 @@ export const createApiRouter = ({
   managedStorage,
   openaiApiKey,
   openaiBaseUrl,
+  openaiSip,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -160,10 +166,11 @@ export const createApiRouter = ({
       mangoConfigured: voiceIntegration.mangoConfigured,
       aiGatewayConfigured: Boolean(openaiApiKey && openaiBaseUrl),
       realtimeWebSocketConfigured: Boolean(openaiApiKey && openaiBaseUrl),
-      sipCallsApiSupported: false,
-      sipIngressReady: false,
-      sipLimitation:
-        "Amazi AI Gateway подтверждает v1/realtime WebSocket, но не подтверждает SIP Calls API.",
+      sipCallsApiSupported: true,
+      sipIngressReady: Boolean(openaiSip.apiKey && openaiSip.webhookSecret),
+      sipLimitation: openaiSip.apiKey
+        ? undefined
+        : "Прямой OpenAI SIP не настроен.",
       t2TransferConfigured: voiceIntegration.t2TransferConfigured,
       publicWebhookConfigured: voiceIntegration.publicWebhookConfigured,
       transferConfigured: Boolean(
@@ -185,6 +192,7 @@ export const createApiRouter = ({
         destination: voiceIntegration.transferNumber,
       },
       managedStorage,
+      openaiSip,
     ),
   );
   return router;
