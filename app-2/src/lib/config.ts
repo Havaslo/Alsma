@@ -32,6 +32,8 @@ const environmentSchema = z.object({
   MANGO_API_BASE_URL: z.string().url().optional(),
   MANGO_API_KEY: z.string().min(1).optional(),
   MANGO_API_SECRET: z.string().min(1).optional(),
+  MANGO_VPBX_API_KEY: z.string().min(1).optional(),
+  MANGO_VPBX_API_SALT: z.string().min(1).optional(),
   MANGO_SIP_TRUNK_URI: z.string().min(1).optional(),
   SBC_PUBLIC_BASE_URL: z.string().url().optional(),
   SBC_WEBHOOK_SECRET: z.string().min(1).optional(),
@@ -120,9 +122,10 @@ export const readConfig = (
     voiceIntegration: {
       mangoApiBaseUrl: parsed.MANGO_API_BASE_URL,
       mangoConfigured: Boolean(
-        parsed.MANGO_API_BASE_URL &&
-        parsed.MANGO_API_KEY &&
-        parsed.MANGO_API_SECRET,
+        (parsed.MANGO_VPBX_API_KEY && parsed.MANGO_VPBX_API_SALT) ||
+        (parsed.MANGO_API_BASE_URL &&
+          parsed.MANGO_API_KEY &&
+          parsed.MANGO_API_SECRET),
       ),
       sbcConfigured: Boolean(
         parsed.SBC_PUBLIC_BASE_URL && parsed.SBC_WEBHOOK_SECRET,

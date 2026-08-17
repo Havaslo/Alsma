@@ -7,6 +7,7 @@ import { createManagedStorage } from "./lib/storage/managed-storage.js";
 
 const host = "0.0.0.0";
 const databaseRetryDelayMilliseconds = 5_000;
+const voiceRetentionMilliseconds = 30 * 24 * 60 * 60 * 1_000;
 
 const wait = async (milliseconds: number): Promise<void> => {
   await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -52,10 +53,29 @@ const start = async (): Promise<void> => {
     }
   };
   void keepDatabaseReady();
+  const purgeExpiredVoiceCalls = async (): Promise<void> => {
+    try {
+      const cutoff = new Date(Date.now() - voiceRetentionMilliseconds);
+      await database.client.voiceCall.deleteMany({
+        where: { createdAt: { lt: cutoff } },
+      });
+    } catch (error) {
+      logger.warn(
+        { error: error instanceof Error ? error.message : "Unknown error" },
+        "Voice call retention cleanup failed",
+      );
+    }
+  };
+  const retentionTimer = setInterval(
+    () => void purgeExpiredVoiceCalls(),
+    60 * 60 * 1_000,
+  );
+  void purgeExpiredVoiceCalls();
   let isShuttingDown = false;
   const shutdown = (signal: NodeJS.Signals) => {
     if (isShuttingDown) return;
     isShuttingDown = true;
+    clearInterval(retentionTimer);
     logger.info({ signal }, "Backend server stopping");
     server.close((serverError) => {
       void database

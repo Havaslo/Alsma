@@ -6,6 +6,7 @@ import {
   answerHandler,
   completeHandler,
   createHandler,
+  mangoWebhookHandler,
   transcriptHandler,
 } from "./voice-agent.handlers.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
@@ -14,6 +15,7 @@ import {
   callParamsSchema,
   completeCallBodySchema,
   createCallBodySchema,
+  mangoWebhookBodySchema,
   transcriptBodySchema,
 } from "./voice-agent.schemas.js";
 import { createVoiceAgentService } from "./voice-agent.service.js";
@@ -26,6 +28,11 @@ export const createVoiceAgentRouter = (
   const service = createVoiceAgentService(
     createVoiceAgentRepository(database),
     apiKey,
+  );
+  router.post(
+    "/mango/webhook",
+    validateRequest({ body: mangoWebhookBodySchema }),
+    mangoWebhookHandler(service),
   );
   router.post(
     "/calls",

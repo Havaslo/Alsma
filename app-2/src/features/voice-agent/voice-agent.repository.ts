@@ -4,7 +4,7 @@ import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
 
 export const createVoiceAgentRepository = (database: Database) => ({
   createCall: (input: CreateCallBody) =>
-    database.client.voiceCall.create({ data: input }),
+    database.client.voiceCall.create({ data: { ...input, provider: "mango" } }),
   getKnowledgeContext: async () => {
     const [articles, rules] = await Promise.all([
       database.client.knowledgeArticle.findMany({
@@ -55,6 +55,31 @@ export const createVoiceAgentRepository = (database: Database) => ({
         status: "completed",
         endedAt: new Date(),
       },
+    }),
+  findByProviderCallId: (providerCallId: string) =>
+    database.client.voiceCall.findUnique({ where: { providerCallId } }),
+  createRequestForCall: (
+    callId: string,
+    extracted: Record<string, unknown>,
+    transcript: unknown,
+  ) =>
+    database.client.adminRequest.create({
+      data: {
+        title: "Заявка из голосового агента",
+        description: "Заявка на бронирование/запись из входящего звонка.",
+        requester:
+          typeof extracted.name === "string" ? extracted.name : undefined,
+        contact:
+          typeof extracted.phone === "string" ? extracted.phone : undefined,
+        category: "voice-agent-booking",
+        details: {
+          source: "mango",
+          callId,
+          extracted,
+          transcript,
+        } as Prisma.InputJsonValue,
+      },
+      select: { id: true },
     }),
 });
 

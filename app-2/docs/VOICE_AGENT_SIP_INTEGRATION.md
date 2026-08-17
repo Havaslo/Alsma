@@ -15,12 +15,22 @@
 - Общие опубликованные статьи базы знаний и активные правила с каналом `voice`.
 - Общая доменная логика чат-агента и Eptera для актуального наличия; внутреннее название сервиса не должно звучать пользователю.
 - Сценарии и правила передачи из админки как источник управляемой логики.
+- Приём нормализованных событий Mango: `POST /api/voice-agent/mango/webhook`. Событие
+  должно содержать `event`, `callId`, а для завершения — `transcript` и `extracted`;
+  повторное событие с тем же `callId` не создаёт новую заявку.
+- При создании сессии голосовой слой получает обязательное уведомление: запись,
+  транскрипт и метаданные хранятся 30 дней и затем удаляются из проекта.
+- Завершённый звонок с собранными данными создаёт заявку в админке в категории
+  `voice-agent-booking` для последующей обработки менеджером.
 
 ## Что добавлено в конфигурационный контур
 
 Переменные должны задаваться только через Environment/Integrations и никогда не попадать во frontend или логи:
 
-- `MANGO_API_BASE_URL`, `MANGO_API_KEY`, `MANGO_API_SECRET` — API и подпись событий MANGO OFFICE.
+- `MANGO_VPBX_API_KEY`, `MANGO_VPBX_API_SALT` — ключ и соль Virtual PBX API Mango;
+  подпись считается как SHA-256 от `key + exact-json + salt`.
+- Старые `MANGO_API_BASE_URL`, `MANGO_API_KEY`, `MANGO_API_SECRET` оставлены для
+  совместимости с ранее подготовленным SBC-контуром.
 - `MANGO_SIP_TRUNK_URI` — адрес SIP-стыка Mango/SBC, если используется.
 - `SBC_PUBLIC_BASE_URL`, `SBC_WEBHOOK_SECRET` — внешний медиашлюз и проверка его webhook.
 - `OPENAI_REALTIME_SIP_BASE_URL`, `OPENAI_REALTIME_SIP_API_KEY`, `OPENAI_REALTIME_SIP_PROJECT_ID` — параметры Realtime SIP, если они выдаются используемым аккаунтом OpenAI.

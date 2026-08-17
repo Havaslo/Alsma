@@ -18,6 +18,7 @@ export const transcriptBodySchema = z.object({
 export const completeCallBodySchema = z.object({
   outcome: z.string().trim().max(120).optional(),
   recordingUrl: z.string().url().optional(),
+  recordingObjectId: z.string().trim().min(1).max(300).optional(),
 });
 
 export const answerBodySchema = z.object({
@@ -25,5 +26,16 @@ export const answerBodySchema = z.object({
   question: z.string().trim().min(1).max(4_000),
 });
 
+export const mangoWebhookBodySchema = z.object({
+  event: z.string().trim().min(1).max(80),
+  callId: z.string().trim().min(1).max(200),
+  callerPhone: z.string().trim().min(3).max(40).optional(),
+  status: z.string().trim().max(80).optional(),
+  recordingUrl: z.string().url().optional(),
+  transcript: z.array(transcriptBodySchema).optional(),
+  extracted: z.record(z.string(), z.unknown()).optional(),
+});
+
 export type CreateCallBody = z.infer<typeof createCallBodySchema>;
 export type TranscriptBody = z.infer<typeof transcriptBodySchema>;
+export type MangoWebhookBody = z.infer<typeof mangoWebhookBodySchema>;

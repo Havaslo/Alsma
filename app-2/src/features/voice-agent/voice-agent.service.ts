@@ -1,5 +1,12 @@
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
-import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
+import type {
+  CreateCallBody,
+  MangoWebhookBody,
+  TranscriptBody,
+} from "./voice-agent.schemas.js";
+
+export const recordingDisclosure =
+  "Разговор записывается. Аудио, расшифровка и данные звонка хранятся 30 дней, затем удаляются.";
 
 const systemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если ответа нет или клиент просит человека, предложи перевод/обратный звонок. Отвечай коротко, естественно и удобно для телефона.`;
 
@@ -49,7 +56,10 @@ export const createVoiceAgentService = (
   };
 
   return {
-    createCall: (input: CreateCallBody) => repository.createCall(input),
+    createCall: async (input: CreateCallBody) => ({
+      ...(await repository.createCall(input)),
+      disclosure: recordingDisclosure,
+    }),
     appendTranscript: (id: string, segment: TranscriptBody) =>
       repository.appendTranscript(id, segment),
     answer: async (question: string, callId?: string) => {
@@ -80,6 +90,41 @@ export const createVoiceAgentService = (
         intent: result.intent ?? "unknown",
         extracted: result.extracted ?? {},
       });
+    },
+    handleMangoWebhook: async (event: MangoWebhookBody) => {
+      const existing = await repository.findByProviderCallId(event.callId);
+      const call =
+        existing ??
+        (await repository.createCall({
+          providerCallId: event.callId,
+          callerPhone: event.callerPhone,
+        }));
+      if (event.transcript) {
+        for (const segment of event.transcript)
+          await repository.appendTranscript(call.id, segment);
+      }
+      if (
+        ["completed", "hangup", "ended", "failed"].includes(
+          event.event.toLowerCase(),
+        )
+      ) {
+        const completed = await repository.completeCall(call.id, {
+          outcome: event.status ?? event.event,
+          recordingUrl: event.recordingUrl,
+          summary: "Звонок завершён. Заявка передана менеджеру.",
+          intent: "booking_request",
+          extracted: event.extracted ?? {},
+        });
+        if (!existing || existing.status !== "completed") {
+          await repository.createRequestForCall(
+            call.id,
+            event.extracted ?? {},
+            event.transcript ?? [],
+          );
+        }
+        return completed;
+      }
+      return call;
     },
   };
 };

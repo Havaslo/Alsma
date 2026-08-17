@@ -64,3 +64,15 @@ export const completeHandler =
       next(error);
     }
   };
+
+export const mangoWebhookHandler =
+  (service: VoiceAgentService): RequestHandler =>
+  async (_req, res, next) => {
+    try {
+      res
+        .status(200)
+        .json(await service.handleMangoWebhook(res.locals.input.body));
+    } catch (error) {
+      next(error);
+    }
+  };
