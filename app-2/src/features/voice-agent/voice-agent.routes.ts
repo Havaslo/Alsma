@@ -43,13 +43,6 @@ export const createVoiceAgentRouter = (
     transfer,
     managedStorage,
   );
-  router.post("/realtime/session", async (_request, response, next) => {
-    try {
-      response.json(await service.createRealtimeSession());
-    } catch (error) {
-      next(error);
-    }
-  });
   router.post(
     "/test/turn",
     validateRequest({ body: voiceTestTurnBodySchema }),

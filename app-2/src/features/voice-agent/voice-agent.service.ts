@@ -77,7 +77,7 @@ const transferMangoCall = async ({
 export const recordingDisclosure =
   "Разговор записывается. Аудио, расшифровка и данные звонка хранятся 30 дней, затем удаляются.";
 
-const systemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если клиент просит человека или вопрос нужно передать менеджеру, сразу вызови transfer_to_manager без дополнительных вопросов и подтверждений. Отвечай коротко, естественно и удобно для телефона.`;
+export const voiceAgentSystemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если клиент просит человека или вопрос нужно передать менеджеру, сразу предложи соединить его с менеджером. Отвечай коротко, естественно и удобно для телефона.`;
 
 const parseJson = (value: string) => {
   try {
@@ -106,7 +106,7 @@ export const createVoiceAgentService = (
     if (!apiKey || !openaiBaseUrl)
       throw new Error("OpenAI AI Gateway is not configured");
     const response = await fetch(
-      `${openaiBaseUrl.replace(/\/$/u, "")}/v1/chat/completions`,
+      `${openaiBaseUrl.replace(/\/$/u, "")}/chat/completions`,
       {
         method: "POST",
         headers: {
@@ -118,7 +118,7 @@ export const createVoiceAgentService = (
           temperature: 0.2,
           response_format: json ? { type: "json_object" } : undefined,
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: voiceAgentSystemPrompt },
             { role: "user", content: prompt },
           ],
         }),
@@ -145,7 +145,7 @@ export const createVoiceAgentService = (
       form.append("file", new Blob([audio], { type: mimeType }), "turn.webm");
       form.append("model", "gpt-4o-mini-transcribe");
       const transcriptionResponse = await fetch(
-        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/audio/transcriptions`,
+        `${openaiBaseUrl.replace(/\/$/u, "")}/audio/transcriptions`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}` },
@@ -170,7 +170,7 @@ export const createVoiceAgentService = (
         );
       })();
       const speechResponse = await fetch(
-        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/audio/speech`,
+        `${openaiBaseUrl.replace(/\/$/u, "")}/audio/speech`,
         {
           method: "POST",
           headers: {
@@ -198,39 +198,6 @@ export const createVoiceAgentService = (
         audioMimeType: "audio/mpeg",
         transcript: text,
       };
-    },
-    createRealtimeSession: async () => {
-      if (!apiKey || !openaiBaseUrl)
-        throw new Error("Realtime AI Gateway is not configured");
-      const response = await fetch(
-        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/realtime/client_secrets`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            session: {
-              type: "realtime",
-              model: "gpt-realtime",
-              audio: { output: { voice: "marin" } },
-            },
-          }),
-          signal: AbortSignal.timeout(10_000),
-        },
-      );
-      if (!response.ok)
-        throw new Error(
-          `Realtime session failed with status ${response.status}`,
-        );
-      const body = (await response.json()) as {
-        value?: string;
-        client_secret?: { value?: string };
-      };
-      const token = body.value ?? body.client_secret?.value;
-      if (!token) throw new Error("Realtime session token was not returned");
-      return { token, model: "gpt-realtime" };
     },
     createCall: async (input: CreateCallBody) => ({
       ...(await repository.createCall(input)),

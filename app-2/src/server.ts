@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
 import { readConfig } from "./lib/config.js";
 import { createDatabase } from "./lib/database/database.js";
 import { runDatabaseMigrations } from "./lib/database/migrations.js";
@@ -34,6 +35,12 @@ const start = async (): Promise<void> => {
   });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
+  });
+  attachVoiceAgentRealtime(server, {
+    apiKey: config.openaiApiKey,
+    database,
+    logger,
+    openaiBaseUrl: config.openaiBaseUrl,
   });
   const keepDatabaseReady = async (): Promise<void> => {
     for (;;) {
