@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import {
   answerHandler,
   completeHandler,
@@ -32,6 +33,7 @@ export const createVoiceAgentRouter = (
     readonly mangoApiSalt?: string;
     readonly destination?: string;
   },
+  managedStorage?: ManagedStorage,
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -39,6 +41,7 @@ export const createVoiceAgentRouter = (
     apiKey,
     openaiBaseUrl,
     transfer,
+    managedStorage,
   );
   router.post("/realtime/session", async (_request, response, next) => {
     try {

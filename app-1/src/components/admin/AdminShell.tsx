@@ -11,6 +11,7 @@ import {
   LogOut,
   MessagesSquare,
   PanelTop,
+  PhoneCall,
   Settings,
   Sparkles,
   UsersRound,
@@ -29,6 +30,12 @@ import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const navigation = [
+  {
+    active: (path: string) => path === ROUTES.adminVoiceCalls,
+    icon: PhoneCall,
+    label: "Входящие звонки",
+    to: ROUTES.adminVoiceCalls,
+  },
   {
     active: (path: string) =>
       path === ROUTES.admin || path === ROUTES.adminDashboard,

@@ -27,7 +27,7 @@ import { createVkClient } from "./features/vk/vk.client.js";
 import { createVkRouter } from "./features/vk/vk.routes.js";
 import { createVoiceAgentRouter } from "./features/voice-agent/voice-agent.routes.js";
 import type { Database } from "./lib/database/database.js";
-import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
+import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 
 type CreateApiRouterOptions = {
   readonly database: Database;
@@ -55,19 +55,17 @@ type CreateApiRouterOptions = {
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
     readonly transferNumber?: string;
+    readonly asterisk: {
+      readonly baseUrl?: string;
+      readonly username?: string;
+      readonly password?: string;
+      readonly app?: string;
+      readonly aiSipEndpoint?: string;
+    };
   };
   readonly yooKassaSecretKey?: string;
   readonly logger: Logger;
-  readonly managedStorage: {
-    readonly upload: (input: {
-      readonly content: Uint8Array;
-      readonly contentType: string;
-      readonly name: string;
-    }) => Promise<ManagedStorageUpload>;
-    readonly getDownload: (
-      objectId: string,
-    ) => Promise<{ readonly downloadUrl: string }>;
-  };
+  readonly managedStorage: ManagedStorage;
 };
 
 export const createApiRouter = ({
@@ -101,7 +99,7 @@ export const createApiRouter = ({
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
-  router.use("/admin", createAdminOperationsRouter(database));
+  router.use("/admin", createAdminOperationsRouter(database, managedStorage));
   router.use("/admin/settings", createAdminSettingsRouter(database));
   router.use(
     "/admin/integrations",
@@ -167,11 +165,17 @@ export const createApiRouter = ({
   );
   router.use(
     "/voice-agent",
-    createVoiceAgentRouter(database, openaiApiKey, openaiBaseUrl, {
-      mangoApiKey: process.env.MANGO_VPBX_API_KEY,
-      mangoApiSalt: process.env.MANGO_VPBX_API_SALT,
-      destination: voiceIntegration.transferNumber,
-    }),
+    createVoiceAgentRouter(
+      database,
+      openaiApiKey,
+      openaiBaseUrl,
+      {
+        mangoApiKey: process.env.MANGO_VPBX_API_KEY,
+        mangoApiSalt: process.env.MANGO_VPBX_API_SALT,
+        destination: voiceIntegration.transferNumber,
+      },
+      managedStorage,
+    ),
   );
   return router;
 };

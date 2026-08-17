@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { startAsteriskVoiceBridge } from "./features/voice-agent/asterisk-voice-bridge.js";
 import { readConfig } from "./lib/config.js";
 import { createDatabase } from "./lib/database/database.js";
 import { runDatabaseMigrations } from "./lib/database/migrations.js";
@@ -35,6 +36,15 @@ const start = async (): Promise<void> => {
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
   });
+  const stopAsterisk = startAsteriskVoiceBridge({
+    ...config.voiceIntegration.asterisk,
+    logger,
+    onIncoming: async ({ callerPhone }) => {
+      await database.client.voiceCall.create({
+        data: { provider: "asterisk", callerPhone, status: "active" },
+      });
+    },
+  });
   const keepDatabaseReady = async (): Promise<void> => {
     for (;;) {
       try {
@@ -56,6 +66,16 @@ const start = async (): Promise<void> => {
   const purgeExpiredVoiceCalls = async (): Promise<void> => {
     try {
       const cutoff = new Date(Date.now() - voiceRetentionMilliseconds);
+      const expired = await database.client.voiceCall.findMany({
+        where: { createdAt: { lt: cutoff } },
+        select: { recordingObjectId: true },
+      });
+      for (const call of expired) {
+        if (call.recordingObjectId)
+          await managedStorage
+            .deleteObject(call.recordingObjectId)
+            .catch(() => undefined);
+      }
       await database.client.voiceCall.deleteMany({
         where: { createdAt: { lt: cutoff } },
       });
@@ -76,6 +96,7 @@ const start = async (): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
     clearInterval(retentionTimer);
+    stopAsterisk();
     logger.info({ signal }, "Backend server stopping");
     server.close((serverError) => {
       void database

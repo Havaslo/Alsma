@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
+import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
@@ -99,6 +100,7 @@ export const createVoiceAgentService = (
     readonly mangoApiSalt?: string;
     readonly destination?: string;
   },
+  managedStorage?: ManagedStorage,
 ) => {
   const completeWithOpenAI = async (prompt: string, json = false) => {
     if (!apiKey || !openaiBaseUrl)
@@ -106,21 +108,21 @@ export const createVoiceAgentService = (
     const response = await fetch(
       `${openaiBaseUrl.replace(/\/$/u, "")}/v1/chat/completions`,
       {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-        model: "gpt-5.4-mini",
-        temperature: 0.2,
-        response_format: json ? { type: "json_object" } : undefined,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-      }),
+          model: "gpt-5.4-mini",
+          temperature: 0.2,
+          response_format: json ? { type: "json_object" } : undefined,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
         }),
+        signal: AbortSignal.timeout(30_000),
       },
     );
     if (!response.ok)
@@ -159,7 +161,8 @@ export const createVoiceAgentService = (
         text?: string;
       };
       const text = transcription.text?.trim();
-      if (!text) throw new Error("The audio did not contain recognizable speech");
+      if (!text)
+        throw new Error("The audio did not contain recognizable speech");
       const answer = await (async () => {
         const knowledge = await repository.getKnowledgeContext();
         return completeWithOpenAI(
@@ -184,7 +187,9 @@ export const createVoiceAgentService = (
         },
       );
       if (!speechResponse.ok)
-        throw new Error(`Audio speech failed with status ${speechResponse.status}`);
+        throw new Error(
+          `Audio speech failed with status ${speechResponse.status}`,
+        );
       return {
         answer,
         audioBase64: Buffer.from(await speechResponse.arrayBuffer()).toString(
@@ -216,7 +221,9 @@ export const createVoiceAgentService = (
         },
       );
       if (!response.ok)
-        throw new Error(`Realtime session failed with status ${response.status}`);
+        throw new Error(
+          `Realtime session failed with status ${response.status}`,
+        );
       const body = (await response.json()) as {
         value?: string;
         client_secret?: { value?: string };
@@ -242,6 +249,7 @@ export const createVoiceAgentService = (
       id: string,
       outcome?: string,
       recordingUrl?: string,
+      recordingObjectId?: string,
     ) => {
       const call = await repository.findCall(id);
       if (!call) return null;
@@ -255,6 +263,7 @@ export const createVoiceAgentService = (
       return repository.completeCall(id, {
         outcome,
         recordingUrl,
+        recordingObjectId,
         summary: result.summary ?? "Резюме не сформировано.",
         intent: result.intent ?? "unknown",
         extracted: result.extracted ?? {},
@@ -277,9 +286,40 @@ export const createVoiceAgentService = (
           event.event.toLowerCase(),
         )
       ) {
+        let recordingObjectId: string | undefined;
+        if (event.recordingUrl && managedStorage) {
+          const recordingUrl = new URL(event.recordingUrl);
+          if (recordingUrl.protocol !== "https:")
+            throw new Error("Recording URL must use HTTPS");
+          const recordingResponse = await fetch(recordingUrl, {
+            signal: AbortSignal.timeout(30_000),
+          });
+          if (recordingResponse.ok) {
+            const contentLength = Number(
+              recordingResponse.headers.get("content-length") ?? 0,
+            );
+            if (contentLength <= 50 * 1024 * 1024) {
+              const bytes = new Uint8Array(
+                await recordingResponse.arrayBuffer(),
+              );
+              if (bytes.byteLength <= 50 * 1024 * 1024) {
+                recordingObjectId = (
+                  await managedStorage.upload({
+                    content: bytes,
+                    contentType:
+                      recordingResponse.headers.get("content-type") ??
+                      "audio/mpeg",
+                    name: `voice-call-${call.id}.audio`,
+                  })
+                ).objectId;
+              }
+            }
+          }
+        }
         const completed = await repository.completeCall(call.id, {
           outcome: event.status ?? event.event,
           recordingUrl: event.recordingUrl,
+          recordingObjectId,
           summary: "Звонок завершён. Заявка передана менеджеру.",
           intent: "booking_request",
           extracted: event.extracted ?? {},

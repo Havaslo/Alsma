@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import {
   createRequireAdmin,
   createRequireAdminPermission,
@@ -33,7 +34,10 @@ import {
   updateRequestStatusBodySchema,
 } from "./admin-operations.schemas.js";
 
-export const createAdminOperationsRouter = (database: Database): Router => {
+export const createAdminOperationsRouter = (
+  database: Database,
+  managedStorage?: ManagedStorage,
+): Router => {
   const router = Router();
   const repository = createAdminOperationsRepository(database);
   router.use(
@@ -138,6 +142,58 @@ export const createAdminOperationsRouter = (database: Database): Router => {
     createRequireAdminPermission("requests.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListRequestsHandler(repository),
+  );
+  router.get(
+    "/voice-calls",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    async (_request, response) => {
+      const calls = await database.client.voiceCall.findMany({
+        orderBy: { startedAt: "desc" },
+        take: 100,
+        select: {
+          id: true,
+          provider: true,
+          callerPhone: true,
+          status: true,
+          outcome: true,
+          startedAt: true,
+          endedAt: true,
+          durationSec: true,
+          transcript: true,
+          summary: true,
+          intent: true,
+          recordingObjectId: true,
+        },
+      });
+      response.json({
+        items: calls.map((call) => ({
+          ...call,
+          startedAt: call.startedAt.toISOString(),
+          endedAt: call.endedAt?.toISOString() ?? null,
+          hasRecording: Boolean(call.recordingObjectId),
+        })),
+      });
+    },
+  );
+  router.get(
+    "/voice-calls/:recordId/recording",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ params: recordParamsSchema }),
+    async (_request, response) => {
+      if (!managedStorage) {
+        response.status(404).json({ error: { code: "RECORDING_UNAVAILABLE" } });
+        return;
+      }
+      const call = await database.client.voiceCall.findUnique({
+        where: { id: response.locals.input.params.recordId },
+        select: { recordingObjectId: true },
+      });
+      if (!call?.recordingObjectId) {
+        response.status(404).json({ error: { code: "RECORDING_NOT_FOUND" } });
+        return;
+      }
+      response.json(await managedStorage.getDownload(call.recordingObjectId));
+    },
   );
   router.patch(
     "/requests/:recordId",

@@ -42,6 +42,7 @@ export const createVoiceAgentRepository = (database: Database) => ({
     data: {
       outcome?: string;
       recordingUrl?: string;
+      recordingObjectId?: string;
       summary: string;
       intent: string;
       extracted: Record<string, unknown>;

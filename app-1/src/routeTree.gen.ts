@@ -34,6 +34,7 @@ import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminSiteLeadsRouteImport } from './routes/admin/site-leads'
+import { Route as AdminVoiceCallsRouteImport } from './routes/admin/voice-calls'
 import { Route as AdminClientsIndexRouteImport } from './routes/admin/clients/index'
 import { Route as AdminClientsClientIdRouteImport } from './routes/admin/clients/$clientId'
 import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
@@ -178,6 +179,11 @@ const AdminSiteLeadsRoute = AdminSiteLeadsRouteImport.update({
   path: '/admin/site-leads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVoiceCallsRoute = AdminVoiceCallsRouteImport.update({
+  id: '/admin/voice-calls',
+  path: '/admin/voice-calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminClientsIndexRoute = AdminClientsIndexRouteImport.update({
   id: '/admin/clients/',
   path: '/admin/clients/',
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -349,6 +356,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRoute
   '/admin': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -395,6 +403,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -442,6 +451,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-calls'
     | '/admin/'
     | '/admin/clients/$clientId'
     | '/admin/requests/$requestId'
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-calls'
     | '/admin'
     | '/admin/clients/$clientId'
     | '/admin/requests/$requestId'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-calls'
     | '/admin/'
     | '/admin/clients/$clientId'
     | '/admin/requests/$requestId'
@@ -577,6 +589,7 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
+  AdminVoiceCallsRoute: typeof AdminVoiceCallsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClientsClientIdRoute: typeof AdminClientsClientIdRoute
   AdminRequestsRequestIdRoute: typeof AdminRequestsRequestIdRoute
@@ -775,6 +788,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSiteLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/voice-calls': {
+      id: '/admin/voice-calls'
+      path: '/admin/voice-calls'
+      fullPath: '/admin/voice-calls'
+      preLoaderRoute: typeof AdminVoiceCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/clients/': {
       id: '/admin/clients/'
       path: '/admin/clients'
@@ -939,6 +959,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSiteLeadsRoute: AdminSiteLeadsRoute,
+  AdminVoiceCallsRoute: AdminVoiceCallsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminClientsClientIdRoute: AdminClientsClientIdRoute,
   AdminRequestsRequestIdRoute: AdminRequestsRequestIdRoute,

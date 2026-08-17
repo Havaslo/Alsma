@@ -15,6 +15,8 @@ export type ManagedStorageDownload = {
   readonly sizeBytes: number;
 };
 
+export type ManagedStorage = ReturnType<typeof createManagedStorage>;
+
 type ManagedStorageConfig = {
   readonly apiUrl: string;
   readonly projectToken: string;

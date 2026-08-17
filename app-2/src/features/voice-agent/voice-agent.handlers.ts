@@ -52,6 +52,7 @@ export const completeHandler =
         res.locals.input.params.callId,
         res.locals.input.body.outcome,
         res.locals.input.body.recordingUrl,
+        res.locals.input.body.recordingObjectId,
       );
       if (!result) {
         res.status(404).json({

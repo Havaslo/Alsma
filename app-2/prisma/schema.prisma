@@ -349,11 +349,13 @@ model VoiceCall {
   intent         String?
   extracted      Json      @default("{}")
   recordingUrl   String?   @map("recording_url")
+  recordingObjectId String? @map("recording_object_id")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([status, createdAt])
   @@index([callerPhone, createdAt])
+  @@index([endedAt])
   @@map("voice_calls")
 }
 

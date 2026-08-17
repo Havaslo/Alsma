@@ -7,7 +7,7 @@ import type { Database } from "./lib/database/database.js";
 import { publicCorsMiddleware } from "./lib/http/cors.js";
 import { errorHandler } from "./lib/http/error-handler.js";
 import { notFoundHandler } from "./lib/http/not-found-handler.js";
-import type { ManagedStorageUpload } from "./lib/storage/managed-storage.js";
+import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
@@ -36,19 +36,17 @@ type CreateAppOptions = {
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
     readonly transferNumber?: string;
+    readonly asterisk: {
+      readonly baseUrl?: string;
+      readonly username?: string;
+      readonly password?: string;
+      readonly app?: string;
+      readonly aiSipEndpoint?: string;
+    };
   };
   readonly database: Database;
   readonly logger: Logger;
-  readonly managedStorage: {
-    readonly upload: (input: {
-      readonly content: Uint8Array;
-      readonly contentType: string;
-      readonly name: string;
-    }) => Promise<ManagedStorageUpload>;
-    readonly getDownload: (
-      objectId: string,
-    ) => Promise<{ readonly downloadUrl: string }>;
-  };
+  readonly managedStorage: ManagedStorage;
 };
 
 export const createApp = ({
