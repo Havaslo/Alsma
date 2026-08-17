@@ -36,6 +36,38 @@ export const mangoWebhookBodySchema = z.object({
   extracted: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const asteriskWebhookBodySchema = z.object({
+  event: z.string().trim().min(1).max(80),
+  channelId: z.string().trim().min(1).max(200),
+  providerCallId: z.string().trim().min(1).max(200).optional(),
+  callerPhone: z.string().trim().min(3).max(40).optional(),
+  status: z.string().trim().max(80).optional(),
+  transcript: z.array(transcriptBodySchema).optional(),
+  recordingUrl: z.string().url().optional(),
+  extracted: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const toolBodySchema = z.discriminatedUnion("name", [
+  z.object({
+    name: z.literal("knowledge_answer"),
+    callId: z.string().uuid().optional(),
+    question: z.string().trim().min(1).max(4_000),
+  }),
+  z.object({
+    name: z.literal("create_booking_request"),
+    callId: z.string().uuid(),
+    extracted: z.record(z.string(), z.unknown()),
+    comment: z.string().trim().max(4_000).optional(),
+  }),
+  z.object({
+    name: z.literal("transfer_to_manager"),
+    callId: z.string().uuid(),
+    reason: z.string().trim().min(1).max(500),
+  }),
+]);
+
 export type CreateCallBody = z.infer<typeof createCallBodySchema>;
 export type TranscriptBody = z.infer<typeof transcriptBodySchema>;
 export type MangoWebhookBody = z.infer<typeof mangoWebhookBodySchema>;
+export type AsteriskWebhookBody = z.infer<typeof asteriskWebhookBodySchema>;
+export type ToolBody = z.infer<typeof toolBodySchema>;

@@ -1,7 +1,9 @@
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
+  AsteriskWebhookBody,
   CreateCallBody,
   MangoWebhookBody,
+  ToolBody,
   TranscriptBody,
 } from "./voice-agent.schemas.js";
 
@@ -25,6 +27,11 @@ const parseJson = (value: string) => {
 export const createVoiceAgentService = (
   repository: VoiceAgentRepository,
   apiKey?: string,
+  transfer?: {
+    readonly sbcBaseUrl?: string;
+    readonly sbcSecret?: string;
+    readonly destination?: string;
+  },
 ) => {
   const completeWithOpenAI = async (prompt: string, json = false) => {
     if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
@@ -125,6 +132,73 @@ export const createVoiceAgentService = (
         return completed;
       }
       return call;
+    },
+    handleAsteriskWebhook: async (event: AsteriskWebhookBody) => {
+      const call = event.providerCallId
+        ? await repository.findByProviderCallId(event.providerCallId)
+        : null;
+      const current =
+        call ??
+        (await repository.createCall({
+          providerCallId: event.providerCallId ?? `asterisk:${event.channelId}`,
+          callerPhone: event.callerPhone,
+        }));
+      if (event.transcript)
+        for (const segment of event.transcript)
+          await repository.appendTranscript(current.id, segment);
+      if (["hangup", "ended", "failed"].includes(event.event.toLowerCase()))
+        return repository.completeCall(current.id, {
+          outcome: event.status ?? event.event,
+          recordingUrl: event.recordingUrl,
+          summary: "Звонок завершён через Asterisk/SBC.",
+          intent: "voice_request",
+          extracted: event.extracted ?? {},
+        });
+      return current;
+    },
+    tool: async (input: ToolBody) => {
+      if (input.name === "knowledge_answer")
+        return {
+          answer: await (async () => {
+            const knowledge = await repository.getKnowledgeContext();
+            return completeWithOpenAI(
+              `Вопрос гостя: ${input.question}\n\nБаза знаний:\n${knowledge}`,
+            );
+          })(),
+        };
+      if (input.name === "create_booking_request") {
+        const request = await repository.createRequestForCall(
+          input.callId,
+          input.extracted,
+          input.comment ? [{ role: "guest", text: input.comment }] : [],
+        );
+        return { requestId: request.id, accepted: true };
+      }
+      if (!transfer?.sbcBaseUrl || !transfer.destination)
+        return { accepted: false, reason: "transfer_not_configured" };
+      await repository.markTransfer(
+        input.callId,
+        `transfer_requested:${input.reason}`,
+      );
+      const response = await fetch(
+        `${transfer.sbcBaseUrl.replace(/\/$/u, "")}/v1/calls/${encodeURIComponent(input.callId)}/transfer`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(transfer.sbcSecret
+              ? { "X-SBC-Webhook-Secret": transfer.sbcSecret }
+              : {}),
+          },
+          body: JSON.stringify({
+            destination: transfer.destination,
+            method: "sip_refer",
+            reason: input.reason,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      return { accepted: response.ok, destination: transfer.destination };
     },
   };
 };

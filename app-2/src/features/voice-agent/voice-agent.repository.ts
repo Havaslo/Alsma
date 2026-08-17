@@ -81,6 +81,11 @@ export const createVoiceAgentRepository = (database: Database) => ({
       },
       select: { id: true },
     }),
+  markTransfer: (id: string, outcome: string) =>
+    database.client.voiceCall.update({
+      where: { id },
+      data: { status: "transferring", outcome },
+    }),
 });
 
 export type VoiceAgentRepository = ReturnType<

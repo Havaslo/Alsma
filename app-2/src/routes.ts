@@ -52,6 +52,11 @@ type CreateApiRouterOptions = {
     readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
+    readonly asteriskConfigured: boolean;
+    readonly sbcPublicBaseUrl?: string;
+    readonly sbcWebhookSecret?: string;
+    readonly asteriskWebhookSecret?: string;
+    readonly transferNumber?: string;
   };
   readonly yooKassaSecretKey?: string;
   readonly logger: Logger;
@@ -147,6 +152,14 @@ export const createApiRouter = ({
   router.get("/voice-agent/readiness", (_request, response) =>
     response.json({ provider: "mango", ...voiceIntegration }),
   );
-  router.use("/voice-agent", createVoiceAgentRouter(database, openaiApiKey));
+  router.use(
+    "/voice-agent",
+    createVoiceAgentRouter(database, openaiApiKey, {
+      sbcBaseUrl: voiceIntegration.sbcPublicBaseUrl,
+      sbcSecret: voiceIntegration.sbcWebhookSecret,
+      destination: voiceIntegration.transferNumber,
+      asteriskWebhookSecret: voiceIntegration.asteriskWebhookSecret,
+    }),
+  );
   return router;
 };

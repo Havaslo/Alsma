@@ -36,6 +36,11 @@ type CreateAppOptions = {
     readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
+    readonly asteriskConfigured: boolean;
+    readonly sbcPublicBaseUrl?: string;
+    readonly sbcWebhookSecret?: string;
+    readonly asteriskWebhookSecret?: string;
+    readonly transferNumber?: string;
   };
   readonly database: Database;
   readonly logger: Logger;

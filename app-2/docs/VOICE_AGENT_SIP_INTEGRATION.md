@@ -2,7 +2,10 @@
 
 ## Целевая маршрутизация
 
-`публичный номер клиента (без изменений)` → безусловная переадресация мобильного оператора → `MANGO OFFICE` → внешний SIP/SBC (если Mango не может напрямую работать с требуемыми TLS/SRTP/кодеками) → `OpenAI Realtime SIP` → голосовой агент ALSMA.
+`MANGO OFFICE: 7 (831) 212-37-12` → `Asterisk/SBC` → `OpenAI Realtime SIP` → голосовой агент ALSMA.
+
+Старый мобильный номер не используется как входная точка и не должен участвовать
+в пилотной маршрутизации.
 
 При запросе человека агент инициирует перевод на менеджера через согласованный механизм Т2 (SIP REFER/attended transfer либо серверная переадресация на номер менеджера).
 
@@ -22,6 +25,13 @@
   транскрипт и метаданные хранятся 30 дней и затем удаляются из проекта.
 - Завершённый звонок с собранными данными создаёт заявку в админке в категории
   `voice-agent-booking` для последующей обработки менеджером.
+- Для Asterisk/SBC добавлен webhook `POST /api/voice-agent/asterisk/webhook`.
+  Он принимает события канала, транскрипцию и результат завершения звонка.
+  Доступ защищается заголовком `X-Asterisk-Webhook-Secret`.
+- Realtime tools доступны через `POST /api/voice-agent/tools`:
+  `knowledge_answer`, `create_booking_request` и `transfer_to_manager`.
+  Последний вызывает у SBC команду `/v1/calls/{callId}/transfer` с методом
+  `sip_refer` и номером T2 из backend-конфигурации.
 
 ## Что добавлено в конфигурационный контур
 
@@ -36,6 +46,9 @@
 - `OPENAI_REALTIME_SIP_BASE_URL`, `OPENAI_REALTIME_SIP_API_KEY`, `OPENAI_REALTIME_SIP_PROJECT_ID` — параметры Realtime SIP, если они выдаются используемым аккаунтом OpenAI.
 - `T2_TRANSFER_NUMBER` — номер менеджера/очереди Т2; хранится только на backend.
 - `VOICE_AGENT_PUBLIC_WEBHOOK_URL` — публичный HTTPS URL для событий Mango/SBC.
+- `ASTERISK_ARI_BASE_URL`, `ASTERISK_ARI_USERNAME`, `ASTERISK_ARI_PASSWORD`,
+  `ASTERISK_ARI_APP_NAME` — параметры ARI для собственного Asterisk/SBC-контура.
+- `ASTERISK_WEBHOOK_SECRET` — секрет webhook событий от Asterisk/SBC.
 
 Наличие этих переменных проверяется без раскрытия значений через backend readiness endpoint.
 
@@ -67,7 +80,10 @@
 
 ## Техническое решение после получения данных
 
-Сначала проверяется прямой путь Mango → Realtime SIP. SBC добавляется только если не сходятся требования TLS/SRTP, кодеков, авторизации или двустороннего media stream. SBC не должен содержать бизнес-логику: он занимается сигнализацией, медиа, нормализацией кодека и проверкой webhook.
+В PoC используется фиксированный путь Mango → Asterisk/SBC → Realtime SIP.
+SBC не должен содержать бизнес-логику: он занимается сигнализацией, медиа,
+нормализацией кодека, SIP REFER и проверкой webhook. Backend предоставляет
+knowledge/booking/transfer tools и CRM-аудит.
 
 События входящего звонка должны быть идемпотентными по `providerCallId`. Для каждой сессии сохраняются только необходимые метаданные и транскрипт. Секреты не сохраняются в БД и не логируются.
 
