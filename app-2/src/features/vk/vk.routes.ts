@@ -500,11 +500,11 @@ export const createVkRouter = ({
       !callbackSecret ||
       !secretMatches(textOf(parsed.data.secret), callbackSecret)
     ) {
-      // VK retries callback deliveries when it receives 401. A rejected
-      // event must never be enqueued, but a plain 200 prevents VK from
-      // turning a stale/misconfigured subscription into a retry storm. The
-      // secret check remains mandatory for processing.
-      response.status(200).type("text/plain").send("ok");
+      // Do not acknowledge an unauthenticated callback. Returning 200 here
+      // silently discards a real VK event and makes a mismatched secret look
+      // like a broken agent. VK will retry a 401, while the event is never
+      // passed to the worker.
+      response.status(401).type("text/plain").send("unauthorized");
       return;
     }
     if (parsed.data.type === "message_new") {
