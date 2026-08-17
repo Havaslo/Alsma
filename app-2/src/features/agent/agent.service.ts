@@ -260,6 +260,12 @@ export const createAiAgentService = (options: AgentOptions) => {
       }),
       loadPublishedOffersContext(options.database),
     ]);
+    if (serviceMention(message) === "offers" && !offersContext) {
+      const transferNotice =
+        "Сейчас нет опубликованных актуальных акций. Передам вопрос менеджеру, чтобы он уточнил доступные предложения.";
+      await options.chat.publish(conversationId, "agent", transferNotice);
+      return { action: "transfer" as const, answer: transferNotice };
+    }
     options.chat.publishStatus(conversationId, "composing", "Формирую ответ");
     const context = knowledgeResult.sources
       .map((source) => source.content)

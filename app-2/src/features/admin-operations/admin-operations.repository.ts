@@ -16,6 +16,105 @@ const clientSource = (
     : "Личный кабинет";
 
 export const createAdminOperationsRepository = (database: Database) => ({
+  getAnalytics: async (start: Date, end: Date) => {
+    const range = { gte: start, lt: end } as const;
+    const days = Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / 86_400_000),
+    );
+    const bucket = (date: Date) =>
+      Math.min(
+        days - 1,
+        Math.max(
+          0,
+          Math.floor((date.getTime() - start.getTime()) / 86_400_000),
+        ),
+      );
+    const [requests, messages, leads, bookings, paidBookings, tasks] =
+      await Promise.all([
+        database.client.adminRequest.findMany({
+          where: { createdAt: range },
+          select: { createdAt: true, status: true, details: true },
+        }),
+        database.client.chatMessage.findMany({
+          where: { createdAt: range },
+          select: { author: true, createdAt: true },
+        }),
+        database.client.siteLead.findMany({
+          where: { createdAt: range },
+          select: { createdAt: true },
+        }),
+        database.client.bookingRequest.findMany({
+          where: { createdAt: range },
+          select: { createdAt: true, status: true, amount: true },
+        }),
+        database.client.guestBooking.findMany({
+          where: { createdAt: range },
+          select: { createdAt: true, paymentStatus: true, paymentAmount: true },
+        }),
+        database.client.managerTask.findMany({
+          where: { createdAt: range },
+          select: { createdAt: true },
+        }),
+      ]);
+    const contacts = Array.from({ length: days }, () => 0);
+    const aiHandled = Array.from({ length: days }, () => 0);
+    const bookingColumns = Array.from({ length: 5 }, () => 0);
+    const revenue = Array.from({ length: days }, () => 0);
+    for (const item of requests) contacts[bucket(item.createdAt)]! += 1;
+    for (const item of leads) contacts[bucket(item.createdAt)]! += 1;
+    for (const item of messages) {
+      if (item.author === "agent") aiHandled[bucket(item.createdAt)]! += 1;
+    }
+    for (const item of bookings) {
+      bookingColumns[
+        Math.min(4, Math.floor((item.createdAt.getHours() / 24) * 5))
+      ]! += 1;
+      if (item.status === "completed")
+        revenue[bucket(item.createdAt)]! += Number(item.amount ?? 0);
+    }
+    for (const item of paidBookings) {
+      if (item.paymentStatus === "succeeded")
+        revenue[bucket(item.createdAt)]! += Number(item.paymentAmount ?? 0);
+    }
+    const channelCounts = new Map<string, number>();
+    for (const item of requests) {
+      const details = item.details;
+      const source =
+        details && typeof details === "object" && !Array.isArray(details)
+          ? String((details as Record<string, unknown>).source ?? "Другое")
+          : "Другое";
+      channelCounts.set(source, (channelCounts.get(source) ?? 0) + 1);
+    }
+    const statusCounts = ["new", "processing", "completed", "cancelled"].map(
+      (status) => requests.filter((item) => item.status === status).length,
+    );
+    return {
+      aiHandled,
+      aiMaximum: Math.max(1, ...aiHandled),
+      bookingColumns,
+      channelCounts: [
+        channelCounts.get("Сайт") ?? 0,
+        channelCounts.get("MAX") ?? 0,
+        channelCounts.get("VK") ?? 0,
+        channelCounts.get("Телефон") ?? 0,
+        [...channelCounts.entries()]
+          .filter(([key]) => !["Сайт", "MAX", "VK", "Телефон"].includes(key))
+          .reduce((sum, [, value]) => sum + value, 0),
+      ],
+      contacts,
+      contactsMaximum: Math.max(1, ...contacts),
+      funnelCounts: [requests.length, leads.length, bookings.length],
+      incomingCalls: Array.from({ length: 9 }, () => 0),
+      incomingMaximum: 1,
+      managerTotal:
+        tasks.length +
+        messages.filter((item) => item.author === "manager").length,
+      requestCounts: statusCounts,
+      revenue,
+      revenueMaximum: Math.max(1, ...revenue),
+    };
+  },
   listNotifications: async () => {
     const [leads, requests, bookings] = await Promise.all([
       database.client.siteLead.findMany({

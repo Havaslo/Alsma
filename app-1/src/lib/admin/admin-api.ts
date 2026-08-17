@@ -90,6 +90,21 @@ export type AdminNotification = {
   readonly status: string;
   readonly createdAt: string;
 };
+export type DashboardAnalytics = {
+  readonly aiHandled: number[];
+  readonly aiMaximum: number;
+  readonly bookingColumns: number[];
+  readonly channelCounts: number[];
+  readonly contacts: number[];
+  readonly contactsMaximum: number;
+  readonly funnelCounts: number[];
+  readonly incomingCalls: number[];
+  readonly incomingMaximum: number;
+  readonly managerTotal: number;
+  readonly requestCounts: number[];
+  readonly revenue: number[];
+  readonly revenueMaximum: number;
+};
 
 export type ManagerTask = {
   readonly completedAt: string | null;
@@ -173,6 +188,21 @@ export const loadAdminRequests = (signal?: AbortSignal) =>
     params: { page: 1, pageSize: 100 },
     signal,
   });
+export const loadAdminAnalytics = (
+  start: string,
+  end: string,
+  signal?: AbortSignal,
+) =>
+  apiClient.get<{ analytics: DashboardAnalytics }>("/admin/analytics", {
+    headers: headers(),
+    params: { start, end },
+    signal,
+  });
+export const loadIntegrationStatuses = (signal?: AbortSignal) =>
+  apiClient.get<{ items: Array<{ id: string; configured: boolean }> }>(
+    "/admin/integrations/status",
+    { headers: headers(), signal },
+  );
 export const loadManagerTasks = (signal?: AbortSignal) =>
   apiClient.get<Page<ManagerTask>>("/admin/manager-tasks", {
     headers: headers(),

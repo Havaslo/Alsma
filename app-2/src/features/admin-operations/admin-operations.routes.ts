@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -39,6 +40,26 @@ export const createAdminOperationsRouter = (database: Database): Router => {
     createRequireAdmin(
       createAdminAuthService(createAdminAuthRepository(database)),
     ),
+  );
+  router.get(
+    "/analytics",
+    createRequireAdminPermission("dashboard.access"),
+    async (request, response) => {
+      const parsed = z
+        .object({ start: z.coerce.date(), end: z.coerce.date() })
+        .safeParse(request.query);
+      if (!parsed.success) {
+        response
+          .status(400)
+          .json({ error: { code: "INVALID_ANALYTICS_RANGE" } });
+        return;
+      }
+      const end = new Date(parsed.data.end);
+      end.setDate(end.getDate() + 1);
+      response.json({
+        analytics: await repository.getAnalytics(parsed.data.start, end),
+      });
+    },
   );
   router.get(
     "/notifications",

@@ -160,26 +160,40 @@ const ChartCard = ({
   </article>
 );
 
-const DonutChart = () => {
+const DonutChart = ({
+  values = [],
+}: {
+  readonly values?: readonly number[];
+}) => {
+  const total = Math.max(
+    1,
+    values.reduce((sum, value) => sum + value, 0),
+  );
+  const percent = (value: number) => `${Math.round((value / total) * 100)}%`;
   const segments = [
-    { label: "Телефон", offset: 0, tone: "blue" as const, value: "52%" },
     {
       label: "Сайт",
+      offset: 0,
+      tone: "blue" as const,
+      value: percent(values[0] ?? 0),
+    },
+    {
+      label: "MAX",
       offset: -52,
       tone: "orange" as const,
-      value: "23%",
+      value: percent(values[1] ?? 0),
     },
     {
-      label: "Мессенджеры",
+      label: "VK",
       offset: -75,
       tone: "purple" as const,
-      value: "16%",
+      value: percent(values[2] ?? 0),
     },
     {
-      label: "Соцсети",
+      label: "Телефон",
       offset: -91,
       tone: "pink" as const,
-      value: "9%",
+      value: percent(values[3] ?? 0),
     },
   ];
 
@@ -262,25 +276,31 @@ const ColumnChart = ({ values }: { readonly values: readonly number[] }) => {
 };
 
 const StatusBars = ({ values }: { readonly values: readonly number[] }) => {
+  const first = Math.max(1, values[0] ?? 0);
   const rows = [
     {
-      change: "+14%",
+      change: "",
       label: "Всего обращений",
       value: values[0],
       width: "100%",
     },
     {
-      change: "+5%",
+      change: "",
       label: "Текущие уточнения",
       value: values[1],
-      width: "74%",
+      width: `${((values[1] ?? 0) / first) * 100}%`,
     },
-    { change: "+2%", label: "В работе", value: values[2], width: "52%" },
     {
-      change: "-1%",
+      change: "",
+      label: "В работе",
+      value: values[2],
+      width: `${((values[2] ?? 0) / first) * 100}%`,
+    },
+    {
+      change: "",
       label: "Передано менеджеру",
       value: values[3],
-      width: "31%",
+      width: `${((values[3] ?? 0) / first) * 100}%`,
     },
   ];
 
@@ -291,9 +311,11 @@ const StatusBars = ({ values }: { readonly values: readonly number[] }) => {
           <div className="flex items-center text-sm">
             <span>{row.label}</span>
             <strong className="ml-auto text-dashboard-blue">{row.value}</strong>
-            <span className="ml-3 text-xs text-muted-ui-foreground">
-              {row.change}
-            </span>
+            {row.change && (
+              <span className="ml-3 text-xs text-muted-ui-foreground">
+                {row.change}
+              </span>
+            )}
           </div>
           <div className="mt-2 h-8 overflow-hidden rounded-xl bg-page p-1">
             <div
@@ -352,7 +374,7 @@ export const AdminDashboardCharts = ({
         </div>
         <span className="text-sm">за выбранный период</span>
       </div>
-      <DonutChart />
+      <DonutChart values={snapshot.channelCounts} />
     </ChartCard>
     <ChartCard
       description="Заявки и бронирования, которые были созданы в течение выбранного периода."
@@ -399,18 +421,6 @@ export const AdminDashboardCharts = ({
           values={snapshot.incomingCalls}
           wide
         />
-        <div className="mt-5 rounded-2xl bg-page p-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-accent-ui-foreground uppercase">
-            Советы от агента
-          </p>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-ui-foreground">
-            <li>• Пик нагрузки приходится на интервал 12:30–14:00.</li>
-            <li>• После 15:00 поток снижается без резких всплесков.</li>
-            <li>
-              • Усиление смены до обеда поможет быстрее закрывать SPA-запросы.
-            </li>
-          </ul>
-        </div>
       </ChartCard>
     </div>
   </div>

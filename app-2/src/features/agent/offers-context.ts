@@ -34,13 +34,6 @@ const formatOffer = (offer: OfferRecord) => {
     .join("; ");
 };
 
-const fallbackOffers = [
-  "Действующие предложения: Wellness-уикенд с диагностикой — выходные с термальной зоной, авторскими ритуалами и проживанием.",
-  "Действующие предложения: Романтический побег — романтический формат с ужином, поздним выездом и приватным wellness-сценарием.",
-  "Действующие предложения: Семейные каникулы — проживание, прогулки, активности и загородный отдых для всей семьи.",
-  "Действующие предложения: Длительное проживание — особые условия и привилегии при отдыхе от пяти ночей.",
-];
-
 export const loadPublishedOffersContext = async (database: Database) => {
   const items = await database.client.siteContent.findMany({
     orderBy: { position: "asc" },
@@ -63,5 +56,7 @@ export const loadPublishedOffersContext = async (database: Database) => {
       .filter((offer) => isCurrent(offer, today))
       .map((offer) => `${collection}: ${formatOffer(offer)}`);
   });
-  return records.filter(Boolean).join("\n") || fallbackOffers.join("\n");
+  // Empty means exactly that: there are no confirmed offers to tell a guest
+  // about. Never invent a promotion when the admin content is empty.
+  return records.filter(Boolean).join("\n");
 };

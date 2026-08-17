@@ -4,7 +4,10 @@ import type { Logger } from "pino";
 import { createAdminAuthRouter } from "./features/admin-auth/admin-auth.routes.js";
 import { createAdminLeadsRouter } from "./features/admin-leads/admin-leads.routes.js";
 import { createAdminOperationsRouter } from "./features/admin-operations/admin-operations.routes.js";
-import { createAdminSettingsRouter } from "./features/admin-settings/admin-settings.routes.js";
+import {
+  createAdminIntegrationsStatusRouter,
+  createAdminSettingsRouter,
+} from "./features/admin-settings/admin-settings.routes.js";
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
 import { createAiAgentService } from "./features/agent/agent.service.js";
 import { createBookingRouter } from "./features/booking/booking.routes.js";
@@ -100,6 +103,21 @@ export const createApiRouter = ({
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
   router.use("/admin", createAdminOperationsRouter(database));
   router.use("/admin/settings", createAdminSettingsRouter(database));
+  router.use(
+    "/admin/integrations",
+    createAdminIntegrationsStatusRouter(database, {
+      ai: Boolean(openaiApiKey && openaiBaseUrl),
+      eptera: Boolean(epteraApiKey && epteraHotelId),
+      max: Boolean(maxBot.token),
+      vk: Boolean(
+        vk.accessToken &&
+        vk.groupId &&
+        vk.callbackSecret &&
+        vk.confirmationCode,
+      ),
+      yookassa: Boolean(yooKassaShopId && yooKassaSecretKey),
+    }),
+  );
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
   router.use("/auth", createGuestAuthRouter(database));
   router.use(

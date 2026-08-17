@@ -8,6 +8,7 @@ import {
   MOCK_INTEGRATION_REQUIREMENTS,
   MOCK_INTEGRATION_SECTIONS,
 } from "@/lib/admin/admin-integration-mocks";
+import { useIntegrationStatuses } from "@/lib/admin/useAdmin";
 import { cn } from "@/lib/cn";
 
 const STATUS_TONES = {
@@ -25,6 +26,10 @@ const initialCheckboxValues = Object.fromEntries(
 );
 
 export const AdminIntegrationsPanel = () => {
+  const statuses = useIntegrationStatuses();
+  const statusById = new Map(
+    (statuses.data?.items ?? []).map((item) => [item.id, item.configured]),
+  );
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [checkboxValues, setCheckboxValues] = useState<Record<string, boolean>>(
     () => initialCheckboxValues,
@@ -41,27 +46,42 @@ export const AdminIntegrationsPanel = () => {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-4">
-        {MOCK_INTEGRATION_OVERVIEW.map(({ description, status, title }) => (
-          <article
-            className="rounded-3xl border border-line bg-brand-foreground p-5"
-            key={title}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-base font-semibold text-brand">{title}</h2>
-              <span
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold",
-                  STATUS_TONES[status],
-                )}
-              >
-                {INTEGRATION_STATUS_LABELS[status]}
-              </span>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-muted-ui-foreground">
-              {description}
-            </p>
-          </article>
-        ))}
+        {MOCK_INTEGRATION_OVERVIEW.map(({ description, status, title }) => {
+          const id =
+            title === "ВКонтакте"
+              ? "vk"
+              : title === "MAX"
+                ? "max"
+                : title.includes("Eptera")
+                  ? "eptera"
+                  : "ai";
+          const configured = statusById.get(id) ?? false;
+          return (
+            <article
+              className="rounded-3xl border border-line bg-brand-foreground p-5"
+              key={title}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-base font-semibold text-brand">{title}</h2>
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-semibold",
+                    configured
+                      ? "bg-brand/10 text-brand"
+                      : STATUS_TONES[status],
+                  )}
+                >
+                  {configured
+                    ? "Подключено"
+                    : INTEGRATION_STATUS_LABELS[status]}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-muted-ui-foreground">
+                {description}
+              </p>
+            </article>
+          );
+        })}
       </section>
 
       <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">

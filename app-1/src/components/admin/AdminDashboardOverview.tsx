@@ -1,38 +1,148 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { Link } from "@tanstack/react-router";
-import { Activity, Check, Lightbulb, MessageSquareText, WalletCards } from "lucide-react";
+import { Activity, Check, MessageSquareText, WalletCards } from "lucide-react";
 
 import { AdminDashboardCharts } from "@/components/admin/AdminDashboardCharts";
 import { AdminDashboardDetails } from "@/components/admin/AdminDashboardDetails";
 import { AdminDashboardPeriodFilter } from "@/components/admin/AdminDashboardPeriodFilter";
-import { buildDashboardAnalytics, initialDashboardPeriod } from "@/components/admin/admin-dashboard-analytics";
-import { useAdminRequests } from "@/lib/admin/useAdmin";
+import { initialDashboardPeriod } from "@/components/admin/admin-dashboard-analytics";
+import { useAdminAnalytics, useAdminRequests } from "@/lib/admin/useAdmin";
 import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
-const insights = [
-  { description: "За последние обращения чаще других повторяются вопросы про семейные номера, размещение с детьми и наличие дополнительных спальных мест.", tone: "bg-supporting/20 text-brand", title: "Частый повтор — семейные номера" },
-  { description: "Агенту пока не хватает коротких ответов по составу SPA-пакетов, ограничениям по времени посещения и включённым услугам.", tone: "bg-accent-ui/15 text-accent-ui-foreground", title: "Не хватает данных по SPA-пакетам" },
-  { description: "Часть диалогов замедляется, когда гость уточняет стоимость трансфера, доступные интервалы и варианты подачи автомобиля.", tone: "bg-destructive/10 text-destructive", title: "Нужен быстрый ответ про трансфер" },
-] as const;
-
 export const AdminDashboardOverview = () => {
   const [period, setPeriod] = useState(initialDashboardPeriod);
-  const analytics = useMemo(() => buildDashboardAnalytics(period), [period]);
+  const analyticsQuery = useAdminAnalytics(period.start, period.end);
+  const analytics = analyticsQuery.data?.analytics;
   const requests = useAdminRequests();
-  const activeRequests = (requests.data?.items ?? []).filter((item) => item.status === "new" || item.status === "processing").slice(0, 2);
+  const activeRequests = (requests.data?.items ?? [])
+    .filter((item) => item.status === "new" || item.status === "processing")
+    .slice(0, 2);
   const kpis = [
-    { change: "Требуют внимания команды", icon: MessageSquareText, label: "Активные обращения", tone: "bg-brand/10 text-brand", value: String(requests.data?.items.filter((item) => item.status === "new" || item.status === "processing").length ?? 0) },
-    { change: "+14% к вчера", icon: Activity, label: "Обращения за смену", tone: "bg-supporting/20 text-brand", value: "84" },
-    { change: "+6% к плану", icon: Check, label: "Подтверждённые брони", tone: "bg-brand/10 text-brand", value: "19" },
-    { change: "+11% к смене", icon: WalletCards, label: "Сумма броней", tone: "bg-accent-ui/15 text-accent-ui-foreground", value: "1,84 млн ₽" },
+    {
+      change: "Требуют внимания команды",
+      icon: MessageSquareText,
+      label: "Активные обращения",
+      tone: "bg-brand/10 text-brand",
+      value: String(
+        requests.data?.items.filter(
+          (item) => item.status === "new" || item.status === "processing",
+        ).length ?? 0,
+      ),
+    },
+    {
+      change: "Реальные обращения за период",
+      icon: Activity,
+      label: "Обращения за период",
+      tone: "bg-supporting/20 text-brand",
+      value: String(
+        analytics?.contacts.reduce((sum, value) => sum + value, 0) ?? 0,
+      ),
+    },
+    {
+      change: "Из данных бронирований",
+      icon: Check,
+      label: "Созданные брони",
+      tone: "bg-brand/10 text-brand",
+      value: String(analytics?.funnelCounts[2] ?? 0),
+    },
+    {
+      change: "Оплаченные бронирования",
+      icon: WalletCards,
+      label: "Сумма оплат",
+      tone: "bg-accent-ui/15 text-accent-ui-foreground",
+      value: `${(analytics?.revenue.reduce((sum, value) => sum + value, 0) ?? 0).toLocaleString("ru-RU")} ₽`,
+    },
   ] as const;
 
-  return <>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{kpis.map(({ change, icon: Icon, label, tone, value }) => <article className="rounded-3xl border border-line bg-brand-foreground px-5 py-4" key={label}><div className="flex items-start justify-between gap-4"><span className="text-sm font-medium text-muted-ui-foreground">{label}</span><span className={`grid size-11 place-items-center rounded-2xl ${tone}`}><Icon className="size-5" /></span></div><p className="mt-3 text-3xl leading-none font-semibold text-brand">{value}</p><p className="mt-3 text-sm text-muted-ui-foreground">{change}</p></article>)}</section>
-    <section className="mt-14"><h1 className="text-4xl font-semibold">Активные обращения</h1><p className="mt-4 max-w-3xl text-lg leading-8 text-muted-ui-foreground">Текущие диалоги, которые идут прямо сейчас и требуют внимания команды или быстрого перехода в разговор.</p><div className="mt-7 grid gap-4 xl:grid-cols-2">{activeRequests.map((request) => <article className="rounded-3xl border border-l-5 border-line border-l-brand bg-brand-foreground p-5" key={request.id}><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-semibold text-brand">{request.contact ?? request.requester ?? "Без контакта"}</h2><p className="mt-1 text-sm text-muted-ui-foreground">{request.category}</p></div><span className="rounded-full px-3 py-1 text-xs font-semibold text-brand">{request.status === "new" ? "Новое" : "В работе"}</span></div><p className="mt-4 text-sm leading-6">{request.title}{request.description ? ` — ${request.description}` : ""}</p><Link className="mt-4 inline-flex rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground" to={buildRoute(ROUTES.adminRequest, { requestId: request.id })}>Перейти к карточке обращения</Link></article>)}{requests.isLoading && <p className="rounded-3xl border border-line bg-brand-foreground p-5 text-muted-ui-foreground">Загружаем активные обращения…</p>}{!requests.isLoading && !activeRequests.length && <p className="rounded-3xl border border-line bg-brand-foreground p-5 text-muted-ui-foreground">Активных обращений сейчас нет.</p>}</div></section>
-    <section className="mt-14"><h2 className="text-4xl font-semibold">Короткие выводы от AI</h2><p className="mt-4 max-w-3xl text-lg leading-8 text-muted-ui-foreground">Здесь будут появляться мини-отчёты по повторяющимся темам, недостающей информации и точкам для улучшения ответов.</p><div className="mt-7 grid gap-4 xl:grid-cols-3">{insights.map(({ description, title, tone }) => <article className="rounded-3xl border border-line bg-brand-foreground p-5" key={title}><div className="flex items-start gap-4"><span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${tone}`}><Lightbulb className="size-5" /></span><div><h3 className="text-xl font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-ui-foreground">{description}</p></div></div></article>)}</div></section>
-    <section className="mt-14"><AdminDashboardPeriodFilter onChange={setPeriod} selection={period} /><AdminDashboardCharts snapshot={analytics} /></section><AdminDashboardDetails snapshot={analytics} />
-  </>;
+  return (
+    <>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map(({ change, icon: Icon, label, tone, value }) => (
+          <article
+            className="rounded-3xl border border-line bg-brand-foreground px-5 py-4"
+            key={label}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <span className="text-sm font-medium text-muted-ui-foreground">
+                {label}
+              </span>
+              <span
+                className={`grid size-11 place-items-center rounded-2xl ${tone}`}
+              >
+                <Icon className="size-5" />
+              </span>
+            </div>
+            <p className="mt-3 text-3xl leading-none font-semibold text-brand">
+              {value}
+            </p>
+            <p className="mt-3 text-sm text-muted-ui-foreground">{change}</p>
+          </article>
+        ))}
+      </section>
+      <section className="mt-14">
+        <h1 className="text-4xl font-semibold">Активные обращения</h1>
+        <p className="mt-4 max-w-3xl text-lg leading-8 text-muted-ui-foreground">
+          Текущие диалоги, которые идут прямо сейчас и требуют внимания команды
+          или быстрого перехода в разговор.
+        </p>
+        <div className="mt-7 grid gap-4 xl:grid-cols-2">
+          {activeRequests.map((request) => (
+            <article
+              className="rounded-3xl border border-l-5 border-line border-l-brand bg-brand-foreground p-5"
+              key={request.id}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-brand">
+                    {request.contact ?? request.requester ?? "Без контакта"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-ui-foreground">
+                    {request.category}
+                  </p>
+                </div>
+                <span className="rounded-full px-3 py-1 text-xs font-semibold text-brand">
+                  {request.status === "new" ? "Новое" : "В работе"}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6">
+                {request.title}
+                {request.description ? ` — ${request.description}` : ""}
+              </p>
+              <Link
+                className="mt-4 inline-flex rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground"
+                to={buildRoute(ROUTES.adminRequest, { requestId: request.id })}
+              >
+                Перейти к карточке обращения
+              </Link>
+            </article>
+          ))}
+          {requests.isLoading && (
+            <p className="rounded-3xl border border-line bg-brand-foreground p-5 text-muted-ui-foreground">
+              Загружаем активные обращения…
+            </p>
+          )}
+          {!requests.isLoading && !activeRequests.length && (
+            <p className="rounded-3xl border border-line bg-brand-foreground p-5 text-muted-ui-foreground">
+              Активных обращений сейчас нет.
+            </p>
+          )}
+        </div>
+      </section>
+      <section className="mt-14">
+        <AdminDashboardPeriodFilter onChange={setPeriod} selection={period} />
+        {analytics ? (
+          <>
+            <AdminDashboardCharts snapshot={analytics} />
+            <AdminDashboardDetails snapshot={analytics} />
+          </>
+        ) : (
+          <p className="mt-6 rounded-3xl border border-line bg-brand-foreground p-5 text-muted-ui-foreground">
+            Загружаем реальные данные за выбранный период…
+          </p>
+        )}
+      </section>
+    </>
+  );
 };

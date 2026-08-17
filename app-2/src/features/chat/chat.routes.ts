@@ -4,7 +4,10 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
-import { createRequireAdmin } from "../admin-auth/admin-auth.middleware.js";
+import {
+  createRequireAdmin,
+  createRequireAdminPermission,
+} from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import type { AiAgentService } from "../agent/agent.service.js";
@@ -35,6 +38,28 @@ const readChatMode = (value: unknown): ChatMode =>
   readDetails(value).chatMode === "manager" ? "manager" : "agent";
 const readManagerRequested = (value: unknown) =>
   readDetails(value).managerRequested === true;
+const assertPublicConversation = async (
+  database: Database,
+  id: string,
+  allowMissing = false,
+) => {
+  const request = await database.client.adminRequest.findUnique({
+    where: { id },
+    select: { details: true },
+  });
+  const details = readDetails(request?.details);
+  if (!request && !allowMissing)
+    throw new HttpError(404, "CHAT_NOT_FOUND", "Чат не найден.");
+  // VK/MAX conversations are never exposed through the guest API. Their
+  // history is available only through the authenticated admin chat routes.
+  if (request && details.source !== "Сайт")
+    throw new HttpError(
+      403,
+      "CHAT_ACCESS_DENIED",
+      "Чат доступен только его владельцу.",
+    );
+  return request;
+};
 const writeEvent = (
   response: { write: (value: string) => void },
   payload: unknown,
@@ -98,8 +123,12 @@ export const createChatRouter = (
   router.get(
     "/mode",
     validateRequest({ query: conversationSchema }),
-    async (_request, response) =>
-      response.json({
+    async (_request, response) => {
+      await assertPublicConversation(
+        database,
+        response.locals.input.query.conversationId,
+      );
+      return response.json({
         mode: await getMode(response.locals.input.query.conversationId),
         managerRequested: await database.client.adminRequest
           .findUnique({
@@ -107,21 +136,34 @@ export const createChatRouter = (
             select: { details: true },
           })
           .then((request) => readManagerRequested(request?.details)),
-      }),
+      });
+    },
   );
   router.get(
     "/messages",
     validateRequest({ query: conversationSchema }),
-    async (_request, response) =>
+    async (_request, response) => {
+      await assertPublicConversation(
+        database,
+        response.locals.input.query.conversationId,
+      );
       response.json({
         items: await chat.list(response.locals.input.query.conversationId),
-      }),
+      });
+    },
   );
   router.post(
     "/messages",
     validateRequest({ body: guestMessageSchema }),
     async (_request, response) => {
       const input = response.locals.input.body;
+      const existing = await assertPublicConversation(
+        database,
+        input.conversationId,
+        true,
+      );
+      if (existing && readDetails(existing.details).source !== "Сайт")
+        throw new HttpError(403, "CHAT_ACCESS_DENIED", "Чат недоступен.");
       await database.client.adminRequest.upsert({
         where: { id: input.conversationId },
         create: {
@@ -193,8 +235,13 @@ export const createChatRouter = (
   router.get(
     "/stream",
     validateRequest({ query: conversationSchema }),
-    (_request, response) =>
-      stream(chat, response.locals.input.query.conversationId, response),
+    async (_request, response) => {
+      await assertPublicConversation(
+        database,
+        response.locals.input.query.conversationId,
+      );
+      stream(chat, response.locals.input.query.conversationId, response);
+    },
   );
 
   const admin = Router();
@@ -203,6 +250,7 @@ export const createChatRouter = (
       createAdminAuthService(createAdminAuthRepository(database)),
     ),
   );
+  admin.use(createRequireAdminPermission("requests.access"));
   admin.get("/messages", async (_request, response) =>
     response.json({ items: await chat.list() }),
   );

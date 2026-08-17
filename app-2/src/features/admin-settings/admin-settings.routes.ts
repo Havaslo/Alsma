@@ -23,6 +23,28 @@ import {
 } from "./admin-settings.schemas.js";
 import { createAdminSettingsService } from "./admin-settings.service.js";
 
+export const createAdminIntegrationsStatusRouter = (
+  database: Database,
+  configured: Record<string, boolean>,
+): Router => {
+  const router = Router();
+  router.use(
+    createRequireAdmin(
+      createAdminAuthService(createAdminAuthRepository(database)),
+    ),
+    createRequireAdminPermission("integrations.access"),
+  );
+  router.get("/status", (_request, response) =>
+    response.json({
+      items: Object.entries(configured).map(([id, isConfigured]) => ({
+        id,
+        configured: isConfigured,
+      })),
+    }),
+  );
+  return router;
+};
+
 export const createAdminSettingsRouter = (database: Database): Router => {
   const router = Router();
   const service = createAdminSettingsService(
