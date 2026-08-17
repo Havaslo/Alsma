@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomUUID } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -42,6 +43,31 @@ export const createVoiceAgentRouter = (
     openaiBaseUrl,
     transfer,
     managedStorage,
+  );
+  router.get("/sip/status", (_request, response) =>
+    response.json({
+      ready: false,
+      provider: "amazi-ai-gateway",
+      realtimeWebSocket: true,
+      sipCallsApi: false,
+      reason:
+        "Текущий Gateway подтверждает v1/realtime WebSocket, но не подтверждает SIP Calls API.",
+      nextStep:
+        "Для SIP-входа нужен провайдерский endpoint realtime.call.incoming и accept для call_id.",
+    }),
+  );
+  router.post("/sip/incoming", (_request, response) =>
+    response.status(501).json({
+      type: "amazi.gateway.error",
+      error: {
+        code: "sip_calls_api_not_supported",
+        message:
+          "SIP-вход через текущий Amazi AI Gateway пока не поддерживается.",
+        requestId: randomUUID(),
+        stage: "sip_ingress",
+        retryable: false,
+      },
+    }),
   );
   router.post(
     "/test/turn",

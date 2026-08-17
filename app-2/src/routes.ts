@@ -159,6 +159,11 @@ export const createApiRouter = ({
       provider: "mango",
       mangoConfigured: voiceIntegration.mangoConfigured,
       aiGatewayConfigured: Boolean(openaiApiKey && openaiBaseUrl),
+      realtimeWebSocketConfigured: Boolean(openaiApiKey && openaiBaseUrl),
+      sipCallsApiSupported: false,
+      sipIngressReady: false,
+      sipLimitation:
+        "Amazi AI Gateway подтверждает v1/realtime WebSocket, но не подтверждает SIP Calls API.",
       t2TransferConfigured: voiceIntegration.t2TransferConfigured,
       publicWebhookConfigured: voiceIntegration.publicWebhookConfigured,
       transferConfigured: Boolean(

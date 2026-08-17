@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { Logger } from "pino";
 import WebSocket, { WebSocketServer } from "ws";
@@ -12,6 +13,14 @@ import {
 const realtimePath = "/api/voice-agent/realtime";
 const realtimeModel = "gpt-realtime";
 
+type GatewayError = {
+  readonly code: string;
+  readonly message: string;
+  readonly requestId: string;
+  readonly stage: string;
+  readonly retryable: boolean;
+};
+
 const upstreamUrl = (baseUrl: string): string => {
   const url = new URL(`${baseUrl.replace(/\/$/u, "")}/realtime`);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -19,12 +28,10 @@ const upstreamUrl = (baseUrl: string): string => {
   return url.toString();
 };
 
-const sendError = (socket: WebSocket, code: string, message: string): void => {
+const sendError = (socket: WebSocket, error: GatewayError): void => {
   if (socket.readyState !== WebSocket.OPEN) return;
-  socket.send(
-    JSON.stringify({ error: { code, message }, type: "alsma.realtime.error" }),
-  );
-  socket.close(1011, code);
+  socket.send(JSON.stringify({ type: "amazi.gateway.error", error }));
+  socket.close(1011, error.code);
 };
 
 export const attachVoiceAgentRealtime = (
@@ -47,11 +54,13 @@ export const attachVoiceAgentRealtime = (
     websocketServer.handleUpgrade(request, socket, head, (client) => {
       void (async () => {
         if (!options.apiKey || !options.openaiBaseUrl) {
-          sendError(
-            client,
-            "gateway_not_configured",
-            "Голосовой AI-агент сейчас недоступен.",
-          );
+          sendError(client, {
+            code: "gateway_not_configured",
+            message: "Голосовой AI-агент сейчас недоступен.",
+            requestId: randomUUID(),
+            stage: "configuration",
+            retryable: false,
+          });
           return;
         }
 
@@ -81,7 +90,34 @@ export const attachVoiceAgentRealtime = (
         upstream.on("message", (data, isBinary) => {
           if (!isBinary) {
             try {
-              const event = JSON.parse(data.toString()) as { type?: string };
+              const event = JSON.parse(data.toString()) as {
+                type?: string;
+                error?: { code?: string; message?: string };
+              };
+              if (event.type === "error") {
+                const requestId = randomUUID();
+                options.logger.error(
+                  {
+                    providerEvent: {
+                      type: event.type,
+                      code: event.error?.code,
+                      message: event.error?.message,
+                    },
+                    requestId,
+                    stage: "realtime_provider",
+                  },
+                  "Realtime provider returned an error",
+                );
+                sendError(client, {
+                  code: event.error?.code ?? "provider_error",
+                  message:
+                    "Голосовой AI вернул ошибку. Повторите попытку позже.",
+                  requestId,
+                  stage: "realtime_provider",
+                  retryable: false,
+                });
+                return;
+              }
               if (event.type === "session.created") {
                 upstream.send(
                   JSON.stringify({
@@ -128,22 +164,26 @@ export const attachVoiceAgentRealtime = (
             { error: error.name },
             "Realtime upstream socket failed",
           );
-          sendError(
-            client,
-            "gateway_connection_failed",
-            "Не удалось подключить голосового AI-агента.",
-          );
+          sendError(client, {
+            code: "gateway_connection_failed",
+            message: "Не удалось подключить голосовой AI-агент.",
+            requestId: randomUUID(),
+            stage: "realtime_connect",
+            retryable: true,
+          });
         });
       })().catch((error: unknown) => {
         options.logger.error(
           { error: error instanceof Error ? error.message : "Unknown error" },
           "Realtime session setup failed",
         );
-        sendError(
-          client,
-          "session_setup_failed",
-          "Не удалось подготовить голосового AI-агента.",
-        );
+        sendError(client, {
+          code: "session_setup_failed",
+          message: "Не удалось подготовить голосового AI-агента.",
+          requestId: randomUUID(),
+          stage: "session_setup",
+          retryable: true,
+        });
       });
     });
   });
