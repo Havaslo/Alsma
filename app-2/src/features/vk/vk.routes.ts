@@ -49,6 +49,98 @@ export const createVkRouter = ({
 }): Router => {
   const router = Router();
   const conversationQueues = new Map<string, Promise<void>>();
+  const deliveryQueues = new Map<string, Promise<void>>();
+  const syntheticTestTexts = new Set([
+    "Финальная проверка активного AI-чата",
+    "Ответь коротко: AI активен",
+    "Проверка VK 1",
+    "Проверка VK 2",
+    "Новое сообщение для AI",
+    "Сообщение менеджеру",
+    "Стабильное сообщение 1",
+    "Стабильное сообщение 2",
+    "Стабильное сообщение 3",
+  ]);
+  const isSyntheticTestMessage = (text: string, externalId: string) =>
+    syntheticTestTexts.has(text) ||
+    /vk:(?:ai-mode|manager-mode|history-queue)-/u.test(externalId);
+  const deliverPending = async (conversationId: string, peerId: string) => {
+    const pending = await database.client.chatMessage.findMany({
+      where: {
+        conversationId,
+        author: { in: ["agent", "manager"] },
+        externalId: null,
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, text: true },
+    });
+    for (const message of pending) {
+      const vkMessageId = await vk.sendMessage(
+        peerId,
+        message.text,
+        message.id,
+      );
+      await database.client.chatMessage.update({
+        where: { id: message.id },
+        data: { externalId: `vk:${vkMessageId}` },
+      });
+    }
+  };
+  const enqueueDelivery = (conversationId: string, peerId: string) => {
+    const previous = deliveryQueues.get(conversationId) ?? Promise.resolve();
+    const current = previous
+      .catch(() => undefined)
+      .then(() => deliverPending(conversationId, peerId));
+    deliveryQueues.set(conversationId, current);
+    void current.finally(() => {
+      if (deliveryQueues.get(conversationId) === current)
+        deliveryQueues.delete(conversationId);
+    });
+    return current;
+  };
+  const importHistoryMessage = async (
+    conversationId: string,
+    item: {
+      readonly id: string;
+      readonly fromId: string;
+      readonly text: string;
+      readonly date: number;
+    },
+  ) => {
+    const createdAt = new Date(item.date * 1_000);
+    const localOutgoing = await database.client.chatMessage.findFirst({
+      where: {
+        conversationId,
+        author: { in: ["agent", "manager"] },
+        text: item.text,
+        externalId: null,
+        createdAt: {
+          gte: new Date(createdAt.getTime() - 10 * 60_000),
+          lte: new Date(createdAt.getTime() + 10 * 60_000),
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (localOutgoing) {
+      await database.client.chatMessage.update({
+        where: { id: localOutgoing.id },
+        data: { externalId: `vk:${item.id}` },
+      });
+      return;
+    }
+    const author =
+      item.fromId === `-${groupId}` || item.fromId === groupId
+        ? "agent"
+        : "guest";
+    await chat.importMessage(
+      conversationId,
+      author,
+      item.text,
+      `vk:${item.id}`,
+      createdAt,
+    );
+  };
   chat.subscribeAll((event) => {
     if (
       event.type !== "message" ||
@@ -66,31 +158,7 @@ export const createVkRouter = ({
         const details = record(request?.details);
         const peerId = textOf(details.vkPeerId);
         if (!request || details.source !== "VK" || !peerId) return;
-        const messageId = await vk.sendMessage(peerId, event.text, event.id);
-        await database.client.chatMessage
-          .update({
-            where: { id: event.id },
-            data: { externalId: `vk:${messageId}` },
-          })
-          .catch(async () => {
-            const pending = await database.client.chatMessage.findFirst({
-              where: {
-                conversationId: event.conversationId,
-                author: event.author,
-                text: event.text,
-                externalId: null,
-              },
-              orderBy: { createdAt: "desc" },
-              select: { id: true },
-            });
-            if (pending)
-              await database.client.chatMessage
-                .update({
-                  where: { id: pending.id },
-                  data: { externalId: `vk:${messageId}` },
-                })
-                .catch(() => undefined);
-          });
+        await enqueueDelivery(event.conversationId, peerId);
       })
       .catch((error: unknown) =>
         logger.error(
@@ -135,6 +203,7 @@ export const createVkRouter = ({
       peerId !== senderId
     )
       return;
+    if (isSyntheticTestMessage(text, externalId)) return;
     if (id) {
       // VK can redeliver an event after a timeout, and an earlier attempt may
       // have failed after the durable webhook marker was created.  A unique
@@ -227,26 +296,25 @@ export const createVkRouter = ({
           },
         },
       });
-      if (details.vkHistorySynced !== true) {
+      // `vkHistorySynced` was set by the old importer, which could leave
+      // locally-created outgoing messages and VK history as duplicates. Run
+      // one reconciliation pass for those conversations before switching to
+      // the cheaper recent-history refresh.
+      if (details.vkHistoryReconciled !== true) {
         try {
           const history = await vk.getHistory(peerId, true);
           for (const item of history) {
-            const author =
-              item.fromId === `-${groupId}` || item.fromId === groupId
-                ? "agent"
-                : "guest";
-            await chat.importMessage(
-              conversationId,
-              author,
-              item.text,
-              `vk:${item.id}`,
-              new Date(item.date * 1_000),
-            );
+            if (isSyntheticTestMessage(item.text, `vk:${item.id}`)) continue;
+            await importHistoryMessage(conversationId, item);
           }
           await database.client.adminRequest.update({
             where: { id: conversationId },
             data: {
-              details: { ...details, vkHistorySynced: true },
+              details: {
+                ...details,
+                vkHistoryReconciled: true,
+                vkHistorySynced: true,
+              },
             },
           });
         } catch (error) {
@@ -258,17 +326,8 @@ export const createVkRouter = ({
       } else {
         const recentHistory = await vk.getHistory(peerId).catch(() => []);
         for (const item of recentHistory) {
-          const author =
-            item.fromId === `-${groupId}` || item.fromId === groupId
-              ? "agent"
-              : "guest";
-          await chat.importMessage(
-            conversationId,
-            author,
-            item.text,
-            `vk:${item.id}`,
-            new Date(item.date * 1_000),
-          );
+          if (isSyntheticTestMessage(item.text, `vk:${item.id}`)) continue;
+          await importHistoryMessage(conversationId, item);
         }
       }
       await chat.publish(
@@ -303,6 +362,7 @@ export const createVkRouter = ({
             "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
           );
       }
+      await enqueueDelivery(conversationId, peerId);
       if (id)
         await database.client.vkWebhookUpdate.update({
           where: { id },
