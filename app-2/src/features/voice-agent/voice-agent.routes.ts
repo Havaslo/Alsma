@@ -19,12 +19,14 @@ import {
   mangoWebhookBodySchema,
   toolBodySchema,
   transcriptBodySchema,
+  voiceTestTurnBodySchema,
 } from "./voice-agent.schemas.js";
 import { createVoiceAgentService } from "./voice-agent.service.js";
 
 export const createVoiceAgentRouter = (
   database: Database,
   apiKey?: string,
+  openaiBaseUrl?: string,
   transfer?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
@@ -35,7 +37,29 @@ export const createVoiceAgentRouter = (
   const service = createVoiceAgentService(
     createVoiceAgentRepository(database),
     apiKey,
+    openaiBaseUrl,
     transfer,
+  );
+  router.post("/realtime/session", async (_request, response, next) => {
+    try {
+      response.json(await service.createRealtimeSession());
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.post(
+    "/test/turn",
+    validateRequest({ body: voiceTestTurnBodySchema }),
+    async (_request, response, next) => {
+      try {
+        const input = response.locals.input.body;
+        response.json(
+          await service.testAudioTurn(input.audioBase64, input.mimeType),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
   );
   router.post(
     "/mango/webhook",

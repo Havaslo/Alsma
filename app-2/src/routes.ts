@@ -167,7 +167,7 @@ export const createApiRouter = ({
   );
   router.use(
     "/voice-agent",
-    createVoiceAgentRouter(database, openaiApiKey, {
+    createVoiceAgentRouter(database, openaiApiKey, openaiBaseUrl, {
       mangoApiKey: process.env.MANGO_VPBX_API_KEY,
       mangoApiSalt: process.env.MANGO_VPBX_API_SALT,
       destination: voiceIntegration.transferNumber,

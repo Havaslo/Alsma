@@ -93,6 +93,7 @@ const parseJson = (value: string) => {
 export const createVoiceAgentService = (
   repository: VoiceAgentRepository,
   apiKey?: string,
+  openaiBaseUrl?: string,
   transfer?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
@@ -100,15 +101,18 @@ export const createVoiceAgentService = (
   },
 ) => {
   const completeWithOpenAI = async (prompt: string, json = false) => {
-    if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    if (!apiKey || !openaiBaseUrl)
+      throw new Error("OpenAI AI Gateway is not configured");
+    const response = await fetch(
+      `${openaiBaseUrl.replace(/\/$/u, "")}/v1/chat/completions`,
+      {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
+        body: JSON.stringify({
+        model: "gpt-5.4-mini",
         temperature: 0.2,
         response_format: json ? { type: "json_object" } : undefined,
         messages: [
@@ -116,7 +120,9 @@ export const createVoiceAgentService = (
           { role: "user", content: prompt },
         ],
       }),
-    });
+        }),
+      },
+    );
     if (!response.ok)
       throw new Error(`OpenAI request failed with status ${response.status}`);
     const body = (await response.json()) as {
@@ -129,6 +135,96 @@ export const createVoiceAgentService = (
   };
 
   return {
+    testAudioTurn: async (audioBase64: string, mimeType: string) => {
+      if (!apiKey || !openaiBaseUrl)
+        throw new Error("OpenAI AI Gateway is not configured");
+      const audio = Buffer.from(audioBase64, "base64");
+      const form = new FormData();
+      form.append("file", new Blob([audio], { type: mimeType }), "turn.webm");
+      form.append("model", "gpt-4o-mini-transcribe");
+      const transcriptionResponse = await fetch(
+        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/audio/transcriptions`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: form,
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+      if (!transcriptionResponse.ok)
+        throw new Error(
+          `Audio transcription failed with status ${transcriptionResponse.status}`,
+        );
+      const transcription = (await transcriptionResponse.json()) as {
+        text?: string;
+      };
+      const text = transcription.text?.trim();
+      if (!text) throw new Error("The audio did not contain recognizable speech");
+      const answer = await (async () => {
+        const knowledge = await repository.getKnowledgeContext();
+        return completeWithOpenAI(
+          `Вопрос гостя: ${text}\n\nБаза знаний и правила:\n${knowledge}`,
+        );
+      })();
+      const speechResponse = await fetch(
+        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/audio/speech`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: answer,
+            model: "gpt-4o-mini-tts",
+            response_format: "mp3",
+            voice: "marin",
+          }),
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+      if (!speechResponse.ok)
+        throw new Error(`Audio speech failed with status ${speechResponse.status}`);
+      return {
+        answer,
+        audioBase64: Buffer.from(await speechResponse.arrayBuffer()).toString(
+          "base64",
+        ),
+        audioMimeType: "audio/mpeg",
+        transcript: text,
+      };
+    },
+    createRealtimeSession: async () => {
+      if (!apiKey || !openaiBaseUrl)
+        throw new Error("Realtime AI Gateway is not configured");
+      const response = await fetch(
+        `${openaiBaseUrl.replace(/\/$/u, "")}/v1/realtime/client_secrets`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            session: {
+              type: "realtime",
+              model: "gpt-realtime",
+              audio: { output: { voice: "marin" } },
+            },
+          }),
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      if (!response.ok)
+        throw new Error(`Realtime session failed with status ${response.status}`);
+      const body = (await response.json()) as {
+        value?: string;
+        client_secret?: { value?: string };
+      };
+      const token = body.value ?? body.client_secret?.value;
+      if (!token) throw new Error("Realtime session token was not returned");
+      return { token, model: "gpt-realtime" };
+    },
     createCall: async (input: CreateCallBody) => ({
       ...(await repository.createCall(input)),
       disclosure: recordingDisclosure,

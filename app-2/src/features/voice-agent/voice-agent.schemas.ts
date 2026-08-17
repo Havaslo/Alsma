@@ -55,7 +55,13 @@ export const toolBodySchema = z.discriminatedUnion("name", [
   }),
 ]);
 
+export const voiceTestTurnBodySchema = z.object({
+  audioBase64: z.string().min(100).max(10_000_000),
+  mimeType: z.string().trim().min(3).max(100),
+});
+
 export type CreateCallBody = z.infer<typeof createCallBodySchema>;
 export type TranscriptBody = z.infer<typeof transcriptBodySchema>;
 export type MangoWebhookBody = z.infer<typeof mangoWebhookBodySchema>;
 export type ToolBody = z.infer<typeof toolBodySchema>;
+export type VoiceTestTurnBody = z.infer<typeof voiceTestTurnBodySchema>;
