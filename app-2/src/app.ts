@@ -32,14 +32,9 @@ type CreateAppOptions = {
   readonly voiceIntegration: {
     readonly mangoApiBaseUrl?: string;
     readonly mangoConfigured: boolean;
-    readonly sbcConfigured: boolean;
     readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
-    readonly asteriskConfigured: boolean;
-    readonly sbcPublicBaseUrl?: string;
-    readonly sbcWebhookSecret?: string;
-    readonly asteriskWebhookSecret?: string;
     readonly transferNumber?: string;
   };
   readonly database: Database;

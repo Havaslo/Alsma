@@ -77,18 +77,6 @@ export const mangoWebhookHandler =
     }
   };
 
-export const asteriskWebhookHandler =
-  (service: VoiceAgentService): RequestHandler =>
-  async (_req, res, next) => {
-    try {
-      res
-        .status(200)
-        .json(await service.handleAsteriskWebhook(res.locals.input.body));
-    } catch (error) {
-      next(error);
-    }
-  };
-
 export const toolHandler =
   (service: VoiceAgentService): RequestHandler =>
   async (_req, res, next) => {

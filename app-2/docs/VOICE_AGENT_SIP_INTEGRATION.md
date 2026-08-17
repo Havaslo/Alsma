@@ -1,13 +1,13 @@
-# Голосовой AI-агент: Mango → SBC → OpenAI Realtime SIP
+# Голосовой AI-агент: Mango Office → OpenAI Realtime SIP
 
 ## Целевая маршрутизация
 
-`MANGO OFFICE: 7 (831) 212-37-12` → `Asterisk/SBC` → `OpenAI Realtime SIP` → голосовой агент ALSMA.
+`MANGO OFFICE: 7 (831) 212-37-12` → `OpenAI Realtime SIP` → голосовой агент ALSMA.
 
 Старый мобильный номер не используется как входная точка и не должен участвовать
 в пилотной маршрутизации.
 
-При запросе человека агент инициирует перевод на менеджера через согласованный механизм Т2 (SIP REFER/attended transfer либо серверная переадресация на номер менеджера).
+При запросе человека агент немедленно выполняет слепой перевод через Mango API на номер Т2.
 
 Публичный номер не переносится и не меняется. На этапе пилота рекомендуется отдельное тестовое окно/номер или ограниченное время переадресации.
 
@@ -25,13 +25,10 @@
   транскрипт и метаданные хранятся 30 дней и затем удаляются из проекта.
 - Завершённый звонок с собранными данными создаёт заявку в админке в категории
   `voice-agent-booking` для последующей обработки менеджером.
-- Для Asterisk/SBC добавлен webhook `POST /api/voice-agent/asterisk/webhook`.
-  Он принимает события канала, транскрипцию и результат завершения звонка.
-  Доступ защищается заголовком `X-Asterisk-Webhook-Secret`.
 - Realtime tools доступны через `POST /api/voice-agent/tools`:
   `knowledge_answer`, `create_booking_request` и `transfer_to_manager`.
-  Последний вызывает у SBC команду `/v1/calls/{callId}/transfer` с методом
-  `sip_refer` и номером T2 из backend-конфигурации.
+  Последний вызывает `POST /vpbx/commands/transfer` Mango с методом `blind` и
+  номером T2 из backend-конфигурации.
 
 ## Что добавлено в конфигурационный контур
 
@@ -39,16 +36,10 @@
 
 - `MANGO_VPBX_API_KEY`, `MANGO_VPBX_API_SALT` — ключ и соль Virtual PBX API Mango;
   подпись считается как SHA-256 от `key + exact-json + salt`.
-- Старые `MANGO_API_BASE_URL`, `MANGO_API_KEY`, `MANGO_API_SECRET` оставлены для
-  совместимости с ранее подготовленным SBC-контуром.
-- `MANGO_SIP_TRUNK_URI` — адрес SIP-стыка Mango/SBC, если используется.
-- `SBC_PUBLIC_BASE_URL`, `SBC_WEBHOOK_SECRET` — внешний медиашлюз и проверка его webhook.
+- Для перевода используется официальный Mango API `POST /vpbx/commands/transfer`.
 - `OPENAI_REALTIME_SIP_BASE_URL`, `OPENAI_REALTIME_SIP_API_KEY`, `OPENAI_REALTIME_SIP_PROJECT_ID` — параметры Realtime SIP, если они выдаются используемым аккаунтом OpenAI.
 - `T2_TRANSFER_NUMBER` — номер менеджера/очереди Т2; хранится только на backend.
-- `VOICE_AGENT_PUBLIC_WEBHOOK_URL` — публичный HTTPS URL для событий Mango/SBC.
-- `ASTERISK_ARI_BASE_URL`, `ASTERISK_ARI_USERNAME`, `ASTERISK_ARI_PASSWORD`,
-  `ASTERISK_ARI_APP_NAME` — параметры ARI для собственного Asterisk/SBC-контура.
-- `ASTERISK_WEBHOOK_SECRET` — секрет webhook событий от Asterisk/SBC.
+- `VOICE_AGENT_PUBLIC_WEBHOOK_URL` — публичный HTTPS URL для событий Mango.
 
 Наличие этих переменных проверяется без раскрытия значений через backend readiness endpoint.
 
@@ -80,10 +71,9 @@
 
 ## Техническое решение после получения данных
 
-В PoC используется фиксированный путь Mango → Asterisk/SBC → Realtime SIP.
-SBC не должен содержать бизнес-логику: он занимается сигнализацией, медиа,
-нормализацией кодека, SIP REFER и проверкой webhook. Backend предоставляет
-knowledge/booking/transfer tools и CRM-аудит.
+В PoC используется прямой путь Mango → Realtime SIP. Backend предоставляет
+knowledge/booking/transfer tools и CRM-аудит. Перевод выполняется Mango API
+командой `blind`, без консультационного шага и без передачи контекста менеджеру.
 
 События входящего звонка должны быть идемпотентными по `providerCallId`. Для каждой сессии сохраняются только необходимые метаданные и транскрипт. Секреты не сохраняются в БД и не логируются.
 

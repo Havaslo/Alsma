@@ -1,16 +1,82 @@
+import { createHash, randomUUID } from "node:crypto";
+
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
-  AsteriskWebhookBody,
   CreateCallBody,
   MangoWebhookBody,
   ToolBody,
   TranscriptBody,
 } from "./voice-agent.schemas.js";
 
+const transferMangoCall = async ({
+  apiKey,
+  callId,
+  destination,
+  salt,
+}: {
+  readonly apiKey: string;
+  readonly callId: string;
+  readonly destination: string;
+  readonly salt: string;
+}) => {
+  const commandId = `alsma-transfer-${randomUUID()}`;
+  const json = JSON.stringify({
+    command_id: commandId,
+    call_id: callId,
+    method: "blind",
+    to_number: destination,
+    initiator: "to.number",
+  });
+  const sign = createHash("sha256")
+    .update(`${apiKey}${json}${salt}`)
+    .digest("hex");
+  const response = await fetch(
+    "https://app.mango-office.ru/vpbx/commands/transfer",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ vpbx_api_key: apiKey, sign, json }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok) throw new Error(`Mango API failed with ${response.status}`);
+  const accepted = (await response.json()) as { result?: number | string };
+  if (String(accepted.result ?? "") === "1000") return accepted;
+  for (const delay of [500, 1_000, 2_000]) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    const resultJson = JSON.stringify({ command_id: commandId });
+    const resultSign = createHash("sha256")
+      .update(`${apiKey}${resultJson}${salt}`)
+      .digest("hex");
+    const resultResponse = await fetch(
+      "https://app.mango-office.ru/vpbx/result/transfer",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          vpbx_api_key: apiKey,
+          sign: resultSign,
+          json: resultJson,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    if (!resultResponse.ok)
+      throw new Error(`Mango result API failed with ${resultResponse.status}`);
+    const result = (await resultResponse.json()) as {
+      result?: number | string;
+    };
+    if (String(result.result ?? "") === "1000") return result;
+    if (result.result && String(result.result) !== "0")
+      throw new Error(`Mango transfer rejected with ${String(result.result)}`);
+  }
+  throw new Error("Mango transfer result timed out");
+};
+
 export const recordingDisclosure =
   "Разговор записывается. Аудио, расшифровка и данные звонка хранятся 30 дней, затем удаляются.";
 
-const systemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если ответа нет или клиент просит человека, предложи перевод/обратный звонок. Отвечай коротко, естественно и удобно для телефона.`;
+const systemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если клиент просит человека или вопрос нужно передать менеджеру, сразу вызови transfer_to_manager без дополнительных вопросов и подтверждений. Отвечай коротко, естественно и удобно для телефона.`;
 
 const parseJson = (value: string) => {
   try {
@@ -28,8 +94,8 @@ export const createVoiceAgentService = (
   repository: VoiceAgentRepository,
   apiKey?: string,
   transfer?: {
-    readonly sbcBaseUrl?: string;
-    readonly sbcSecret?: string;
+    readonly mangoApiKey?: string;
+    readonly mangoApiSalt?: string;
     readonly destination?: string;
   },
 ) => {
@@ -133,29 +199,6 @@ export const createVoiceAgentService = (
       }
       return call;
     },
-    handleAsteriskWebhook: async (event: AsteriskWebhookBody) => {
-      const call = event.providerCallId
-        ? await repository.findByProviderCallId(event.providerCallId)
-        : null;
-      const current =
-        call ??
-        (await repository.createCall({
-          providerCallId: event.providerCallId ?? `asterisk:${event.channelId}`,
-          callerPhone: event.callerPhone,
-        }));
-      if (event.transcript)
-        for (const segment of event.transcript)
-          await repository.appendTranscript(current.id, segment);
-      if (["hangup", "ended", "failed"].includes(event.event.toLowerCase()))
-        return repository.completeCall(current.id, {
-          outcome: event.status ?? event.event,
-          recordingUrl: event.recordingUrl,
-          summary: "Звонок завершён через Asterisk/SBC.",
-          intent: "voice_request",
-          extracted: event.extracted ?? {},
-        });
-      return current;
-    },
     tool: async (input: ToolBody) => {
       if (input.name === "knowledge_answer")
         return {
@@ -174,31 +217,25 @@ export const createVoiceAgentService = (
         );
         return { requestId: request.id, accepted: true };
       }
-      if (!transfer?.sbcBaseUrl || !transfer.destination)
+      const call = await repository.findCall(input.callId);
+      if (
+        !call?.providerCallId ||
+        !transfer?.mangoApiKey ||
+        !transfer.mangoApiSalt ||
+        !transfer.destination
+      )
         return { accepted: false, reason: "transfer_not_configured" };
       await repository.markTransfer(
         input.callId,
         `transfer_requested:${input.reason}`,
       );
-      const response = await fetch(
-        `${transfer.sbcBaseUrl.replace(/\/$/u, "")}/v1/calls/${encodeURIComponent(input.callId)}/transfer`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(transfer.sbcSecret
-              ? { "X-SBC-Webhook-Secret": transfer.sbcSecret }
-              : {}),
-          },
-          body: JSON.stringify({
-            destination: transfer.destination,
-            method: "sip_refer",
-            reason: input.reason,
-          }),
-          signal: AbortSignal.timeout(10_000),
-        },
-      );
-      return { accepted: response.ok, destination: transfer.destination };
+      await transferMangoCall({
+        apiKey: transfer.mangoApiKey,
+        callId: call.providerCallId,
+        destination: transfer.destination,
+        salt: transfer.mangoApiSalt,
+      });
+      return { accepted: true, destination: transfer.destination };
     },
   };
 };

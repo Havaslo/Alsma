@@ -35,18 +35,11 @@ const environmentSchema = z.object({
   MANGO_VPBX_API_KEY: z.string().min(1).optional(),
   MANGO_VPBX_API_SALT: z.string().min(1).optional(),
   MANGO_SIP_TRUNK_URI: z.string().min(1).optional(),
-  SBC_PUBLIC_BASE_URL: z.string().url().optional(),
-  SBC_WEBHOOK_SECRET: z.string().min(1).optional(),
   OPENAI_REALTIME_SIP_BASE_URL: z.string().url().optional(),
   OPENAI_REALTIME_SIP_API_KEY: z.string().min(1).optional(),
   OPENAI_REALTIME_SIP_PROJECT_ID: z.string().min(1).optional(),
   T2_TRANSFER_NUMBER: z.string().min(3).optional(),
   VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
-  ASTERISK_ARI_BASE_URL: z.string().url().optional(),
-  ASTERISK_ARI_USERNAME: z.string().min(1).optional(),
-  ASTERISK_ARI_PASSWORD: z.string().min(1).optional(),
-  ASTERISK_ARI_APP_NAME: z.string().min(1).default("alsma-voice-agent"),
-  ASTERISK_WEBHOOK_SECRET: z.string().min(16).optional(),
   MAX_BOT_TOKEN: z.string().min(1).optional(),
   MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
   MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
@@ -86,14 +79,9 @@ export type AppConfig = {
   readonly voiceIntegration: {
     readonly mangoApiBaseUrl?: string;
     readonly mangoConfigured: boolean;
-    readonly sbcConfigured: boolean;
     readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
-    readonly asteriskConfigured: boolean;
-    readonly sbcPublicBaseUrl?: string;
-    readonly sbcWebhookSecret?: string;
-    readonly asteriskWebhookSecret?: string;
     readonly transferNumber?: string;
   };
 };
@@ -137,9 +125,6 @@ export const readConfig = (
           parsed.MANGO_API_KEY &&
           parsed.MANGO_API_SECRET),
       ),
-      sbcConfigured: Boolean(
-        parsed.SBC_PUBLIC_BASE_URL && parsed.SBC_WEBHOOK_SECRET,
-      ),
       realtimeSipConfigured: Boolean(
         parsed.OPENAI_REALTIME_SIP_BASE_URL &&
         parsed.OPENAI_REALTIME_SIP_API_KEY &&
@@ -147,15 +132,6 @@ export const readConfig = (
       ),
       t2TransferConfigured: Boolean(parsed.T2_TRANSFER_NUMBER),
       publicWebhookConfigured: Boolean(parsed.VOICE_AGENT_PUBLIC_WEBHOOK_URL),
-      asteriskConfigured: Boolean(
-        parsed.ASTERISK_ARI_BASE_URL &&
-        parsed.ASTERISK_ARI_USERNAME &&
-        parsed.ASTERISK_ARI_PASSWORD &&
-        parsed.ASTERISK_WEBHOOK_SECRET,
-      ),
-      sbcPublicBaseUrl: parsed.SBC_PUBLIC_BASE_URL,
-      sbcWebhookSecret: parsed.SBC_WEBHOOK_SECRET,
-      asteriskWebhookSecret: parsed.ASTERISK_WEBHOOK_SECRET,
       transferNumber: parsed.T2_TRANSFER_NUMBER,
     },
   };
