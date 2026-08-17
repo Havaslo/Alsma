@@ -215,6 +215,7 @@ export const createVkRouter = ({
     )
       return;
     if (isSyntheticTestMessage(text, externalId)) return;
+    let agentAlreadyCompleted = false;
     if (id) {
       // VK can redeliver an event after a timeout, and an earlier attempt may
       // have failed after the durable webhook marker was created.  A unique
@@ -228,6 +229,7 @@ export const createVkRouter = ({
       if (existingUpdate?.groupId !== undefined) {
         if (existingUpdate.groupId !== groupId) return;
         if (existingUpdate.status === "completed") return;
+        agentAlreadyCompleted = existingUpdate.status === "agent_completed";
         await database.client.vkWebhookUpdate.update({
           where: { id },
           data: { status: "processing", updatedAt: new Date() },
@@ -339,7 +341,7 @@ export const createVkRouter = ({
           await importHistoryMessage(conversationId, item);
         }
       }
-      if (!incomingMessageStored)
+      if (!incomingMessageStored && !agentAlreadyCompleted)
         await chat.publish(
           conversationId,
           "guest",
@@ -348,7 +350,7 @@ export const createVkRouter = ({
           externalId || undefined,
         );
       const managerMode = details.chatMode === "manager";
-      if (!managerMode) {
+      if (!agentAlreadyCompleted && !managerMode) {
         const result = await agent.reply(conversationId, text);
         if (result?.action === "transfer") {
           await database.client.adminRequest.update({
@@ -372,6 +374,13 @@ export const createVkRouter = ({
             "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
           );
       }
+      if (id && !agentAlreadyCompleted) {
+        await database.client.vkWebhookUpdate.update({
+          where: { id },
+          data: { status: "agent_completed" },
+        });
+        agentAlreadyCompleted = true;
+      }
       await enqueueDelivery(conversationId, peerId);
       if (id)
         await database.client.vkWebhookUpdate.update({
@@ -385,7 +394,12 @@ export const createVkRouter = ({
       );
       if (id)
         await database.client.vkWebhookUpdate
-          .update({ where: { id }, data: { status: "failed" } })
+          .update({
+            where: { id },
+            data: {
+              status: agentAlreadyCompleted ? "agent_completed" : "failed",
+            },
+          })
           .catch(() => undefined);
     } finally {
       release();
@@ -393,6 +407,51 @@ export const createVkRouter = ({
         conversationQueues.delete(peerId);
     }
   };
+  const processWithRetry = async (event: Record<string, unknown>) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await processEvent(event);
+      } catch (error) {
+        logger.warn(
+          {
+            attempt: attempt + 1,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          "VK event attempt failed",
+        );
+      }
+      const id = textOf(event.event_id);
+      if (!id) return;
+      const update = await database.client.vkWebhookUpdate.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      if (update?.status === "completed") return;
+      if (attempt < 2)
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, 1_000 * 2 ** attempt),
+        );
+    }
+  };
+  void database.client.vkWebhookUpdate
+    .findMany({
+      where: { status: { in: ["processing", "failed", "agent_completed"] } },
+      orderBy: { updatedAt: "asc" },
+      take: 25,
+      select: { payload: true },
+    })
+    .then((updates) => {
+      for (const update of updates) {
+        const payload = record(update.payload);
+        if (payload.type === "message_new") void processWithRetry(payload);
+      }
+    })
+    .catch((error: unknown) =>
+      logger.warn(
+        { error: error instanceof Error ? error.message : "Unknown error" },
+        "VK pending event recovery failed",
+      ),
+    );
   router.get("/readiness", async (_request, response) => {
     let credentialsVerified = false;
     if (vk.configured && groupId) {
@@ -449,7 +508,7 @@ export const createVkRouter = ({
       return;
     }
     response.status(200).type("text/plain").send("ok");
-    void processEvent(parsed.data);
+    void processWithRetry(parsed.data);
   });
   return router;
 };
