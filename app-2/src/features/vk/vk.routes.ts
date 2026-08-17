@@ -60,6 +60,7 @@ export const createVkRouter = ({
     "Стабильное сообщение 1",
     "Стабильное сообщение 2",
     "Стабильное сообщение 3",
+    "Проверка после исправления VK",
   ]);
   const isSyntheticTestMessage = (text: string, externalId: string) =>
     syntheticTestTexts.has(text) ||
@@ -75,6 +76,7 @@ export const createVkRouter = ({
       select: { id: true, text: true },
     });
     for (const message of pending) {
+      if (isSyntheticTestMessage(message.text, "")) continue;
       let vkMessageId = "";
       let lastError: unknown;
       for (let attempt = 0; attempt < 3 && !vkMessageId; attempt += 1) {
