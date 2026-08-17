@@ -354,6 +354,8 @@ export const createVoiceAgentService = (
         return { requestId: request.id, accepted: true };
       }
       const call = await repository.findCall(input.callId);
+      if (call?.status === "transferring" || call?.status === "completed")
+        return { accepted: true, duplicate: true };
       if (
         !call?.providerCallId ||
         !transfer?.mangoApiKey ||

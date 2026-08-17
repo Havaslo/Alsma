@@ -1,5 +1,4 @@
 import { createApp } from "./app.js";
-import { startAsteriskVoiceBridge } from "./features/voice-agent/asterisk-voice-bridge.js";
 import { readConfig } from "./lib/config.js";
 import { createDatabase } from "./lib/database/database.js";
 import { runDatabaseMigrations } from "./lib/database/migrations.js";
@@ -35,15 +34,6 @@ const start = async (): Promise<void> => {
   });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
-  });
-  const stopAsterisk = startAsteriskVoiceBridge({
-    ...config.voiceIntegration.asterisk,
-    logger,
-    onIncoming: async ({ callerPhone }) => {
-      await database.client.voiceCall.create({
-        data: { provider: "asterisk", callerPhone, status: "active" },
-      });
-    },
   });
   const keepDatabaseReady = async (): Promise<void> => {
     for (;;) {
@@ -96,7 +86,6 @@ const start = async (): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
     clearInterval(retentionTimer);
-    stopAsterisk();
     logger.info({ signal }, "Backend server stopping");
     server.close((serverError) => {
       void database

@@ -31,18 +31,12 @@ type CreateAppOptions = {
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
     readonly mangoApiBaseUrl?: string;
+    readonly mangoApiKey?: string;
+    readonly mangoApiSalt?: string;
     readonly mangoConfigured: boolean;
-    readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
     readonly transferNumber?: string;
-    readonly asterisk: {
-      readonly baseUrl?: string;
-      readonly username?: string;
-      readonly password?: string;
-      readonly app?: string;
-      readonly aiSipEndpoint?: string;
-    };
   };
   readonly database: Database;
   readonly logger: Logger;

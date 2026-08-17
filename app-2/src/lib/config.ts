@@ -34,16 +34,7 @@ const environmentSchema = z.object({
   MANGO_API_SECRET: z.string().min(1).optional(),
   MANGO_VPBX_API_KEY: z.string().min(1).optional(),
   MANGO_VPBX_API_SALT: z.string().min(1).optional(),
-  MANGO_SIP_TRUNK_URI: z.string().min(1).optional(),
-  OPENAI_REALTIME_SIP_BASE_URL: z.string().url().optional(),
-  OPENAI_REALTIME_SIP_API_KEY: z.string().min(1).optional(),
-  OPENAI_REALTIME_SIP_PROJECT_ID: z.string().min(1).optional(),
   T2_TRANSFER_NUMBER: z.string().min(3).optional(),
-  ASTERISK_ARI_BASE_URL: z.string().url().optional(),
-  ASTERISK_ARI_USERNAME: z.string().min(1).optional(),
-  ASTERISK_ARI_PASSWORD: z.string().min(1).optional(),
-  ASTERISK_ARI_APP: z.string().min(1).optional(),
-  ASTERISK_AI_SIP_ENDPOINT: z.string().min(1).optional(),
   VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
   MAX_BOT_TOKEN: z.string().min(1).optional(),
   MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
@@ -83,18 +74,12 @@ export type AppConfig = {
   readonly yooKassaShopId?: string;
   readonly voiceIntegration: {
     readonly mangoApiBaseUrl?: string;
+    readonly mangoApiKey?: string;
+    readonly mangoApiSalt?: string;
     readonly mangoConfigured: boolean;
-    readonly realtimeSipConfigured: boolean;
     readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
     readonly transferNumber?: string;
-    readonly asterisk: {
-      readonly baseUrl?: string;
-      readonly username?: string;
-      readonly password?: string;
-      readonly app?: string;
-      readonly aiSipEndpoint?: string;
-    };
   };
 };
 
@@ -131,27 +116,17 @@ export const readConfig = (
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
     voiceIntegration: {
       mangoApiBaseUrl: parsed.MANGO_API_BASE_URL,
+      mangoApiKey: parsed.MANGO_VPBX_API_KEY,
+      mangoApiSalt: parsed.MANGO_VPBX_API_SALT,
       mangoConfigured: Boolean(
         (parsed.MANGO_VPBX_API_KEY && parsed.MANGO_VPBX_API_SALT) ||
         (parsed.MANGO_API_BASE_URL &&
           parsed.MANGO_API_KEY &&
           parsed.MANGO_API_SECRET),
       ),
-      realtimeSipConfigured: Boolean(
-        parsed.OPENAI_REALTIME_SIP_BASE_URL &&
-        parsed.OPENAI_REALTIME_SIP_API_KEY &&
-        parsed.OPENAI_REALTIME_SIP_PROJECT_ID,
-      ),
       t2TransferConfigured: Boolean(parsed.T2_TRANSFER_NUMBER),
       publicWebhookConfigured: Boolean(parsed.VOICE_AGENT_PUBLIC_WEBHOOK_URL),
       transferNumber: parsed.T2_TRANSFER_NUMBER,
-      asterisk: {
-        baseUrl: parsed.ASTERISK_ARI_BASE_URL,
-        username: parsed.ASTERISK_ARI_USERNAME,
-        password: parsed.ASTERISK_ARI_PASSWORD,
-        app: parsed.ASTERISK_ARI_APP,
-        aiSipEndpoint: parsed.ASTERISK_AI_SIP_ENDPOINT,
-      },
     },
   };
 };
