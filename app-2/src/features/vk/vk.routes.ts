@@ -75,11 +75,20 @@ export const createVkRouter = ({
       select: { id: true, text: true },
     });
     for (const message of pending) {
-      const vkMessageId = await vk.sendMessage(
-        peerId,
-        message.text,
-        message.id,
-      );
+      let vkMessageId = "";
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3 && !vkMessageId; attempt += 1) {
+        try {
+          vkMessageId = await vk.sendMessage(peerId, message.text, message.id);
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2)
+            await new Promise<void>((resolve) =>
+              setTimeout(resolve, 500 * (attempt + 1)),
+            );
+        }
+      }
+      if (!vkMessageId) throw lastError ?? new Error("VK delivery failed");
       await database.client.chatMessage.update({
         where: { id: message.id },
         data: { externalId: `vk:${vkMessageId}` },
@@ -253,6 +262,7 @@ export const createVkRouter = ({
         select: { details: true },
       });
       const details = record(existing?.details);
+      let incomingMessageStored = false;
       if (externalId) {
         const alreadyStored = await database.client.chatMessage.findUnique({
           where: {
@@ -260,13 +270,10 @@ export const createVkRouter = ({
           },
           select: { id: true },
         });
-        if (alreadyStored) {
-          if (id)
-            await database.client.vkWebhookUpdate
-              .update({ where: { id }, data: { status: "completed" } })
-              .catch(() => undefined);
-          return;
-        }
+        // A full VK history sync may have imported the current event before
+        // the callback reaches this point. That must suppress only the
+        // duplicate INSERT, not the agent turn for this callback.
+        incomingMessageStored = Boolean(alreadyStored);
       }
       await database.client.adminRequest.upsert({
         where: { id: conversationId },
@@ -330,13 +337,14 @@ export const createVkRouter = ({
           await importHistoryMessage(conversationId, item);
         }
       }
-      await chat.publish(
-        conversationId,
-        "guest",
-        text,
-        undefined,
-        externalId || undefined,
-      );
+      if (!incomingMessageStored)
+        await chat.publish(
+          conversationId,
+          "guest",
+          text,
+          undefined,
+          externalId || undefined,
+        );
       const managerMode = details.chatMode === "manager";
       if (!managerMode) {
         const result = await agent.reply(conversationId, text);
