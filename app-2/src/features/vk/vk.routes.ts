@@ -473,7 +473,7 @@ export const createVkRouter = ({
   router.get("/callback", (_request, response) => {
     response.type("text/plain").send("VK callback endpoint is ready");
   });
-  router.post("/callback", (request, response) => {
+  router.post("/callback", async (request, response) => {
     const parsed = schema.safeParse(request.body);
     if (
       !parsed.success ||
@@ -506,6 +506,38 @@ export const createVkRouter = ({
       // secret check remains mandatory for processing.
       response.status(200).type("text/plain").send("ok");
       return;
+    }
+    if (parsed.data.type === "message_new") {
+      const eventId = textOf(parsed.data.event_id);
+      if (eventId) {
+        // Persist the callback before acknowledging VK.  Previously the
+        // marker was created only inside the fire-and-forget worker, so a
+        // process restart between 200 OK and that worker dropped the event
+        // forever and made the bot look dependent on manual project activity.
+        try {
+          const existing = await database.client.vkWebhookUpdate.findUnique({
+            where: { id: eventId },
+            select: { status: true },
+          });
+          if (!existing) {
+            await database.client.vkWebhookUpdate.create({
+              data: {
+                id: eventId,
+                groupId,
+                payload: JSON.parse(JSON.stringify(parsed.data)),
+                status: "processing",
+              },
+            });
+          }
+        } catch (error) {
+          request.log.error(
+            { error },
+            "VK callback event could not be persisted",
+          );
+          response.status(503).type("text/plain").send("retry");
+          return;
+        }
+      }
     }
     response.status(200).type("text/plain").send("ok");
     void processWithRetry(parsed.data);
