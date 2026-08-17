@@ -155,7 +155,18 @@ export const createApiRouter = ({
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
   router.get("/voice-agent/readiness", (_request, response) =>
-    response.json({ provider: "mango", ...voiceIntegration }),
+    response.json({
+      provider: "mango",
+      mangoConfigured: voiceIntegration.mangoConfigured,
+      aiGatewayConfigured: Boolean(openaiApiKey && openaiBaseUrl),
+      t2TransferConfigured: voiceIntegration.t2TransferConfigured,
+      publicWebhookConfigured: voiceIntegration.publicWebhookConfigured,
+      transferConfigured: Boolean(
+        voiceIntegration.mangoApiKey &&
+        voiceIntegration.mangoApiSalt &&
+        voiceIntegration.transferNumber,
+      ),
+    }),
   );
   router.use(
     "/voice-agent",
