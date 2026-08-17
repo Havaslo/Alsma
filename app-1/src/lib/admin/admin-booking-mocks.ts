@@ -1,5 +1,5 @@
 export type MockBookingPayment = "paid" | "partial" | "pending";
-export type MockBookingSource = "ai-agent" | "site" | "vk" | "whatsapp";
+export type MockBookingSource = "ai-agent" | "max" | "site" | "vk";
 export type MockBookingStatus =
   "confirmed" | "new" | "pending-confirmation" | "selection";
 
@@ -50,8 +50,8 @@ export const MOCK_BOOKINGS: readonly MockBookingRequest[] = [
     payment: "paid",
     phone: "+7 (911) 320-44-19",
     roomName: "SPA-люкс",
-    source: "whatsapp",
-    sourceLabel: "WhatsApp",
+    source: "max",
+    sourceLabel: "MAX",
     status: "selection",
   },
   {
@@ -125,14 +125,14 @@ export const BOOKING_STATUS_LABELS: Record<MockBookingStatus, string> = {
 
 export const BOOKING_SOURCE_OPTIONS = [
   { label: "Все источники", value: "all" },
-  { label: "WhatsApp", value: "whatsapp" },
+  { label: "MAX", value: "max" },
   { label: "AI-агент", value: "ai-agent" },
   { label: "Сайт", value: "site" },
   { label: "VK", value: "vk" },
 ] as const;
 
 export const BOOKING_FORM_SOURCE_OPTIONS = [
-  { label: "WhatsApp", value: "whatsapp" },
+  { label: "MAX", value: "max" },
   { label: "AI-агент", value: "ai-agent" },
   { label: "Сайт", value: "site" },
   { label: "VK", value: "vk" },

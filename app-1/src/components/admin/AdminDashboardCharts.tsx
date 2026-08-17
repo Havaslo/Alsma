@@ -172,9 +172,9 @@ const DonutChart = ({
   const percent = (value: number) => `${Math.round((value / total) * 100)}%`;
   const segments = [
     {
-      label: "Сайт",
+      label: "Звонки",
       offset: 0,
-      tone: "blue" as const,
+      tone: "teal" as const,
       value: percent(values[0] ?? 0),
     },
     {
@@ -190,9 +190,9 @@ const DonutChart = ({
       value: percent(values[2] ?? 0),
     },
     {
-      label: "Телефон",
+      label: "Чат на сайте",
       offset: -91,
-      tone: "pink" as const,
+      tone: "blue" as const,
       value: percent(values[3] ?? 0),
     },
   ];

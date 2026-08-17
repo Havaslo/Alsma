@@ -7,34 +7,28 @@ const ChannelSummary = ({ values }: { readonly values: readonly number[] }) => {
   );
   const channels = [
     {
-      label: "Телефон",
+      label: "Звонки",
       tone: "bg-dashboard-teal",
       value: values[0],
       width: `${((values[0] ?? 0) / total) * 100}%`,
     },
     {
-      label: "Сайт",
-      tone: "bg-dashboard-blue",
+      label: "MAX",
+      tone: "bg-dashboard-orange",
       value: values[1],
       width: `${((values[1] ?? 0) / total) * 100}%`,
     },
     {
-      label: "Telegram",
-      tone: "bg-dashboard-orange",
+      label: "VK",
+      tone: "bg-dashboard-purple",
       value: values[2],
       width: `${((values[2] ?? 0) / total) * 100}%`,
     },
     {
-      label: "WhatsApp",
-      tone: "bg-dashboard-pink",
+      label: "Чат на сайте",
+      tone: "bg-dashboard-blue",
       value: values[3],
       width: `${((values[3] ?? 0) / total) * 100}%`,
-    },
-    {
-      label: "Email",
-      tone: "bg-dashboard-purple",
-      value: values[4],
-      width: `${((values[4] ?? 0) / total) * 100}%`,
     },
   ];
 
@@ -42,7 +36,8 @@ const ChannelSummary = ({ values }: { readonly values: readonly number[] }) => {
     <article className="rounded-3xl border border-line bg-brand-foreground p-5">
       <h3 className="text-2xl font-semibold">Обращения по каналам</h3>
       <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-        Распределение входящего потока между сайтом, мессенджерами и телефонией.
+        Распределение входящего потока между звонками и двумя каналами
+        сообщений.
       </p>
       <div className="mt-7 flex h-4 overflow-hidden rounded-full bg-page">
         {channels.map((channel) => (
@@ -68,7 +63,8 @@ const ChannelSummary = ({ values }: { readonly values: readonly number[] }) => {
         ))}
       </div>
       <p className="mt-5 text-sm leading-6 text-brand">
-        Телефон и сайт остаются главными точками входа, Telegram быстро растёт.
+        Сводка учитывает только фактические каналы проекта: звонки, MAX, VK и
+        чат на сайте.
       </p>
     </article>
   );

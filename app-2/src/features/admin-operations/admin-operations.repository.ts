@@ -77,14 +77,39 @@ export const createAdminOperationsRepository = (database: Database) => ({
       if (item.paymentStatus === "succeeded")
         revenue[bucket(item.createdAt)]! += Number(item.paymentAmount ?? 0);
     }
-    const channelCounts = new Map<string, number>();
+    // Analytics intentionally has a closed channel vocabulary. Legacy sources
+    // (and malformed/unknown details) must not leak into the dashboard or
+    // inflate the denominator used by its percentages.
+    const channelCounts = new Map([
+      ["Звонки", 0],
+      ["MAX", 0],
+      ["VK", 0],
+      ["Сайт", 0],
+    ]);
     for (const item of requests) {
       const details = item.details;
       const source =
         details && typeof details === "object" && !Array.isArray(details)
           ? String((details as Record<string, unknown>).source ?? "Другое")
           : "Другое";
-      channelCounts.set(source, (channelCounts.get(source) ?? 0) + 1);
+      const normalizedSource = source.trim().toLocaleLowerCase("ru-RU");
+      const channel =
+        normalizedSource === "телефон" ||
+        normalizedSource === "звонки" ||
+        normalizedSource === "звонок" ||
+        normalizedSource === "voice"
+          ? "Звонки"
+          : normalizedSource === "сайт" ||
+              normalizedSource === "чат на сайте" ||
+              normalizedSource === "site" ||
+              normalizedSource === "website"
+            ? "Сайт"
+            : normalizedSource === "max"
+              ? "MAX"
+              : normalizedSource === "vk" || normalizedSource === "вконтакте"
+                ? "VK"
+                : null;
+      if (channel) channelCounts.set(channel, channelCounts.get(channel)! + 1);
     }
     const statusCounts = ["new", "processing", "completed", "cancelled"].map(
       (status) => requests.filter((item) => item.status === status).length,
@@ -94,13 +119,10 @@ export const createAdminOperationsRepository = (database: Database) => ({
       aiMaximum: Math.max(1, ...aiHandled),
       bookingColumns,
       channelCounts: [
-        channelCounts.get("Сайт") ?? 0,
+        channelCounts.get("Звонки") ?? 0,
         channelCounts.get("MAX") ?? 0,
         channelCounts.get("VK") ?? 0,
-        channelCounts.get("Телефон") ?? 0,
-        [...channelCounts.entries()]
-          .filter(([key]) => !["Сайт", "MAX", "VK", "Телефон"].includes(key))
-          .reduce((sum, [, value]) => sum + value, 0),
+        channelCounts.get("Сайт") ?? 0,
       ],
       contacts,
       contactsMaximum: Math.max(1, ...contacts),
