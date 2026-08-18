@@ -171,6 +171,14 @@ const choosesCallback = (text: string) =>
   /остав(?:лю|ить)|контакт|номер\s+телефон|пусть\s+менеджер\s+свяж|второй\s+вариант|по\s+контактам/iu.test(
     text,
   );
+const isBookingRequest = (message: string, booking?: BookingContext) =>
+  Boolean(
+    booking?.checkInDate ||
+    booking?.checkOutDate ||
+    booking?.adults ||
+    booking?.roomCount ||
+    /брон|засел|прожив|даты?\s+(?:заезда|проживания)/iu.test(message),
+  );
 const phoneFromText = (text: string) =>
   text
     .match(/(?:\+?7|8)[\s(\-]*\d[\d\s()\-]{8,}\d/iu)?.[0]
@@ -231,6 +239,91 @@ export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
   );
+  const saveAgentRequest = async (input: {
+    conversationId: string;
+    currentDetails: unknown;
+    message: string;
+    history: string;
+    contactRequest?: ConversationState["contactRequest"];
+    booking?: BookingContext;
+    name?: string;
+    phone?: string;
+    email?: string;
+  }) => {
+    const existingDetails =
+      input.currentDetails &&
+      typeof input.currentDetails === "object" &&
+      !Array.isArray(input.currentDetails)
+        ? (input.currentDetails as Record<string, unknown>)
+        : {};
+    const bookingRequest = isBookingRequest(input.message, input.booking);
+    const contact = input.phone ?? input.contactRequest?.phone;
+    const name = input.name ?? input.contactRequest?.name;
+    const details = {
+      ...existingDetails,
+      source: "AI-agent",
+      channelType: "chat",
+      conversationId: input.conversationId,
+      requestType: bookingRequest ? "booking" : "agent-contact",
+      agentRequestCreated: true,
+      collectedContext: {
+        ...(input.booking ? { booking: input.booking } : {}),
+        ...(input.contactRequest
+          ? { contactRequest: input.contactRequest }
+          : {}),
+      },
+    };
+    const description = [
+      `Исходный запрос гостя: ${input.message}`,
+      input.history ? `Контекст диалога:\n${input.history}` : "",
+      input.booking
+        ? `Собранные параметры: ${JSON.stringify(input.booking)}`
+        : "",
+      name || contact
+        ? `Контакты: ${name ?? "имя не указано"}, ${contact ?? "телефон не указан"}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    await options.database.client.adminRequest.update({
+      where: { id: input.conversationId },
+      data: {
+        title: bookingRequest
+          ? "Заявка на бронирование из AI-чата"
+          : "Заявка агента: связь с гостем",
+        category: bookingRequest ? "booking" : "AI-agent",
+        requester: name || undefined,
+        contact: contact || undefined,
+        description,
+        details,
+      },
+    });
+    if (bookingRequest && name && contact) {
+      const existingBooking =
+        await options.database.client.bookingRequest.findFirst({
+          where: { adminRequestId: input.conversationId },
+          select: { id: true },
+        });
+      if (!existingBooking) {
+        await options.database.client.bookingRequest.create({
+          data: {
+            adminRequestId: input.conversationId,
+            guestName: name,
+            phone: contact,
+            email: input.email ?? null,
+            checkInDate: input.booking?.checkInDate
+              ? new Date(`${input.booking.checkInDate}T00:00:00Z`)
+              : null,
+            checkOutDate: input.booking?.checkOutDate
+              ? new Date(`${input.booking.checkOutDate}T00:00:00Z`)
+              : null,
+            guestsCount: input.booking?.adults ?? 1,
+            roomName: null,
+          },
+        });
+      }
+    }
+  };
   const reply = async (conversationId: string, message: string) => {
     await ensureDefaultAgentPlaybook(options.database);
     const setting = await options.database.client.appSetting.findUnique({
@@ -305,6 +398,23 @@ export const createAiAgentService = (options: AgentOptions) => {
       return { action: "answer" as const, answer };
     }
     if (managerTransfer) {
+      if (
+        hasContactData ||
+        previousContactRequest.awaitingContacts ||
+        previousContactRequest.awaitingChoice ||
+        previousState.booking
+      ) {
+        await saveAgentRequest({
+          conversationId,
+          currentDetails: requestState?.details,
+          message,
+          history,
+          contactRequest: contactRequestDetails,
+          booking: previousState.booking,
+          name: detectedName,
+          phone: detectedPhone,
+        });
+      }
       return {
         action: "transfer" as const,
         answer: "Передаю диалог менеджеру — он подключится к вам.",
@@ -335,21 +445,15 @@ export const createAiAgentService = (options: AgentOptions) => {
     if (awaitingContacts && hasContactData && !previousContactRequest.created) {
       const answer =
         "Спасибо, я передал заявку менеджеру. Он свяжется с вами по указанному номеру.";
-      await options.database.client.adminRequest.update({
-        where: { id: conversationId },
-        data: {
-          requester: detectedName,
-          contact: detectedPhone,
-          description: message,
-          details: {
-            ...(requestState?.details &&
-            typeof requestState.details === "object"
-              ? requestState.details
-              : {}),
-            contactRequest: { ...contactRequestDetails, created: true },
-            managerRequested: true,
-          },
-        },
+      await saveAgentRequest({
+        conversationId,
+        currentDetails: requestState?.details,
+        message,
+        history,
+        contactRequest: { ...contactRequestDetails, created: true },
+        booking: previousState.booking,
+        name: detectedName,
+        phone: detectedPhone,
       });
       await options.chat.publish(conversationId, "agent", answer);
       return { action: "answer" as const, answer };
@@ -548,51 +652,6 @@ export const createAiAgentService = (options: AgentOptions) => {
     if (!parsed.success) return null;
     const result = parsed.data;
     const requestedBooking = bookingSchema.safeParse(result.booking);
-    if (
-      result.action === "create_request" &&
-      settings.canCreateRequest &&
-      requestedBooking.success &&
-      result.name &&
-      result.phone
-    ) {
-      await options.database.client.bookingRequest.create({
-        data: {
-          adminRequest: { connect: { id: conversationId } },
-          checkInDate: new Date(
-            `${requestedBooking.data.checkInDate}T00:00:00Z`,
-          ),
-          checkOutDate: new Date(
-            `${requestedBooking.data.checkOutDate}T00:00:00Z`,
-          ),
-          email: result.email,
-          guestName: result.name,
-          guestsCount: result.guestsCount ?? requestedBooking.data.adults,
-          phone: result.phone,
-          roomName: null,
-        },
-      });
-    } else if (
-      result.action === "create_request" &&
-      settings.canCreateRequest
-    ) {
-      await options.database.client.adminRequest.upsert({
-        where: { id: conversationId },
-        create: {
-          id: conversationId,
-          category: "AI-agent",
-          contact: result.phone ?? result.email ?? "Не указан",
-          description: message,
-          details: { channelType: "chat", conversationId, source: "AI-agent" },
-          requester: result.name ?? "Гость",
-          status: "new",
-          title: "Заявка из AI-чата",
-        },
-        update: {
-          description: message,
-          updatedAt: new Date(),
-        },
-      });
-    }
     const scenarioAction = selectedScenario?.action ?? "answer";
     const effectiveAction =
       scenarioAction === "answer" ? result.action : scenarioAction;
@@ -600,6 +659,22 @@ export const createAiAgentService = (options: AgentOptions) => {
       scenarioAction === "open_page"
         ? (selectedScenario?.page ?? result.page)
         : result.page;
+    if (
+      settings.canCreateRequest &&
+      (effectiveAction === "create_request" || effectiveAction === "transfer")
+    ) {
+      await saveAgentRequest({
+        conversationId,
+        currentDetails: requestState?.details,
+        message,
+        history,
+        contactRequest: previousContactRequest,
+        booking: requestedBooking.success ? requestedBooking.data : nextBooking,
+        name: result.name ?? detectedName,
+        phone: result.phone ?? detectedPhone,
+        email: result.email,
+      });
+    }
     let bookingUrl: string | undefined;
     if (effectiveAction === "open_page") {
       bookingUrl =
