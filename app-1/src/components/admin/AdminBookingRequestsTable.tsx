@@ -25,9 +25,9 @@ export const AdminBookingRequestsTable = ({
       <table className="w-full min-w-5xl border-collapse text-left text-sm">
         <thead className="bg-page text-xs font-semibold">
           <tr>
-            <th className="px-5 py-4">Гость</th>
-            <th className="px-5 py-4">Даты проживания</th>
-            <th className="px-5 py-4">Гости</th>
+            <th className="px-5 py-4">Заявитель</th>
+            <th className="px-5 py-4">Описание заявки</th>
+            <th className="px-5 py-4">Даты / гости</th>
             <th className="px-5 py-4">Номер</th>
             <th className="px-5 py-4">Статус заявки</th>
             <th className="px-5 py-4">Обращение</th>
@@ -53,6 +53,11 @@ export const AdminBookingRequestsTable = ({
                 <span className="mt-1 block text-xs text-muted-ui-foreground">
                   {item.adminRequest.category}
                 </span>
+                {item.description && (
+                  <p className="mt-2 max-w-sm text-xs whitespace-pre-wrap text-muted-ui-foreground">
+                    {item.description}
+                  </p>
+                )}
                 <Button
                   className="mt-2 px-3"
                   onClick={() => onOpen(item.adminRequestId)}
@@ -64,7 +69,12 @@ export const AdminBookingRequestsTable = ({
               <td className="px-5 py-4">
                 {item.checkInDate && item.checkOutDate
                   ? `${new Date(item.checkInDate).toLocaleDateString("ru-RU")} — ${new Date(item.checkOutDate).toLocaleDateString("ru-RU")}`
-                  : "Даты не указаны"}
+                  : "Не бронирование"}
+                {item.guestsCount > 0 && (
+                  <span className="mt-1 block text-xs text-muted-ui-foreground">
+                    Гостей: {item.guestsCount}
+                  </span>
+                )}
               </td>
               <td className="px-5 py-4">{item.guestsCount}</td>
               <td className="px-5 py-4">{item.roomName ?? "Не выбран"}</td>
@@ -83,7 +93,7 @@ export const AdminBookingRequestsTable = ({
     </div>
     {!items.length && (
       <p className="p-12 text-center text-muted-ui-foreground">
-        Реальных заявок на бронирование пока нет.
+        Заявок от агентов пока нет.
       </p>
     )}
   </section>

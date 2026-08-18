@@ -58,7 +58,7 @@ const navigation = [
   {
     active: (path: string) => path === ROUTES.adminBookingRequests,
     icon: CalendarCheck,
-    label: "Заявки на бронирование",
+    label: "Заявки от агентов",
     to: ROUTES.adminBookingRequests,
   },
   {
@@ -102,7 +102,7 @@ const navigation = [
 const adminPageTitle = (path: string): string => {
   if (path === ROUTES.admin || path === ROUTES.adminDashboard) return "Дашборд";
   if (path === ROUTES.adminSiteLeads) return "Заявки сайта";
-  if (path === ROUTES.adminBookingRequests) return "Заявки на бронирование";
+  if (path === ROUTES.adminBookingRequests) return "Заявки от агентов";
   if (path.startsWith(ROUTES.adminClients)) return "Клиенты";
   if (path === ROUTES.adminRequests) return "Обращения";
   if (path.startsWith(`${ROUTES.adminRequests}/`))
@@ -139,7 +139,7 @@ const notificationLabel = (type: AdminNotification["type"]) =>
   type === "lead"
     ? "Заявка сайта"
     : type === "booking"
-      ? "Бронирование"
+      ? "Заявка агента"
       : "Обращение";
 
 export const AdminShell = ({

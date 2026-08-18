@@ -201,20 +201,47 @@ export const createAdminOperationsRepository = (database: Database) => ({
     database.client.guestUser.delete({ where: { id: recordId } }),
   listBookings: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
-    const [items, total] = await database.client.$transaction([
-      database.client.bookingRequest.findMany({
-        orderBy: { createdAt: "desc" },
-        skip,
-        take,
-        include: {
-          adminRequest: {
-            select: { category: true, id: true, status: true, title: true },
-          },
+    const requests = await database.client.adminRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { bookingRequests: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    const agentRequests = requests.filter((request) => {
+      const details = request.details;
+      const createdByAgent =
+        details && typeof details === "object" && !Array.isArray(details)
+          ? (details as Record<string, unknown>).agentRequestCreated === true ||
+            (details as Record<string, unknown>).source === "AI-agent"
+          : false;
+      return (
+        request.bookingRequests.length > 0 ||
+        createdByAgent ||
+        request.category === "AI-agent"
+      );
+    });
+    const items = agentRequests.map((request) => {
+      const booking = request.bookingRequests[0] ?? null;
+      return {
+        id: booking?.id ?? request.id,
+        adminRequestId: request.id,
+        adminRequest: {
+          category: request.category,
+          id: request.id,
+          status: request.status,
+          title: request.title,
         },
-      }),
-      database.client.bookingRequest.count(),
-    ]);
-    return { items, total };
+        guestName: booking?.guestName ?? request.requester ?? "Гость",
+        phone: booking?.phone ?? request.contact ?? "",
+        email: booking?.email ?? null,
+        checkInDate: booking?.checkInDate ?? null,
+        checkOutDate: booking?.checkOutDate ?? null,
+        guestsCount: booking?.guestsCount ?? 0,
+        roomName: booking?.roomName ?? null,
+        status: booking?.status ?? request.status,
+        createdAt: booking?.createdAt ?? request.createdAt,
+        description: request.description,
+      };
+    });
+    return { items: items.slice(skip, skip + take), total: items.length };
   },
   listClients: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);

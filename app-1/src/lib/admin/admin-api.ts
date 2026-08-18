@@ -35,7 +35,7 @@ export type SiteLead = {
   readonly sourcePage: string;
   readonly status: "cancelled" | "completed" | "new" | "processing";
 };
-export type BookingRequest = {
+export type AgentRequest = {
   readonly checkInDate: string | null;
   readonly checkOutDate: string | null;
   readonly guestName: string;
@@ -53,7 +53,9 @@ export type BookingRequest = {
   readonly status: "cancelled" | "completed" | "new" | "processing";
   readonly roomName: string | null;
   readonly phone: string;
+  readonly description: string | null;
 };
+export type BookingRequest = AgentRequest;
 export type AdminClient = {
   readonly _count: { bookings: number };
   readonly bonusProgram: { balance: number; level: string } | null;
@@ -182,7 +184,7 @@ export const updateAdminLead = (input: {
     { headers: headers() },
   );
 export const loadAdminBookings = (signal?: AbortSignal) =>
-  apiClient.get<Page<BookingRequest>>("/admin/bookings", {
+  apiClient.get<Page<AgentRequest>>("/admin/bookings", {
     headers: headers(),
     params: { page: 1, pageSize: 100 },
     signal,

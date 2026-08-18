@@ -32,7 +32,7 @@ const documentTitles: Record<string, string> = {
   [ROUTES.about]: "О нас — АЛСМА",
   [ROUTES.allInclusive]: "Все включено — АЛСМА",
   [ROUTES.adminAgentScenarios]: "Сценарии агентов",
-  [ROUTES.adminBookingRequests]: "Заявки на бронирование — админ-панель АЛСМА",
+  [ROUTES.adminBookingRequests]: "Заявки от агентов — админ-панель АЛСМА",
   [ROUTES.adminClients]: "Клиенты — админ-панель АЛСМА",
   [ROUTES.adminDashboard]: "Админ-панель АЛСМА",
   [ROUTES.adminIntegrations]: "Интеграции — админ-панель АЛСМА",

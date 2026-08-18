@@ -27,7 +27,15 @@ export const AdminBookingRequestsPanel = () => {
   const items = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("ru-RU");
     return (bookings.data?.items ?? []).filter((item) => {
-      const haystack = [item.guestName, item.phone, item.email, item.roomName]
+      const haystack = [
+        item.guestName,
+        item.phone,
+        item.email,
+        item.roomName,
+        item.description,
+        item.adminRequest.title,
+        item.adminRequest.category,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("ru-RU");
@@ -41,11 +49,11 @@ export const AdminBookingRequestsPanel = () => {
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <h1 className="text-3xl font-semibold">Заявки на бронирование</h1>
+        <h1 className="text-3xl font-semibold">Заявки от агентов</h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-          Здесь отображаются только реальные заявки с параметрами проживания,
-          созданные агентом или другим backend-процессом. Обращения и история
-          чатов находятся в разделе «Обращения».
+          Здесь отображаются заявки, которые агенты создали из диалогов: на
+          бронирование, обратный звонок, мероприятия и другие вопросы. Полная
+          переписка и история чатов находятся в разделе «Обращения».
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-[minmax(20rem,1fr)_14rem]">
           <label>
@@ -57,7 +65,7 @@ export const AdminBookingRequestsPanel = () => {
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Имя, телефон, почта, номер"
+                placeholder="Имя, телефон, почта, описание"
                 value={search}
               />
             </span>
