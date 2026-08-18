@@ -155,10 +155,14 @@ const asConversationState = (value: unknown): ConversationState => {
         : undefined,
   };
 };
-const contactRequestIntent = (text: string) =>
-  /перезвон|позвон|свяж(?:ите|ите|ать)\s+с\s+менеджер|менеджер.*позвон|группов|корпоратив|свадьб|банкет|корпоратив|мероприяти|праздник|несандартн|нестандартн/iu.test(
-    text,
-  );
+const scenarioMatches = (trigger: string, text: string) =>
+  trigger
+    .split(/[\n,;|]+/u)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .some((item) =>
+      text.toLocaleLowerCase("ru-RU").includes(item.toLocaleLowerCase("ru-RU")),
+    );
 const choosesManagerTransfer = (text: string) =>
   /перевед(?:ите|и)|соедин(?:ите|и)|сразу\s+менеджер|переда(?:йте|йт)\s+менеджер|хочу\s+с\s+менеджер/iu.test(
     text,
@@ -250,11 +254,18 @@ export const createAiAgentService = (options: AgentOptions) => {
     });
     const previousState = asConversationState(requestState?.details);
     const previousContactRequest = previousState.contactRequest ?? {};
+    const contactScenario =
+      await options.database.client.agentScenario.findFirst({
+        where: { title: "Перезвон и нестандартные мероприятия", enabled: true },
+        select: { response: true, trigger: true },
+      });
     const detectedPhone =
       phoneFromText(message) ?? previousContactRequest.phone;
     const detectedName = nameFromText(message) ?? previousContactRequest.name;
     const hasContactData = Boolean(detectedName && detectedPhone);
-    const contactIntent = contactRequestIntent(message);
+    const contactIntent = Boolean(
+      contactScenario && scenarioMatches(contactScenario.trigger, message),
+    );
     const managerTransfer = choosesManagerTransfer(message);
     const callbackChoice = choosesCallback(message);
     const awaitingContacts =
@@ -453,7 +464,6 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
-      "Для просьб перезвонить, звонка менеджера, группового или корпоративного заезда, свадьбы, банкета, корпоратива, праздника или другого нестандартного мероприятия сначала предложи ровно два варианта: (1) сразу передать диалог менеджеру; (2) оставить имя и номер телефона, чтобы менеджер связался. Не передавай диалог автоматически, если гость ещё не выбрал вариант. Если выбран вариант с контактами, собирай недостающие имя и номер в разных сообщениях; после получения обоих создай заявку в текущем AdminRequest и сообщи, что менеджер свяжется. Повторная передача имени или телефона не создаёт новую заявку.",
       "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для проживания собери недостающие параметры и проверь наличие; URL в текст не вставляй.",
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. Используй transfer только если гость прямо попросил менеджера/сотрудника или выполнено конкретное правило передачи; фраза «попробуйте ещё раз» сама по себе НЕ является передачей. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,

@@ -12,10 +12,6 @@ import {
   TextAreaField,
   TextField,
 } from "@/components/ui/FormField";
-import {
-  AGENT_SCENARIO_TRIGGER_LABELS,
-  AGENT_SCENARIO_TRIGGER_OPTIONS,
-} from "@/lib/admin/admin-agent-scenario-mocks";
 import type { AgentScenario } from "@/lib/admin/agent-scenarios-api";
 
 const ACTION_OPTIONS = [
@@ -50,10 +46,7 @@ export const AdminAgentScenarioCard = ({
         <div>
           <h3 className="text-lg font-semibold text-brand">{item.title}</h3>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Применение:{" "}
-            {AGENT_SCENARIO_TRIGGER_LABELS[
-              trigger as keyof typeof AGENT_SCENARIO_TRIGGER_LABELS
-            ] ?? trigger}
+            Применение: {trigger}
           </p>
         </div>
         <Button
@@ -70,23 +63,10 @@ export const AdminAgentScenarioCard = ({
             label="Название сценария"
             {...form.register("title", { required: true })}
           />
-          <label className="block text-sm font-medium text-panel-foreground">
-            <span>Где применяется</span>
-            <span className="mt-2 block rounded-xl border border-line bg-brand-foreground px-4 py-2.5">
-              <Controller
-                control={form.control}
-                name="trigger"
-                render={({ field }) => (
-                  <DropdownSelect
-                    ariaLabel={`Область применения сценария ${item.title}`}
-                    onChange={field.onChange}
-                    options={AGENT_SCENARIO_TRIGGER_OPTIONS}
-                    value={field.value}
-                  />
-                )}
-              />
-            </span>
-          </label>
+          <TextField
+            label="Триггеры (через запятую)"
+            {...form.register("trigger", { required: true })}
+          />
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <label className="block text-sm font-medium text-panel-foreground">
