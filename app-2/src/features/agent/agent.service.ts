@@ -171,6 +171,10 @@ const choosesCallback = (text: string) =>
   /остав(?:лю|ить)|контакт|номер\s+телефон|пусть\s+менеджер\s+свяж|второй\s+вариант|по\s+контактам/iu.test(
     text,
   );
+const explicitlyRequestsAgentRequest = (text: string) =>
+  /(?:созд(?:ай|ать|айте)|сдел(?:ай|ать|айте)|оформ(?:и|ить|ите)|запиш(?:и|ите|ать))\s+(?:мне\s+)?заявк|пересозд(?:ай|ать|айте)\s+(?:е[её]|заявк)|заявк[уы]\s+занов/iu.test(
+    text,
+  );
 const isBookingRequest = (message: string, booking?: BookingContext) =>
   Boolean(
     booking?.checkInDate ||
@@ -266,6 +270,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       conversationId: input.conversationId,
       requestType: bookingRequest ? "booking" : "agent-contact",
       agentRequestCreated: true,
+      ...(input.contactRequest ? { contactRequest: input.contactRequest } : {}),
       collectedContext: {
         ...(input.booking ? { booking: input.booking } : {}),
         ...(input.contactRequest
@@ -361,6 +366,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     );
     const managerTransfer = choosesManagerTransfer(message);
     const callbackChoice = choosesCallback(message);
+    const explicitCreateRequest = explicitlyRequestsAgentRequest(message);
     const awaitingContacts =
       previousContactRequest.awaitingContacts === true ||
       previousContactRequest.awaitingChoice === true ||
@@ -374,6 +380,48 @@ export const createAiAgentService = (options: AgentOptions) => {
       ...(detectedName ? { name: detectedName } : {}),
       ...(detectedPhone ? { phone: detectedPhone } : {}),
     };
+    if (explicitCreateRequest) {
+      if (!hasContactData) {
+        const missing = detectedName
+          ? "номер телефона"
+          : detectedPhone
+            ? "имя"
+            : "имя и номер телефона";
+        const answer = `Чтобы создать заявку, напишите ${missing}.`;
+        await options.database.client.adminRequest.update({
+          where: { id: conversationId },
+          data: {
+            details: {
+              ...(requestState?.details &&
+              typeof requestState.details === "object"
+                ? requestState.details
+                : {}),
+              contactRequest: {
+                ...contactRequestDetails,
+                awaitingContacts: true,
+              },
+            },
+          },
+        });
+        await options.chat.publish(conversationId, "agent", answer);
+        return { action: "answer" as const, answer };
+      }
+      await saveAgentRequest({
+        conversationId,
+        currentDetails: requestState?.details,
+        message,
+        history,
+        contactRequest: { ...contactRequestDetails, created: true },
+        booking: previousState.booking,
+        name: detectedName,
+        phone: detectedPhone,
+      });
+      const answer = previousContactRequest.created
+        ? "Заявка обновлена. Менеджер свяжется с вами по указанному номеру."
+        : "Заявка создана. Менеджер свяжется с вами по указанному номеру.";
+      await options.chat.publish(conversationId, "agent", answer);
+      return { action: "answer" as const, answer };
+    }
     if (
       contactIntent &&
       !callbackChoice &&
