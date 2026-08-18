@@ -73,7 +73,7 @@ export const createVkRouter = ({
         externalId: null,
       },
       orderBy: { createdAt: "asc" },
-      select: { id: true, text: true },
+      select: { id: true, text: true, bookingUrl: true },
     });
     for (const message of pending) {
       if (isSyntheticTestMessage(message.text, "")) continue;
@@ -81,7 +81,13 @@ export const createVkRouter = ({
       let lastError: unknown;
       for (let attempt = 0; attempt < 3 && !vkMessageId; attempt += 1) {
         try {
-          vkMessageId = await vk.sendMessage(peerId, message.text, message.id);
+          const link = message.bookingUrl
+            ? new URL(message.bookingUrl, "https://alsma.ru").toString()
+            : undefined;
+          const text = link
+            ? `${message.text}\n\nОткрыть: ${link}`
+            : message.text;
+          vkMessageId = await vk.sendMessage(peerId, text, message.id);
         } catch (error) {
           lastError = error;
           if (attempt < 2)

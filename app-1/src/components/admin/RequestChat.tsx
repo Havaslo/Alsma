@@ -12,6 +12,7 @@ export type RequestChatMessage = {
   readonly author: "guest" | "agent" | "manager";
   readonly text: string;
   readonly createdAt: string;
+  readonly bookingUrl?: string;
 };
 
 type RequestChatProps = {
@@ -40,7 +41,7 @@ export const RequestChat = ({
     const loadMode = () =>
       apiClient
         .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
-          "/chat/mode",
+          "/chat/admin/mode",
           {
             params: { conversationId },
             headers: adminHeaders,
@@ -51,12 +52,13 @@ export const RequestChat = ({
           setManagerRequested(data.managerRequested);
         });
     void Promise.all([
-      apiClient.get<{ items: RequestChatMessage[] }>("/chat/messages", {
+      apiClient.get<{ items: RequestChatMessage[] }>("/chat/admin/messages", {
         params: { conversationId },
+        headers: adminHeaders,
       }),
       apiClient
         .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
-          "/chat/mode",
+          "/chat/admin/mode",
           {
             params: { conversationId },
             headers: adminHeaders,
@@ -80,7 +82,7 @@ export const RequestChat = ({
     });
     const modePoll = window.setInterval(loadMode, 2_000);
     const events = new EventSource(
-      `/api/chat/stream?conversationId=${encodeURIComponent(conversationId)}`,
+      `/api/chat/admin/stream?conversationId=${encodeURIComponent(conversationId)}&token=${encodeURIComponent(readAdminSession() ?? "")}`,
     );
     events.onmessage = (event) => {
       const eventData = JSON.parse(event.data) as

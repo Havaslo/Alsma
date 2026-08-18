@@ -209,6 +209,11 @@ export const AdminRequestsPanel = () => {
                       <span className="mt-1 block text-xs text-muted-ui-foreground">
                         {item.description ?? "Без описания"}
                       </span>
+                      {item._count?.chatMessages ? (
+                        <span className="mt-1 block text-xs font-medium text-brand">
+                          Сообщений в диалоге: {item._count.chatMessages}
+                        </span>
+                      ) : null}
                       {newMessage && (
                         <span className="mt-2 inline-flex rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
                           Новое сообщение

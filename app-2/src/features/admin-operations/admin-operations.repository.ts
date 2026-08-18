@@ -252,6 +252,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { createdAt: "desc" },
         skip,
         take,
+        include: { _count: { select: { chatMessages: true } } },
       }),
       database.client.adminRequest.count(),
     ]);

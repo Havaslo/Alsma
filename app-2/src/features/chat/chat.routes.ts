@@ -251,8 +251,28 @@ export const createChatRouter = (
     ),
   );
   admin.use(createRequireAdminPermission("requests.access"));
-  admin.get("/messages", async (_request, response) =>
-    response.json({ items: await chat.list() }),
+  admin.get(
+    "/mode",
+    validateRequest({ query: conversationSchema }),
+    async (_request, response) => {
+      const conversationId = response.locals.input.query.conversationId;
+      const request = await database.client.adminRequest.findUnique({
+        where: { id: conversationId },
+        select: { details: true },
+      });
+      response.json({
+        mode: readChatMode(request?.details),
+        managerRequested: readManagerRequested(request?.details),
+      });
+    },
+  );
+  admin.get(
+    "/messages",
+    validateRequest({ query: conversationSchema }),
+    async (_request, response) =>
+      response.json({
+        items: await chat.list(response.locals.input.query.conversationId),
+      }),
   );
   admin.post(
     "/mode",

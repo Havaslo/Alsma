@@ -76,6 +76,7 @@ export type AdminRequest = {
     readonly [key: string]: string | boolean | undefined;
   };
   readonly id: string;
+  readonly _count?: { readonly chatMessages: number };
   readonly requester: string | null;
   readonly status: SiteLead["status"];
   readonly title: string;
