@@ -93,6 +93,7 @@ export const createMaxBotRouter = ({
   readonly webhookUrl?: string;
 }): Router => {
   const router = Router();
+  const conversationQueues = new Map<string, Promise<void>>();
   if (max.configured && webhookSecret && webhookUrl) {
     const callbackUrl = new URL("/api/max/webhook", webhookUrl).toString();
     void max
@@ -128,8 +129,54 @@ export const createMaxBotRouter = ({
   const handleUpdate = async (payload: Record<string, unknown>) => {
     const { chatId, eventId, senderId, text, updateType } =
       extractMessage(payload);
-    if (updateType && updateType !== "message_created") return;
-    if (!chatId || !text || !senderId) return;
+    if (updateType && updateType !== "message_created") {
+      logger.info(
+        { channel: "MAX", reason: "unsupported_update", updateType },
+        "MAX message skipped",
+      );
+      return;
+    }
+    if (!chatId || !text || !senderId) {
+      logger.info(
+        { channel: "MAX", reason: "missing_message_fields", chatId },
+        "MAX message skipped",
+      );
+      return;
+    }
+    let bot;
+    try {
+      bot = await max.getBotIdentity();
+    } catch (error) {
+      logger.warn(
+        {
+          channel: "MAX",
+          chatId,
+          reason: "bot_identity_unavailable",
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        "MAX message skipped",
+      );
+      return;
+    }
+    if (!bot) {
+      logger.warn(
+        { channel: "MAX", chatId, reason: "bot_identity_missing" },
+        "MAX message skipped",
+      );
+      return;
+    }
+    if (bot?.userId === senderId) {
+      logger.info(
+        {
+          channel: "MAX",
+          chatId,
+          conversationId: conversationIdFor(chatId),
+          reason: "bot_sender",
+        },
+        "MAX message skipped",
+      );
+      return;
+    }
     if (eventId) {
       try {
         await database.client.maxWebhookUpdate.create({
@@ -139,6 +186,14 @@ export const createMaxBotRouter = ({
         return;
       }
     }
+    const previous = conversationQueues.get(chatId) ?? Promise.resolve();
+    let release!: () => void;
+    const turn = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => turn);
+    conversationQueues.set(chatId, queued);
+    await previous;
     try {
       const conversationId = conversationIdFor(chatId);
       const existing = await database.client.adminRequest.findUnique({
@@ -201,6 +256,10 @@ export const createMaxBotRouter = ({
         await database.client.maxWebhookUpdate
           .update({ where: { id: eventId }, data: { status: "failed" } })
           .catch(() => undefined);
+    } finally {
+      release();
+      if (conversationQueues.get(chatId) === queued)
+        conversationQueues.delete(chatId);
     }
   };
 

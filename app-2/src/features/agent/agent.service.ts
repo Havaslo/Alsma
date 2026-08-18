@@ -101,6 +101,10 @@ const asksForOtherDates = (text: string) =>
   /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
     text,
   );
+const asksToRepeatAvailability = (text: string) =>
+  /провер(?:ь|ьте|ить|им)\s+(?:наличие|свободн)|повтор(?:и|ить|но)\s+(?:провер|запрос)|попроб(?:уй|уйте)\s+ещ[ёе]\s+раз|проверь(?:те)?\s+ещ[ёе]\s+раз/iu.test(
+    text,
+  );
 const serviceMention = (
   text: string,
 ): "spa" | "hardware-procedures" | "offers" | null => {
@@ -211,6 +215,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     const currentMessageHasDate = hasDateInMessage(message);
     const requestedOtherDates =
       asksForOtherDates(message) && !currentMessageHasDate;
+    const explicitAvailabilityRetry = asksToRepeatAvailability(message);
     const entities = extractEntities(message);
     const nextBooking: BookingContext = requestedOtherDates
       ? {
@@ -225,6 +230,32 @@ export const createAiAgentService = (options: AgentOptions) => {
         : { ...previousState.booking, ...entities };
     const nextServiceContext =
       serviceMention(message) ?? previousState.serviceContext;
+    const currentDates =
+      nextBooking.checkInDate && nextBooking.checkOutDate
+        ? `${nextBooking.checkInDate}/${nextBooking.checkOutDate}`
+        : undefined;
+    const datesChanged =
+      Boolean(currentDates) &&
+      currentDates !== previousState.booking?.lastCheckedDates;
+    const shouldCheckAvailability =
+      Boolean(currentDates) &&
+      (datesChanged ||
+        explicitAvailabilityRetry ||
+        (requestedOtherDates === false &&
+          !previousState.booking?.lastCheckedDates));
+    options.logger.info(
+      {
+        channel: "text-agent",
+        conversationId,
+        previousDates: previousState.booking?.lastCheckedDates,
+        currentDates,
+        datesChanged,
+        explicitAvailabilityRetry,
+        repeatedBookingRequest:
+          Boolean(currentDates) && !shouldCheckAvailability,
+      },
+      "Agent booking check decision",
+    );
     await options.database.client.adminRequest.update({
       where: { id: conversationId },
       data: {
@@ -418,7 +449,7 @@ export const createAiAgentService = (options: AgentOptions) => {
         : extractedBooking
           ? { success: true as const, data: extractedBooking }
           : modelBooking;
-    if (booking.success) {
+    if (booking.success && shouldCheckAvailability) {
       options.chat.publishStatus(
         conversationId,
         "checking_availability",

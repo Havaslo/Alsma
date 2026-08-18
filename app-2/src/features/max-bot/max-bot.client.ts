@@ -21,6 +21,7 @@ type MaxSubscription = {
   readonly secret: string;
   readonly url: string;
 };
+type MaxBotIdentity = { readonly userId: string };
 
 export class MaxApiError extends Error {
   readonly status: number;
@@ -45,6 +46,7 @@ const maxChatId = (value: string) => {
 export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
   const normalizedToken = normalizeToken(token);
   let outgoing = Promise.resolve();
+  let identityPromise: Promise<MaxBotIdentity | undefined> | undefined;
   const request = async (path: string, init: RequestInit) => {
     if (!normalizedToken) throw new Error("MAX bot token is not configured");
     let lastStatus = 0;
@@ -86,6 +88,27 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
   return {
     MaxApiError,
     configured: Boolean(normalizedToken),
+    getBotIdentity: async (): Promise<MaxBotIdentity | undefined> => {
+      if (!normalizedToken) return undefined;
+      identityPromise ??= request("/me", { method: "GET" }).then(
+        async (response) => {
+          const payload: unknown = await response.json();
+          const data =
+            payload && typeof payload === "object"
+              ? (payload as Record<string, unknown>)
+              : {};
+          const user =
+            data.user && typeof data.user === "object"
+              ? (data.user as Record<string, unknown>)
+              : data;
+          const value = user.user_id ?? user.id;
+          return typeof value === "string" || typeof value === "number"
+            ? { userId: String(value) }
+            : undefined;
+        },
+      );
+      return identityPromise;
+    },
     verifyCredentials: async () => {
       await request("/me", { method: "GET" });
     },
