@@ -22,6 +22,7 @@ export const updateClientBodySchema = z
   });
 export const createBookingBodySchema = z
   .object({
+    adminRequestId: z.uuid(),
     checkInDate: z.coerce.date(),
     checkOutDate: z.coerce.date(),
     email: z.string().trim().email().max(255).nullable().default(null),

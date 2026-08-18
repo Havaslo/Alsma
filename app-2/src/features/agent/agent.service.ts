@@ -415,6 +415,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     ) {
       await options.database.client.bookingRequest.create({
         data: {
+          adminRequest: { connect: { id: conversationId } },
           checkInDate: new Date(
             `${requestedBooking.data.checkInDate}T00:00:00Z`,
           ),

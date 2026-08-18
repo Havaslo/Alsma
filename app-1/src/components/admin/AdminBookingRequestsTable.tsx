@@ -1,3 +1,6 @@
+import { Eye } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 import type { BookingRequest } from "@/lib/admin/admin-api";
 
 const statusLabels: Record<BookingRequest["status"], string> = {
@@ -9,8 +12,10 @@ const statusLabels: Record<BookingRequest["status"], string> = {
 
 export const AdminBookingRequestsTable = ({
   items,
+  onOpen,
 }: {
   readonly items: readonly BookingRequest[];
+  readonly onOpen: (requestId: string) => void;
 }) => (
   <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
     <p className="border-b border-line px-5 py-4 text-sm font-semibold">
@@ -25,6 +30,7 @@ export const AdminBookingRequestsTable = ({
             <th className="px-5 py-4">Гости</th>
             <th className="px-5 py-4">Номер</th>
             <th className="px-5 py-4">Статус заявки</th>
+            <th className="px-5 py-4">Обращение</th>
             <th className="px-5 py-4">Создана</th>
           </tr>
         </thead>
@@ -41,6 +47,19 @@ export const AdminBookingRequestsTable = ({
                     {item.email}
                   </span>
                 )}
+              </td>
+              <td className="px-5 py-4">
+                <strong className="block">{item.adminRequest.title}</strong>
+                <span className="mt-1 block text-xs text-muted-ui-foreground">
+                  {item.adminRequest.category}
+                </span>
+                <Button
+                  className="mt-2 px-3"
+                  onClick={() => onOpen(item.adminRequestId)}
+                  variant="secondary"
+                >
+                  <Eye className="size-4" /> Открыть обращение
+                </Button>
               </td>
               <td className="px-5 py-4">
                 {item.checkInDate && item.checkOutDate

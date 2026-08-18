@@ -5,6 +5,13 @@ export type AdminUser = {
   readonly displayName: string;
   readonly email: string;
   readonly id: string;
+  readonly adminRequestId: string;
+  readonly adminRequest: {
+    readonly category: string;
+    readonly id: string;
+    readonly status: "cancelled" | "completed" | "new" | "processing";
+    readonly title: string;
+  };
   readonly permissions: string[];
   readonly role: string;
 };
@@ -35,6 +42,13 @@ export type BookingRequest = {
   readonly guestsCount: number;
   readonly email: string | null;
   readonly id: string;
+  readonly adminRequestId: string;
+  readonly adminRequest: {
+    readonly category: string;
+    readonly id: string;
+    readonly status: "cancelled" | "completed" | "new" | "processing";
+    readonly title: string;
+  };
   readonly createdAt: string;
   readonly status: "cancelled" | "completed" | "new" | "processing";
   readonly roomName: string | null;

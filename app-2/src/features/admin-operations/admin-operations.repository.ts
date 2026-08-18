@@ -206,6 +206,11 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { createdAt: "desc" },
         skip,
         take,
+        include: {
+          adminRequest: {
+            select: { category: true, id: true, status: true, title: true },
+          },
+        },
       }),
       database.client.bookingRequest.count(),
     ]);

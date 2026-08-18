@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 
+import { useNavigate } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 
 import { AdminBookingRequestsTable } from "@/components/admin/AdminBookingRequestsTable";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import type { BookingRequest } from "@/lib/admin/admin-api";
 import { useAdminBookings } from "@/lib/admin/useAdmin";
+import { buildRoute } from "@/lib/navigation";
+import { ROUTES } from "@/route-constants";
 
 type Status = BookingRequest["status"] | "all";
 const statusOptions = [
@@ -18,6 +21,7 @@ const statusOptions = [
 
 export const AdminBookingRequestsPanel = () => {
   const bookings = useAdminBookings();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const items = useMemo(() => {
@@ -77,7 +81,14 @@ export const AdminBookingRequestsPanel = () => {
           Загружаем реальные заявки…
         </section>
       ) : (
-        <AdminBookingRequestsTable items={items} />
+        <AdminBookingRequestsTable
+          items={items}
+          onOpen={(requestId) =>
+            navigate({
+              to: buildRoute(ROUTES.adminRequest, { requestId }),
+            })
+          }
+        />
       )}
     </div>
   );
