@@ -22,6 +22,7 @@ export const ROUTES = {
   adminSiteManagementBlog: "/admin/site-management/blog",
   adminSiteManagementCelebrations: "/admin/site-management/celebrations",
   adminSiteManagementDocuments: "/admin/site-management/documents",
+  adminSiteManagementFaq: "/admin/site-management/faq",
   adminSiteManagementEntertainment: "/admin/site-management/entertainment",
   adminSiteManagementGeneral: "/admin/site-management/general",
   adminSiteManagementHome: "/admin/site-management/home",
@@ -44,6 +45,7 @@ export const ROUTES = {
   privacy: "/privacy",
   rooms: "/rooms",
   spa: "/spa",
+  faq: "/faq",
 } as const;
 
 /** Consolidated admin paths rendered by the dashboard page. */
@@ -65,6 +67,7 @@ export const ADMIN_DASHBOARD_ROUTES = [
   ROUTES.adminSiteManagementBlog,
   ROUTES.adminSiteManagementCelebrations,
   ROUTES.adminSiteManagementDocuments,
+  ROUTES.adminSiteManagementFaq,
   ROUTES.adminSiteManagementEntertainment,
   ROUTES.adminSiteManagementGeneral,
   ROUTES.adminSiteManagementHome,

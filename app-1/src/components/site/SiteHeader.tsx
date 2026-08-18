@@ -18,6 +18,7 @@ const navigation = [
 ];
 
 const moreNavigation = [
+  { label: "Частые вопросы", to: ROUTES.faq },
   { label: "Аппаратные процедуры", to: ROUTES.hardwareProcedures },
   { label: "Новости", to: ROUTES.news },
   { label: "Блог", to: ROUTES.blog },

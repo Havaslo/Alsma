@@ -49,7 +49,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "about",
-    title: "АЛСМА — отдых в гармонии с природой",
+    title: "Об отеле АЛСМА",
   },
   "all-inclusive": {
     description:
@@ -67,7 +67,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "all-inclusive",
-    title: "Все для беззаботного отдыха",
+    title: "Отдых по формату «всё включено»",
   },
   blog: {
     description:
@@ -121,7 +121,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "entertainment",
-    title: "Каждый день наполнен впечатлениями",
+    title: "Развлечения для гостей всех возрастов",
   },
   "hardware-procedures": {
     description:
@@ -148,7 +148,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
     heroImage,
     highlights: [],
     key: "home",
-    title: "Отдых, который возвращает к себе",
+    title: "Загородный SPA-отель АЛСМА",
   },
   news: {
     description: "Новые программы, события и важные обновления отеля.",
@@ -184,7 +184,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "offers",
-    title: "Выберите предложение под свой формат отдыха",
+    title: "Акции и предложения АЛСМА",
   },
   privacy: {
     description:
@@ -221,7 +221,7 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "rooms",
-    title: "Номера, в которых хочется остаться",
+    title: "Проживание в АЛСМА",
   },
   spa: {
     description:
@@ -239,6 +239,6 @@ export const PUBLIC_PAGES: Record<PublicPageKey, PublicPageDefinition> = {
       },
     ],
     key: "spa",
-    title: "Время для себя",
+    title: "SPA в загородном отеле АЛСМА",
   },
 };

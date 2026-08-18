@@ -18,6 +18,7 @@ const navigation = [
   ["Всё включено", ROUTES.allInclusive],
   ["Акции", ROUTES.offers],
   ["О нас", ROUTES.about],
+  ["Частые вопросы", ROUTES.faq],
 ] as const;
 
 const contacts = [

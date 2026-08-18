@@ -17,6 +17,7 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as CelebrationsRouteImport } from './routes/celebrations'
 import { Route as EntertainmentRouteImport } from './routes/entertainment'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as HardwareProceduresRouteImport } from './routes/hardware-procedures'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewsRouteImport } from './routes/news'
@@ -47,6 +48,7 @@ import { Route as AdminSiteManagementBlogRouteImport } from './routes/admin/site
 import { Route as AdminSiteManagementCelebrationsRouteImport } from './routes/admin/site-management/celebrations'
 import { Route as AdminSiteManagementDocumentsRouteImport } from './routes/admin/site-management/documents'
 import { Route as AdminSiteManagementEntertainmentRouteImport } from './routes/admin/site-management/entertainment'
+import { Route as AdminSiteManagementFaqRouteImport } from './routes/admin/site-management/faq'
 import { Route as AdminSiteManagementGeneralRouteImport } from './routes/admin/site-management/general'
 import { Route as AdminSiteManagementHomeRouteImport } from './routes/admin/site-management/home'
 import { Route as AdminSiteManagementNewsRouteImport } from './routes/admin/site-management/news'
@@ -92,6 +94,11 @@ const CelebrationsRoute = CelebrationsRouteImport.update({
 const EntertainmentRoute = EntertainmentRouteImport.update({
   id: '/entertainment',
   path: '/entertainment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HardwareProceduresRoute = HardwareProceduresRouteImport.update({
@@ -251,6 +258,11 @@ const AdminSiteManagementEntertainmentRoute =
     path: '/admin/site-management/entertainment',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminSiteManagementFaqRoute = AdminSiteManagementFaqRouteImport.update({
+  id: '/admin/site-management/faq',
+  path: '/admin/site-management/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSiteManagementGeneralRoute =
   AdminSiteManagementGeneralRouteImport.update({
     id: '/admin/site-management/general',
@@ -294,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
+  '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
@@ -321,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
   '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/faq': typeof AdminSiteManagementFaqRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
   '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
@@ -340,6 +354,7 @@ export interface FileRoutesByTo {
   '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
+  '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
@@ -367,6 +382,7 @@ export interface FileRoutesByTo {
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
   '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/faq': typeof AdminSiteManagementFaqRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
   '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
@@ -387,6 +403,7 @@ export interface FileRoutesById {
   '/booking': typeof BookingRoute
   '/celebrations': typeof CelebrationsRoute
   '/entertainment': typeof EntertainmentRoute
+  '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
@@ -414,6 +431,7 @@ export interface FileRoutesById {
   '/admin/site-management/celebrations': typeof AdminSiteManagementCelebrationsRoute
   '/admin/site-management/documents': typeof AdminSiteManagementDocumentsRoute
   '/admin/site-management/entertainment': typeof AdminSiteManagementEntertainmentRoute
+  '/admin/site-management/faq': typeof AdminSiteManagementFaqRoute
   '/admin/site-management/general': typeof AdminSiteManagementGeneralRoute
   '/admin/site-management/home': typeof AdminSiteManagementHomeRoute
   '/admin/site-management/news': typeof AdminSiteManagementNewsRoute
@@ -435,6 +453,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/celebrations'
     | '/entertainment'
+    | '/faq'
     | '/hardware-procedures'
     | '/login'
     | '/news'
@@ -462,6 +481,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/celebrations'
     | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
+    | '/admin/site-management/faq'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
     | '/admin/site-management/news'
@@ -481,6 +501,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/celebrations'
     | '/entertainment'
+    | '/faq'
     | '/hardware-procedures'
     | '/login'
     | '/news'
@@ -508,6 +529,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/celebrations'
     | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
+    | '/admin/site-management/faq'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
     | '/admin/site-management/news'
@@ -527,6 +549,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/celebrations'
     | '/entertainment'
+    | '/faq'
     | '/hardware-procedures'
     | '/login'
     | '/news'
@@ -554,6 +577,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/celebrations'
     | '/admin/site-management/documents'
     | '/admin/site-management/entertainment'
+    | '/admin/site-management/faq'
     | '/admin/site-management/general'
     | '/admin/site-management/home'
     | '/admin/site-management/news'
@@ -574,6 +598,7 @@ export interface RootRouteChildren {
   BookingRoute: typeof BookingRoute
   CelebrationsRoute: typeof CelebrationsRoute
   EntertainmentRoute: typeof EntertainmentRoute
+  FaqRoute: typeof FaqRoute
   HardwareProceduresRoute: typeof HardwareProceduresRoute
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRoute
@@ -600,6 +625,7 @@ export interface RootRouteChildren {
   AdminSiteManagementCelebrationsRoute: typeof AdminSiteManagementCelebrationsRoute
   AdminSiteManagementDocumentsRoute: typeof AdminSiteManagementDocumentsRoute
   AdminSiteManagementEntertainmentRoute: typeof AdminSiteManagementEntertainmentRoute
+  AdminSiteManagementFaqRoute: typeof AdminSiteManagementFaqRoute
   AdminSiteManagementGeneralRoute: typeof AdminSiteManagementGeneralRoute
   AdminSiteManagementHomeRoute: typeof AdminSiteManagementHomeRoute
   AdminSiteManagementNewsRoute: typeof AdminSiteManagementNewsRoute
@@ -667,6 +693,13 @@ declare module '@tanstack/react-router' {
       path: '/entertainment'
       fullPath: '/entertainment'
       preLoaderRoute: typeof EntertainmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hardware-procedures': {
@@ -879,6 +912,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSiteManagementEntertainmentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/site-management/faq': {
+      id: '/admin/site-management/faq'
+      path: '/admin/site-management/faq'
+      fullPath: '/admin/site-management/faq'
+      preLoaderRoute: typeof AdminSiteManagementFaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/site-management/general': {
       id: '/admin/site-management/general'
       path: '/admin/site-management/general'
@@ -944,6 +984,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingRoute: BookingRoute,
   CelebrationsRoute: CelebrationsRoute,
   EntertainmentRoute: EntertainmentRoute,
+  FaqRoute: FaqRoute,
   HardwareProceduresRoute: HardwareProceduresRoute,
   LoginRoute: LoginRoute,
   NewsRoute: NewsRoute,
@@ -970,6 +1011,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSiteManagementCelebrationsRoute: AdminSiteManagementCelebrationsRoute,
   AdminSiteManagementDocumentsRoute: AdminSiteManagementDocumentsRoute,
   AdminSiteManagementEntertainmentRoute: AdminSiteManagementEntertainmentRoute,
+  AdminSiteManagementFaqRoute: AdminSiteManagementFaqRoute,
   AdminSiteManagementGeneralRoute: AdminSiteManagementGeneralRoute,
   AdminSiteManagementHomeRoute: AdminSiteManagementHomeRoute,
   AdminSiteManagementNewsRoute: AdminSiteManagementNewsRoute,

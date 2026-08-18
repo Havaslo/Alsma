@@ -27,6 +27,7 @@ import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { AdminSitePlaceholder } from "@/components/admin/AdminSitePlaceholder";
 import { AdminSpaEditor } from "@/components/admin/AdminSpaEditor";
 import { AdminVoiceCallsPanel } from "@/components/admin/AdminVoiceCallsPanel";
+import { AdminFaqEditor } from "@/components/admin/AdminFaqEditor";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
@@ -71,6 +72,7 @@ export const AdminDashboardPage = () => {
     ROUTES.adminSiteManagementNews,
     ROUTES.adminSiteManagementBlog,
     ROUTES.adminSiteManagementDocuments,
+    ROUTES.adminSiteManagementFaq,
   ];
   return (
     <AdminShell onLogout={() => void logout()} path={path} user={user}>
@@ -119,6 +121,8 @@ export const AdminDashboardPage = () => {
         (can("site.access") || can("site.manage")) && <AdminBlogEditor />}
       {path === ROUTES.adminSiteManagementDocuments &&
         (can("site.access") || can("site.manage")) && <AdminDocumentsEditor />}
+      {path === ROUTES.adminSiteManagementFaq &&
+        (can("site.access") || can("site.manage")) && <AdminFaqEditor />}
       {isSiteManagement &&
         !implementedSiteSections.includes(path as never) &&
         (can("site.access") || can("site.manage")) && (

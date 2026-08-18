@@ -27,6 +27,7 @@ const publicRoutes = new Set<string>([
   ROUTES.blog,
   ROUTES.booking,
   ROUTES.privacy,
+  ROUTES.faq,
 ]);
 const documentTitles: Record<string, string> = {
   [ROUTES.about]: "О нас — АЛСМА",
@@ -54,6 +55,7 @@ const documentTitles: Record<string, string> = {
   [ROUTES.privacy]: "Политика конфиденциальности — АЛСМА",
   [ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
   [ROUTES.spa]: "SPA-центр — АЛСМА",
+  [ROUTES.faq]: "Частые вопросы — АЛСМА",
 };
 const RootLayout = () => {
   const pathname = useRouterState({
