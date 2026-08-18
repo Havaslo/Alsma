@@ -35,7 +35,8 @@ export type BookingRequest = {
   readonly guestsCount: number;
   readonly email: string | null;
   readonly id: string;
-  readonly paidAt: string | null;
+  readonly createdAt: string;
+  readonly status: "cancelled" | "completed" | "new" | "processing";
   readonly roomName: string | null;
   readonly phone: string;
 };

@@ -405,25 +405,51 @@ export const createAiAgentService = (options: AgentOptions) => {
     const parsed = actionSchema.safeParse(decoded);
     if (!parsed.success) return null;
     const result = parsed.data;
-    if (result.action === "create_request" && settings.canCreateRequest)
-      await options.database.client.siteLead.create({
+    const requestedBooking = bookingSchema.safeParse(result.booking);
+    if (
+      result.action === "create_request" &&
+      settings.canCreateRequest &&
+      requestedBooking.success &&
+      result.name &&
+      result.phone
+    ) {
+      await options.database.client.bookingRequest.create({
         data: {
-          sourcePage: "chat",
-          formCode: "ai-agent-request",
-          formTitle: "Заявка из AI-чата",
-          name: result.name,
-          phone: result.phone,
+          checkInDate: new Date(
+            `${requestedBooking.data.checkInDate}T00:00:00Z`,
+          ),
+          checkOutDate: new Date(
+            `${requestedBooking.data.checkOutDate}T00:00:00Z`,
+          ),
           email: result.email,
-          details: {
-            conversationId,
-            checkInDate: result.checkInDate,
-            checkOutDate: result.checkOutDate,
-            guestsCount: result.guestsCount,
-            comment: message,
-            source: "ai-agent",
-          },
+          guestName: result.name,
+          guestsCount: result.guestsCount ?? requestedBooking.data.adults,
+          phone: result.phone,
+          roomName: null,
         },
       });
+    } else if (
+      result.action === "create_request" &&
+      settings.canCreateRequest
+    ) {
+      await options.database.client.adminRequest.upsert({
+        where: { id: conversationId },
+        create: {
+          id: conversationId,
+          category: "AI-agent",
+          contact: result.phone ?? result.email ?? "Не указан",
+          description: message,
+          details: { channelType: "chat", conversationId, source: "AI-agent" },
+          requester: result.name ?? "Гость",
+          status: "new",
+          title: "Заявка из AI-чата",
+        },
+        update: {
+          description: message,
+          updatedAt: new Date(),
+        },
+      });
+    }
     const scenarioAction = selectedScenario?.action ?? "answer";
     const effectiveAction =
       scenarioAction === "answer" ? result.action : scenarioAction;
