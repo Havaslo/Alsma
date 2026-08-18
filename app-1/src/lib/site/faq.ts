@@ -200,8 +200,18 @@ export const FAQ_FALLBACK: readonly FaqItem[] = [
 export const getPublishedFaq = (items?: SiteContentItem[]) => {
   const stored = items?.flatMap((item, index) => {
     const value = item.content;
-    if (typeof value.question !== "string" || typeof value.answer !== "string") return [];
-    return [{ question: value.question, answer: value.answer, category: typeof value.category === "string" ? value.category : "Общее", position: typeof value.position === "number" ? value.position : item.position || index + 1 }];
+    const question = typeof value.question === "string" ? value.question.trim() : "";
+    const answer = typeof value.answer === "string" ? value.answer.trim() : "";
+    if (!question || !answer) return [];
+    const position = typeof value.position === "number" && Number.isFinite(value.position)
+      ? value.position
+      : item.position || index + 1;
+    return [{
+      question,
+      answer,
+      category: typeof value.category === "string" && value.category.trim() ? value.category.trim() : "Общее",
+      position,
+    }];
   });
-  return (stored?.length ? stored : [...FAQ_FALLBACK]).sort((a, b) => a.position - b.position);
+  return (stored ?? []).sort((a, b) => a.position - b.position);
 };

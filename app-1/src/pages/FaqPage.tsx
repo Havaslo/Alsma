@@ -1,19 +1,30 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import faqHeroImage from "@/assets/alsma/nature.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { FAQ_FALLBACK, getPublishedFaq } from "@/lib/site/faq";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
-
-const fallback = [["Какие варианты проживания есть в АЛСМА?", "На странице проживания опубликованы номера разных категорий, а также отдельные дома и коттеджи."], ["Что есть в SPA-центре?", "В SPA-центре представлены термальная зона, бассейн с минеральной водой, массажные кабинеты, уход за лицом и водные процедуры."], ["Какие развлечения доступны гостям?", "На территории есть спортивная площадка, детский клуб, экологические тропы, сезонные активности и вечерние программы."], ["Что включает формат «всё включено»?", "На странице формата указаны завтрак, обед и ужин, активности в течение дня, SPA, пляж и анимация."], ["Проводятся ли в АЛСМА события?", "АЛСМА принимает свадьбы, семейные торжества, юбилеи, частные события и корпоративные выезды."], ["Где находится АЛСМА?", "АЛСМА находится в Нижегородской области, в городе Бор, в деревне Васильково, на улице Лесной, 7."], ["Как забронировать проживание?", "Для бронирования используйте страницу «Бронирование» или свяжитесь с отделом бронирования по телефону, указанному в футере сайта."], ["Подходит ли АЛСМА для семейного отдыха?", "На сайте представлены семейные номера, детский клуб, анимация и развлечения для гостей разных возрастов."]] as const;
 
 export const FaqPage = () => {
   const content = usePublishedSiteContent("faq");
-  const stored = content.data?.items?.flatMap((item) => typeof item.content.question === "string" && typeof item.content.answer === "string" ? [[item.content.question, item.content.answer] as [string, string]] : []) ?? [];
-  const questions = stored.length ? stored : fallback;
+  const publishedFaq = useMemo(() => getPublishedFaq(content.data?.items), [content.data?.items]);
+  const questions = publishedFaq.length ? publishedFaq : FAQ_FALLBACK;
   const [open, setOpen] = useState(0);
   const id = useId();
-  useEffect(() => { document.title = "Частые вопросы — АЛСМА"; document.querySelector('meta[name="description"]')?.setAttribute("content", "Ответы на частые вопросы о проживании, SPA, развлечениях и отдыхе в загородном SPA-отеле АЛСМА."); const script = document.createElement("script"); script.type = "application/ld+json"; script.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: questions.map(([name, text]) => ({ "@type": "Question", name, acceptedAnswer: { "@type": "Answer", text } })) }); document.head.append(script); return () => script.remove(); }, [questions]);
+  useEffect(() => {
+    document.title = "Частые вопросы — АЛСМА";
+    document.querySelector('meta[name="description"]')?.setAttribute("content", "Ответы на частые вопросы о проживании, SPA, развлечениях и отдыхе в загородном SPA-отеле АЛСМА.");
+    const existing = document.querySelector('script[data-seo="faq-jsonld"]');
+    existing?.remove();
+    if (!publishedFaq.length) return;
+    const script = document.createElement("script");
+    script.dataset.seo = "faq-jsonld";
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: publishedFaq.map(({ question, answer }) => ({ "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: answer } })) });
+    document.head.append(script);
+    return () => script.remove();
+  }, [publishedFaq]);
   return (
     <main className="min-h-screen bg-page text-page-foreground">
       <SiteHeader />
@@ -25,7 +36,7 @@ export const FaqPage = () => {
       />
       <section className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-24">
         <div className="space-y-3">
-          {questions.map(([question, answer], index) => {
+          {questions.map(({ question, answer }, index) => {
             const expanded = open === index;
             return (
               <article
