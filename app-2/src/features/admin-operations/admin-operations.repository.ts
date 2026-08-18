@@ -329,9 +329,16 @@ export const createAdminOperationsRepository = (database: Database) => ({
       where: { id: recordId },
     }),
   updateRequest: (recordId: string, input: UpdateRequestStatusBody) =>
-    database.client.adminRequest.update({
-      data: input,
-      where: { id: recordId },
+    database.client.$transaction(async (transaction) => {
+      const request = await transaction.adminRequest.update({
+        data: input,
+        where: { id: recordId },
+      });
+      await transaction.bookingRequest.updateMany({
+        data: input,
+        where: { adminRequestId: recordId },
+      });
+      return request;
     }),
 });
 

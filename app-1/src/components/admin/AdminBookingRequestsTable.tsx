@@ -13,9 +13,16 @@ const statusLabels: Record<BookingRequest["status"], string> = {
 export const AdminBookingRequestsTable = ({
   items,
   onOpen,
+  onStatusChange,
+  updatingId,
 }: {
   readonly items: readonly BookingRequest[];
   readonly onOpen: (requestId: string) => void;
+  readonly onStatusChange: (
+    requestId: string,
+    status: BookingRequest["status"],
+  ) => void;
+  readonly updatingId?: string;
 }) => (
   <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
     <p className="border-b border-line px-5 py-4 text-sm font-semibold">
@@ -79,9 +86,24 @@ export const AdminBookingRequestsTable = ({
               <td className="px-5 py-4">{item.guestsCount}</td>
               <td className="px-5 py-4">{item.roomName ?? "Не выбран"}</td>
               <td className="px-5 py-4">
-                <span className="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-                  {statusLabels[item.status]}
-                </span>
+                <select
+                  aria-label={`Статус заявки ${item.guestName}`}
+                  className="rounded-xl border border-line bg-page px-3 py-2 text-xs font-semibold text-brand outline-none disabled:opacity-50"
+                  disabled={updatingId === item.adminRequestId}
+                  onChange={(event) =>
+                    onStatusChange(
+                      item.adminRequestId,
+                      event.target.value as BookingRequest["status"],
+                    )
+                  }
+                  value={item.status}
+                >
+                  {Object.entries(statusLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </td>
               <td className="px-5 py-4 text-muted-ui-foreground">
                 {new Date(item.createdAt).toLocaleString("ru-RU")}

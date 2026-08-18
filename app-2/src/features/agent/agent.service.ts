@@ -278,18 +278,27 @@ export const createAiAgentService = (options: AgentOptions) => {
           : {}),
       },
     };
+    const guestMessages = input.history
+      .split("\n")
+      .filter((line) => line.startsWith("Гость:"))
+      .map((line) => line.replace(/^Гость:\s*/u, "").trim());
+    const originalRequest = guestMessages[0] ?? input.message;
+    const collectedParameters = input.booking
+      ? Object.entries(input.booking)
+          .filter(
+            ([key, value]) => value !== undefined && key !== "lastCheckedDates",
+          )
+          .map(
+            ([key, value]) =>
+              `${key}: ${Array.isArray(value) ? value.join(", ") : value}`,
+          )
+          .join(", ")
+      : "не указаны";
     const description = [
-      `Исходный запрос гостя: ${input.message}`,
-      input.history ? `Контекст диалога:\n${input.history}` : "",
-      input.booking
-        ? `Собранные параметры: ${JSON.stringify(input.booking)}`
-        : "",
-      name || contact
-        ? `Контакты: ${name ?? "имя не указано"}, ${contact ?? "телефон не указан"}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+      `Запрос гостя: ${originalRequest}`,
+      `Контакты: ${name ?? "имя не указано"}, ${contact ?? "телефон не указан"}`,
+      `Параметры бронирования: ${collectedParameters}`,
+    ].join("\n");
     await options.database.client.adminRequest.update({
       where: { id: input.conversationId },
       data: {

@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { AdminBookingRequestsTable } from "@/components/admin/AdminBookingRequestsTable";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import type { BookingRequest } from "@/lib/admin/admin-api";
-import { useAdminBookings } from "@/lib/admin/useAdmin";
+import { useAdminBookings, useUpdateAdminRequest } from "@/lib/admin/useAdmin";
 import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
@@ -21,6 +21,7 @@ const statusOptions = [
 
 export const AdminBookingRequestsPanel = () => {
   const bookings = useAdminBookings();
+  const updateRequest = useUpdateAdminRequest();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
@@ -95,6 +96,14 @@ export const AdminBookingRequestsPanel = () => {
             navigate({
               to: buildRoute(ROUTES.adminRequest, { requestId }),
             })
+          }
+          onStatusChange={(requestId, nextStatus) =>
+            updateRequest.mutate({ recordId: requestId, status: nextStatus })
+          }
+          updatingId={
+            updateRequest.isPending
+              ? updateRequest.variables?.recordId
+              : undefined
           }
         />
       )}
