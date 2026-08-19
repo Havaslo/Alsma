@@ -8,6 +8,8 @@ import type { AiAgentService } from "../agent/agent.service.js";
 import type { ChatService } from "../chat/chat.service.js";
 import type { VkClient } from "./vk.client.js";
 
+export const VK_BOT_PAUSE_SETTING = "vk.bot.paused";
+
 const schema = z.record(z.string(), z.unknown());
 const record = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
@@ -48,6 +50,13 @@ export const createVkRouter = ({
   readonly vk: VkClient;
 }): Router => {
   const router = Router();
+  const isPaused = async () => {
+    const setting = await database.client.appSetting.findUnique({
+      where: { key: VK_BOT_PAUSE_SETTING },
+      select: { value: true },
+    });
+    return setting?.value === true;
+  };
   const conversationQueues = new Map<string, Promise<void>>();
   const deliveryQueues = new Map<string, Promise<void>>();
   const syntheticTestTexts = new Set([
@@ -76,6 +85,7 @@ export const createVkRouter = ({
       select: { id: true, text: true, bookingUrl: true },
     });
     for (const message of pending) {
+      if (await isPaused()) return;
       if (isSyntheticTestMessage(message.text, "")) continue;
       let vkMessageId = "";
       let lastError: unknown;
@@ -166,25 +176,29 @@ export const createVkRouter = ({
       !groupId
     )
       return;
-    void database.client.adminRequest
-      .findUnique({
-        where: { id: event.conversationId },
-        select: { details: true },
-      })
-      .then(async (request) => {
-        const details = record(request?.details);
-        const peerId = textOf(details.vkPeerId);
-        if (!request || details.source !== "VK" || !peerId) return;
-        await enqueueDelivery(event.conversationId, peerId);
-      })
-      .catch((error: unknown) =>
-        logger.error(
-          { error: error instanceof Error ? error.message : "Unknown error" },
-          "VK outgoing message delivery failed",
-        ),
-      );
+    void isPaused().then((paused) => {
+      if (paused) return;
+      return database.client.adminRequest
+        .findUnique({
+          where: { id: event.conversationId },
+          select: { details: true },
+        })
+        .then(async (request) => {
+          const details = record(request?.details);
+          const peerId = textOf(details.vkPeerId);
+          if (!request || details.source !== "VK" || !peerId) return;
+          await enqueueDelivery(event.conversationId, peerId);
+        })
+        .catch((error: unknown) =>
+          logger.error(
+            { error: error instanceof Error ? error.message : "Unknown error" },
+            "VK outgoing message delivery failed",
+          ),
+        );
+    });
   });
   const processEvent = async (event: Record<string, unknown>) => {
+    if (await isPaused()) return;
     if (event.type !== "message_new" || textOf(event.group_id) !== groupId)
       return;
     const object = record(event.object);
@@ -414,6 +428,7 @@ export const createVkRouter = ({
     }
   };
   const processWithRetry = async (event: Record<string, unknown>) => {
+    if (await isPaused()) return;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await processEvent(event);
@@ -470,6 +485,7 @@ export const createVkRouter = ({
     }
     response.json({
       provider: "vk",
+      paused: await isPaused(),
       configured: vk.configured && Boolean(groupId),
       credentialsVerified,
       callbackProtectionConfigured: Boolean(callbackSecret),
@@ -511,6 +527,10 @@ export const createVkRouter = ({
       // like a broken agent. VK will retry a 401, while the event is never
       // passed to the worker.
       response.status(401).type("text/plain").send("unauthorized");
+      return;
+    }
+    if (await isPaused()) {
+      response.status(200).type("text/plain").send("ok");
       return;
     }
     if (parsed.data.type === "message_new") {
