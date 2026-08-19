@@ -50,6 +50,12 @@ const sourceLabel = (source: string | undefined) => {
 const readKey = (id: string) => `alsma-admin-request-read-${id}`;
 
 const assignee = (item: AdminRequest) => {
+  if (item.agentStopped)
+    return {
+      label: "Агент остановлен",
+      className: "bg-muted-ui text-muted-ui-foreground",
+      Icon: Bot,
+    };
   if (item.details.managerRequested)
     return {
       label: "Запрошен менеджер",

@@ -81,6 +81,7 @@ export type AdminClientDetail = AdminClient & {
   readonly bookings: AdminClientBooking[];
 };
 export type AdminRequest = {
+  readonly agentStopped?: boolean;
   readonly category: string;
   readonly contact: string | null;
   readonly createdAt: string;

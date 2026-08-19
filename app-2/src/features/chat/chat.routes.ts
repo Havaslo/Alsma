@@ -38,6 +38,14 @@ const readChatMode = (value: unknown): ChatMode =>
   readDetails(value).chatMode === "manager" ? "manager" : "agent";
 const readManagerRequested = (value: unknown) =>
   readDetails(value).managerRequested === true;
+const isSiteAgentActive = async (database: Database) => {
+  const setting = await database.client.appSetting.findUnique({
+    where: { key: "agent.settings" },
+    select: { value: true },
+  });
+  const value = readDetails(setting?.value);
+  return value.enabled !== false && value.site !== false;
+};
 const assertPublicConversation = async (
   database: Database,
   id: string,
@@ -188,6 +196,15 @@ export const createChatRouter = (
         "guest",
         input.text,
       );
+      if (!(await isSiteAgentActive(database))) {
+        await setMode(input.conversationId, "manager", true);
+        response.status(201).json({
+          message: published,
+          mode: "manager",
+          managerRequested: true,
+        });
+        return;
+      }
       if ((await getMode(input.conversationId)) === "manager") {
         response.status(201).json({ message: published });
         return;
@@ -200,6 +217,11 @@ export const createChatRouter = (
       void agent
         .reply(input.conversationId, input.text)
         .then(async (result) => {
+          if (!(await isSiteAgentActive(database))) {
+            await setMode(input.conversationId, "manager", true);
+            chat.publishStatus(input.conversationId, "idle", "");
+            return;
+          }
           if (result?.action === "transfer") {
             await setMode(input.conversationId, "manager", true);
             chat.publishStatus(input.conversationId, "idle", "");
@@ -222,6 +244,11 @@ export const createChatRouter = (
           chat.publishStatus(input.conversationId, "idle", "");
         })
         .catch(async () => {
+          if (!(await isSiteAgentActive(database))) {
+            await setMode(input.conversationId, "manager", true);
+            chat.publishStatus(input.conversationId, "idle", "");
+            return;
+          }
           await chat.publish(
             input.conversationId,
             "agent",
@@ -263,6 +290,7 @@ export const createChatRouter = (
       response.json({
         mode: readChatMode(request?.details),
         managerRequested: readManagerRequested(request?.details),
+        agentStopped: !(await isSiteAgentActive(database)),
       });
     },
   );

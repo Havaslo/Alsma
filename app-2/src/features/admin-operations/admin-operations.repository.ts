@@ -279,7 +279,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
   },
   listRequests: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
-    const [items, total] = await database.client.$transaction([
+    const [items, total, setting] = await database.client.$transaction([
       database.client.adminRequest.findMany({
         orderBy: { createdAt: "desc" },
         skip,
@@ -287,8 +287,23 @@ export const createAdminOperationsRepository = (database: Database) => ({
         include: { _count: { select: { chatMessages: true } } },
       }),
       database.client.adminRequest.count(),
+      database.client.appSetting.findUnique({
+        where: { key: "agent.settings" },
+        select: { value: true },
+      }),
     ]);
-    return { items, total };
+    const settings = setting?.value && typeof setting.value === "object"
+      ? (setting.value as Record<string, unknown>)
+      : {};
+    const stopped = settings.enabled === false || settings.site === false;
+    return {
+      items: items.map((item) => ({
+        ...item,
+        agentStopped: stopped &&
+          (item.details as Record<string, unknown> | null)?.source === "Сайт",
+      })),
+      total,
+    };
   },
   listTasks: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);

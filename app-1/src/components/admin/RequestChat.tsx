@@ -30,6 +30,7 @@ export const RequestChat = ({
   const [messages, setMessages] = useState<RequestChatMessage[]>([]);
   const [mode, setMode] = useState<"agent" | "manager">("agent");
   const [managerRequested, setManagerRequested] = useState(false);
+  const [agentStopped, setAgentStopped] = useState(false);
   const [agentStatus, setAgentStatus] = useState("");
   const [text, setText] = useState("");
   const adminHeaders = useMemo(
@@ -40,7 +41,7 @@ export const RequestChat = ({
   useEffect(() => {
     const loadMode = () =>
       apiClient
-        .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
+        .get<{ mode: "agent" | "manager"; managerRequested: boolean; agentStopped?: boolean }>(
           "/chat/admin/mode",
           {
             params: { conversationId },
@@ -50,6 +51,7 @@ export const RequestChat = ({
         .then(({ data }) => {
           setMode(data.mode);
           setManagerRequested(data.managerRequested);
+          setAgentStopped(Boolean(data.agentStopped));
         });
     void Promise.all([
       apiClient.get<{ items: RequestChatMessage[] }>("/chat/admin/messages", {
@@ -57,7 +59,7 @@ export const RequestChat = ({
         headers: adminHeaders,
       }),
       apiClient
-        .get<{ mode: "agent" | "manager"; managerRequested: boolean }>(
+        .get<{ mode: "agent" | "manager"; managerRequested: boolean; agentStopped?: boolean }>(
           "/chat/admin/mode",
           {
             params: { conversationId },
@@ -67,6 +69,7 @@ export const RequestChat = ({
         .then(({ data }) => {
           setMode(data.mode);
           setManagerRequested(data.managerRequested);
+          setAgentStopped(Boolean(data.agentStopped));
         }),
     ]).then(([{ data }]) => {
       setMessages(
@@ -131,13 +134,15 @@ export const RequestChat = ({
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-supporting/30 px-3 py-1 text-xs font-semibold text-supporting-foreground">
-            {managerRequested
+            {agentStopped
+              ? "Агент остановлен"
+              : managerRequested
               ? "Запрошен менеджер"
               : mode === "manager"
                 ? "Менеджер отвечает"
                 : "AI-агент отвечает"}
           </span>
-          <button
+          {!agentStopped && <button
             className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold"
             onClick={async () => {
               const nextMode = mode === "manager" ? "agent" : "manager";
@@ -152,7 +157,7 @@ export const RequestChat = ({
             type="button"
           >
             {mode === "manager" ? "Передать AI" : "Взять диалог"}
-          </button>
+          </button>}
         </div>
       </header>
       {agentStatus && mode === "agent" && (
