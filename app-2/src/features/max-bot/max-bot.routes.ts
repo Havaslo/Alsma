@@ -93,6 +93,11 @@ export const createMaxBotRouter = ({
   readonly webhookUrl?: string;
 }): Router => {
   const router = Router();
+  const isAgentEnabled = async () => {
+    const setting = await database.client.appSetting.findUnique({ where: { key: "agent.settings" }, select: { value: true } });
+    const value = setting?.value;
+    return !(value && typeof value === "object" && "max" in value && (value as { max?: unknown }).max === false);
+  };
   const conversationQueues = new Map<string, Promise<void>>();
   if (max.configured && webhookSecret && webhookUrl) {
     const callbackUrl = new URL("/api/max/webhook", webhookUrl).toString();
@@ -108,7 +113,9 @@ export const createMaxBotRouter = ({
   chat.subscribeAll((event) => {
     if (event.type !== "message" || event.author === "guest" || !max.configured)
       return;
-    void database.client.adminRequest
+    void isAgentEnabled().then((enabled) => {
+      if (!enabled) return;
+      return database.client.adminRequest
       .findUnique({
         where: { id: event.conversationId },
         select: { details: true },
@@ -124,9 +131,11 @@ export const createMaxBotRouter = ({
           "MAX outgoing message delivery failed",
         ),
       );
+    });
   });
 
   const handleUpdate = async (payload: Record<string, unknown>) => {
+    if (!(await isAgentEnabled())) return;
     const { chatId, eventId, senderId, text, updateType } =
       extractMessage(payload);
     if (updateType && updateType !== "message_created") {
@@ -221,7 +230,7 @@ export const createMaxBotRouter = ({
       });
       await chat.publish(conversationId, "guest", text);
       if (!isManagerMode(currentDetails)) {
-        const result = await agent.reply(conversationId, text);
+        const result = await agent.reply(conversationId, text, "max");
         if (result?.action === "transfer")
           await database.client.adminRequest.update({
             where: { id: conversationId },

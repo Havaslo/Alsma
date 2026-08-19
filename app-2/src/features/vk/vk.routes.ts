@@ -55,7 +55,10 @@ export const createVkRouter = ({
       where: { key: VK_BOT_PAUSE_SETTING },
       select: { value: true },
     });
-    return setting?.value === true;
+    if (setting?.value === true) return true;
+    const agentSetting = await database.client.appSetting.findUnique({ where: { key: "agent.settings" }, select: { value: true } });
+    const value = agentSetting?.value;
+    return Boolean(value && typeof value === "object" && "vk" in value && (value as { vk?: unknown }).vk === false);
   };
   const conversationQueues = new Map<string, Promise<void>>();
   const deliveryQueues = new Map<string, Promise<void>>();
@@ -371,7 +374,7 @@ export const createVkRouter = ({
         );
       const managerMode = details.chatMode === "manager";
       if (!agentAlreadyCompleted && !managerMode) {
-        const result = await agent.reply(conversationId, text);
+        const result = await agent.reply(conversationId, text, "vk");
         if (result?.action === "transfer") {
           await database.client.adminRequest.update({
             where: { id: conversationId },

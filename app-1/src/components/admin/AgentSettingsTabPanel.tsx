@@ -22,6 +22,10 @@ export type AgentSettingsTab =
 
 const DEFAULT_VALUES: AgentSettings = {
   enabled: true,
+  site: true,
+  voice: true,
+  vk: true,
+  max: true,
   tone: "Тёплый, спокойный и уверенный. Отвечать коротко, по делу и без давления.",
   language:
     "Русский язык. Если клиент пишет на другом языке — отвечать на языке клиента.",
@@ -104,6 +108,18 @@ export const AgentSettingsTabPanel = ({
             label="Агент активен на сайте"
             onChange={(checked) => form.setValue("enabled", checked)}
           />
+          <div className="rounded-2xl border border-line bg-page p-4">
+            <h2 className="font-semibold text-brand">Каналы агента</h2>
+            <p className="mt-1 text-sm text-muted-ui-foreground">
+              Независимые переключатели. Общий переключатель сайта не меняет их автоматически.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <SettingCheckbox checked={watched.site} label="Агент активен на сайте" onChange={(checked) => form.setValue("site", checked)} />
+              <SettingCheckbox checked={watched.voice} label="Агент активен в звонках" onChange={(checked) => form.setValue("voice", checked)} />
+              <SettingCheckbox checked={watched.vk} label="Агент активен в VK" onChange={(checked) => form.setValue("vk", checked)} />
+              <SettingCheckbox checked={watched.max} label="Агент активен в MAX" onChange={(checked) => form.setValue("max", checked)} />
+            </div>
+          </div>
         </div>
       )}
       {tab === "capabilities" && (

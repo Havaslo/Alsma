@@ -6,6 +6,18 @@ import type {
 } from "./agent-scenarios.schemas.js";
 
 const SETTINGS_KEY = "agent.settings";
+const normalizeSettings = (value: unknown) => {
+  const source = value && typeof value === "object" ? value : {};
+  const record = source as Record<string, unknown>;
+  return {
+    ...record,
+    enabled: typeof record.enabled === "boolean" ? record.enabled : true,
+    site: typeof record.site === "boolean" ? record.site : true,
+    voice: typeof record.voice === "boolean" ? record.voice : true,
+    vk: typeof record.vk === "boolean" ? record.vk : true,
+    max: typeof record.max === "boolean" ? record.max : true,
+  };
+};
 
 export const createAgentScenariosRepository = (database: Database) => ({
   list: async () => ({
@@ -16,19 +28,19 @@ export const createAgentScenariosRepository = (database: Database) => ({
       orderBy: { updatedAt: "desc" },
     }),
   }),
-  getSettings: async () =>
-    (
-      await database.client.appSetting.findUnique({
-        select: { value: true },
-        where: { key: SETTINGS_KEY },
-      })
-    )?.value ?? null,
+  getSettings: async () => {
+    const setting = await database.client.appSetting.findUnique({
+      select: { value: true },
+      where: { key: SETTINGS_KEY },
+    });
+    return setting ? normalizeSettings(setting.value) : null;
+  },
   saveSettings: async (input: AgentSettingsBody) =>
     (
       await database.client.appSetting.upsert({
-        create: { key: SETTINGS_KEY, value: input },
+        create: { key: SETTINGS_KEY, value: normalizeSettings(input) },
         select: { value: true },
-        update: { value: input },
+        update: { value: normalizeSettings(input) },
         where: { key: SETTINGS_KEY },
       })
     ).value,

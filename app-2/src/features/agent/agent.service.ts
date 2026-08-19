@@ -46,6 +46,10 @@ type AgentOptions = {
 };
 const asSettings = (value: unknown) => ({
   enabled: true,
+  site: true,
+  voice: true,
+  vk: true,
+  max: true,
   tone: "доброжелательный, спокойный и полезный",
   language: "русский",
   bookingUrl: "",
@@ -338,14 +342,24 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     }
   };
-  const reply = async (conversationId: string, message: string) => {
+  const reply = async (
+    conversationId: string,
+    message: string,
+    channel: "site" | "vk" | "max" = "site",
+  ) => {
     await ensureDefaultAgentPlaybook(options.database);
     const setting = await options.database.client.appSetting.findUnique({
       where: { key: settingsKey },
       select: { value: true },
     });
     const settings = asSettings(setting?.value);
-    if (!settings.enabled || !options.apiKey || !options.baseUrl) return null;
+    if (
+      !settings.enabled ||
+      !settings[channel] ||
+      !options.apiKey ||
+      !options.baseUrl
+    )
+      return null;
     const conversationMessages = (
       await options.chat.list(conversationId)
     ).slice(-20);

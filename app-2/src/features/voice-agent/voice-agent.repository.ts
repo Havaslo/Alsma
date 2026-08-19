@@ -3,6 +3,11 @@ import type { Database } from "../../lib/database/database.js";
 import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
 
 export const createVoiceAgentRepository = (database: Database) => ({
+  getAgentSettings: async () =>
+    (await database.client.appSetting.findUnique({
+      where: { key: "agent.settings" },
+      select: { value: true },
+    }))?.value,
   createCall: (input: CreateCallBody) =>
     database.client.voiceCall.create({ data: { ...input, provider: "mango" } }),
   getKnowledgeContext: async () => {

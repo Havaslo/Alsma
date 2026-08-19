@@ -102,6 +102,11 @@ export const createVoiceAgentService = (
   },
   managedStorage?: ManagedStorage,
 ) => {
+  const isVoiceEnabled = async () => {
+    const setting = await repository.getAgentSettings();
+    const value = setting as Record<string, unknown> | null | undefined;
+    return !(value && value.voice === false);
+  };
   const completeWithOpenAI = async (prompt: string, json = false) => {
     if (!apiKey || !openaiBaseUrl)
       throw new Error("OpenAI AI Gateway is not configured");
@@ -206,6 +211,8 @@ export const createVoiceAgentService = (
     appendTranscript: (id: string, segment: TranscriptBody) =>
       repository.appendTranscript(id, segment),
     answer: async (question: string, callId?: string) => {
+      if (!(await isVoiceEnabled()))
+        return { answer: "Сейчас голосовой AI-агент временно недоступен.", callId };
       const knowledge = await repository.getKnowledgeContext();
       const answer = await completeWithOpenAI(
         `Вопрос гостя: ${question}\n\nБаза знаний и правила:\n${knowledge}`,
@@ -306,6 +313,8 @@ export const createVoiceAgentService = (
       if (input.name === "knowledge_answer")
         return {
           answer: await (async () => {
+            if (!(await isVoiceEnabled()))
+              return "Сейчас голосовой AI-агент временно недоступен.";
             const knowledge = await repository.getKnowledgeContext();
             return completeWithOpenAI(
               `Вопрос гостя: ${input.question}\n\nБаза знаний:\n${knowledge}`,

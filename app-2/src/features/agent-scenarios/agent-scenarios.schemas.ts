@@ -21,6 +21,10 @@ export const agentTransferRuleBodySchema = z.object({
 export const agentSettingsSchema = z
   .object({
     enabled: z.boolean(),
+    site: z.boolean().default(true),
+    voice: z.boolean().default(true),
+    vk: z.boolean().default(true),
+    max: z.boolean().default(true),
     tone: z.string().trim().min(1).max(2_000),
     language: z.string().trim().min(1).max(500),
     greeting: z.string().trim().min(1).max(2_000),

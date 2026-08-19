@@ -29,6 +29,10 @@ export type AgentTransferRuleInput = Omit<AgentTransferRule, "id"> & {
 };
 export type AgentSettings = {
   readonly enabled: boolean;
+  readonly site: boolean;
+  readonly voice: boolean;
+  readonly vk: boolean;
+  readonly max: boolean;
   readonly tone: string;
   readonly language: string;
   readonly greeting: string;
