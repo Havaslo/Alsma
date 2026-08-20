@@ -132,16 +132,6 @@ export const HomePage = () => {
                 </span>
                 в Яндекс Картах
               </a>
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand-foreground/15 bg-panel px-5 py-2.5 text-[0.8rem] font-bold tracking-[0.08em] text-page-foreground uppercase">
-                <span className="inline-flex items-center gap-1">
-                  4
-                  <Star
-                    aria-hidden="true"
-                    className="size-4 fill-current text-orange-500"
-                  />
-                </span>
-                Загородный спа-отель премиум класса
-              </span>
             </div>
             <h1 className="max-w-4xl font-heading text-4xl leading-[1.02] font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
               {typeof hero?.title === "string"
