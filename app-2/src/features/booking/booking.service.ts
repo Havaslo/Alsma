@@ -229,6 +229,7 @@ export const createBookingService = (
       guestList: JSON.parse(JSON.stringify(input.guests)),
       roomName: offer.roomType,
       selectedOffer: JSON.parse(JSON.stringify(offer)),
+      paymentMethod: input.paymentMethod,
       totalAmount,
       userId: guest.id,
       voucherNumber,

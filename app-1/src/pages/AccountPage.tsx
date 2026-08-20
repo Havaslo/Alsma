@@ -1,16 +1,13 @@
-import { useForm } from "react-hook-form";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
-import { Form } from "@/components/Form";
 import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
-import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
+import { logoutGuest } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
-import { GUEST_PROFILE_QUERY_KEY, useGuestAuth } from "@/lib/auth/useGuestAuth";
+import { useGuestAuth } from "@/lib/auth/useGuestAuth";
 import { ROUTES } from "@/route-constants";
 
 export const AccountPage = () => {
@@ -18,13 +15,6 @@ export const AccountPage = () => {
   const queryClient = useQueryClient();
   const auth = useGuestAuth();
   const guest = auth.data?.guest;
-  const profileForm = useForm({ defaultValues: { fullName: "" } });
-  const profileMutation = useMutation({
-    mutationFn: completeGuestProfile,
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: GUEST_PROFILE_QUERY_KEY }),
-  });
-
   if (auth.isLoading)
     return (
       <main className="grid min-h-screen place-items-center bg-page">
@@ -32,38 +22,6 @@ export const AccountPage = () => {
       </main>
     );
   if (!guest) return <Navigate replace to={ROUTES.login} />;
-  if (guest.requiresNameCompletion)
-    return (
-      <main className="min-h-screen bg-page px-4 pt-24 sm:pt-32">
-        <SiteHeader light />
-        <section className="mx-auto max-w-xl rounded-4xl border border-line bg-panel p-8 shadow-xl">
-          <h1 className="font-heading text-4xl font-semibold text-brand">
-            Как к вам обращаться?
-          </h1>
-          <p className="mt-3 text-muted-ui-foreground">
-            Имя будет отображаться в личном кабинете и бронированиях.
-          </p>
-          <Form
-            className="mt-7 space-y-4"
-            form={profileForm}
-            onSubmit={(values) => profileMutation.mutate(values)}
-          >
-            <input
-              className="w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-              placeholder="Ваше имя"
-              {...profileForm.register("fullName", { required: true })}
-            />
-            <button
-              className="w-full rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground"
-              type="submit"
-            >
-              Продолжить
-            </button>
-          </Form>
-        </section>
-      </main>
-    );
-
   const logout = async () => {
     await logoutGuest().catch(() => undefined);
     writeGuestSession(null);
@@ -78,11 +36,11 @@ export const AccountPage = () => {
         <section className="flex flex-col justify-between gap-6 rounded-4xl border border-line bg-panel p-7 sm:flex-row sm:items-center">
           <div className="flex items-center gap-5">
             <div className="grid size-20 place-items-center rounded-full bg-page text-3xl font-semibold text-brand">
-              {guest.fullName?.[0]}
+              {guest.fullName?.[0] || "Г"}
             </div>
             <div>
               <h1 className="font-heading text-4xl font-semibold text-brand">
-                {guest.fullName}
+                {guest.fullName || "Гость"}
               </h1>
               <div className="mt-3 space-y-1 text-sm text-muted-ui-foreground">
                 {guest.phone && !guest.phone.startsWith("email:") && (

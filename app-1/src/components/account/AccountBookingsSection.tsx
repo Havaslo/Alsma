@@ -1,6 +1,6 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
-import { CalendarDays, Download, Printer } from "lucide-react";
+import { CalendarDays, Download } from "lucide-react";
 
 import type { GuestProfile } from "@/lib/auth/guest-auth-api";
 
@@ -29,6 +29,9 @@ const getBookingNumber = (id: string) => `ALS-${id.slice(0, 8).toUpperCase()}`;
 
 const getBookingServices = (roomName: string, status: string) =>
   bookingServices[roomName] ?? [status];
+
+const paymentMethodLabel = (method: "full" | "first_night") =>
+  method === "first_night" ? "Оплата первых суток" : "Полная оплата";
 
 const escapeHtml = (value: string) =>
   value.replace(
@@ -91,21 +94,19 @@ const downloadBookingPdf = async (
     </div>
     <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
       <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Тариф</div>
-      <div style="font-size: 16px; line-height: 1.8;">${escapeHtml([booking.selectedOffer?.boardType, booking.selectedOffer?.rateType, booking.selectedOffer?.rateDescription].filter(Boolean).join(" · ") || "Не указан")}</div>
+      <div style="font-size: 16px; line-height: 1.8;">${escapeHtml(tariff || "Не указан")}</div>
     </div>
     <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
       <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Состав гостей</div>
       <div style="font-size: 16px; line-height: 1.8;">Всего гостей: ${booking.guestsCount}<br />Дети: ${children.length ? `есть, ${children.length}` : "нет"}</div>
-    </div>
-    <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
-      <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Тариф</div>
-      <div style="font-size: 16px; line-height: 1.8;">${escapeHtml(tariff)}</div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px 48px; margin-top: 42px;">
       <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Заезд</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${formatDate(booking.checkInDate)}</div></div>
       <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Выезд</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${formatDate(booking.checkOutDate)}</div></div>
       <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Гости</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${booking.guestsCount} гостя</div></div>
       <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Итоговая цена</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${booking.totalAmount ? `${Number(booking.totalAmount).toLocaleString("ru-RU")} ₽` : "По запросу"}</div></div>
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Тип оплаты</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${paymentMethodLabel(booking.paymentMethod)}</div></div>
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Сумма платежа</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${booking.paymentAmount ? `${Number(booking.paymentAmount).toLocaleString("ru-RU")} ₽` : "По запросу"}</div></div>
     </div>
   `;
   window.document.body.appendChild(document);
@@ -210,13 +211,6 @@ export const AccountBookingsSection = ({
                 type="button"
               >
                 <Download className="size-4" /> Скачать PDF
-              </button>
-              <button
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 font-semibold text-brand"
-                onClick={() => window.print()}
-                type="button"
-              >
-                <Printer className="size-4" /> Распечатать
               </button>
             </div>
           </div>

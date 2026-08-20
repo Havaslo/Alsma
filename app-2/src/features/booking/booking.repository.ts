@@ -16,6 +16,7 @@ export const createBookingRepository = (database: Database) => ({
     guestList: Prisma.InputJsonValue;
     roomName: string;
     selectedOffer: Prisma.InputJsonValue;
+    paymentMethod: "full" | "first_night";
     totalAmount: number;
     userId: string;
     voucherNumber: string | null;
@@ -24,6 +25,7 @@ export const createBookingRepository = (database: Database) => ({
       data: {
         ...input,
         paymentStatus: "payment_pending",
+        paymentMethod: input.paymentMethod,
         status: "awaiting_payment",
       },
     }),

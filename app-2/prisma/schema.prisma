@@ -125,6 +125,7 @@ model GuestBooking {
   totalAmount         Decimal?  @map("total_amount") @db.Decimal(12, 2)
   currency            String    @default("RUB")
   paymentStatus       String    @default("payment_pending") @map("payment_status")
+  paymentMethod       String    @default("full") @map("payment_method")
   paymentAmount       Decimal?  @map("payment_amount") @db.Decimal(12, 2)
   paymentId           String?   @unique @map("payment_id")
   epteraReservationId String?   @unique @map("eptera_reservation_id")

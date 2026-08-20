@@ -24,6 +24,8 @@ export type GuestProfile = {
     }> | null;
     readonly id: string;
     readonly paymentStatus: string;
+    readonly paymentMethod: "full" | "first_night";
+    readonly paymentAmount: string | null;
     readonly roomName: string;
     readonly selectedOffer: {
       readonly boardType?: string;

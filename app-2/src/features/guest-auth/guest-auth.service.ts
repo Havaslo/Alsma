@@ -21,6 +21,8 @@ const publicUser = (user: {
     guestList: unknown;
     id: string;
     paymentStatus: string;
+    paymentMethod: string;
+    paymentAmount: { toString(): string } | null;
     roomName: string;
     selectedOffer: unknown;
     status: string;
@@ -35,6 +37,7 @@ const publicUser = (user: {
   bonusProgram: user.bonusProgram,
   bookings: user.bookings.map((booking) => ({
     ...booking,
+    paymentAmount: booking.paymentAmount?.toString() ?? null,
     totalAmount: booking.totalAmount?.toString() ?? null,
   })),
   email: user.email,
