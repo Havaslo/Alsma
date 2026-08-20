@@ -1,12 +1,7 @@
 import { z } from "zod";
 
-export const requestCodeBodySchema = z.object({
-  contact: z.email(),
-});
-
-export const verifyCodeBodySchema = z.object({
-  code: z.string().regex(/^\d{4}$/),
-  pendingCodeId: z.uuid(),
+export const loginBodySchema = z.object({
+  email: z.string().trim().pipe(z.email()),
 });
 
 export const completeProfileBodySchema = z.object({
@@ -14,5 +9,4 @@ export const completeProfileBodySchema = z.object({
 });
 
 export type CompleteProfileBody = z.infer<typeof completeProfileBodySchema>;
-export type RequestCodeBody = z.infer<typeof requestCodeBodySchema>;
-export type VerifyCodeBody = z.infer<typeof verifyCodeBodySchema>;
+export type LoginBody = z.infer<typeof loginBodySchema>;

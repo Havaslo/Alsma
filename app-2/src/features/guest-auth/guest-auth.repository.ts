@@ -12,21 +12,21 @@ export const createGuestAuthRepository = (database: Database) => ({
       include: guestInclude,
       where: { id: userId },
     }),
-  consumeCode: (id: string, sessionHash: string, sessionExpiresAt: Date) =>
-    database.client.guestLoginCode.update({
-      data: {
-        codeHash: sessionHash,
-        consumedAt: new Date(),
-        expiresAt: sessionExpiresAt,
-      },
-      where: { id },
-    }),
-  createCode: (input: {
-    codeHash: string;
-    expiresAt: Date;
+  createSession: (input: {
     phone: string;
+    sessionHash: string;
+    sessionExpiresAt: Date;
     userId: string;
-  }) => database.client.guestLoginCode.create({ data: input }),
+  }) =>
+    database.client.guestLoginCode.create({
+      data: {
+        codeHash: input.sessionHash,
+        consumedAt: new Date(),
+        expiresAt: input.sessionExpiresAt,
+        phone: input.phone,
+        userId: input.userId,
+      },
+    }),
   createUser: (input: { email?: string; phone: string }) =>
     database.client.guestUser.create({ data: input }),
   provisionDemoProfile: (userId: string) =>
@@ -69,8 +69,6 @@ export const createGuestAuthRepository = (database: Database) => ({
         where: { id: userId },
       });
     }),
-  findCode: (id: string) =>
-    database.client.guestLoginCode.findUnique({ where: { id } }),
   findSession: (tokenHash: string) =>
     database.client.guestLoginCode.findFirst({
       include: { user: { include: guestInclude } },

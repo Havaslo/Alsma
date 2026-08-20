@@ -1,12 +1,8 @@
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { HttpError } from "../../lib/http/http-error.js";
 import type { GuestAuthRepository } from "./guest-auth.repository.js";
-import type {
-  CompleteProfileBody,
-  RequestCodeBody,
-  VerifyCodeBody,
-} from "./guest-auth.schemas.js";
+import type { CompleteProfileBody, LoginBody } from "./guest-auth.schemas.js";
 
 const hash = (value: string): string =>
   createHash("sha256").update(value).digest("hex");
@@ -58,8 +54,8 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
     if (token) await repository.revokeSession(hash(token));
     return { ok: true };
   },
-  requestCode: async (input: RequestCodeBody) => {
-    const email = input.contact.trim().toLowerCase();
+  login: async (input: LoginBody) => {
+    const email = input.email.trim().toLowerCase();
     // GuestUser.phone remains required for compatibility with existing records;
     // email-only accounts use a non-contact technical value in that column.
     const technicalPhone = `email:${email}`;
@@ -67,37 +63,13 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
     user ??= await repository.findUserByPhone(technicalPhone);
     user ??= await repository.createUser({ email, phone: technicalPhone });
     user = (await repository.provisionDemoProfile(user.id)) ?? user;
-    const code = String(randomInt(0, 10_000)).padStart(4, "0");
-    const record = await repository.createCode({
-      codeHash: hash(code),
-      expiresAt: new Date(Date.now() + 10 * 60_000),
+    const token = randomBytes(32).toString("base64url");
+    await repository.createSession({
+      sessionHash: hash(token),
+      sessionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60_000),
       phone: user.phone,
       userId: user.id,
     });
-    return {
-      channel: "email" as const,
-      debugCode: code,
-      expiresInSeconds: 600,
-      maskedContact: `${email.slice(0, 2)}•••@${email.split("@")[1]}`,
-      pendingCodeId: record.id,
-    };
-  },
-  verifyCode: async (input: VerifyCodeBody) => {
-    const record = await repository.findCode(input.pendingCodeId);
-    if (
-      !record ||
-      record.consumedAt ||
-      record.expiresAt <= new Date() ||
-      record.codeHash !== hash(input.code)
-    ) {
-      throw new HttpError(400, "CODE_INVALID", "Код недействителен или истёк.");
-    }
-    const token = randomBytes(32).toString("base64url");
-    await repository.consumeCode(
-      record.id,
-      hash(token),
-      new Date(Date.now() + 30 * 24 * 60 * 60_000),
-    );
     const session = await repository.findSession(hash(token));
     if (!session?.user)
       throw new HttpError(

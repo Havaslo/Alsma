@@ -32,18 +32,8 @@ const authHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export const requestLoginCode = (input: { contact: string }) =>
-  apiClient.post<{
-    channel: "email";
-    debugCode: string;
-    maskedContact: string;
-    pendingCodeId: string;
-  }>("/auth/request-code", input);
-
-export const verifyLoginCode = (input: {
-  code: string;
-  pendingCodeId: string;
-}) => apiClient.post<AuthState & { token: string }>("/auth/verify-code", input);
+export const loginGuest = (input: { email: string }) =>
+  apiClient.post<AuthState & { token: string }>("/auth/login", input);
 
 export const loadGuestProfile = (signal?: AbortSignal) =>
   apiClient.get<AuthState>("/auth/me", { headers: authHeaders(), signal });
