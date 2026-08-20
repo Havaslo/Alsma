@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +6,6 @@ import { LogOut, Mail, Phone } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
-import { AccountLoyaltySection } from "@/components/account/AccountLoyaltySection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { completeGuestProfile, logoutGuest } from "@/lib/auth/guest-auth-api";
@@ -20,7 +18,6 @@ export const AccountPage = () => {
   const queryClient = useQueryClient();
   const auth = useGuestAuth();
   const guest = auth.data?.guest;
-  const [section, setSection] = useState<"bookings" | "loyalty">("bookings");
   const profileForm = useForm({ defaultValues: { fullName: "" } });
   const profileMutation = useMutation({
     mutationFn: completeGuestProfile,
@@ -113,29 +110,14 @@ export const AccountPage = () => {
           </button>
         </section>
         <nav className="mt-10 flex flex-wrap gap-3">
-          {[
-            ["bookings", "История бронирований"],
-            ["loyalty", "Бонусы и скидки"],
-          ].map(([value, label]) => (
-            <button
-              className={
-                section === value
-                  ? "rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-                  : "rounded-full border border-line bg-panel px-6 py-3 font-semibold text-brand"
-              }
-              key={value}
-              onClick={() => setSection(value as "bookings" | "loyalty")}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
+          <button
+            className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+            type="button"
+          >
+            История бронирований
+          </button>
         </nav>
-        {section === "bookings" ? (
-          <AccountBookingsSection bookings={guest.bookings} profile={guest} />
-        ) : (
-          <AccountLoyaltySection bonusProgram={guest.bonusProgram} />
-        )}
+        <AccountBookingsSection bookings={guest.bookings} profile={guest} />
       </div>
     </main>
   );
