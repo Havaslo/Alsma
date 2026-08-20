@@ -30,11 +30,24 @@ const getBookingNumber = (id: string) => `ALS-${id.slice(0, 8).toUpperCase()}`;
 const getBookingServices = (roomName: string, status: string) =>
   bookingServices[roomName] ?? [status];
 
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        character
+      ] ?? character,
+  );
+
 const downloadBookingPdf = async (
   booking: GuestProfile["bookings"][number],
 ) => {
   const bookingNumber = getBookingNumber(booking.id);
   const services = getBookingServices(booking.roomName, booking.status);
+  const guests = booking.guestList ?? [];
+  const contactName = [booking.contactFirstName, booking.contactLastName]
+    .filter(Boolean)
+    .join(" ");
   const document = window.document.createElement("div");
 
   document.style.cssText = [
@@ -54,8 +67,23 @@ const downloadBookingPdf = async (
       <div style="color: #6c716c; font-size: 14px; margin-top: 8px;">Подтверждение бронирования</div>
     </div>
     <div style="margin-top: 42px;">
-      <div style="font-size: 28px; font-weight: 700;">${booking.roomName}</div>
-      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони: ${bookingNumber}</div>
+      <div style="font-size: 28px; font-weight: 700;">${escapeHtml(booking.roomName)}</div>
+      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони: ${escapeHtml(booking.voucherNumber ?? bookingNumber)}</div>
+      <div style="color: #6c716c; font-size: 14px; margin-top: 8px;">Статус оплаты: ${escapeHtml(booking.paymentStatus)}</div>
+      ${booking.epteraReservationId ? `<div style="color: #6c716c; font-size: 14px; margin-top: 6px;">Номер брони Eptera: ${escapeHtml(booking.epteraReservationId)}</div>` : ""}
+    </div>
+    <div style="margin-top: 42px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
+      <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Контактное лицо</div>
+      <div style="font-size: 17px; line-height: 1.8;">${escapeHtml(contactName || "Не указано")}<br />${escapeHtml(booking.contactEmail ?? "")}<br />${escapeHtml(booking.contactPhone ?? "")}</div>
+      ${booking.contactComment ? `<div style="margin-top: 12px; font-size: 15px;">Комментарий: ${escapeHtml(booking.contactComment)}</div>` : ""}
+    </div>
+    <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
+      <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Тариф</div>
+      <div style="font-size: 16px; line-height: 1.8;">${escapeHtml([booking.selectedOffer?.boardType, booking.selectedOffer?.rateType, booking.selectedOffer?.rateDescription].filter(Boolean).join(" · ") || "Не указан")}</div>
+    </div>
+    <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
+      <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Состав гостей</div>
+      <div style="font-size: 16px; line-height: 1.8;">${guests.map((guest) => `• ${escapeHtml(`${guest.firstName} ${guest.lastName}`)} — ${escapeHtml(guest.type)}${guest.birthDate ? `, ${escapeHtml(guest.birthDate)}` : ""}`).join("<br />")}</div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px 48px; margin-top: 42px;">
       <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Заезд</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${formatDate(booking.checkInDate)}</div></div>
@@ -109,7 +137,8 @@ export const AccountBookingsSection = ({
                 {booking.roomName}
               </h3>
               <p className="mt-2 text-sm text-muted-ui-foreground">
-                Номер брони: {getBookingNumber(booking.id)}
+                Номер брони:{" "}
+                {booking.voucherNumber ?? getBookingNumber(booking.id)}
               </p>
               <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
@@ -147,6 +176,70 @@ export const AccountBookingsSection = ({
                   </dd>
                 </div>
               </dl>
+              <div className="mt-7 grid gap-4 rounded-3xl bg-page p-5 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                    Контактное лицо
+                  </p>
+                  <p className="mt-2 font-semibold">
+                    {[booking.contactFirstName, booking.contactLastName]
+                      .filter(Boolean)
+                      .join(" ") || "Не указано"}
+                  </p>
+                  <p className="mt-1 text-muted-ui-foreground">
+                    {booking.contactEmail ?? "—"}
+                  </p>
+                  <p className="text-muted-ui-foreground">
+                    {booking.contactPhone ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                    Статус оплаты
+                  </p>
+                  <p className="mt-2 font-semibold">{booking.paymentStatus}</p>
+                  {booking.epteraReservationId && (
+                    <p className="mt-1 text-muted-ui-foreground">
+                      Eptera: {booking.epteraReservationId}
+                    </p>
+                  )}
+                  {booking.contactComment && (
+                    <p className="mt-1 text-muted-ui-foreground">
+                      Комментарий: {booking.contactComment}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                    Тариф
+                  </p>
+                  <p className="mt-2 font-semibold">
+                    {[
+                      booking.selectedOffer?.boardType,
+                      booking.selectedOffer?.rateType,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "Не указан"}
+                  </p>
+                </div>
+              </div>
+              {booking.guestList?.length ? (
+                <div className="mt-5 rounded-3xl border border-line p-5">
+                  <p className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                    Состав гостей
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {booking.guestList.map((guest) => (
+                      <li
+                        key={`${guest.type}-${guest.firstName}-${guest.lastName}`}
+                      >
+                        {guest.firstName} {guest.lastName} · {guest.type}
+                        {guest.birthDate ? ` · ${guest.birthDate}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div className="mt-7 flex flex-wrap gap-2">
                 {getBookingServices(booking.roomName, booking.status).map(
                   (service) => (

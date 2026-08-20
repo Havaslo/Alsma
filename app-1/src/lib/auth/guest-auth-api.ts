@@ -9,11 +9,30 @@ export type GuestProfile = {
   readonly bookings: Array<{
     readonly checkInDate: string;
     readonly checkOutDate: string;
+    readonly contactComment: string | null;
+    readonly contactEmail: string | null;
+    readonly contactFirstName: string | null;
+    readonly contactLastName: string | null;
+    readonly contactPhone: string | null;
+    readonly epteraReservationId: string | null;
     readonly guestsCount: number;
+    readonly guestList: Array<{
+      readonly birthDate?: string;
+      readonly firstName: string;
+      readonly lastName: string;
+      readonly type: "adult" | "baby" | "child";
+    }> | null;
     readonly id: string;
+    readonly paymentStatus: string;
     readonly roomName: string;
+    readonly selectedOffer: {
+      readonly boardType?: string;
+      readonly rateDescription?: string | null;
+      readonly rateType?: string;
+    } | null;
     readonly status: string;
     readonly totalAmount: string | null;
+    readonly voucherNumber: string | null;
   }>;
   readonly email: string | null;
   readonly fullName: string | null;

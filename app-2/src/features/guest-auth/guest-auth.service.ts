@@ -11,11 +11,21 @@ const publicUser = (user: {
   bookings: Array<{
     checkInDate: Date;
     checkOutDate: Date;
+    contactComment: string | null;
+    contactEmail: string | null;
+    contactFirstName: string | null;
+    contactLastName: string | null;
+    contactPhone: string | null;
+    epteraReservationId: string | null;
     guestsCount: number;
+    guestList: unknown;
     id: string;
+    paymentStatus: string;
     roomName: string;
+    selectedOffer: unknown;
     status: string;
     totalAmount: { toString(): string } | null;
+    voucherNumber: string | null;
   }>;
   email: string | null;
   fullName: string | null;

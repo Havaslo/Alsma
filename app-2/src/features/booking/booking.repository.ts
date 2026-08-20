@@ -5,11 +5,15 @@ export const createBookingRepository = (database: Database) => ({
   createGuestBooking: (input: {
     checkInDate: Date;
     checkOutDate: Date;
+    contactComment: string | null;
     contactEmail: string;
+    contactFirstName: string | null;
+    contactLastName: string | null;
     contactPhone: string;
     currency: string;
     epteraReservationId: string | null;
     guestsCount: number;
+    guestList: Prisma.InputJsonValue;
     roomName: string;
     selectedOffer: Prisma.InputJsonValue;
     totalAmount: number;
@@ -48,10 +52,40 @@ export const createBookingRepository = (database: Database) => ({
     fullName: string;
     phone: string;
   }) =>
-    database.client.guestUser.upsert({
-      create: input,
-      update: { email: input.email, fullName: input.fullName },
-      where: { phone: input.phone },
+    database.client.$transaction(async (transaction) => {
+      const byEmail = await transaction.guestUser.findFirst({
+        where: { email: input.email },
+      });
+      if (byEmail) {
+        const phoneOwner = await transaction.guestUser.findUnique({
+          where: { phone: input.phone },
+        });
+        return transaction.guestUser.update({
+          data: {
+            fullName: input.fullName,
+            ...(phoneOwner && phoneOwner.id !== byEmail.id
+              ? {}
+              : { phone: input.phone }),
+          },
+          where: { id: byEmail.id },
+        });
+      }
+      const byPhone = await transaction.guestUser.findUnique({
+        where: { phone: input.phone },
+      });
+      if (byPhone && (!byPhone.email || byPhone.email === input.email)) {
+        return transaction.guestUser.update({
+          data: { email: input.email, fullName: input.fullName },
+          where: { id: byPhone.id },
+        });
+      }
+      return transaction.guestUser.create({
+        data: {
+          email: input.email,
+          fullName: input.fullName,
+          phone: `email:${input.email}`,
+        },
+      });
     }),
 });
 

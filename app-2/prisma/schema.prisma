@@ -129,8 +129,12 @@ model GuestBooking {
   paymentId           String?   @unique @map("payment_id")
   epteraReservationId String?   @unique @map("eptera_reservation_id")
   voucherNumber       String?   @map("voucher_number")
+  contactFirstName    String?   @map("contact_first_name")
+  contactLastName     String?   @map("contact_last_name")
   contactPhone        String?   @map("contact_phone")
   contactEmail        String?   @map("contact_email")
+  contactComment      String?   @map("contact_comment")
+  guestList           Json?     @map("guest_list")
   selectedOffer       Json?     @map("selected_offer")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
