@@ -1,3 +1,5 @@
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { CalendarDays, Download, Printer } from "lucide-react";
 
 import type { GuestProfile } from "@/lib/auth/guest-auth-api";
@@ -23,6 +25,66 @@ const formatDate = (value: string) =>
     year: "numeric",
   });
 
+const getBookingNumber = (id: string) => `ALS-${id.slice(0, 8).toUpperCase()}`;
+
+const getBookingServices = (roomName: string, status: string) =>
+  bookingServices[roomName] ?? [status];
+
+const downloadBookingPdf = async (
+  booking: GuestProfile["bookings"][number],
+) => {
+  const bookingNumber = getBookingNumber(booking.id);
+  const services = getBookingServices(booking.roomName, booking.status);
+  const document = window.document.createElement("div");
+
+  document.style.cssText = [
+    "position: fixed",
+    "left: -10000px",
+    "top: 0",
+    "width: 794px",
+    "padding: 56px",
+    "box-sizing: border-box",
+    "background: #f7f4ed",
+    "color: #173f34",
+    "font-family: Arial, sans-serif",
+  ].join(";");
+  document.innerHTML = `
+    <div style="border-bottom: 2px solid #d9cdbb; padding-bottom: 22px;">
+      <div style="font-size: 28px; font-weight: 700; letter-spacing: 2px;">АЛСМА</div>
+      <div style="color: #6c716c; font-size: 14px; margin-top: 8px;">Подтверждение бронирования</div>
+    </div>
+    <div style="margin-top: 42px;">
+      <div style="font-size: 28px; font-weight: 700;">${booking.roomName}</div>
+      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони: ${bookingNumber}</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px 48px; margin-top: 42px;">
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Заезд</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${formatDate(booking.checkInDate)}</div></div>
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Выезд</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${formatDate(booking.checkOutDate)}</div></div>
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Гости</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${booking.guestsCount} гостя</div></div>
+      <div><div style="color: #6c716c; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Итоговая цена</div><div style="font-size: 19px; font-weight: 700; margin-top: 8px;">${booking.totalAmount ? `${Number(booking.totalAmount).toLocaleString("ru-RU")} ₽` : "По запросу"}</div></div>
+    </div>
+    <div style="margin-top: 42px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
+      <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Услуги</div>
+      <div style="font-size: 17px; line-height: 1.8;">${services.map((service) => `• ${service}`).join("<br />")}</div>
+    </div>
+  `;
+  window.document.body.appendChild(document);
+
+  try {
+    const canvas = await html2canvas(document, {
+      backgroundColor: "#f7f4ed",
+      scale: 2,
+    });
+    const pdf = new jsPDF({ format: "a4", unit: "mm" });
+    const width = 190;
+    const height = (canvas.height * width) / canvas.width;
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, width, height);
+    pdf.save(`bron-${bookingNumber}.pdf`);
+  } finally {
+    document.remove();
+  }
+};
+
 export const AccountBookingsSection = ({
   bookings,
 }: {
@@ -47,7 +109,7 @@ export const AccountBookingsSection = ({
                 {booking.roomName}
               </h3>
               <p className="mt-2 text-sm text-muted-ui-foreground">
-                Номер брони: ALS-{booking.id.slice(0, 8).toUpperCase()}
+                Номер брони: {getBookingNumber(booking.id)}
               </p>
               <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
@@ -86,7 +148,7 @@ export const AccountBookingsSection = ({
                 </div>
               </dl>
               <div className="mt-7 flex flex-wrap gap-2">
-                {(bookingServices[booking.roomName] ?? [booking.status]).map(
+                {getBookingServices(booking.roomName, booking.status).map(
                   (service) => (
                     <span
                       className="rounded-full border border-line bg-page px-4 py-2 text-sm"
@@ -101,7 +163,7 @@ export const AccountBookingsSection = ({
             <div className="flex shrink-0 flex-col gap-3">
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-page px-5 py-3 font-semibold text-brand"
-                onClick={() => window.print()}
+                onClick={() => void downloadBookingPdf(booking)}
                 type="button"
               >
                 <Download className="size-4" /> Скачать PDF
