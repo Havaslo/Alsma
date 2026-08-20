@@ -1,5 +1,3 @@
-import { Star } from "lucide-react";
-
 import corporateCheckinsImage from "@/assets/alsma/corporate-checkins.jpg";
 import heroImage from "@/assets/alsma/hero.jpg";
 import { HomeBookingBar } from "@/components/site/HomeBookingBar";
@@ -123,14 +121,7 @@ export const HomePage = () => {
                 rel="noreferrer"
                 target="_blank"
               >
-                <span className="inline-flex items-center gap-1">
-                  4.9
-                  <Star
-                    aria-hidden="true"
-                    className="size-4 fill-current text-orange-500"
-                  />
-                </span>
-                в Яндекс Картах
+                4.9 ⭐ в Яндекс Картах
               </a>
             </div>
             <h1 className="max-w-4xl font-heading text-4xl leading-[1.02] font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
