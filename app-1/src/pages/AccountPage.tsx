@@ -132,7 +132,7 @@ export const AccountPage = () => {
           ))}
         </nav>
         {section === "bookings" ? (
-          <AccountBookingsSection bookings={guest.bookings} />
+          <AccountBookingsSection bookings={guest.bookings} profile={guest} />
         ) : (
           <AccountLoyaltySection bonusProgram={guest.bonusProgram} />
         )}
