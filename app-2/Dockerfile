@@ -53,14 +53,20 @@ FROM node:22-alpine AS production
 
 RUN apk add --no-cache ca-certificates
 
+ENV COREPACK_HOME=/opt/corepack
 ENV NODE_ENV=production
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
+
+RUN mkdir -p "$COREPACK_HOME" \
+  && corepack enable \
+  && corepack prepare pnpm@11.7.0 --activate \
+  && chmod -R a=rX "$COREPACK_HOME"
 
 COPY --from=build --chown=65532:65532 /app ./
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 USER 65532:65532
 
-CMD ["node", "dist/server.js"]
+CMD ["pnpm", "start"]
