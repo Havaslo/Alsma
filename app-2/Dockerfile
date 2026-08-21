@@ -1,61 +1,41 @@
 # syntax=docker/dockerfile:1.7
 FROM node:22-alpine AS development
 
-RUN apk add --no-cache ca-certificates openssl wget \
-  && wget -qO /usr/local/share/ca-certificates/russian-trusted-root-ca.crt \
-    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt \
-  && printf '' | openssl s_client -connect platform-api2.max.ru:443 \
-    -servername platform-api2.max.ru -showcerts 2>/dev/null \
-    | awk 'BEGIN { certificate = 0 } /BEGIN CERTIFICATE/ { certificate += 1 } certificate == 2 { print } /END CERTIFICATE/ && certificate == 2 { exit }' \
-    > /usr/local/share/ca-certificates/russian-trusted-sub-ca.crt \
-  && update-ca-certificates
-
-ENV HOME=/tmp/amazi-home
+ENV HOME=/tmp/project-home
 ENV NODE_ENV=development
-ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
 RUN corepack enable
 
 USER 65532:65532
-
-CMD ["sh", "-c", "pnpm install --frozen-lockfile --ignore-scripts --store-dir /tmp/pnpm-store && exec pnpm run dev"]
+CMD ["sh", "-c", "pnpm install --ignore-scripts --store-dir /tmp/pnpm-store && exec pnpm run dev"]
 
 FROM node:22-alpine AS build
 
-RUN apk add --no-cache ca-certificates openssl wget \
-  && wget -qO /usr/local/share/ca-certificates/russian-trusted-root-ca.crt \
-    http://nuc-cdp.digital.gov.ru/cdp/rootca_ssl_rsa2022.crt \
-  && printf '' | openssl s_client -connect platform-api2.max.ru:443 \
-    -servername platform-api2.max.ru -showcerts 2>/dev/null \
-    | awk 'BEGIN { certificate = 0 } /BEGIN CERTIFICATE/ { certificate += 1 } certificate == 2 { print } /END CERTIFICATE/ && certificate == 2 { exit }' \
-    > /usr/local/share/ca-certificates/russian-trusted-sub-ca.crt \
-  && update-ca-certificates
-ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
-
 WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts ./
+COPY prisma ./prisma
+
+RUN corepack enable \
+  && pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN --mount=type=secret,id=application_environment,required=false \
-  set -eu; \
-  corepack enable; \
-  pnpm install --frozen-lockfile; \
-  if [ -f /run/secrets/application_environment ]; then \
-    cp /run/secrets/application_environment .env.production.local; \
-  fi; \
+ARG AMAZI_BUILD_REVISION=local
+
+RUN set -eu; \
+  test -n "$AMAZI_BUILD_REVISION"; \
+  rm -rf dist src/generated/prisma; \
+  pnpm exec prisma generate; \
   pnpm run build; \
-  rm -f .env.production.local; \
-  pnpm prune --prod
+  pnpm prune --prod --ignore-scripts
 
 FROM node:22-alpine AS production
 
-RUN apk add --no-cache ca-certificates
-
 ENV COREPACK_HOME=/opt/corepack
 ENV NODE_ENV=production
-ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 
@@ -64,8 +44,7 @@ RUN mkdir -p "$COREPACK_HOME" \
   && corepack prepare pnpm@11.7.0 --activate \
   && chmod -R a=rX "$COREPACK_HOME"
 
-COPY --from=build --chown=65532:65532 /app ./
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build --chown=65532:65532 /app /app
 
 USER 65532:65532
 
