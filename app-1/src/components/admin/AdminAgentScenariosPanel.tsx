@@ -22,7 +22,7 @@ import {
 } from "@/lib/admin/useAgentScenarios";
 import { cn } from "@/lib/cn";
 
-type AgentScenariosTab = AgentSettingsTab | "rules" | "scenarios";
+type AgentScenariosTab = AgentSettingsTab | "rules" | "scenarios" | "voice";
 const SUMMARY_CARDS = [
   { key: "scenarios", label: "Сценариев ответов" },
   { key: "rules", label: "Правил перевода" },
@@ -31,6 +31,7 @@ const SUMMARY_CARDS = [
 const TABS: Array<{ label: string; value: AgentScenariosTab }> = [
   { label: "Сценарии ответов", value: "scenarios" },
   { label: "Правила перевода", value: "rules" },
+  { label: "Голосовой агент", value: "voice" },
   { label: "Общие настройки", value: "general" },
   { label: "Возможности агента", value: "capabilities" },
   { label: "Данные клиента", value: "data" },
@@ -46,6 +47,10 @@ export const AdminAgentScenariosPanel = () => {
   const deleteRule = useDeleteAgentTransferRule();
   const scenarios = scenariosQuery.data?.scenarios ?? [];
   const rules = scenariosQuery.data?.transferRules ?? [];
+  const voiceScenarios = scenarios.filter((item) =>
+    item.channels.includes("voice"),
+  );
+  const voiceRules = rules.filter((item) => item.channels.includes("voice"));
   const activeCount = useMemo(
     () => [...scenarios, ...rules].filter((item) => item.enabled).length,
     [rules, scenarios],
@@ -58,20 +63,25 @@ export const AdminAgentScenariosPanel = () => {
   const addScenario = () =>
     saveScenario.mutate({
       action: "answer",
+      channels: tab === "voice" ? ["voice"] : ["text"],
       enabled: true,
       page: null,
-      response: "Опишите правило поведения ассистента для этого сценария.",
-      title: "Новый сценарий",
+      response:
+        tab === "voice"
+          ? "Опишите правило поведения голосового агента для этого сценария."
+          : "Опишите правило поведения ассистента для этого сценария.",
+      title: tab === "voice" ? "Новый голосовой сценарий" : "Новый сценарий",
       trigger: "consultation",
     });
   const addRule = () =>
     saveRule.mutate({
+      channels: tab === "voice" ? ["voice"] : ["text"],
       condition: "",
       destination: "booking-manager",
       enabled: true,
       title: "Новое правило",
     });
-  const isListTab = tab === "scenarios" || tab === "rules";
+  const isListTab = tab === "scenarios" || tab === "rules" || tab === "voice";
 
   return (
     <div className="space-y-6">
@@ -117,39 +127,81 @@ export const AdminAgentScenariosPanel = () => {
           <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-brand">
-                {tab === "scenarios" ? "Сценарии ответов" : "Правила перевода"}
+                {tab === "voice"
+                  ? "Сценарии голосового агента"
+                  : tab === "scenarios"
+                    ? "Сценарии ответов"
+                    : "Правила перевода"}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
-                {tab === "scenarios"
-                  ? "Изменяйте тексты, триггеры и следующее действие сценария для новых обращений."
-                  : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку."}
+                {tab === "voice"
+                  ? "Инструкции для телефонных разговоров. Они используются только голосовым агентом."
+                  : tab === "scenarios"
+                    ? "Изменяйте тексты, триггеры и следующее действие сценария для новых обращений."
+                    : "Определяйте, когда разговор нужно перевести менеджеру или создать заявку."}
               </p>
             </div>
-            <Button onClick={tab === "scenarios" ? addScenario : addRule}>
+            <Button
+              onClick={
+                tab === "voice"
+                  ? addScenario
+                  : tab === "scenarios"
+                    ? addScenario
+                    : addRule
+              }
+            >
               <Plus className="size-4" />
-              {tab === "scenarios" ? "Добавить сценарий" : "Добавить правило"}
+              {tab === "rules" ? "Добавить правило" : "Добавить сценарий"}
             </Button>
           </header>
           <div className="mt-6 space-y-4">
-            {tab === "scenarios"
-              ? scenarios.map((item: AgentScenario) => (
-                  <AdminAgentScenarioCard
-                    item={item}
-                    key={item.id}
-                    onDelete={() => deleteScenario.mutate(item.id)}
-                    onSave={(updated) => saveScenario.mutate(updated)}
-                  />
-                ))
-              : rules.map((item: AgentTransferRule) => (
-                  <AdminAgentTransferRuleCard
-                    item={item}
-                    key={item.id}
-                    onDelete={() => deleteRule.mutate(item.id)}
-                    onSave={(updated) => saveRule.mutate(updated)}
-                  />
-                ))}
+            {tab === "voice"
+              ? [...voiceScenarios, ...voiceRules].map((item) =>
+                  "condition" in item ? (
+                    <AdminAgentTransferRuleCard
+                      item={item}
+                      key={item.id}
+                      onDelete={() => deleteRule.mutate(item.id)}
+                      onSave={(updated) => saveRule.mutate(updated)}
+                    />
+                  ) : (
+                    <AdminAgentScenarioCard
+                      item={item}
+                      key={item.id}
+                      onDelete={() => deleteScenario.mutate(item.id)}
+                      onSave={(updated) => saveScenario.mutate(updated)}
+                    />
+                  ),
+                )
+              : tab === "scenarios"
+                ? scenarios
+                    .filter((item) => item.channels.includes("text"))
+                    .map((item: AgentScenario) => (
+                      <AdminAgentScenarioCard
+                        item={item}
+                        key={item.id}
+                        onDelete={() => deleteScenario.mutate(item.id)}
+                        onSave={(updated) => saveScenario.mutate(updated)}
+                      />
+                    ))
+                : rules
+                    .filter((item) => item.channels.includes("text"))
+                    .map((item: AgentTransferRule) => (
+                      <AdminAgentTransferRuleCard
+                        item={item}
+                        key={item.id}
+                        onDelete={() => deleteRule.mutate(item.id)}
+                        onSave={(updated) => saveRule.mutate(updated)}
+                      />
+                    ))}
             {!scenariosQuery.isLoading &&
-              !(tab === "scenarios" ? scenarios.length : rules.length) && (
+              !(tab === "voice"
+                ? voiceScenarios.length + voiceRules.length
+                : tab === "scenarios"
+                  ? scenarios.filter((item) => item.channels.includes("text"))
+                      .length
+                  : rules.filter((item) => item.channels.includes("text"))
+                      .length) && (
                 <p className="rounded-2xl bg-page p-5 text-sm text-muted-ui-foreground">
                   Пока нет сохранённых записей.
                 </p>

@@ -1,17 +1,21 @@
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { Database } from "../../lib/database/database.js";
+import { ensureDefaultAgentPlaybook } from "../agent/agent-playbook.js";
 import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
 
 export const createVoiceAgentRepository = (database: Database) => ({
   getAgentSettings: async () =>
-    (await database.client.appSetting.findUnique({
-      where: { key: "agent.settings" },
-      select: { value: true },
-    }))?.value,
+    (
+      await database.client.appSetting.findUnique({
+        where: { key: "agent.settings" },
+        select: { value: true },
+      })
+    )?.value,
   createCall: (input: CreateCallBody) =>
     database.client.voiceCall.create({ data: { ...input, provider: "mango" } }),
   getKnowledgeContext: async () => {
-    const [articles, rules] = await Promise.all([
+    await ensureDefaultAgentPlaybook(database);
+    const [articles, rules, scenarios, transferRules] = await Promise.all([
       database.client.knowledgeArticle.findMany({
         where: { status: "published", channels: { has: "voice" } },
         orderBy: { updatedAt: "desc" },
@@ -20,10 +24,25 @@ export const createVoiceAgentRepository = (database: Database) => ({
         where: { enabled: true, channels: { has: "voice" } },
         orderBy: { priority: "desc" },
       }),
+      database.client.agentScenario.findMany({
+        where: { enabled: true, channels: { has: "voice" } },
+        orderBy: { updatedAt: "desc" },
+      }),
+      database.client.agentTransferRule.findMany({
+        where: { enabled: true, channels: { has: "voice" } },
+        orderBy: { updatedAt: "desc" },
+      }),
     ]);
     return [
       ...articles.map((item) => `${item.title}: ${item.content}`),
       ...rules.map((item) => `Правило ${item.title}: ${item.content}`),
+      ...scenarios.map(
+        (item) => `Голосовой сценарий ${item.title}: ${item.response}`,
+      ),
+      ...transferRules.map(
+        (item) =>
+          `Правило перевода ${item.title}: ${item.condition}. Назначение: ${item.destination}`,
+      ),
     ].join("\n\n");
   },
   findCall: (id: string) =>

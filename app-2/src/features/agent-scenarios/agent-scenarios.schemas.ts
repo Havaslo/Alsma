@@ -3,6 +3,10 @@ import { z } from "zod";
 export const agentScenarioBodySchema = z.object({
   action: z.enum(["answer", "open_page", "transfer"]).default("answer"),
   enabled: z.boolean().default(true),
+  channels: z
+    .array(z.enum(["text", "voice"]))
+    .min(1)
+    .default(["text"]),
   id: z.string().uuid().optional(),
   page: z.enum(["spa", "hardware-procedures", "offers"]).nullable().optional(),
   response: z.string().trim().min(1).max(10_000),
@@ -14,6 +18,10 @@ export const agentTransferRuleBodySchema = z.object({
   condition: z.string().trim().min(1).max(10_000),
   destination: z.string().trim().min(1).max(255),
   enabled: z.boolean().default(true),
+  channels: z
+    .array(z.enum(["text", "voice"]))
+    .min(1)
+    .default(["text"]),
   id: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(255),
 });

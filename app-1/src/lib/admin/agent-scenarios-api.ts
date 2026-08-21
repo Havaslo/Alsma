@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/api/api-client";
 export type AgentScenario = {
   readonly action: "answer" | "open_page" | "transfer";
   readonly enabled: boolean;
+  readonly channels: Array<"text" | "voice">;
   readonly id: string;
   readonly page: "spa" | "hardware-procedures" | "offers" | null;
   readonly response: string;
@@ -14,6 +15,7 @@ export type AgentTransferRule = {
   readonly condition: string;
   readonly destination: string;
   readonly enabled: boolean;
+  readonly channels: Array<"text" | "voice">;
   readonly id: string;
   readonly title: string;
 };

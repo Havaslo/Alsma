@@ -595,11 +595,11 @@ export const createAiAgentService = (options: AgentOptions) => {
     ] = await Promise.all([
       knowledge.answer({ channel: "text", question: message }),
       options.database.client.agentScenario.findMany({
-        where: { enabled: true },
+        where: { enabled: true, channels: { has: "text" } },
         orderBy: { updatedAt: "desc" },
       }),
       options.database.client.agentTransferRule.findMany({
-        where: { enabled: true },
+        where: { enabled: true, channels: { has: "text" } },
         orderBy: { createdAt: "asc" },
       }),
       options.database.client.agentRule.findMany({

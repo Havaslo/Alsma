@@ -67,7 +67,7 @@ const defaultScenarios = [
     title: "Резервный ответ без зацикливания",
     trigger: "fallback",
   },
-] as const;
+];
 
 const defaultTransferRules = [
   {
@@ -105,11 +105,50 @@ const defaultTransferRules = [
     enabled: true,
     title: "Неподтверждённая информация",
   },
-] as const;
+];
+
+const defaultVoiceScenarios = [
+  {
+    channels: ["voice"],
+    enabled: true,
+    response:
+      "Консультируй по телефону коротко и естественно. Рассказывай об акциях только по опубликованным данным и не придумывай сроки, цены или скидки.",
+    title: "Голос: консультация и акции",
+    trigger: "акции,скидки,условия,стоимость,что входит,расскажите",
+  },
+  {
+    channels: ["voice"],
+    enabled: true,
+    response:
+      "Для проверки проживания обязательно уточни дату заезда, дату выезда и количество взрослых и детей. После этого используй check_availability. Озвучивай только результат проверки и не подтверждай бронь.",
+    title: "Голос: проверка наличия и вместимости",
+    trigger:
+      "наличие,свободные номера,забронировать,проживание,разместить,человек",
+  },
+  {
+    channels: ["voice"],
+    enabled: true,
+    response:
+      "Если клиент просит сотрудника, не уверен в ответе, не может получить подтверждённые данные или вопрос требует ручной обработки, объясни, что переводишь звонок, и вызови transfer_to_manager.",
+    title: "Голос: перевод при необходимости",
+    trigger: "менеджер,сотрудник,оператор,соедините,переведите,помогите",
+  },
+];
+
+const defaultVoiceTransferRules = [
+  {
+    channels: ["voice"],
+    condition:
+      "Гость просит сотрудника, менеджера или оператора либо агент не может уверенно подтвердить ответ.",
+    destination: "duty-manager",
+    enabled: true,
+    title: "Голос: перевод по запросу или при неуверенности",
+  },
+];
 
 export const ensureDefaultAgentPlaybook = async (database: Database) => {
   await Promise.all([
-    ...defaultScenarios.map(async (item) => {
+    ...[...defaultScenarios, ...defaultVoiceScenarios].map(async (item) => {
       const existing = await database.client.agentScenario.findFirst({
         where: { title: item.title },
         select: { action: true, id: true, page: true, response: true },
@@ -117,6 +156,7 @@ export const ensureDefaultAgentPlaybook = async (database: Database) => {
       if (!existing) {
         await database.client.agentScenario.create({ data: item });
       } else if (
+        "action" in item &&
         item.title === "Акции и скидки" &&
         existing.action === "answer" &&
         existing.page === null &&
@@ -129,13 +169,15 @@ export const ensureDefaultAgentPlaybook = async (database: Database) => {
         });
       }
     }),
-    ...defaultTransferRules.map(async (item) => {
-      const existing = await database.client.agentTransferRule.findFirst({
-        where: { title: item.title },
-        select: { id: true },
-      });
-      if (!existing)
-        await database.client.agentTransferRule.create({ data: item });
-    }),
+    ...[...defaultTransferRules, ...defaultVoiceTransferRules].map(
+      async (item) => {
+        const existing = await database.client.agentTransferRule.findFirst({
+          where: { title: item.title },
+          select: { id: true },
+        });
+        if (!existing)
+          await database.client.agentTransferRule.create({ data: item });
+      },
+    ),
   ]);
 };
