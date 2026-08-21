@@ -292,14 +292,16 @@ export const createAdminOperationsRepository = (database: Database) => ({
         select: { value: true },
       }),
     ]);
-    const settings = setting?.value && typeof setting.value === "object"
-      ? (setting.value as Record<string, unknown>)
-      : {};
+    const settings =
+      setting?.value && typeof setting.value === "object"
+        ? (setting.value as Record<string, unknown>)
+        : {};
     const stopped = settings.enabled === false || settings.site === false;
     return {
       items: items.map((item) => ({
         ...item,
-        agentStopped: stopped &&
+        agentStopped:
+          stopped &&
           (item.details as Record<string, unknown> | null)?.source === "Сайт",
       })),
       total,

@@ -20,6 +20,7 @@ type CreateAppOptions = {
     readonly baseUrl: string;
     readonly webhookSecret?: string;
   };
+  readonly voiceConfigurationSecret?: string;
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -57,6 +58,7 @@ export const createApp = ({
   openaiApiKey,
   openaiBaseUrl,
   openaiSip,
+  voiceConfigurationSecret,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -98,6 +100,7 @@ export const createApp = ({
       openaiApiKey,
       openaiBaseUrl,
       openaiSip,
+      voiceConfigurationSecret,
       maxBot,
       vk,
       yooKassaSecretKey,

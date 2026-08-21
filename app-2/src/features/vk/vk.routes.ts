@@ -56,9 +56,17 @@ export const createVkRouter = ({
       select: { value: true },
     });
     if (setting?.value === true) return true;
-    const agentSetting = await database.client.appSetting.findUnique({ where: { key: "agent.settings" }, select: { value: true } });
+    const agentSetting = await database.client.appSetting.findUnique({
+      where: { key: "agent.settings" },
+      select: { value: true },
+    });
     const value = agentSetting?.value;
-    return Boolean(value && typeof value === "object" && "vk" in value && (value as { vk?: unknown }).vk === false);
+    return Boolean(
+      value &&
+      typeof value === "object" &&
+      "vk" in value &&
+      (value as { vk?: unknown }).vk === false,
+    );
   };
   const conversationQueues = new Map<string, Promise<void>>();
   const deliveryQueues = new Map<string, Promise<void>>();

@@ -94,9 +94,17 @@ export const createMaxBotRouter = ({
 }): Router => {
   const router = Router();
   const isAgentEnabled = async () => {
-    const setting = await database.client.appSetting.findUnique({ where: { key: "agent.settings" }, select: { value: true } });
+    const setting = await database.client.appSetting.findUnique({
+      where: { key: "agent.settings" },
+      select: { value: true },
+    });
     const value = setting?.value;
-    return !(value && typeof value === "object" && "max" in value && (value as { max?: unknown }).max === false);
+    return !(
+      value &&
+      typeof value === "object" &&
+      "max" in value &&
+      (value as { max?: unknown }).max === false
+    );
   };
   const conversationQueues = new Map<string, Promise<void>>();
   if (max.configured && webhookSecret && webhookUrl) {
@@ -116,21 +124,24 @@ export const createMaxBotRouter = ({
     void isAgentEnabled().then((enabled) => {
       if (!enabled) return;
       return database.client.adminRequest
-      .findUnique({
-        where: { id: event.conversationId },
-        select: { details: true },
-      })
-      .then(async (request) => {
-        const chatId = firstString(detailsFor(request?.details).maxChatId);
-        if (!request || !isMaxRequest(request.details) || !chatId) return;
-        await max.sendMessage({ chatId, text: messageForMax(event, siteUrl) });
-      })
-      .catch((error: unknown) =>
-        logger.error(
-          { error: error instanceof Error ? error.message : "Unknown error" },
-          "MAX outgoing message delivery failed",
-        ),
-      );
+        .findUnique({
+          where: { id: event.conversationId },
+          select: { details: true },
+        })
+        .then(async (request) => {
+          const chatId = firstString(detailsFor(request?.details).maxChatId);
+          if (!request || !isMaxRequest(request.details) || !chatId) return;
+          await max.sendMessage({
+            chatId,
+            text: messageForMax(event, siteUrl),
+          });
+        })
+        .catch((error: unknown) =>
+          logger.error(
+            { error: error instanceof Error ? error.message : "Unknown error" },
+            "MAX outgoing message delivery failed",
+          ),
+        );
     });
   });
 

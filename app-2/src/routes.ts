@@ -40,6 +40,7 @@ type CreateApiRouterOptions = {
     readonly baseUrl: string;
     readonly webhookSecret?: string;
   };
+  readonly voiceConfigurationSecret?: string;
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -76,6 +77,7 @@ export const createApiRouter = ({
   openaiApiKey,
   openaiBaseUrl,
   openaiSip,
+  voiceConfigurationSecret,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -194,6 +196,7 @@ export const createApiRouter = ({
       },
       managedStorage,
       openaiSip,
+      voiceConfigurationSecret,
     ),
   );
   return router;

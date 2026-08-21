@@ -5,6 +5,10 @@ import { validateRequest } from "../../lib/http/validate-request.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import {
+  createVoiceConfigurationHandler,
+  voiceTestCompletedHandler,
+} from "./voice-agent.configuration.js";
+import {
   answerHandler,
   completeHandler,
   createHandler,
@@ -46,6 +50,7 @@ export const createVoiceAgentRouter = (
     readonly baseUrl: string;
     readonly webhookSecret?: string;
   },
+  voiceConfigurationSecret?: string,
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -66,6 +71,11 @@ export const createVoiceAgentRouter = (
       reason: sipReady ? undefined : "Прямой OpenAI SIP не настроен.",
     }),
   );
+  router.get(
+    "/configuration",
+    createVoiceConfigurationHandler(database, voiceConfigurationSecret),
+  );
+  router.post("/configuration", voiceTestCompletedHandler);
   router.post(
     "/sip/incoming",
     createOpenAiSipHandler({
