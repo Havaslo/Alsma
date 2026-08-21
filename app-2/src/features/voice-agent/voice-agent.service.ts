@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import type { EpteraClient } from "../booking/eptera.client.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
@@ -77,7 +78,7 @@ const transferMangoCall = async ({
 export const recordingDisclosure =
   "Разговор записывается. Аудио, расшифровка и данные звонка хранятся 30 дней, затем удаляются.";
 
-export const voiceAgentSystemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Представляйся сотрудником базы. Отвечай только по переданным правилам и базе знаний. Не выдумывай наличие, цены или подтверждение брони: пока PMS не подключена, принимай заявку и обещай проверку менеджером. Если клиент просит человека или вопрос нужно передать менеджеру, сразу предложи соединить его с менеджером. Отвечай коротко, естественно и удобно для телефона.`;
+export const voiceAgentSystemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Приветствуй гостя и сначала пойми его запрос. Консультируй только по актуальной переданной базе знаний: рассказывай об акциях без выдуманных условий. Для проверки проживания обязательно уточни даты заезда и выезда, количество взрослых и детей, затем вызови check_availability. Озвучивай только результат инструмента: подходящие варианты, отсутствие вариантов или необходимость уточнения. Не оформляй, не изменяй и не отменяй бронирование. Если гость просит сотрудника, дважды не понял ответ, данных недостаточно, произошла ошибка интеграции или ты не уверен — сообщи о переводе и вызови transfer_to_manager. Отвечай коротко и естественно для телефона.`;
 
 const parseJson = (value: string) => {
   try {
@@ -95,6 +96,7 @@ export const createVoiceAgentService = (
   repository: VoiceAgentRepository,
   apiKey?: string,
   openaiBaseUrl?: string,
+  eptera?: EpteraClient,
   transfer?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
@@ -212,7 +214,10 @@ export const createVoiceAgentService = (
       repository.appendTranscript(id, segment),
     answer: async (question: string, callId?: string) => {
       if (!(await isVoiceEnabled()))
-        return { answer: "Сейчас голосовой AI-агент временно недоступен.", callId };
+        return {
+          answer: "Сейчас голосовой AI-агент временно недоступен.",
+          callId,
+        };
       const knowledge = await repository.getKnowledgeContext();
       const answer = await completeWithOpenAI(
         `Вопрос гостя: ${question}\n\nБаза знаний и правила:\n${knowledge}`,
@@ -328,6 +333,18 @@ export const createVoiceAgentService = (
           input.comment ? [{ role: "guest", text: input.comment }] : [],
         );
         return { requestId: request.id, accepted: true };
+      }
+      if (input.name === "check_availability") {
+        if (!eptera)
+          return { available: false, reason: "availability_not_configured" };
+        const result = await eptera.checkAvailability({
+          adults: input.adults,
+          checkIn: input.checkIn,
+          checkOut: input.checkOut,
+          children: input.children,
+          roomCount: input.roomCount,
+        });
+        return result;
       }
       const call = await repository.findCall(input.callId);
       if (call?.status === "transferring" || call?.status === "completed")

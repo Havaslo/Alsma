@@ -186,6 +186,7 @@ export const createApiRouter = ({
       database,
       openaiApiKey,
       openaiBaseUrl,
+      { apiKey: epteraApiKey, hotelId: epteraHotelId },
       {
         mangoApiKey: voiceIntegration.mangoApiKey,
         mangoApiSalt: voiceIntegration.mangoApiSalt,

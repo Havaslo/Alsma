@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { createEpteraClient } from "./features/booking/eptera.client.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
 import { readConfig } from "./lib/config.js";
 import { createDatabase } from "./lib/database/database.js";
@@ -42,6 +43,10 @@ const start = async (): Promise<void> => {
     database,
     logger,
     openaiBaseUrl: config.openaiBaseUrl,
+    eptera: createEpteraClient({
+      apiKey: config.epteraApiKey,
+      hotelId: config.epteraHotelId,
+    }),
   });
   const keepDatabaseReady = async (): Promise<void> => {
     for (;;) {

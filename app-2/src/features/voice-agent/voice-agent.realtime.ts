@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import WebSocket, { WebSocketServer } from "ws";
 
 import type { Database } from "../../lib/database/database.js";
+import type { EpteraClient } from "../booking/eptera.client.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 import {
   recordingDisclosure,
@@ -11,7 +12,7 @@ import {
 } from "./voice-agent.service.js";
 
 const realtimePath = "/api/voice-agent/realtime";
-const realtimeModel = "gpt-realtime";
+const realtimeModel = "gpt-realtime-2.1";
 
 type GatewayError = {
   readonly code: string;
@@ -41,6 +42,7 @@ export const attachVoiceAgentRealtime = (
     readonly database: Database;
     readonly logger: Logger;
     readonly openaiBaseUrl?: string;
+    readonly eptera?: EpteraClient;
   },
 ): void => {
   const websocketServer = new WebSocketServer({
@@ -87,7 +89,7 @@ export const attachVoiceAgentRealtime = (
           );
         });
 
-        upstream.on("message", (data, isBinary) => {
+        upstream.on("message", async (data, isBinary) => {
           if (!isBinary) {
             try {
               const event = JSON.parse(data.toString()) as {
@@ -134,6 +136,39 @@ export const attachVoiceAgentRealtime = (
                       },
                       instructions: `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}`,
                       output_modalities: ["audio"],
+                      tools: [
+                        {
+                          type: "function",
+                          name: "check_availability",
+                          description:
+                            "Проверить актуальную доступность номеров по датам и числу гостей.",
+                          parameters: {
+                            type: "object",
+                            properties: {
+                              checkIn: { type: "string" },
+                              checkOut: { type: "string" },
+                              adults: { type: "integer", minimum: 1 },
+                              children: {
+                                type: "array",
+                                items: { type: "integer", minimum: 0 },
+                              },
+                              roomCount: { type: "integer", minimum: 1 },
+                            },
+                            required: ["checkIn", "checkOut", "adults"],
+                          },
+                        },
+                        {
+                          type: "function",
+                          name: "transfer_to_manager",
+                          description:
+                            "Перевести звонок сотруднику по просьбе гостя или при отсутствии уверенного ответа.",
+                          parameters: {
+                            type: "object",
+                            properties: { reason: { type: "string" } },
+                            required: ["reason"],
+                          },
+                        },
+                      ],
                       type: "realtime",
                     },
                     type: "session.update",
@@ -145,6 +180,54 @@ export const attachVoiceAgentRealtime = (
                     type: "alsma.realtime.connected",
                   }),
                 );
+              }
+              if (event.type === "response.function_call_arguments.done") {
+                const functionEvent = event as typeof event & {
+                  call_id?: string;
+                  name?: string;
+                  arguments?: string;
+                };
+                if (
+                  functionEvent.call_id &&
+                  functionEvent.name === "check_availability" &&
+                  options.eptera
+                ) {
+                  let output: unknown = {
+                    available: false,
+                    reason: "temporary_error",
+                  };
+                  try {
+                    const args = JSON.parse(
+                      functionEvent.arguments ?? "{}",
+                    ) as {
+                      checkIn: string;
+                      checkOut: string;
+                      adults: number;
+                      children?: number[];
+                      roomCount?: number;
+                    };
+                    output = await options.eptera.checkAvailability({
+                      adults: args.adults,
+                      checkIn: args.checkIn,
+                      checkOut: args.checkOut,
+                      children: args.children ?? [],
+                      roomCount: args.roomCount ?? 1,
+                    });
+                  } catch {
+                    // Return a safe tool result; the model will explain the failure and offer a transfer.
+                  }
+                  upstream.send(
+                    JSON.stringify({
+                      type: "conversation.item.create",
+                      item: {
+                        type: "function_call_output",
+                        call_id: functionEvent.call_id,
+                        output: JSON.stringify(output),
+                      },
+                    }),
+                  );
+                  upstream.send(JSON.stringify({ type: "response.create" }));
+                }
               }
             } catch {
               options.logger.warn(

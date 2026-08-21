@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import { createEpteraClient } from "../booking/eptera.client.js";
 import {
   answerHandler,
   completeHandler,
@@ -33,6 +34,7 @@ export const createVoiceAgentRouter = (
   database: Database,
   apiKey?: string,
   openaiBaseUrl?: string,
+  eptera?: { apiKey?: string; hotelId?: string },
   transfer?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
@@ -50,6 +52,7 @@ export const createVoiceAgentRouter = (
     createVoiceAgentRepository(database),
     apiKey,
     openaiBaseUrl,
+    createEpteraClient(eptera ?? {}),
     transfer,
     managedStorage,
   );

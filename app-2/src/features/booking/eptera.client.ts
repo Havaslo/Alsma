@@ -42,6 +42,14 @@ export type EpteraOffer = {
   readonly bedOptions: string | null;
 };
 
+export type AvailabilityRequest = {
+  readonly adults: number;
+  readonly checkIn: string;
+  readonly checkOut: string;
+  readonly children: readonly number[];
+  readonly roomCount: number;
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -357,6 +365,58 @@ export const createEpteraClient = ({
   };
 
   return {
+    checkAvailability: async (input: AvailabilityRequest) => {
+      const offers = await (async () => {
+        const result = await (async () => {
+          const rooms = await getDefinitions();
+          const { hotelId: configuredHotelId } = requireConfiguration();
+          const query = new URLSearchParams({
+            adult: String(input.adults),
+            childage: input.children.join(","),
+            currency: "RUB",
+            fromdate: input.checkIn,
+            language: "ru",
+            "min-room-count": String(input.roomCount),
+            nationality: "RU",
+            "promo-code": "",
+            onlybestoffer: "false",
+            todate: input.checkOut,
+          });
+          const payload = await request<unknown>(
+            `/hotel/${configuredHotelId}/price/?${query}`,
+          );
+          return readOfferItems(payload).flatMap((item) => {
+            const offer = asRecord(item);
+            if (!offer) return [];
+            const id = string(offer, "id");
+            if (!id) return [];
+            const room = rooms.get(number(offer, "room-type-id"));
+            const roomToSell = nullableNumber(offer, "room-tosell");
+            const capacity = room?.capacity ?? null;
+            if (
+              roomToSell === 0 ||
+              (capacity !== null &&
+                capacity < input.adults + input.children.length)
+            )
+              return [];
+            return [
+              {
+                id,
+                roomType: string(offer, "room-type"),
+                roomToSell,
+                capacity,
+                price:
+                  nullableNumber(offer, "discounted-price") ??
+                  nullableNumber(offer, "price"),
+                currency: string(offer, "currency") || "RUB",
+              },
+            ];
+          });
+        })();
+        return result;
+      })();
+      return { available: offers.length > 0, offers: offers.slice(0, 5) };
+    },
     getOffers: async (input: {
       adults: number;
       checkIn: string;

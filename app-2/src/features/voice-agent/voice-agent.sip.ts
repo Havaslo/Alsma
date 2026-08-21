@@ -111,7 +111,7 @@ export const createOpenAiSipHandler =
         },
         body: JSON.stringify({
           type: "realtime",
-          model: "gpt-realtime",
+          model: "gpt-realtime-2.1",
           instructions: await getInstructions(),
           audio: { output: { voice: "marin" } },
         }),
