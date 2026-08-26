@@ -95,7 +95,6 @@ export type AdminRequest = {
   };
   readonly id: string;
   readonly _count?: { readonly chatMessages: number };
-  readonly voiceCalls?: AdminVoiceCall[];
   readonly requester: string | null;
   readonly status: SiteLead["status"];
   readonly title: string;
@@ -112,10 +111,21 @@ export type AdminVoiceCall = {
   readonly transcript: Array<{
     readonly role?: string;
     readonly text?: string;
+    readonly at?: string;
+    readonly startedAt?: string;
+    readonly endedAt?: string;
   }>;
   readonly summary: string | null;
   readonly intent: string | null;
   readonly recordingObjectId: string | null;
+  readonly hasRecording: boolean;
+  readonly hasTranscript: boolean;
+  readonly adminRequest: {
+    readonly id: string;
+    readonly requester: string | null;
+    readonly status: SiteLead["status"];
+    readonly title: string;
+  } | null;
 };
 export type AdminNotification = {
   readonly id: string;
@@ -222,6 +232,17 @@ export const loadAdminRequests = (signal?: AbortSignal) =>
   apiClient.get<Page<AdminRequest>>("/admin/requests", {
     headers: headers(),
     params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const loadAdminVoiceCalls = (signal?: AbortSignal) =>
+  apiClient.get<Page<AdminVoiceCall>>("/admin/voice-calls", {
+    headers: headers(),
+    params: { page: 1, pageSize: 100 },
+    signal,
+  });
+export const loadAdminVoiceCall = (recordId: string, signal?: AbortSignal) =>
+  apiClient.get<{ call: AdminVoiceCall }>(`/admin/voice-calls/${recordId}`, {
+    headers: headers(),
     signal,
   });
 export const loadAdminAnalytics = (

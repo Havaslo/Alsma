@@ -31,7 +31,7 @@ import { ROUTES } from "@/route-constants";
 
 const navigation = [
   {
-    active: (path: string) => path === ROUTES.adminVoiceCalls,
+    active: (path: string) => path.startsWith(ROUTES.adminVoiceCalls),
     icon: PhoneCall,
     label: "Входящие звонки",
     to: ROUTES.adminVoiceCalls,
@@ -103,6 +103,8 @@ const adminPageTitle = (path: string): string => {
   if (path === ROUTES.admin || path === ROUTES.adminDashboard) return "Дашборд";
   if (path === ROUTES.adminSiteLeads) return "Заявки сайта";
   if (path === ROUTES.adminBookingRequests) return "Заявки от агентов";
+  if (path === ROUTES.adminVoiceCalls) return "Входящие звонки";
+  if (path.startsWith(`${ROUTES.adminVoiceCalls}/`)) return "Входящий звонок";
   if (path.startsWith(ROUTES.adminClients)) return "Клиенты";
   if (path === ROUTES.adminRequests) return "Обращения";
   if (path.startsWith(`${ROUTES.adminRequests}/`))

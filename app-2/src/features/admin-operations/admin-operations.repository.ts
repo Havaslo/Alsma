@@ -284,26 +284,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { createdAt: "desc" },
         skip,
         take,
-        include: {
-          _count: { select: { chatMessages: true } },
-          voiceCalls: {
-            orderBy: { startedAt: "desc" },
-            take: 3,
-            select: {
-              id: true,
-              callerPhone: true,
-              status: true,
-              outcome: true,
-              startedAt: true,
-              endedAt: true,
-              durationSec: true,
-              transcript: true,
-              summary: true,
-              intent: true,
-              recordingObjectId: true,
-            },
-          },
-        },
+        include: { _count: { select: { chatMessages: true } } },
       }),
       database.client.adminRequest.count(),
       database.client.appSetting.findUnique({
@@ -324,6 +305,49 @@ export const createAdminOperationsRepository = (database: Database) => ({
           (item.details as Record<string, unknown> | null)?.source === "Сайт",
       })),
       total,
+    };
+  },
+  listVoiceCalls: async (query: AdminOperationsQuery) => {
+    const { skip, take } = getPaginationRange(query);
+    const [items, total] = await database.client.$transaction([
+      database.client.voiceCall.findMany({
+        orderBy: { startedAt: "desc" },
+        skip,
+        take,
+        include: {
+          adminRequest: {
+            select: { id: true, requester: true, status: true, title: true },
+          },
+        },
+      }),
+      database.client.voiceCall.count(),
+    ]);
+    return {
+      items: items.map(({ recordingUrl: _recordingUrl, ...call }) => ({
+        ...call,
+        hasRecording: Boolean(call.recordingObjectId),
+        hasTranscript:
+          Array.isArray(call.transcript) && call.transcript.length > 0,
+      })),
+      total,
+    };
+  },
+  getVoiceCall: async (recordId: string) => {
+    const call = await database.client.voiceCall.findUnique({
+      where: { id: recordId },
+      include: {
+        adminRequest: {
+          select: { id: true, requester: true, status: true, title: true },
+        },
+      },
+    });
+    if (!call) return null;
+    const { recordingUrl: _recordingUrl, ...result } = call;
+    return {
+      ...result,
+      hasRecording: Boolean(call.recordingObjectId),
+      hasTranscript:
+        Array.isArray(call.transcript) && call.transcript.length > 0,
     };
   },
   listTasks: async (query: AdminOperationsQuery) => {

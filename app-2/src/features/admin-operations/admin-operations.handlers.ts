@@ -53,6 +53,9 @@ export const createGetClientHandler =
 export const createListRequestsHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listRequests);
+export const createListVoiceCallsHandler = (
+  repository: AdminOperationsRepository,
+): RequestHandler => listHandler(repository.listVoiceCalls);
 export const createListTasksHandler = (
   repository: AdminOperationsRepository,
 ): RequestHandler => listHandler(repository.listTasks);

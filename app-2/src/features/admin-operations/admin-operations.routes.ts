@@ -19,6 +19,7 @@ import {
   createListClientsHandler,
   createListRequestsHandler,
   createListTasksHandler,
+  createListVoiceCallsHandler,
   createMarkBookingPaidHandler,
   createUpdateBonusHandler,
   createUpdateClientHandler,
@@ -144,6 +145,12 @@ export const createAdminOperationsRouter = (
     createListRequestsHandler(repository),
   );
   router.get(
+    "/voice-calls",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ query: adminOperationsQuerySchema }),
+    createListVoiceCallsHandler(repository),
+  );
+  router.get(
     "/voice-calls/:recordId/recording",
     createRequireAdminPermission("voice.calls.access", "requests.access"),
     validateRequest({ params: recordParamsSchema }),
@@ -161,6 +168,21 @@ export const createAdminOperationsRouter = (
         return;
       }
       response.json(await managedStorage.getDownload(call.recordingObjectId));
+    },
+  );
+  router.get(
+    "/voice-calls/:recordId",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ params: recordParamsSchema }),
+    async (_request, response) => {
+      const call = await repository.getVoiceCall(
+        response.locals.input.params.recordId,
+      );
+      if (!call) {
+        response.status(404).json({ error: { code: "VOICE_CALL_NOT_FOUND" } });
+        return;
+      }
+      response.json({ call });
     },
   );
   router.patch(

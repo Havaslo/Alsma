@@ -11,6 +11,8 @@ import {
   loadAdminClients,
   loadAdminLeads,
   loadAdminRequests,
+  loadAdminVoiceCall,
+  loadAdminVoiceCalls,
   loadIntegrationStatuses,
   loadManagerTasks,
   markBookingPaid,
@@ -58,6 +60,18 @@ export const useAdminRequests = () =>
     [...ADMIN_OPERATIONS_QUERY_KEY, "requests"],
     (signal) => loadAdminRequests(signal),
     { refetchInterval: 3_000 },
+  );
+export const useAdminVoiceCalls = () =>
+  useApiQuery(
+    [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls"],
+    (signal) => loadAdminVoiceCalls(signal),
+    { refetchInterval: 3_000 },
+  );
+export const useAdminVoiceCall = (recordId: string) =>
+  useApiQuery(
+    [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls", recordId],
+    (signal) => loadAdminVoiceCall(recordId, signal),
+    { enabled: Boolean(recordId) },
   );
 export const useAdminAnalytics = (start: string, end: string) =>
   useApiQuery(

@@ -13,6 +13,7 @@ export type RequestChatMessage = {
   readonly text: string;
   readonly createdAt: string;
   readonly bookingUrl?: string;
+  readonly externalId?: string;
 };
 
 type RequestChatProps = {
@@ -55,7 +56,12 @@ export const RequestChat = ({
           headers: adminHeaders,
         })
         .then(({ data }) => {
-          if (data.items.length) setMessages(data.items);
+          if (data.items.length)
+            setMessages(
+              data.items.filter(
+                (message) => !message.externalId?.startsWith("voice:"),
+              ),
+            );
         })
         .catch(() => undefined);
       return;
@@ -97,7 +103,9 @@ export const RequestChat = ({
     ]).then(([{ data }]) => {
       setMessages(
         data.items.length
-          ? data.items
+          ? data.items.filter(
+              (message) => !message.externalId?.startsWith("voice:"),
+            )
           : initialMessages.map((message, index) => ({
               ...message,
               id: `initial-${conversationId}-${index}`,

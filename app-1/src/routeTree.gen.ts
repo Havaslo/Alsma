@@ -55,6 +55,7 @@ import { Route as AdminSiteManagementNewsRouteImport } from './routes/admin/site
 import { Route as AdminSiteManagementOffersRouteImport } from './routes/admin/site-management/offers'
 import { Route as AdminSiteManagementRoomsRouteImport } from './routes/admin/site-management/rooms'
 import { Route as AdminSiteManagementSpaRouteImport } from './routes/admin/site-management/spa'
+import { Route as AdminVoiceCallsCallIdRouteImport } from './routes/admin/voice-calls/$callId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -296,6 +297,11 @@ const AdminSiteManagementSpaRoute = AdminSiteManagementSpaRouteImport.update({
   path: '/admin/site-management/spa',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVoiceCallsCallIdRoute = AdminVoiceCallsCallIdRouteImport.update({
+  id: '/$callId',
+  path: '/$callId',
+  getParentRoute: () => AdminVoiceCallsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -323,7 +329,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
-  '/admin/voice-calls': typeof AdminVoiceCallsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
   '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
   '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/voice-calls/$callId': typeof AdminVoiceCallsCallIdRoute
   '/admin/clients/': typeof AdminClientsIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/site-management/': typeof AdminSiteManagementIndexRoute
@@ -371,7 +378,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
-  '/admin/voice-calls': typeof AdminVoiceCallsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -389,6 +396,7 @@ export interface FileRoutesByTo {
   '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
   '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
   '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/voice-calls/$callId': typeof AdminVoiceCallsCallIdRoute
   '/admin/clients': typeof AdminClientsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/site-management': typeof AdminSiteManagementIndexRoute
@@ -420,7 +428,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
-  '/admin/voice-calls': typeof AdminVoiceCallsRoute
+  '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/requests/$requestId': typeof AdminRequestsRequestIdRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/admin/site-management/offers': typeof AdminSiteManagementOffersRoute
   '/admin/site-management/rooms': typeof AdminSiteManagementRoomsRoute
   '/admin/site-management/spa': typeof AdminSiteManagementSpaRoute
+  '/admin/voice-calls/$callId': typeof AdminVoiceCallsCallIdRoute
   '/admin/clients/': typeof AdminClientsIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/site-management/': typeof AdminSiteManagementIndexRoute
@@ -488,6 +497,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/offers'
     | '/admin/site-management/rooms'
     | '/admin/site-management/spa'
+    | '/admin/voice-calls/$callId'
     | '/admin/clients/'
     | '/admin/requests/'
     | '/admin/site-management/'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/offers'
     | '/admin/site-management/rooms'
     | '/admin/site-management/spa'
+    | '/admin/voice-calls/$callId'
     | '/admin/clients'
     | '/admin/requests'
     | '/admin/site-management'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/admin/site-management/offers'
     | '/admin/site-management/rooms'
     | '/admin/site-management/spa'
+    | '/admin/voice-calls/$callId'
     | '/admin/clients/'
     | '/admin/requests/'
     | '/admin/site-management/'
@@ -614,7 +626,7 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
-  AdminVoiceCallsRoute: typeof AdminVoiceCallsRoute
+  AdminVoiceCallsRoute: typeof AdminVoiceCallsRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClientsClientIdRoute: typeof AdminClientsClientIdRoute
   AdminRequestsRequestIdRoute: typeof AdminRequestsRequestIdRoute
@@ -961,6 +973,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSiteManagementSpaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/voice-calls/$callId': {
+      id: '/admin/voice-calls/$callId'
+      path: '/$callId'
+      fullPath: '/admin/voice-calls/$callId'
+      preLoaderRoute: typeof AdminVoiceCallsCallIdRouteImport
+      parentRoute: typeof AdminVoiceCallsRoute
+    }
   }
 }
 
@@ -974,6 +993,18 @@ const AccountRouteChildren: AccountRouteChildren = {
 
 const AccountRouteWithChildren =
   AccountRoute._addFileChildren(AccountRouteChildren)
+
+interface AdminVoiceCallsRouteChildren {
+  AdminVoiceCallsCallIdRoute: typeof AdminVoiceCallsCallIdRoute
+}
+
+const AdminVoiceCallsRouteChildren: AdminVoiceCallsRouteChildren = {
+  AdminVoiceCallsCallIdRoute: AdminVoiceCallsCallIdRoute,
+}
+
+const AdminVoiceCallsRouteWithChildren = AdminVoiceCallsRoute._addFileChildren(
+  AdminVoiceCallsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1000,7 +1031,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSiteLeadsRoute: AdminSiteLeadsRoute,
-  AdminVoiceCallsRoute: AdminVoiceCallsRoute,
+  AdminVoiceCallsRoute: AdminVoiceCallsRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminClientsClientIdRoute: AdminClientsClientIdRoute,
   AdminRequestsRequestIdRoute: AdminRequestsRequestIdRoute,
