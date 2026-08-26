@@ -4,7 +4,6 @@ import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
-import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import {
   createVoiceConfigurationHandler,
   voiceTestCompletedHandler,
@@ -17,6 +16,7 @@ import {
   toolHandler,
   transcriptHandler,
 } from "./voice-agent.handlers.js";
+import { getVoiceInstructions } from "./voice-agent.prompt.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 import {
   answerBodySchema,
@@ -28,11 +28,7 @@ import {
   transcriptBodySchema,
   voiceTestTurnBodySchema,
 } from "./voice-agent.schemas.js";
-import {
-  createVoiceAgentService,
-  recordingDisclosure,
-  voiceAgentSystemPrompt,
-} from "./voice-agent.service.js";
+import { createVoiceAgentService } from "./voice-agent.service.js";
 import { createOpenAiSipHandler } from "./voice-agent.sip.js";
 
 export const createVoiceAgentRouter = (
@@ -83,12 +79,7 @@ export const createVoiceAgentRouter = (
     createOpenAiSipHandler({
       apiKey: openaiSip?.apiKey,
       baseUrl: openaiSip?.baseUrl ?? "https://api.openai.com/v1",
-      getInstructions: async () => {
-        const knowledge =
-          await createVoiceAgentRepository(database).getKnowledgeContext();
-        const events = await listPublishedEvents(database).catch(() => []);
-        return `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}\n\nОпубликованный календарь мероприятий (только эти данные):\n${formatEventsContext(events) || "Нет опубликованных актуальных мероприятий."}\nНе придумывай мероприятия и даты. Если в календаре нет ответа, скажи, что у тебя нет этой информации, и предложи уточнить у менеджера.`;
-      },
+      getInstructions: () => getVoiceInstructions(database),
       webhookSecret: openaiSip?.webhookSecret,
     }),
   );

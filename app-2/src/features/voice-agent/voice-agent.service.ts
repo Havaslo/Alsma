@@ -77,11 +77,6 @@ const transferMangoCall = async ({
   throw new Error("Mango transfer result timed out");
 };
 
-export const recordingDisclosure =
-  "Разговор записывается. Аудио, расшифровка и данные звонка хранятся 30 дней, затем удаляются.";
-
-export const voiceAgentSystemPrompt = `Ты — вежливый русскоязычный голосовой помощник базы отдыха ALSMA. Соблюдай переданные администратором голосовые сценарии и правила перевода. Используй только переданную базу знаний и результаты инструментов. Не оформляй, не изменяй и не отменяй бронирование. Отвечай коротко и естественно для телефона.`;
-
 const parseJson = (value: string) => {
   try {
     return JSON.parse(value) as {
@@ -128,7 +123,11 @@ export const createVoiceAgentService = (
           temperature: 0.2,
           response_format: json ? { type: "json_object" } : undefined,
           messages: [
-            { role: "system", content: voiceAgentSystemPrompt },
+            {
+              role: "system",
+              content:
+                "Ответь только на основе переданного ниже контекста; не добавляй неподтверждённые факты.",
+            },
             { role: "user", content: prompt },
           ],
         }),
@@ -211,7 +210,6 @@ export const createVoiceAgentService = (
     },
     createCall: async (input: CreateCallBody) => ({
       ...(await repository.createCall(input)),
-      disclosure: recordingDisclosure,
     }),
     appendTranscript: (id: string, segment: TranscriptBody) =>
       repository.appendTranscript(id, segment),
