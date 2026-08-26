@@ -137,6 +137,16 @@ const server = createServer(async (request, response) => {
 
   const requestUrl = new URL(request.url, "http://localhost");
   const method = request.method ?? "";
+  // The platform probes /api/health for application readiness. The frontend
+  // has no required backend proxy target in production, so answer this probe
+  // locally instead of treating it as an unavailable API request.
+  if (
+    requestUrl.pathname === "/api/health" &&
+    ["GET", "HEAD"].includes(method)
+  ) {
+    sendText(response, 200, "ok\n");
+    return;
+  }
   // Handle API paths first. Also proxy every non-read request as a safeguard
   // for ingress layers that strip /api before forwarding to this container.
   if (isApiPath(requestUrl.pathname) || !["GET", "HEAD"].includes(method)) {
