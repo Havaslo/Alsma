@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
+import { AdminVoiceCallDetails } from "@/components/admin/AdminVoiceCallDetails";
 import { RequestChat } from "@/components/admin/RequestChat";
+import type { RequestChatMessage } from "@/components/admin/RequestChat";
 import { useAdminRequests } from "@/lib/admin/useAdmin";
 import { cn } from "@/lib/cn";
 import { ROUTES } from "@/route-constants";
@@ -22,6 +24,27 @@ export const AdminRequestDetail = ({
 }) => {
   const requests = useAdminRequests();
   const request = requests.data?.items.find((item) => item.id === requestId);
+  const voiceMessages: RequestChatMessage[] = (
+    request?.voiceCalls ?? []
+  ).flatMap((call) =>
+    call.transcript.flatMap((segment, index) => {
+      if (!segment.text) return [];
+      return [
+        {
+          author:
+            segment.role === "assistant"
+              ? "agent"
+              : segment.role === "manager"
+                ? "manager"
+                : "guest",
+          conversationId: request?.id ?? requestId,
+          createdAt: call.startedAt,
+          id: `legacy-${call.id}-${index}`,
+          text: segment.text,
+        } satisfies RequestChatMessage,
+      ];
+    }),
+  );
 
   if (requests.isLoading)
     return (
@@ -87,7 +110,12 @@ export const AdminRequestDetail = ({
               {request.description ?? "Описание не указано."}
             </p>
           </div>
-          <RequestChat conversationId={request.id} initialMessages={[]} />
+          <AdminVoiceCallDetails calls={request.voiceCalls ?? []} />
+          <RequestChat
+            conversationId={request.id}
+            initialMessages={voiceMessages}
+            readOnly={Boolean(request.voiceCalls?.length)}
+          />
         </section>
         <aside className="space-y-5">
           <DetailsCard

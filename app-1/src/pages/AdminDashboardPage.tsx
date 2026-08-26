@@ -13,6 +13,7 @@ import { AdminClientsPanel } from "@/components/admin/AdminClientsPanel";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
 import { AdminDocumentsEditor } from "@/components/admin/AdminDocumentsEditor";
 import { AdminEntertainmentEditor } from "@/components/admin/AdminEntertainmentEditor";
+import { AdminFaqEditor } from "@/components/admin/AdminFaqEditor";
 import { AdminHomeEditor } from "@/components/admin/AdminHomeEditor";
 import { AdminIntegrationsPanel } from "@/components/admin/AdminIntegrationsPanel";
 import { AdminKnowledgeBasePanel } from "@/components/admin/AdminKnowledgeBasePanel";
@@ -26,8 +27,6 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { AdminSitePlaceholder } from "@/components/admin/AdminSitePlaceholder";
 import { AdminSpaEditor } from "@/components/admin/AdminSpaEditor";
-import { AdminVoiceCallsPanel } from "@/components/admin/AdminVoiceCallsPanel";
-import { AdminFaqEditor } from "@/components/admin/AdminFaqEditor";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
@@ -90,9 +89,10 @@ export const AdminDashboardPage = () => {
       {path === ROUTES.adminRequests && can("requests.access") && (
         <AdminRequestsPanel />
       )}
-      {params.requestId && can("requests.access") && (
-        <AdminRequestDetail requestId={params.requestId} />
-      )}
+      {params.requestId &&
+        (can("requests.access") || can("voice.calls.access")) && (
+          <AdminRequestDetail requestId={params.requestId} />
+        )}
       {path === ROUTES.adminKnowledgeBase &&
         (can("knowledge.access") || can("knowledge.manage")) && (
           <AdminKnowledgeBasePanel />
@@ -131,9 +131,10 @@ export const AdminDashboardPage = () => {
       {path === ROUTES.adminIntegrations && can("integrations.access") && (
         <AdminIntegrationsPanel />
       )}
-      {path === ROUTES.adminVoiceCalls && can("voice.calls.access") && (
-        <AdminVoiceCallsPanel />
-      )}
+      {path === ROUTES.adminVoiceCalls &&
+        (can("requests.access") || can("voice.calls.access")) && (
+          <AdminRequestsPanel initialType="call" />
+        )}
     </AdminShell>
   );
 };

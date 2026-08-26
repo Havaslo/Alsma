@@ -95,10 +95,27 @@ export type AdminRequest = {
   };
   readonly id: string;
   readonly _count?: { readonly chatMessages: number };
+  readonly voiceCalls?: AdminVoiceCall[];
   readonly requester: string | null;
   readonly status: SiteLead["status"];
   readonly title: string;
   readonly updatedAt: string;
+};
+export type AdminVoiceCall = {
+  readonly id: string;
+  readonly callerPhone: string | null;
+  readonly status: string;
+  readonly outcome: string | null;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly durationSec: number | null;
+  readonly transcript: Array<{
+    readonly role?: string;
+    readonly text?: string;
+  }>;
+  readonly summary: string | null;
+  readonly intent: string | null;
+  readonly recordingObjectId: string | null;
 };
 export type AdminNotification = {
   readonly id: string;

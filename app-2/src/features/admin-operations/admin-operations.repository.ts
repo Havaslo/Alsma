@@ -284,7 +284,26 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { createdAt: "desc" },
         skip,
         take,
-        include: { _count: { select: { chatMessages: true } } },
+        include: {
+          _count: { select: { chatMessages: true } },
+          voiceCalls: {
+            orderBy: { startedAt: "desc" },
+            take: 3,
+            select: {
+              id: true,
+              callerPhone: true,
+              status: true,
+              outcome: true,
+              startedAt: true,
+              endedAt: true,
+              durationSec: true,
+              transcript: true,
+              summary: true,
+              intent: true,
+              recordingObjectId: true,
+            },
+          },
+        },
       }),
       database.client.adminRequest.count(),
       database.client.appSetting.findUnique({

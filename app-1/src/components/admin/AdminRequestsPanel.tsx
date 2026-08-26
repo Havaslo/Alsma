@@ -42,7 +42,8 @@ const sourceLabel = (source: string | undefined) => {
   if (
     value.includes("phone") ||
     value.includes("call") ||
-    value.includes("телефон")
+    value.includes("телефон") ||
+    value.includes("звон")
   )
     return "Звонки";
   return "Сайт";
@@ -75,10 +76,14 @@ const assignee = (item: AdminRequest) => {
   };
 };
 
-export const AdminRequestsPanel = () => {
+export const AdminRequestsPanel = ({
+  initialType = "all",
+}: {
+  readonly initialType?: RequestType;
+}) => {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [type, setType] = useState<RequestType>("all");
+  const [type, setType] = useState<RequestType>(initialType);
   const [readAt, setReadAt] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const requests = useAdminRequests();
@@ -123,45 +128,53 @@ export const AdminRequestsPanel = () => {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 md:grid-cols-[minmax(20rem,1fr)_12rem_12rem]">
-        <label>
-          <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-            Поиск
-          </span>
-          <span className="flex min-h-12 items-center gap-3 rounded-2xl border border-line bg-brand-foreground px-4">
-            <Search className="size-4 text-muted-ui-foreground" />
-            <input
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Заголовок, клиент, контакт"
-              value={search}
+      <section className="space-y-2">
+        {initialType === "call" && (
+          <p className="text-sm text-muted-ui-foreground">
+            Быстрый фильтр обращений с каналом «Звонок». История, транскрипция и
+            запись находятся внутри единого обращения.
+          </p>
+        )}
+        <div className="grid gap-4 md:grid-cols-[minmax(20rem,1fr)_12rem_12rem]">
+          <label>
+            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
+              Поиск
+            </span>
+            <span className="flex min-h-12 items-center gap-3 rounded-2xl border border-line bg-brand-foreground px-4">
+              <Search className="size-4 text-muted-ui-foreground" />
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-ui-foreground"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Заголовок, клиент, контакт"
+                value={search}
+              />
+            </span>
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
+              Тип обращения
+            </span>
+            <DropdownSelect<RequestType>
+              ariaLabel="Фильтр по типу обращения"
+              onChange={setType}
+              options={typeOptions}
+              triggerClassName="min-h-12 rounded-2xl border border-line bg-brand-foreground px-4 text-sm"
+              value={type}
             />
-          </span>
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-            Тип обращения
-          </span>
-          <DropdownSelect<RequestType>
-            ariaLabel="Фильтр по типу обращения"
-            onChange={setType}
-            options={typeOptions}
-            triggerClassName="min-h-12 rounded-2xl border border-line bg-brand-foreground px-4 text-sm"
-            value={type}
-          />
-        </label>
-        <label>
-          <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-            Статус обращения
-          </span>
-          <DropdownSelect<StatusFilter>
-            ariaLabel="Фильтр обращений по статусу"
-            onChange={setStatus}
-            options={statusOptions}
-            triggerClassName="min-h-12 rounded-2xl border border-line bg-brand-foreground px-4 text-sm"
-            value={status}
-          />
-        </label>
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
+              Статус обращения
+            </span>
+            <DropdownSelect<StatusFilter>
+              ariaLabel="Фильтр обращений по статусу"
+              onChange={setStatus}
+              options={statusOptions}
+              triggerClassName="min-h-12 rounded-2xl border border-line bg-brand-foreground px-4 text-sm"
+              value={status}
+            />
+          </label>
+        </div>
       </section>
       <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground">
         <p className="border-b border-line px-5 py-4 text-sm font-semibold">

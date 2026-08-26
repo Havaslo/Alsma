@@ -18,14 +18,16 @@ export type RequestChatMessage = {
 type RequestChatProps = {
   readonly conversationId: string;
   readonly initialMessages: readonly {
-    author: "guest" | "manager";
+    author: "guest" | "agent" | "manager";
     text: string;
   }[];
+  readonly readOnly?: boolean;
 };
 
 export const RequestChat = ({
   conversationId,
   initialMessages,
+  readOnly = false,
 }: RequestChatProps) => {
   const [messages, setMessages] = useState<RequestChatMessage[]>([]);
   const [mode, setMode] = useState<"agent" | "manager">("agent");
@@ -39,15 +41,35 @@ export const RequestChat = ({
   );
 
   useEffect(() => {
+    if (readOnly) {
+      const fallback = initialMessages.map((message, index) => ({
+        ...message,
+        id: `initial-${conversationId}-${index}`,
+        conversationId,
+        createdAt: new Date(0).toISOString(),
+      }));
+      setMessages(fallback);
+      void apiClient
+        .get<{ items: RequestChatMessage[] }>("/chat/admin/messages", {
+          params: { conversationId },
+          headers: adminHeaders,
+        })
+        .then(({ data }) => {
+          if (data.items.length) setMessages(data.items);
+        })
+        .catch(() => undefined);
+      return;
+    }
     const loadMode = () =>
       apiClient
-        .get<{ mode: "agent" | "manager"; managerRequested: boolean; agentStopped?: boolean }>(
-          "/chat/admin/mode",
-          {
-            params: { conversationId },
-            headers: adminHeaders,
-          },
-        )
+        .get<{
+          mode: "agent" | "manager";
+          managerRequested: boolean;
+          agentStopped?: boolean;
+        }>("/chat/admin/mode", {
+          params: { conversationId },
+          headers: adminHeaders,
+        })
         .then(({ data }) => {
           setMode(data.mode);
           setManagerRequested(data.managerRequested);
@@ -59,13 +81,14 @@ export const RequestChat = ({
         headers: adminHeaders,
       }),
       apiClient
-        .get<{ mode: "agent" | "manager"; managerRequested: boolean; agentStopped?: boolean }>(
-          "/chat/admin/mode",
-          {
-            params: { conversationId },
-            headers: adminHeaders,
-          },
-        )
+        .get<{
+          mode: "agent" | "manager";
+          managerRequested: boolean;
+          agentStopped?: boolean;
+        }>("/chat/admin/mode", {
+          params: { conversationId },
+          headers: adminHeaders,
+        })
         .then(({ data }) => {
           setMode(data.mode);
           setManagerRequested(data.managerRequested);
@@ -106,7 +129,7 @@ export const RequestChat = ({
       window.clearInterval(modePoll);
       events.close();
     };
-  }, [adminHeaders, conversationId, initialMessages]);
+  }, [adminHeaders, conversationId, initialMessages, readOnly]);
 
   const send = async (event: FormEvent) => {
     event.preventDefault();
@@ -126,10 +149,12 @@ export const RequestChat = ({
       <header className="flex items-center justify-between border-b border-line px-5 py-4">
         <div>
           <p className="text-xs font-semibold tracking-wider text-muted-ui-foreground uppercase">
-            Общение по обращению
+            {readOnly ? "Транскрипция звонка" : "Общение по обращению"}
           </p>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Ответы приходят в реальном времени
+            {readOnly
+              ? "Реплики сохранены с ролями участников разговора"
+              : "Ответы приходят в реальном времени"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -137,27 +162,29 @@ export const RequestChat = ({
             {agentStopped
               ? "Агент остановлен"
               : managerRequested
-              ? "Запрошен менеджер"
-              : mode === "manager"
-                ? "Менеджер отвечает"
-                : "AI-агент отвечает"}
+                ? "Запрошен менеджер"
+                : mode === "manager"
+                  ? "Менеджер отвечает"
+                  : "AI-агент отвечает"}
           </span>
-          {!agentStopped && <button
-            className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold"
-            onClick={async () => {
-              const nextMode = mode === "manager" ? "agent" : "manager";
-              await apiClient.post(
-                "/chat/admin/mode",
-                { conversationId, mode: nextMode },
-                { headers: adminHeaders },
-              );
-              setMode(nextMode);
-              setManagerRequested(false);
-            }}
-            type="button"
-          >
-            {mode === "manager" ? "Передать AI" : "Взять диалог"}
-          </button>}
+          {!agentStopped && (
+            <button
+              className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold"
+              onClick={async () => {
+                const nextMode = mode === "manager" ? "agent" : "manager";
+                await apiClient.post(
+                  "/chat/admin/mode",
+                  { conversationId, mode: nextMode },
+                  { headers: adminHeaders },
+                );
+                setMode(nextMode);
+                setManagerRequested(false);
+              }}
+              type="button"
+            >
+              {mode === "manager" ? "Передать AI" : "Взять диалог"}
+            </button>
+          )}
         </div>
       </header>
       {agentStatus && mode === "agent" && (
@@ -182,26 +209,28 @@ export const RequestChat = ({
           </article>
         ))}
       </div>
-      <form className="flex gap-2 border-t border-line p-4" onSubmit={send}>
-        <input
-          aria-label="Ответ по обращению"
-          className="min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-4 py-3 text-sm outline-none focus:border-focus"
-          onChange={(event) => setText(event.target.value)}
-          placeholder={
-            mode === "manager"
-              ? "Ответ менеджера"
-              : "Диалог отвечает AI — напишите, чтобы взять его"
-          }
-          value={text}
-        />
-        <button
-          aria-label="Отправить ответ"
-          className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-brand-foreground"
-          type="submit"
-        >
-          <Send className="size-4" />
-        </button>
-      </form>
+      {!readOnly && (
+        <form className="flex gap-2 border-t border-line p-4" onSubmit={send}>
+          <input
+            aria-label="Ответ по обращению"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-4 py-3 text-sm outline-none focus:border-focus"
+            onChange={(event) => setText(event.target.value)}
+            placeholder={
+              mode === "manager"
+                ? "Ответ менеджера"
+                : "Диалог отвечает AI — напишите, чтобы взять его"
+            }
+            value={text}
+          />
+          <button
+            aria-label="Отправить ответ"
+            className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-brand-foreground"
+            type="submit"
+          >
+            <Send className="size-4" />
+          </button>
+        </form>
+      )}
     </section>
   );
 };

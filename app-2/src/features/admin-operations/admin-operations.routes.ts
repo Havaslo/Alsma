@@ -139,41 +139,9 @@ export const createAdminOperationsRouter = (
   );
   router.get(
     "/requests",
-    createRequireAdminPermission("requests.access"),
+    createRequireAdminPermission("requests.access", "voice.calls.access"),
     validateRequest({ query: adminOperationsQuerySchema }),
     createListRequestsHandler(repository),
-  );
-  router.get(
-    "/voice-calls",
-    createRequireAdminPermission("voice.calls.access", "requests.access"),
-    async (_request, response) => {
-      const calls = await database.client.voiceCall.findMany({
-        orderBy: { startedAt: "desc" },
-        take: 100,
-        select: {
-          id: true,
-          provider: true,
-          callerPhone: true,
-          status: true,
-          outcome: true,
-          startedAt: true,
-          endedAt: true,
-          durationSec: true,
-          transcript: true,
-          summary: true,
-          intent: true,
-          recordingObjectId: true,
-        },
-      });
-      response.json({
-        items: calls.map((call) => ({
-          ...call,
-          startedAt: call.startedAt.toISOString(),
-          endedAt: call.endedAt?.toISOString() ?? null,
-          hasRecording: Boolean(call.recordingObjectId),
-        })),
-      });
-    },
   );
   router.get(
     "/voice-calls/:recordId/recording",

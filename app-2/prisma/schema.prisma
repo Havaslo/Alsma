@@ -161,20 +161,20 @@ model SiteLead {
 }
 
 model BookingRequest {
-  id           String     @id @default(uuid()) @db.Uuid
-  guestName    String     @map("guest_name")
-  phone        String
-  email        String?
-  checkInDate  DateTime?  @map("check_in_date") @db.Date
-  checkOutDate DateTime?  @map("check_out_date") @db.Date
-  guestsCount  Int        @default(1) @map("guests_count")
-  roomName     String?    @map("room_name")
-  amount       Decimal?   @db.Decimal(12, 2)
-  status       LeadStatus @default(new)
-  paidAt       DateTime?  @map("paid_at") @db.Timestamptz(3)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  adminRequestId String    @map("admin_request_id") @db.Uuid
+  id             String       @id @default(uuid()) @db.Uuid
+  guestName      String       @map("guest_name")
+  phone          String
+  email          String?
+  checkInDate    DateTime?    @map("check_in_date") @db.Date
+  checkOutDate   DateTime?    @map("check_out_date") @db.Date
+  guestsCount    Int          @default(1) @map("guests_count")
+  roomName       String?      @map("room_name")
+  amount         Decimal?     @db.Decimal(12, 2)
+  status         LeadStatus   @default(new)
+  paidAt         DateTime?    @map("paid_at") @db.Timestamptz(3)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  adminRequestId String       @map("admin_request_id") @db.Uuid
   adminRequest   AdminRequest @relation(fields: [adminRequestId], references: [id], onDelete: Restrict)
 
   @@index([status, createdAt])
@@ -183,18 +183,19 @@ model BookingRequest {
 }
 
 model AdminRequest {
-  id          String     @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  requester   String?
-  contact     String?
-  category    String
-  status      LeadStatus @default(new)
-  details     Json       @default("{}")
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  chatMessages ChatMessage[]
+  id              String           @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+  requester       String?
+  contact         String?
+  category        String
+  status          LeadStatus       @default(new)
+  details         Json             @default("{}")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  chatMessages    ChatMessage[]
   bookingRequests BookingRequest[]
+  voiceCalls      VoiceCall[]
 
   @@index([status, createdAt])
   @@map("admin_requests")
@@ -210,8 +211,8 @@ model ChatMessage {
   externalId     String?      @map("external_id")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  @@index([conversationId, createdAt])
   @@unique([conversationId, externalId])
+  @@index([conversationId, createdAt])
   @@map("chat_messages")
 }
 
@@ -346,23 +347,25 @@ model KnowledgeQueryLog {
 }
 
 model VoiceCall {
-  id             String    @id @default(uuid()) @db.Uuid
-  provider       String    @default("t2")
-  providerCallId String?   @unique @map("provider_call_id")
-  callerPhone    String?   @map("caller_phone")
-  status         String    @default("active")
-  outcome        String?
-  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz(3)
-  endedAt        DateTime? @map("ended_at") @db.Timestamptz(3)
-  durationSec    Int?      @map("duration_sec")
-  transcript     Json      @default("[]")
-  summary        String?
-  intent         String?
-  extracted      Json      @default("{}")
-  recordingUrl   String?   @map("recording_url")
-  recordingObjectId String? @map("recording_object_id")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                String        @id @default(uuid()) @db.Uuid
+  provider          String        @default("t2")
+  providerCallId    String?       @unique @map("provider_call_id")
+  callerPhone       String?       @map("caller_phone")
+  status            String        @default("active")
+  outcome           String?
+  startedAt         DateTime      @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt           DateTime?     @map("ended_at") @db.Timestamptz(3)
+  durationSec       Int?          @map("duration_sec")
+  transcript        Json          @default("[]")
+  summary           String?
+  intent            String?
+  extracted         Json          @default("{}")
+  recordingUrl      String?       @map("recording_url")
+  recordingObjectId String?       @map("recording_object_id")
+  adminRequestId    String?       @unique @map("admin_request_id") @db.Uuid
+  adminRequest      AdminRequest? @relation(fields: [adminRequestId], references: [id], onDelete: SetNull)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([status, createdAt])
   @@index([callerPhone, createdAt])
@@ -387,6 +390,7 @@ model VkWebhookUpdate {
   payload   Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
   @@index([createdAt])
   @@map("vk_webhook_updates")
 }
