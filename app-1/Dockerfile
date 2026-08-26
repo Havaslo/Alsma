@@ -26,22 +26,33 @@ ARG AMAZI_BUILD_REVISION=local
 
 RUN --mount=type=secret,id=application_environment,required=false \
   set -eu; \
-  test -n "$AMAZI_BUILD_REVISION"; \
+  : > .backend-proxy-target; \
   if [ -f /run/secrets/application_environment ]; then \
     cp /run/secrets/application_environment .env.production.local; \
   fi; \
+  if [ -f .env.production.local ]; then \
+    backend_target="$(sed -n 's/^BACKEND_PROXY_TARGET=//p' .env.production.local | head -n 1)"; \
+    backend_target="${backend_target#\"}"; \
+    backend_target="${backend_target%\"}"; \
+    if [ -n "$backend_target" ]; then \
+      printf '%s' "$backend_target" > .backend-proxy-target; \
+    fi; \
+  fi; \
+  test -n "$AMAZI_BUILD_REVISION"; \
   rm -rf dist; \
   pnpm run build; \
   rm -f .env.production.local
 
-FROM ghcr.io/static-web-server/static-web-server:2.41.0-alpine@sha256:58e12f1502be7b68cf492e27582a81634583f3389005e94ce44729cc1464a941 AS production
+FROM node:22-alpine AS production
 
-ENV SERVER_FALLBACK_PAGE=/app/dist/index.html
-ENV SERVER_HEALTH=true
-ENV SERVER_HOST=0.0.0.0
-ENV SERVER_PORT=3000
-ENV SERVER_ROOT=/app/dist
+ENV NODE_ENV=production
 
-COPY --from=build --chown=65532:65532 /app/dist /app/dist
+WORKDIR /app
+
+COPY --from=build --chown=65532:65532 /app/dist ./dist
+COPY --from=build --chown=65532:65532 /app/.backend-proxy-target ./backend-proxy-target
+COPY --chown=65532:65532 production-server.mjs ./server.mjs
 
 USER 65532:65532
+
+CMD ["node", "server.mjs"]
