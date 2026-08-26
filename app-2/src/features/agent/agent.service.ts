@@ -6,6 +6,7 @@ import type { EpteraClient } from "../booking/eptera.client.js";
 import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
+import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import { ensureDefaultAgentPlaybook } from "./agent-playbook.js";
 import { loadPublishedOffersContext } from "./offers-context.js";
 
@@ -101,6 +102,16 @@ const hasDateInMessage = (text: string) =>
   /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s*(?:[-–]\s*|по\s+)\d{1,2}\s+[а-яё]+(?:\s+\d{4})?/iu.test(
     text,
   );
+const calendarDateInMessage = (text: string): string | undefined => {
+  const iso = text.match(/\b(\d{4}-\d{2}-\d{2})\b/u)?.[1];
+  if (iso) return iso;
+  const match = text.match(/\b(\d{1,2})\s+([а-яё]+)(?:\s+(\d{4}))?\b/iu);
+  if (!match?.[1] || !match[2]) return undefined;
+  const month = monthNumbers[match[2].toLocaleLowerCase("ru-RU")];
+  return month
+    ? `${match[3] ?? new Date().getFullYear()}-${month}-${String(Number(match[1])).padStart(2, "0")}`
+    : undefined;
+};
 const asksForOtherDates = (text: string) =>
   /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
     text,
@@ -592,6 +603,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       transferRules,
       knowledgeRules,
       offersContext,
+      eventsContext,
     ] = await Promise.all([
       knowledge.answer({ channel: "text", question: message }),
       options.database.client.agentScenario.findMany({
@@ -607,6 +619,10 @@ export const createAiAgentService = (options: AgentOptions) => {
         orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
       }),
       loadPublishedOffersContext(options.database),
+      loadPublishedEventsContext(
+        options.database,
+        calendarDateInMessage(message),
+      ).catch(() => ""),
     ]);
     if (serviceMention(message) === "offers" && !offersContext) {
       const transferNotice =
@@ -640,6 +656,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
       "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для проживания собери недостающие параметры и проверь наличие; URL в текст не вставляй.",
+      "Для вопросов о мероприятиях используй только опубликованный календарь ниже. Не выдумывай названия, даты или условия; если подходящего события нет или календарь недоступен, честно скажи, что у тебя нет подтверждённой информации, и предложи уточнить у менеджера.",
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. Используй transfer только если гость прямо попросил менеджера/сотрудника или выполнено конкретное правило передачи; фраза «попробуйте ещё раз» сама по себе НЕ является передачей. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
       `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
       "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers.",
@@ -649,6 +666,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен. Если выбранный сценарий задаёт action или page, следуй ему.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
+      `Опубликованные актуальные мероприятия с публичного календаря${calendarDateInMessage(message) ? ` на дату ${calendarDateInMessage(message)}` : ""} (не выдумывай события):\n${eventsContext || "Опубликованных мероприятий на запрошенную дату сейчас нет или календарь недоступен."}`,
       `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,

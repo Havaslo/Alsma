@@ -94,5 +94,7 @@ export const formatEventsContext = (events: PublishedVoiceEvent[]) =>
     )
     .join("\n");
 
-export const loadPublishedEventsContext = async (database: Database) =>
-  formatEventsContext(await listPublishedEvents(database));
+export const loadPublishedEventsContext = async (
+  database: Database,
+  date?: string,
+) => formatEventsContext(await listPublishedEvents(database, date));
