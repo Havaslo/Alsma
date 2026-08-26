@@ -78,6 +78,7 @@ export const createApp = ({
       logger,
     }),
   );
+  app.use(express.urlencoded({ extended: false, limit: "512kb" }));
   app.use(
     express.json({
       limit: "12mb",

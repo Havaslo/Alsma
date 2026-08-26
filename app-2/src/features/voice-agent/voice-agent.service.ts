@@ -1,13 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
-import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
+import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
+import type { MangoProviderEvent } from "./voice-agent.mango.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
-  MangoWebhookBody,
   ToolBody,
   TranscriptBody,
 } from "./voice-agent.schemas.js";
@@ -100,7 +100,6 @@ export const createVoiceAgentService = (
     readonly mangoApiSalt?: string;
     readonly destination?: string;
   },
-  managedStorage?: ManagedStorage,
 ) => {
   const isVoiceEnabled = async () => {
     const setting = await repository.getAgentSettings();
@@ -144,6 +143,36 @@ export const createVoiceAgentService = (
       "Не удалось получить ответ."
     );
   };
+
+  const completeCallForId = async (
+    id: string,
+    outcome?: string,
+    recordingUrl?: string,
+    recordingObjectId?: string,
+  ) => {
+    const call = await repository.findCall(id);
+    if (!call) return null;
+    const transcript = JSON.stringify(call.transcript);
+    const result = parseJson(
+      await completeWithOpenAI(
+        `Проанализируй транскрипцию звонка и верни JSON с полями summary (краткое резюме на русском), intent (намерение), extracted (имя, телефон, даты, гости, тип номера, услуги, пожелания — только найденные поля). Транскрипция: ${transcript}`,
+        true,
+      ),
+    );
+    return repository.completeCall(id, {
+      outcome,
+      recordingUrl,
+      recordingObjectId,
+      summary: result.summary ?? "Резюме не сформировано.",
+      intent: result.intent ?? "unknown",
+      extracted: result.extracted ?? {},
+    });
+  };
+
+  const mangoEventHandler = createMangoEventHandler({
+    completeCall: completeCallForId,
+    repository,
+  });
 
   return {
     testAudioTurn: async (audioBase64: string, mimeType: string) => {
@@ -225,95 +254,57 @@ export const createVoiceAgentService = (
       );
       return { answer, callId };
     },
-    completeCall: async (
-      id: string,
+    completeCall: completeCallForId,
+    handleMangoWebhook: async (providerEvent: MangoProviderEvent) => {
+      const claimed = await repository.claimWebhookEvent({
+        callId:
+          providerEvent.kind === "call" || providerEvent.kind === "recording"
+            ? providerEvent.event.call_id
+            : undefined,
+        entryId:
+          providerEvent.kind === "normalized"
+            ? undefined
+            : providerEvent.event.entry_id,
+        eventKey: providerEvent.eventKey,
+        provider: "mango",
+        sequence:
+          providerEvent.kind === "call" || providerEvent.kind === "recording"
+            ? providerEvent.event.seq
+            : undefined,
+      });
+      if (!claimed) return { received: true, duplicate: true };
+
+      try {
+        return await mangoEventHandler.handle(providerEvent);
+      } catch (error) {
+        await repository
+          .releaseWebhookEvent(providerEvent.eventKey)
+          .catch(() => undefined);
+        throw error;
+      }
+    },
+    ensureProviderCall: (input: {
+      callerPhone?: string;
+      provider: string;
+      providerCallId: string;
+    }) => repository.ensureCall(input),
+    appendTranscriptByProvider: async (
+      providerCallId: string,
+      segment: TranscriptBody,
+    ) => {
+      const call = await repository.findByProviderCallId(providerCallId);
+      return call ? repository.appendTranscript(call.id, segment) : null;
+    },
+    completeCallByProvider: async (
+      providerCallId: string,
       outcome?: string,
       recordingUrl?: string,
       recordingObjectId?: string,
     ) => {
-      const call = await repository.findCall(id);
-      if (!call) return null;
-      const transcript = JSON.stringify(call.transcript);
-      const result = parseJson(
-        await completeWithOpenAI(
-          `Проанализируй транскрипцию звонка и верни JSON с полями summary (краткое резюме на русском), intent (намерение), extracted (имя, телефон, даты, гости, тип номера, услуги, пожелания — только найденные поля). Транскрипция: ${transcript}`,
-          true,
-        ),
-      );
-      return repository.completeCall(id, {
-        outcome,
-        recordingUrl,
-        recordingObjectId,
-        summary: result.summary ?? "Резюме не сформировано.",
-        intent: result.intent ?? "unknown",
-        extracted: result.extracted ?? {},
-      });
-    },
-    handleMangoWebhook: async (event: MangoWebhookBody) => {
-      const existing = await repository.findByProviderCallId(event.callId);
-      const call =
-        existing ??
-        (await repository.createCall({
-          providerCallId: event.callId,
-          callerPhone: event.callerPhone,
-        }));
-      if (event.transcript) {
-        for (const segment of event.transcript)
-          await repository.appendTranscript(call.id, segment);
-      }
-      if (
-        ["completed", "hangup", "ended", "failed"].includes(
-          event.event.toLowerCase(),
-        )
-      ) {
-        let recordingObjectId: string | undefined;
-        if (event.recordingUrl && managedStorage) {
-          const recordingUrl = new URL(event.recordingUrl);
-          if (recordingUrl.protocol !== "https:")
-            throw new Error("Recording URL must use HTTPS");
-          const recordingResponse = await fetch(recordingUrl, {
-            signal: AbortSignal.timeout(30_000),
-          });
-          if (recordingResponse.ok) {
-            const contentLength = Number(
-              recordingResponse.headers.get("content-length") ?? 0,
-            );
-            if (contentLength <= 50 * 1024 * 1024) {
-              const bytes = new Uint8Array(
-                await recordingResponse.arrayBuffer(),
-              );
-              if (bytes.byteLength <= 50 * 1024 * 1024) {
-                recordingObjectId = (
-                  await managedStorage.upload({
-                    content: bytes,
-                    contentType:
-                      recordingResponse.headers.get("content-type") ??
-                      "audio/mpeg",
-                    name: `voice-call-${call.id}.audio`,
-                  })
-                ).objectId;
-              }
-            }
-          }
-        }
-        const completed = await repository.completeCall(call.id, {
-          outcome: event.status ?? event.event,
-          recordingUrl: event.recordingUrl,
-          recordingObjectId,
-          summary: "Звонок завершён. Заявка передана менеджеру.",
-          intent: "booking_request",
-          extracted: event.extracted ?? {},
-        });
-        if (!existing || existing.status !== "completed") {
-          await repository.createRequestForCall(
-            call.id,
-            event.extracted ?? {},
-            event.transcript ?? [],
-          );
-        }
-        return completed;
-      }
-      return call;
+      const call = await repository.findByProviderCallId(providerCallId);
+      return call
+        ? completeCallForId(call.id, outcome, recordingUrl, recordingObjectId)
+        : null;
     },
     tool: async (input: ToolBody) => {
       if (input.name === "get_events") {

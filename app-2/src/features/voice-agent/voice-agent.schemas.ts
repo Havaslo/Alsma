@@ -7,6 +7,9 @@ export const createCallBodySchema = z.object({
 });
 
 export const callParamsSchema = z.object({ callId: z.string().uuid() });
+export const providerCallParamsSchema = z.object({
+  providerCallId: z.string().trim().min(1).max(200),
+});
 
 export const transcriptBodySchema = z.object({
   role: z.enum(["guest", "assistant", "manager"]),
@@ -35,6 +38,69 @@ export const mangoWebhookBodySchema = z.object({
   transcript: z.array(transcriptBodySchema).optional(),
   extracted: z.record(z.string(), z.unknown()).optional(),
 });
+
+const mangoIdentifier = z.string().trim().min(1).max(128);
+const mangoTimestamp = z.coerce.number().int().nonnegative();
+const mangoPartySchema = z
+  .object({
+    number: z.string().trim().min(3).max(80).optional(),
+    extension: z.union([z.string(), z.number()]).optional(),
+  })
+  .passthrough();
+
+export const mangoCallEventSchema = z
+  .object({
+    entry_id: mangoIdentifier,
+    call_id: mangoIdentifier,
+    timestamp: mangoTimestamp,
+    seq: z.coerce.number().int().nonnegative().optional(),
+    call_state: z.enum(["Appeared", "Connected", "OnHold", "Disconnected"]),
+    location: z.enum(["ivr", "queue", "abonent"]).optional(),
+    from: mangoPartySchema.optional(),
+    to: mangoPartySchema.optional(),
+    disconnect_reason: z.union([z.string(), z.number()]).optional(),
+    sip_call_id: mangoIdentifier.optional(),
+  })
+  .passthrough();
+
+export const mangoSummaryEventSchema = z
+  .object({
+    entry_id: mangoIdentifier,
+    call_direction: z.coerce.number().int().min(0).max(2),
+    from: mangoPartySchema.optional(),
+    to: mangoPartySchema.optional(),
+    line_number: z.string().trim().max(80).optional(),
+    create_time: mangoTimestamp,
+    forward_time: mangoTimestamp.optional(),
+    talk_time: mangoTimestamp.optional(),
+    end_time: mangoTimestamp,
+    entry_result: z.coerce.number().int().min(0).max(1),
+    disconnect_reason: z.union([z.string(), z.number()]).optional(),
+    sip_call_id: mangoIdentifier.optional(),
+  })
+  .passthrough();
+
+export const mangoRecordingEventSchema = z
+  .object({
+    recording_id: mangoIdentifier,
+    recording_state: z.enum(["Started", "Continued", "Completed"]),
+    seq: z.coerce.number().int().nonnegative().optional(),
+    entry_id: mangoIdentifier,
+    call_id: mangoIdentifier,
+    timestamp: mangoTimestamp,
+    completion_code: z.union([z.string(), z.number()]).optional(),
+  })
+  .passthrough();
+
+export const mangoRecordingAddedEventSchema = z
+  .object({
+    entry_id: mangoIdentifier,
+    product_id: z.union([z.string(), z.number()]),
+    user_id: z.union([z.string(), z.number()]),
+    timestamp: mangoTimestamp,
+    recording_id: mangoIdentifier,
+  })
+  .passthrough();
 
 export const toolBodySchema = z.discriminatedUnion("name", [
   z.object({

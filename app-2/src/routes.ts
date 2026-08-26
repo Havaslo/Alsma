@@ -194,7 +194,6 @@ export const createApiRouter = ({
         mangoApiSalt: voiceIntegration.mangoApiSalt,
         destination: voiceIntegration.transferNumber,
       },
-      managedStorage,
       openaiSip,
       voiceConfigurationSecret,
     ),

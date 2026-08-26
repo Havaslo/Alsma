@@ -323,12 +323,18 @@ export const createAdminOperationsRepository = (database: Database) => ({
       database.client.voiceCall.count(),
     ]);
     return {
-      items: items.map(({ recordingUrl: _recordingUrl, ...call }) => ({
-        ...call,
-        hasRecording: Boolean(call.recordingObjectId),
-        hasTranscript:
-          Array.isArray(call.transcript) && call.transcript.length > 0,
-      })),
+      items: items.map(
+        ({
+          providerRecordingId: _providerRecordingId,
+          recordingUrl: _recordingUrl,
+          ...call
+        }) => ({
+          ...call,
+          hasRecording: Boolean(call.recordingObjectId),
+          hasTranscript:
+            Array.isArray(call.transcript) && call.transcript.length > 0,
+        }),
+      ),
       total,
     };
   },
@@ -342,7 +348,11 @@ export const createAdminOperationsRepository = (database: Database) => ({
       },
     });
     if (!call) return null;
-    const { recordingUrl: _recordingUrl, ...result } = call;
+    const {
+      providerRecordingId: _providerRecordingId,
+      recordingUrl: _recordingUrl,
+      ...result
+    } = call;
     return {
       ...result,
       hasRecording: Boolean(call.recordingObjectId),

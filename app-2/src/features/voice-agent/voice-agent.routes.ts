@@ -2,7 +2,6 @@ import { Router } from "express";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
-import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import {
   createVoiceConfigurationHandler,
@@ -13,9 +12,12 @@ import {
   completeHandler,
   createHandler,
   mangoWebhookHandler,
+  providerCompleteHandler,
+  providerTranscriptHandler,
   toolHandler,
   transcriptHandler,
 } from "./voice-agent.handlers.js";
+import { parseMangoWebhook } from "./voice-agent.mango.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 import {
@@ -23,7 +25,7 @@ import {
   callParamsSchema,
   completeCallBodySchema,
   createCallBodySchema,
-  mangoWebhookBodySchema,
+  providerCallParamsSchema,
   toolBodySchema,
   transcriptBodySchema,
   voiceTestTurnBodySchema,
@@ -41,7 +43,6 @@ export const createVoiceAgentRouter = (
     readonly mangoApiSalt?: string;
     readonly destination?: string;
   },
-  managedStorage?: ManagedStorage,
   openaiSip?: {
     readonly apiKey?: string;
     readonly baseUrl: string;
@@ -57,7 +58,6 @@ export const createVoiceAgentRouter = (
     openaiBaseUrl,
     createEpteraClient(eptera ?? {}),
     transfer,
-    managedStorage,
   );
   const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);
   router.get("/sip/status", (_request, response) =>
@@ -80,6 +80,12 @@ export const createVoiceAgentRouter = (
       apiKey: openaiSip?.apiKey,
       baseUrl: openaiSip?.baseUrl ?? "https://api.openai.com/v1",
       getInstructions: () => getVoiceInstructions(database),
+      onIncomingCall: async (providerCallId) => {
+        await service.ensureProviderCall({
+          provider: "openai",
+          providerCallId,
+        });
+      },
       webhookSecret: openaiSip?.webhookSecret,
     }),
   );
@@ -99,7 +105,20 @@ export const createVoiceAgentRouter = (
   );
   router.post(
     "/mango/webhook",
-    validateRequest({ body: mangoWebhookBodySchema }),
+    (request, response, next) => {
+      try {
+        response.locals.input = {
+          body: parseMangoWebhook({
+            apiKey: transfer?.mangoApiKey,
+            body: request.body,
+            salt: transfer?.mangoApiSalt,
+          }),
+        };
+        next();
+      } catch (error) {
+        next(error);
+      }
+    },
     mangoWebhookHandler(service),
   );
   router.post(
@@ -111,6 +130,22 @@ export const createVoiceAgentRouter = (
     "/calls",
     validateRequest({ body: createCallBodySchema }),
     createHandler(service),
+  );
+  router.post(
+    "/calls/provider/:providerCallId/transcript",
+    validateRequest({
+      body: transcriptBodySchema,
+      params: providerCallParamsSchema,
+    }),
+    providerTranscriptHandler(service),
+  );
+  router.post(
+    "/calls/provider/:providerCallId/complete",
+    validateRequest({
+      body: completeCallBodySchema,
+      params: providerCallParamsSchema,
+    }),
+    providerCompleteHandler(service),
   );
   router.post(
     "/calls/:callId/transcript",

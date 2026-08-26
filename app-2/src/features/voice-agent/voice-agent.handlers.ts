@@ -30,6 +30,25 @@ export const transcriptHandler =
       next(error);
     }
   };
+export const providerTranscriptHandler =
+  (service: VoiceAgentService): RequestHandler =>
+  async (_req, res, next) => {
+    try {
+      const result = await service.appendTranscriptByProvider(
+        res.locals.input.params.providerCallId,
+        res.locals.input.body,
+      );
+      if (!result) {
+        res.status(404).json({
+          error: { code: "CALL_NOT_FOUND", message: "Звонок не найден." },
+        });
+        return;
+      }
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 export const answerHandler =
   (service: VoiceAgentService): RequestHandler =>
   async (_req, res, next) => {
@@ -65,14 +84,40 @@ export const completeHandler =
       next(error);
     }
   };
+export const providerCompleteHandler =
+  (service: VoiceAgentService): RequestHandler =>
+  async (_req, res, next) => {
+    try {
+      const result = await service.completeCallByProvider(
+        res.locals.input.params.providerCallId,
+        res.locals.input.body.outcome,
+        res.locals.input.body.recordingUrl,
+        res.locals.input.body.recordingObjectId,
+      );
+      if (!result) {
+        res.status(404).json({
+          error: { code: "CALL_NOT_FOUND", message: "Звонок не найден." },
+        });
+        return;
+      }
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 
 export const mangoWebhookHandler =
   (service: VoiceAgentService): RequestHandler =>
   async (_req, res, next) => {
     try {
-      res
-        .status(200)
-        .json(await service.handleMangoWebhook(res.locals.input.body));
+      const result = await service.handleMangoWebhook(res.locals.input.body);
+      res.status(200).json({
+        duplicate:
+          result && typeof result === "object" && "duplicate" in result
+            ? result.duplicate
+            : undefined,
+        received: true,
+      });
     } catch (error) {
       next(error);
     }

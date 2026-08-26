@@ -54,11 +54,13 @@ export const createOpenAiSipHandler =
     apiKey,
     baseUrl,
     getInstructions,
+    onIncomingCall,
     webhookSecret,
   }: {
     readonly apiKey?: string;
     readonly baseUrl: string;
     readonly getInstructions: () => Promise<string>;
+    readonly onIncomingCall?: (providerCallId: string) => Promise<void>;
     readonly webhookSecret?: string;
   }): RequestHandler =>
   async (request, response) => {
@@ -101,6 +103,8 @@ export const createOpenAiSipHandler =
       return;
     }
 
+    await onIncomingCall?.(`openai:${callId}`);
+
     const upstream = await fetch(
       `${baseUrl.replace(/\/$/u, "")}/realtime/calls/${encodeURIComponent(callId)}/accept`,
       {
@@ -110,10 +114,19 @@ export const createOpenAiSipHandler =
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          audio: {
+            input: {
+              turn_detection: {
+                type: "server_vad",
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+            output: { voice: "marin" },
+          },
           type: "realtime",
           model: "gpt-realtime-2.1",
           instructions: await getInstructions(),
-          audio: { output: { voice: "marin" } },
         }),
         signal: AbortSignal.timeout(15_000),
       },
@@ -131,5 +144,5 @@ export const createOpenAiSipHandler =
       return;
     }
 
-    response.status(200).json({ accepted: true, callId, requestId });
+    response.status(200).json({ accepted: true, requestId });
   };

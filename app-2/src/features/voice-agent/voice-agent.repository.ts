@@ -64,27 +64,18 @@ export const createVoiceAgentRepository = (database: Database) => ({
       })
     )?.value,
   createCall: async (input: CreateCallBody) =>
-    database.client.$transaction(async (transaction) => {
-      const call = await transaction.voiceCall.create({
-        data: { ...input, provider: "mango" },
-      });
-      const request = await transaction.adminRequest.create({
-        data: {
-          title: "Входящий звонок",
-          description: "Входящий звонок из телефонии.",
-          category: "voice-call",
-          details: {
-            source: "Звонки",
-            channelType: "call",
-            voiceCallId: call.id,
-          } as Prisma.InputJsonValue,
-        },
-      });
-      return transaction.voiceCall.update({
-        where: { id: call.id },
-        data: { adminRequestId: request.id },
-      });
+    ensureCall(database, {
+      callerPhone: input.callerPhone,
+      provider: "mango",
+      providerCallId: input.providerCallId,
+      recordingUrl: input.recordingUrl,
     }),
+  ensureCall: (input: {
+    callerPhone?: string;
+    provider: string;
+    providerCallId: string;
+    providerEntryId?: string;
+  }) => ensureCall(database, input),
   getKnowledgeContext: async () => {
     await ensureDefaultAgentPlaybook(database);
     const [articles, rules, scenarios, transferRules] = await Promise.all([
@@ -97,7 +88,11 @@ export const createVoiceAgentRepository = (database: Database) => ({
         orderBy: { priority: "desc" },
       }),
       database.client.agentScenario.findMany({
-        where: { enabled: true, channels: { has: "voice" } },
+        where: {
+          enabled: true,
+          channels: { has: "voice" },
+          NOT: { title: "Голос: уведомление о возможной записи" },
+        },
         orderBy: { updatedAt: "desc" },
       }),
       database.client.agentTransferRule.findMany({
@@ -252,6 +247,44 @@ export const createVoiceAgentRepository = (database: Database) => ({
     }),
   findByProviderCallId: (providerCallId: string) =>
     database.client.voiceCall.findUnique({ where: { providerCallId } }),
+  findByProviderEntryId: (providerEntryId: string) =>
+    database.client.voiceCall.findFirst({
+      orderBy: { startedAt: "desc" },
+      where: { providerEntryId },
+    }),
+  updateCall: (id: string, data: Prisma.VoiceCallUpdateInput) =>
+    database.client.voiceCall.update({ data, where: { id } }),
+  claimWebhookEvent: async (input: {
+    eventKey: string;
+    provider: string;
+    entryId?: string;
+    callId?: string;
+    sequence?: number;
+  }) => {
+    try {
+      await database.client.voiceWebhookEvent.create({
+        data: {
+          callId: input.callId,
+          entryId: input.entryId,
+          eventKey: input.eventKey,
+          provider: input.provider,
+          sequence: input.sequence,
+        },
+      });
+      return true;
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "P2002"
+      )
+        return false;
+      throw error;
+    }
+  },
+  releaseWebhookEvent: (eventKey: string) =>
+    database.client.voiceWebhookEvent.deleteMany({ where: { eventKey } }),
   createRequestForCall: (
     callId: string,
     extracted: Record<string, unknown>,
@@ -318,6 +351,76 @@ export const createVoiceAgentRepository = (database: Database) => ({
       data: { status: "transferring", outcome },
     }),
 });
+
+const ensureCall = async (
+  database: Database,
+  {
+    callerPhone,
+    provider,
+    providerCallId,
+    providerEntryId,
+    recordingUrl,
+  }: {
+    readonly callerPhone?: string;
+    readonly provider: string;
+    readonly providerCallId?: string;
+    readonly providerEntryId?: string;
+    readonly recordingUrl?: string;
+  },
+) => {
+  const existing = providerCallId
+    ? await database.client.voiceCall.findUnique({
+        where: { providerCallId },
+      })
+    : null;
+  if (existing)
+    return database.client.voiceCall.update({
+      data: {
+        ...(callerPhone ? { callerPhone } : {}),
+        ...(providerEntryId ? { providerEntryId } : {}),
+        ...(recordingUrl ? { recordingUrl } : {}),
+      },
+      where: { id: existing.id },
+    });
+
+  try {
+    return await database.client.$transaction(async (transaction) => {
+      const call = await transaction.voiceCall.create({
+        data: {
+          callerPhone,
+          provider,
+          providerCallId,
+          providerEntryId,
+          recordingUrl,
+        },
+      });
+      const request = await transaction.adminRequest.create({
+        data: {
+          title: "Входящий звонок",
+          description: "Входящий звонок из телефонии.",
+          category: "voice-call",
+          details: {
+            source: "Звонки",
+            channelType: "call",
+            voiceCallId: call.id,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return transaction.voiceCall.update({
+        where: { id: call.id },
+        data: { adminRequestId: request.id },
+      });
+    });
+  } catch (error) {
+    if (providerCallId) {
+      const raced = await database.client.voiceCall.findUnique({
+        where: { providerCallId },
+      });
+      if (raced) return raced;
+    }
+    throw error;
+  }
+};
 
 export type VoiceAgentRepository = ReturnType<
   typeof createVoiceAgentRepository

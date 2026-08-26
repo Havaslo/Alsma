@@ -17,6 +17,7 @@
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
     "start": "node dist/server.js",
+    "test:voice": "tsx --test src/features/voice-agent/voice-agent.mango.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

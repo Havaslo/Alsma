@@ -350,6 +350,8 @@ model VoiceCall {
   id                String        @id @default(uuid()) @db.Uuid
   provider          String        @default("t2")
   providerCallId    String?       @unique @map("provider_call_id")
+  providerEntryId   String?       @map("provider_entry_id")
+  providerSequence  Int?          @map("provider_sequence")
   callerPhone       String?       @map("caller_phone")
   status            String        @default("active")
   outcome           String?
@@ -362,6 +364,7 @@ model VoiceCall {
   extracted         Json          @default("{}")
   recordingUrl      String?       @map("recording_url")
   recordingObjectId String?       @map("recording_object_id")
+  providerRecordingId String?     @map("provider_recording_id")
   adminRequestId    String?       @unique @map("admin_request_id") @db.Uuid
   adminRequest      AdminRequest? @relation(fields: [adminRequestId], references: [id], onDelete: SetNull)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -369,8 +372,22 @@ model VoiceCall {
 
   @@index([status, createdAt])
   @@index([callerPhone, createdAt])
+  @@index([providerEntryId, startedAt])
   @@index([endedAt])
   @@map("voice_calls")
+}
+
+model VoiceWebhookEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  provider  String
+  eventKey  String   @unique @map("event_key")
+  entryId   String?  @map("entry_id")
+  callId    String?  @map("call_id")
+  sequence  Int?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([provider, entryId])
+  @@map("voice_webhook_events")
 }
 
 model MaxWebhookUpdate {
