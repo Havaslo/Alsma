@@ -42,6 +42,8 @@ export const createVoiceAgentRouter = (
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
     readonly destination?: string;
+    readonly openaiSipApiKey?: string;
+    readonly openaiSipBaseUrl?: string;
   },
   openaiSip?: {
     readonly apiKey?: string;
@@ -57,7 +59,11 @@ export const createVoiceAgentRouter = (
     apiKey,
     openaiBaseUrl,
     createEpteraClient(eptera ?? {}),
-    transfer,
+    {
+      ...transfer,
+      openaiSipApiKey: openaiSip?.apiKey,
+      openaiSipBaseUrl: openaiSip?.baseUrl,
+    },
   );
   const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);
   router.get("/sip/status", (_request, response) =>
@@ -86,6 +92,8 @@ export const createVoiceAgentRouter = (
           providerCallId,
         });
       },
+      onToolCall: (providerCallId, name, args) =>
+        service.toolForProviderCall(providerCallId, name, args),
       webhookSecret: openaiSip?.webhookSecret,
     }),
   );

@@ -350,6 +350,18 @@ export const createVoiceAgentRepository = (database: Database) => ({
       where: { id },
       data: { status: "transferring", outcome },
     }),
+  claimTransfer: async (id: string, outcome: string) => {
+    const result = await database.client.voiceCall.updateMany({
+      where: { id, status: { notIn: ["transferring", "completed"] } },
+      data: { status: "transferring", outcome },
+    });
+    return result.count === 1;
+  },
+  failTransfer: (id: string, outcome: string) =>
+    database.client.voiceCall.update({
+      where: { id },
+      data: { status: "active", outcome },
+    }),
 });
 
 const ensureCall = async (

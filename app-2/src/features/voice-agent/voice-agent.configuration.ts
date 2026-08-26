@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
+import { voiceAgentTools } from "./voice-agent.tools.js";
 
 const realtimeModel = "gpt-realtime-2.1";
 
@@ -37,48 +38,7 @@ const getConfiguration = async (database: Database) => {
         voice: "marin",
       },
     },
-    tools: [
-      {
-        type: "function",
-        name: "get_events",
-        description:
-          "Получить свежий список опубликованных мероприятий или мероприятия на конкретную дату.",
-        parameters: {
-          type: "object",
-          properties: {
-            date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
-          },
-        },
-      },
-      {
-        type: "function",
-        name: "check_availability",
-        description:
-          "Проверить актуальную доступность номеров по датам и числу гостей.",
-        parameters: {
-          type: "object",
-          properties: {
-            checkIn: { type: "string" },
-            checkOut: { type: "string" },
-            adults: { type: "integer", minimum: 1 },
-            children: { type: "array", items: { type: "integer", minimum: 0 } },
-            roomCount: { type: "integer", minimum: 1 },
-          },
-          required: ["checkIn", "checkOut", "adults"],
-        },
-      },
-      {
-        type: "function",
-        name: "transfer_to_manager",
-        description:
-          "Перевести звонок сотруднику по просьбе гостя или при отсутствии уверенного ответа.",
-        parameters: {
-          type: "object",
-          properties: { reason: { type: "string" } },
-          required: ["reason"],
-        },
-      },
-    ],
+    tools: voiceAgentTools,
   };
 };
 

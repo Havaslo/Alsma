@@ -90,25 +90,30 @@ export const createApp = ({
     }),
   );
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
-  app.use(
-    "/api",
-    createApiRouter({
-      database,
-      epteraApiKey,
-      epteraHotelId,
-      logger,
-      managedStorage,
-      openaiApiKey,
-      openaiBaseUrl,
-      openaiSip,
-      voiceConfigurationSecret,
-      maxBot,
-      vk,
-      yooKassaSecretKey,
-      yooKassaShopId,
-      voiceIntegration,
-    }),
-  );
+  const apiRouter = createApiRouter({
+    database,
+    epteraApiKey,
+    epteraHotelId,
+    logger,
+    managedStorage,
+    openaiApiKey,
+    openaiBaseUrl,
+    openaiSip,
+    voiceConfigurationSecret,
+    maxBot,
+    vk,
+    yooKassaSecretKey,
+    yooKassaShopId,
+    voiceIntegration,
+  });
+  // The Mango connector accepts a bare external-system URL. Keep that URL
+  // compatible with the canonical API route so existing PBX settings do not
+  // silently discard signed events at GET/POST /.
+  app.post(["/", "/mango/webhook"], (request, response, next) => {
+    request.url = "/voice-agent/mango/webhook";
+    apiRouter(request, response, next);
+  });
+  app.use("/api", apiRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
   return app;

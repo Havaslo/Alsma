@@ -1,11 +1,21 @@
 import type { Request, RequestHandler } from "express";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import WebSocket from "ws";
+
+import { voiceAgentTools } from "./voice-agent.tools.js";
 
 type RawRequest = Request & { readonly rawBody?: Buffer };
 
 type OpenAiWebhook = {
   readonly data?: { readonly call_id?: string };
   readonly type?: string;
+};
+
+type OpenAiToolEvent = {
+  readonly type?: string;
+  readonly call_id?: string;
+  readonly name?: string;
+  readonly arguments?: string;
 };
 
 const signatureToleranceSeconds = 300;
@@ -49,18 +59,42 @@ const verifyWebhook = (request: RawRequest, webhookSecret: string): boolean => {
   });
 };
 
+export const buildSipAcceptPayload = (instructions: string) => ({
+  audio: {
+    input: {
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+      },
+    },
+    output: { voice: "marin" },
+  },
+  type: "realtime",
+  model: "gpt-realtime-2.1",
+  instructions,
+  output_modalities: ["audio"],
+  tools: voiceAgentTools,
+});
+
 export const createOpenAiSipHandler =
   ({
     apiKey,
     baseUrl,
     getInstructions,
     onIncomingCall,
+    onToolCall,
     webhookSecret,
   }: {
     readonly apiKey?: string;
     readonly baseUrl: string;
     readonly getInstructions: () => Promise<string>;
     readonly onIncomingCall?: (providerCallId: string) => Promise<void>;
+    readonly onToolCall?: (
+      providerCallId: string,
+      name: string,
+      args: unknown,
+    ) => Promise<unknown>;
     readonly webhookSecret?: string;
   }): RequestHandler =>
   async (request, response) => {
@@ -113,21 +147,7 @@ export const createOpenAiSipHandler =
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          audio: {
-            input: {
-              turn_detection: {
-                type: "server_vad",
-                create_response: true,
-                interrupt_response: true,
-              },
-            },
-            output: { voice: "marin" },
-          },
-          type: "realtime",
-          model: "gpt-realtime-2.1",
-          instructions: await getInstructions(),
-        }),
+        body: JSON.stringify(buildSipAcceptPayload(await getInstructions())),
         signal: AbortSignal.timeout(15_000),
       },
     );
@@ -143,6 +163,88 @@ export const createOpenAiSipHandler =
       });
       return;
     }
+
+    const realtime = new WebSocket(
+      `${baseUrl.replace(/\/$/u, "")}/realtime?call_id=${encodeURIComponent(callId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } },
+    );
+    let failureHangupTimer: NodeJS.Timeout | undefined;
+    const hangup = () => {
+      void fetch(
+        `${baseUrl.replace(/\/$/u, "")}/realtime/calls/${encodeURIComponent(callId)}/hangup`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(10_000),
+        },
+      ).catch(() => undefined);
+    };
+    realtime.on("open", () => {
+      realtime.send(JSON.stringify({ type: "response.create" }));
+    });
+    realtime.on("message", (data, isBinary) => {
+      if (isBinary || !onToolCall) return;
+      let event: OpenAiToolEvent;
+      try {
+        event = JSON.parse(data.toString()) as OpenAiToolEvent;
+      } catch {
+        return;
+      }
+      if (
+        event.type !== "response.function_call_arguments.done" ||
+        !event.call_id ||
+        !event.name
+      )
+        return;
+      void (async () => {
+        let args: unknown = {};
+        try {
+          args = JSON.parse(event.arguments ?? "{}");
+        } catch {
+          args = {};
+        }
+        const result = await onToolCall(`openai:${callId}`, event.name!, args);
+        if (realtime.readyState !== WebSocket.OPEN) return;
+        realtime.send(
+          JSON.stringify({
+            type: "conversation.item.create",
+            item: {
+              type: "function_call_output",
+              call_id: event.call_id,
+              output: JSON.stringify(result),
+            },
+          }),
+        );
+        if (
+          result &&
+          typeof result === "object" &&
+          "accepted" in result &&
+          (result as { accepted?: unknown }).accepted === false
+        ) {
+          failureHangupTimer = setTimeout(hangup, 15_000);
+        }
+        realtime.send(JSON.stringify({ type: "response.create" }));
+      })().catch(() => {
+        if (realtime.readyState === WebSocket.OPEN)
+          realtime.send(
+            JSON.stringify({
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: event.call_id,
+                output: JSON.stringify({
+                  accepted: false,
+                  reason: "tool_failed",
+                }),
+              },
+            }),
+          );
+        failureHangupTimer = setTimeout(hangup, 15_000);
+      });
+    });
+    realtime.on("close", () => {
+      if (failureHangupTimer) clearTimeout(failureHangupTimer);
+    });
 
     response.status(200).json({ accepted: true, requestId });
   };

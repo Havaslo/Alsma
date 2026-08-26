@@ -11,6 +11,7 @@ import type {
   ToolBody,
   TranscriptBody,
 } from "./voice-agent.schemas.js";
+import { toolBodySchema } from "./voice-agent.schemas.js";
 
 const transferMangoCall = async ({
   apiKey,
@@ -77,6 +78,36 @@ const transferMangoCall = async ({
   throw new Error("Mango transfer result timed out");
 };
 
+const transferOpenAiCall = async ({
+  apiKey,
+  baseUrl,
+  callId,
+  destination,
+}: {
+  readonly apiKey: string;
+  readonly baseUrl: string;
+  readonly callId: string;
+  readonly destination: string;
+}) => {
+  const targetUri = /^(tel|sip):/iu.test(destination)
+    ? destination
+    : `tel:${destination}`;
+  const response = await fetch(
+    `${baseUrl.replace(/\/$/u, "")}/realtime/calls/${encodeURIComponent(callId)}/refer`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ target_uri: targetUri }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  if (!response.ok)
+    throw new Error(`OpenAI call transfer failed with ${response.status}`);
+};
+
 const parseJson = (value: string) => {
   try {
     return JSON.parse(value) as {
@@ -99,6 +130,8 @@ export const createVoiceAgentService = (
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
     readonly destination?: string;
+    readonly openaiSipApiKey?: string;
+    readonly openaiSipBaseUrl?: string;
   },
 ) => {
   const isVoiceEnabled = async () => {
@@ -173,6 +206,99 @@ export const createVoiceAgentService = (
     completeCall: completeCallForId,
     repository,
   });
+
+  const transferToManager = async (callId: string, reason: string) => {
+    const call = await repository.findCall(callId);
+    if (call?.status === "transferring" || call?.status === "completed")
+      return { accepted: true, duplicate: true };
+    if (!call?.providerCallId || !transfer?.destination)
+      return { accepted: false, reason: "transfer_not_configured" };
+    if (
+      call.provider !== "openai" &&
+      (!transfer.mangoApiKey || !transfer.mangoApiSalt)
+    )
+      return { accepted: false, reason: "transfer_not_configured" };
+    if (
+      call.provider === "openai" &&
+      (!transfer.openaiSipApiKey || !transfer.openaiSipBaseUrl)
+    )
+      return { accepted: false, reason: "transfer_not_configured" };
+
+    const claimed = await repository.claimTransfer(
+      callId,
+      `transfer_requested:${reason}`,
+    );
+    if (!claimed) return { accepted: true, duplicate: true };
+
+    try {
+      if (call.provider === "openai") {
+        await transferOpenAiCall({
+          apiKey: transfer.openaiSipApiKey!,
+          baseUrl: transfer.openaiSipBaseUrl!,
+          callId: call.providerCallId.replace(/^openai:/u, ""),
+          destination: transfer.destination,
+        });
+      } else {
+        await transferMangoCall({
+          apiKey: transfer.mangoApiKey!,
+          callId: call.providerCallId,
+          destination: transfer.destination,
+          salt: transfer.mangoApiSalt!,
+        });
+      }
+      return { accepted: true };
+    } catch {
+      await repository
+        .failTransfer(callId, "transfer_failed")
+        .catch(() => undefined);
+      return { accepted: false, reason: "transfer_failed" };
+    }
+  };
+
+  const executeTool = async (input: ToolBody) => {
+    if (input.name === "get_events") {
+      try {
+        const events = await listPublishedEvents(database, input.date);
+        return {
+          events: events.map((event) => ({ ...event })),
+          context: formatEventsContext(events),
+        };
+      } catch {
+        return { events: [], reason: "events_temporarily_unavailable" };
+      }
+    }
+    if (input.name === "knowledge_answer")
+      return {
+        answer: await (async () => {
+          if (!(await isVoiceEnabled()))
+            return "Сейчас голосовой AI-агент временно недоступен.";
+          const knowledge = await repository.getKnowledgeContext();
+          return completeWithOpenAI(
+            `Вопрос гостя: ${input.question}\n\nБаза знаний:\n${knowledge}`,
+          );
+        })(),
+      };
+    if (input.name === "create_booking_request") {
+      const request = await repository.createRequestForCall(
+        input.callId,
+        input.extracted,
+        input.comment ? [{ role: "guest", text: input.comment }] : [],
+      );
+      return { requestId: request.id, accepted: true };
+    }
+    if (input.name === "check_availability") {
+      if (!eptera)
+        return { available: false, reason: "availability_not_configured" };
+      return eptera.checkAvailability({
+        adults: input.adults,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        children: input.children,
+        roomCount: input.roomCount,
+      });
+    }
+    return transferToManager(input.callId, input.reason);
+  };
 
   return {
     testAudioTurn: async (audioBase64: string, mimeType: string) => {
@@ -306,71 +432,23 @@ export const createVoiceAgentService = (
         ? completeCallForId(call.id, outcome, recordingUrl, recordingObjectId)
         : null;
     },
-    tool: async (input: ToolBody) => {
-      if (input.name === "get_events") {
-        try {
-          const events = await listPublishedEvents(database, input.date);
-          return {
-            events: events.map((event) => ({ ...event })),
-            context: formatEventsContext(events),
-          };
-        } catch {
-          return { events: [], reason: "events_temporarily_unavailable" };
-        }
-      }
-      if (input.name === "knowledge_answer")
-        return {
-          answer: await (async () => {
-            if (!(await isVoiceEnabled()))
-              return "Сейчас голосовой AI-агент временно недоступен.";
-            const knowledge = await repository.getKnowledgeContext();
-            return completeWithOpenAI(
-              `Вопрос гостя: ${input.question}\n\nБаза знаний:\n${knowledge}`,
-            );
-          })(),
-        };
-      if (input.name === "create_booking_request") {
-        const request = await repository.createRequestForCall(
-          input.callId,
-          input.extracted,
-          input.comment ? [{ role: "guest", text: input.comment }] : [],
-        );
-        return { requestId: request.id, accepted: true };
-      }
-      if (input.name === "check_availability") {
-        if (!eptera)
-          return { available: false, reason: "availability_not_configured" };
-        const result = await eptera.checkAvailability({
-          adults: input.adults,
-          checkIn: input.checkIn,
-          checkOut: input.checkOut,
-          children: input.children,
-          roomCount: input.roomCount,
-        });
-        return result;
-      }
-      const call = await repository.findCall(input.callId);
-      if (call?.status === "transferring" || call?.status === "completed")
-        return { accepted: true, duplicate: true };
-      if (
-        !call?.providerCallId ||
-        !transfer?.mangoApiKey ||
-        !transfer.mangoApiSalt ||
-        !transfer.destination
-      )
-        return { accepted: false, reason: "transfer_not_configured" };
-      await repository.markTransfer(
-        input.callId,
-        `transfer_requested:${input.reason}`,
-      );
-      await transferMangoCall({
-        apiKey: transfer.mangoApiKey,
-        callId: call.providerCallId,
-        destination: transfer.destination,
-        salt: transfer.mangoApiSalt,
+    toolForProviderCall: async (
+      providerCallId: string,
+      name: string,
+      args: unknown,
+    ) => {
+      const call = await repository.findByProviderCallId(providerCallId);
+      if (!call) return { accepted: false, reason: "call_not_found" };
+      const parsed = toolBodySchema.safeParse({
+        ...(args && typeof args === "object" ? args : {}),
+        callId: call.id,
+        name,
       });
-      return { accepted: true, destination: transfer.destination };
+      if (!parsed.success)
+        return { accepted: false, reason: "invalid_tool_arguments" };
+      return executeTool(parsed.data);
     },
+    tool: executeTool,
   };
 };
 
