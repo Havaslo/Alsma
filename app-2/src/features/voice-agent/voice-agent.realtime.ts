@@ -5,6 +5,7 @@ import WebSocket, { WebSocketServer } from "ws";
 
 import type { Database } from "../../lib/database/database.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
+import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 import {
   recordingDisclosure,
@@ -69,6 +70,9 @@ export const attachVoiceAgentRealtime = (
         const knowledge = await createVoiceAgentRepository(
           options.database,
         ).getKnowledgeContext();
+        const events = await listPublishedEvents(options.database).catch(
+          () => [],
+        );
         const upstream = new WebSocket(upstreamUrl(options.openaiBaseUrl), {
           headers: { Authorization: `Bearer ${options.apiKey}` },
           maxPayload: 8 * 1024 * 1024,
@@ -134,9 +138,24 @@ export const attachVoiceAgentRealtime = (
                         },
                         output: { voice: "marin" },
                       },
-                      instructions: `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}`,
+                      instructions: `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}\n\nОпубликованный календарь мероприятий (только эти данные):\n${formatEventsContext(events) || "Нет опубликованных актуальных мероприятий."}\nНе придумывай мероприятия и даты. Если в календаре нет ответа, скажи, что у тебя нет этой информации, и предложи уточнить у менеджера. Для конкретной даты используй get_events.`,
                       output_modalities: ["audio"],
                       tools: [
+                        {
+                          type: "function",
+                          name: "get_events",
+                          description:
+                            "Получить свежий список опубликованных мероприятий или мероприятия на конкретную дату.",
+                          parameters: {
+                            type: "object",
+                            properties: {
+                              date: {
+                                type: "string",
+                                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                              },
+                            },
+                          },
+                        },
                         {
                           type: "function",
                           name: "check_availability",
@@ -189,8 +208,8 @@ export const attachVoiceAgentRealtime = (
                 };
                 if (
                   functionEvent.call_id &&
-                  functionEvent.name === "check_availability" &&
-                  options.eptera
+                  (functionEvent.name === "check_availability" ||
+                    functionEvent.name === "get_events")
                 ) {
                   let output: unknown = {
                     available: false,
@@ -206,13 +225,24 @@ export const attachVoiceAgentRealtime = (
                       children?: number[];
                       roomCount?: number;
                     };
-                    output = await options.eptera.checkAvailability({
-                      adults: args.adults,
-                      checkIn: args.checkIn,
-                      checkOut: args.checkOut,
-                      children: args.children ?? [],
-                      roomCount: args.roomCount ?? 1,
-                    });
+                    if (functionEvent.name === "get_events") {
+                      const found = await listPublishedEvents(
+                        options.database,
+                        (args as { date?: string }).date,
+                      );
+                      output = {
+                        events: found,
+                        context: formatEventsContext(found),
+                      };
+                    } else if (options.eptera) {
+                      output = await options.eptera.checkAvailability({
+                        adults: args.adults,
+                        checkIn: args.checkIn,
+                        checkOut: args.checkOut,
+                        children: args.children ?? [],
+                        roomCount: args.roomCount ?? 1,
+                      });
+                    }
                   } catch {
                     // Return a safe tool result; the model will explain the failure and offer a transfer.
                   }

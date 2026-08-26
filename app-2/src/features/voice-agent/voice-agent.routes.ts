@@ -4,6 +4,7 @@ import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
+import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import {
   createVoiceConfigurationHandler,
   voiceTestCompletedHandler,
@@ -55,6 +56,7 @@ export const createVoiceAgentRouter = (
   const router = Router();
   const service = createVoiceAgentService(
     createVoiceAgentRepository(database),
+    database,
     apiKey,
     openaiBaseUrl,
     createEpteraClient(eptera ?? {}),
@@ -84,7 +86,8 @@ export const createVoiceAgentRouter = (
       getInstructions: async () => {
         const knowledge =
           await createVoiceAgentRepository(database).getKnowledgeContext();
-        return `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}`;
+        const events = await listPublishedEvents(database).catch(() => []);
+        return `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}\n\nОпубликованный календарь мероприятий (только эти данные):\n${formatEventsContext(events) || "Нет опубликованных актуальных мероприятий."}\nНе придумывай мероприятия и даты. Если в календаре нет ответа, скажи, что у тебя нет этой информации, и предложи уточнить у менеджера.`;
       },
       webhookSecret: openaiSip?.webhookSecret,
     }),

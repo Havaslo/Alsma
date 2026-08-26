@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 
+import type { Database } from "../../lib/database/database.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
+import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
@@ -94,6 +96,7 @@ const parseJson = (value: string) => {
 
 export const createVoiceAgentService = (
   repository: VoiceAgentRepository,
+  database: Database,
   apiKey?: string,
   openaiBaseUrl?: string,
   eptera?: EpteraClient,
@@ -315,6 +318,17 @@ export const createVoiceAgentService = (
       return call;
     },
     tool: async (input: ToolBody) => {
+      if (input.name === "get_events") {
+        try {
+          const events = await listPublishedEvents(database, input.date);
+          return {
+            events: events.map((event) => ({ ...event })),
+            context: formatEventsContext(events),
+          };
+        } catch {
+          return { events: [], reason: "events_temporarily_unavailable" };
+        }
+      }
       if (input.name === "knowledge_answer")
         return {
           answer: await (async () => {

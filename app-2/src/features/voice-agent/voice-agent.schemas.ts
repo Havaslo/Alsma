@@ -43,6 +43,14 @@ export const toolBodySchema = z.discriminatedUnion("name", [
     question: z.string().trim().min(1).max(4_000),
   }),
   z.object({
+    name: z.literal("get_events"),
+    callId: z.string().uuid().optional(),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  }),
+  z.object({
     name: z.literal("check_availability"),
     callId: z.string().uuid().optional(),
     checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

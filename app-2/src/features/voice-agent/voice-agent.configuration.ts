@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { timingSafeEqual } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
+import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 import {
   recordingDisclosure,
@@ -21,12 +22,15 @@ const hasValidBearer = (authorization: string | undefined, secret: string) => {
 };
 
 const getConfiguration = async (database: Database) => {
-  const knowledge =
-    await createVoiceAgentRepository(database).getKnowledgeContext();
+  const [knowledge, events] = await Promise.all([
+    createVoiceAgentRepository(database).getKnowledgeContext(),
+    listPublishedEvents(database).catch(() => []),
+  ]);
+  const eventsContext = formatEventsContext(events);
   return {
     type: "realtime",
     model: realtimeModel,
-    instructions: `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}`,
+    instructions: `${voiceAgentSystemPrompt}\n\nПервой фразой сообщи: ${recordingDisclosure}\n\nБаза знаний и правила:\n${knowledge}\n\nОпубликованный календарь мероприятий (только эти данные, актуальны на момент конфигурации):\n${eventsContext || "Нет опубликованных актуальных мероприятий."}\nНе придумывай мероприятия и даты. Если в календаре нет ответа, скажи, что у тебя нет этой информации, и предложи уточнить у менеджера. Для вопроса о конкретной дате используй инструмент get_events.`,
     output_modalities: ["audio"],
     audio: {
       input: {
@@ -43,6 +47,18 @@ const getConfiguration = async (database: Database) => {
       },
     },
     tools: [
+      {
+        type: "function",
+        name: "get_events",
+        description:
+          "Получить свежий список опубликованных мероприятий или мероприятия на конкретную дату.",
+        parameters: {
+          type: "object",
+          properties: {
+            date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+          },
+        },
+      },
       {
         type: "function",
         name: "check_availability",
