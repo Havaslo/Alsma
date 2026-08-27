@@ -181,9 +181,6 @@ export const DateRangePicker = ({
           <p className="mt-2 text-xs text-muted-ui-foreground">
             {pendingStart ? "Выберите дату выезда" : "Выберите дату заезда"}
           </p>
-          <p className="mt-1 text-xs text-muted-ui-foreground">
-            Минимальная цена за ночь по доступным тарифам Eptera
-          </p>
           <div className="mt-3 grid grid-cols-7 text-center text-xs font-semibold text-muted-ui-foreground">
             {weekdays.map((day) => (
               <span className="py-2" key={day}>
