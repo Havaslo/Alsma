@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 
+import { mangoExternalEventPaths } from "../../app.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import {
   parseMangoWebhook,
@@ -15,6 +16,17 @@ const signedBody = (json: string) => ({
   json,
   sign: createHash("sha256").update(`${apiKey}${json}${salt}`).digest("hex"),
   vpbx_api_key: apiKey,
+});
+
+test("maps every Mango external-system event path to the secured webhook", () => {
+  assert.deepEqual(mangoExternalEventPaths, [
+    "/",
+    "/mango/webhook",
+    "/events/call",
+    "/events/summary",
+    "/events/recording",
+    "/events/record/added",
+  ]);
 });
 
 test("verifies the exact MANGO form signature without reserializing JSON", () => {

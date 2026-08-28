@@ -49,6 +49,15 @@ type CreateAppOptions = {
   readonly managedStorage: ManagedStorage;
 };
 
+export const mangoExternalEventPaths = [
+  "/",
+  "/mango/webhook",
+  "/events/call",
+  "/events/summary",
+  "/events/recording",
+  "/events/record/added",
+];
+
 export const createApp = ({
   database,
   epteraApiKey,
@@ -106,10 +115,10 @@ export const createApp = ({
     yooKassaShopId,
     voiceIntegration,
   });
-  // The Mango connector accepts a bare external-system URL. Keep that URL
-  // compatible with the canonical API route so existing PBX settings do not
-  // silently discard signed events at GET/POST /.
-  app.post(["/", "/mango/webhook"], (request, response, next) => {
+  // Mango appends event paths to the configured external-system origin. Keep
+  // the bare origin and every documented event path on the same secured
+  // handler so PBX delivery cannot bypass signature validation or persistence.
+  app.post(mangoExternalEventPaths, (request, response, next) => {
     request.url = "/voice-agent/mango/webhook";
     apiRouter(request, response, next);
   });
