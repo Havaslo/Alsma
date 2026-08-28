@@ -72,7 +72,12 @@ export const createMangoEventHandler = ({
     const existing =
       (event.sipCallId
         ? await repository.findBySipCallId(event.sipCallId)
-        : null) ?? (await repository.findByProviderCallId(event.callId));
+        : null) ??
+      (await repository.findByMangoCallId(event.callId)) ??
+      (event.entryId
+        ? await repository.findByProviderEntryId(event.entryId)
+        : null) ??
+      (await repository.findByProviderCallId(event.callId));
     return (
       existing ??
       (await repository.ensureCall({

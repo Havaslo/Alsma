@@ -94,6 +94,12 @@ export const createVoiceAgentRouter = (
       },
       onToolCall: (providerCallId, name, args) =>
         service.toolForProviderCall(providerCallId, name, args),
+      onTranscript: async (providerCallId, role, text) => {
+        await service.appendTranscriptByProvider(providerCallId, {
+          role,
+          text,
+        });
+      },
       webhookSecret: openaiSip?.webhookSecret,
     }),
   );

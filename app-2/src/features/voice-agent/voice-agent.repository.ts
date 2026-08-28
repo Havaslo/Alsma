@@ -250,6 +250,8 @@ export const createVoiceAgentRepository = (database: Database) => ({
     }),
   findByProviderCallId: (providerCallId: string) =>
     database.client.voiceCall.findUnique({ where: { providerCallId } }),
+  findByMangoCallId: (mangoCallId: string) =>
+    database.client.voiceCall.findFirst({ where: { mangoCallId } }),
   findBySipCallId: (sipCallId: string) =>
     database.client.voiceCall.findUnique({ where: { sipCallId } }),
   findByProviderEntryId: (providerEntryId: string) =>

@@ -18,6 +18,12 @@ type OpenAiToolEvent = {
   readonly arguments?: string;
 };
 
+type OpenAiTranscriptEvent = {
+  readonly type?: string;
+  readonly transcript?: string;
+  readonly item_id?: string;
+};
+
 const signatureToleranceSeconds = 300;
 
 const decodeSecret = (secret: string): Buffer => {
@@ -77,6 +83,16 @@ export const buildSipAcceptPayload = (instructions: string) => ({
   tools: voiceAgentTools,
 });
 
+export const isRealtimeReadyEvent = (type?: string) =>
+  type === "session.updated";
+
+export const isRealtimeTranscriptEvent = (type?: string) =>
+  [
+    "conversation.item.input_audio_transcription.completed",
+    "conversation.item.input_audio_transcription.done",
+    "response.audio_transcript.done",
+  ].includes(type ?? "");
+
 export const createOpenAiSipHandler =
   ({
     apiKey,
@@ -84,6 +100,7 @@ export const createOpenAiSipHandler =
     getInstructions,
     onIncomingCall,
     onToolCall,
+    onTranscript,
     webhookSecret,
   }: {
     readonly apiKey?: string;
@@ -95,6 +112,11 @@ export const createOpenAiSipHandler =
       name: string,
       args: unknown,
     ) => Promise<unknown>;
+    readonly onTranscript?: (
+      providerCallId: string,
+      role: "guest" | "assistant",
+      text: string,
+    ) => Promise<void>;
     readonly webhookSecret?: string;
   }): RequestHandler =>
   async (request, response) => {
@@ -180,16 +202,46 @@ export const createOpenAiSipHandler =
       ).catch(() => undefined);
     };
     realtime.on("open", () => {
-      realtime.send(JSON.stringify({ type: "response.create" }));
+      realtime.send(
+        JSON.stringify({
+          type: "session.update",
+          session: {
+            input_audio_transcription: { model: "gpt-4o-mini-transcribe" },
+            turn_detection: {
+              type: "server_vad",
+              create_response: true,
+              interrupt_response: true,
+            },
+          },
+        }),
+      );
     });
     realtime.on("message", (data, isBinary) => {
-      if (isBinary || !onToolCall) return;
-      let event: OpenAiToolEvent;
+      if (isBinary) return;
+      let event: OpenAiToolEvent & OpenAiTranscriptEvent;
       try {
-        event = JSON.parse(data.toString()) as OpenAiToolEvent;
+        event = JSON.parse(data.toString()) as OpenAiToolEvent &
+          OpenAiTranscriptEvent;
       } catch {
         return;
       }
+      if (
+        onTranscript &&
+        typeof event.transcript === "string" &&
+        event.transcript.trim() &&
+        isRealtimeTranscriptEvent(event.type)
+      ) {
+        void onTranscript(
+          `openai:${callId}`,
+          event.type?.startsWith("response.") ? "assistant" : "guest",
+          event.transcript.trim(),
+        );
+      }
+      if (isRealtimeReadyEvent(event.type)) {
+        realtime.send(JSON.stringify({ type: "response.create" }));
+        return;
+      }
+      if (!onToolCall) return;
       if (
         event.type !== "response.function_call_arguments.done" ||
         !event.call_id ||
