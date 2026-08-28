@@ -75,6 +75,8 @@ export const createVoiceAgentRepository = (database: Database) => ({
     provider: string;
     providerCallId: string;
     providerEntryId?: string;
+    mangoCallId?: string;
+    mangoTransferInitiator?: string;
   }) => ensureCall(database, input),
   getKnowledgeContext: async () => {
     await ensureDefaultAgentPlaybook(database);
@@ -372,12 +374,16 @@ const ensureCall = async (
     providerCallId,
     providerEntryId,
     recordingUrl,
+    mangoCallId,
+    mangoTransferInitiator,
   }: {
     readonly callerPhone?: string;
     readonly provider: string;
     readonly providerCallId?: string;
     readonly providerEntryId?: string;
     readonly recordingUrl?: string;
+    readonly mangoCallId?: string;
+    readonly mangoTransferInitiator?: string;
   },
 ) => {
   const existing = providerCallId
@@ -403,6 +409,8 @@ const ensureCall = async (
           provider,
           providerCallId,
           providerEntryId,
+          mangoCallId,
+          mangoTransferInitiator,
           recordingUrl,
         },
       });

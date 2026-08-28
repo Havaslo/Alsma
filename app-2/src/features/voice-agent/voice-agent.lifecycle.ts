@@ -81,11 +81,16 @@ export const createMangoEventHandler = ({
   };
 
   const handleCall = async (event: MangoCallEvent) => {
-    const call = await callForEvent({
-      callId: event.call_id,
-      callerPhone: event.from?.number,
-      entryId: event.entry_id,
-    });
+    const linkedOpenAiCall = event.sip_call_id
+      ? await repository.findByProviderCallId(`openai:${event.sip_call_id}`)
+      : null;
+    const call =
+      linkedOpenAiCall ??
+      (await callForEvent({
+        callId: event.call_id,
+        callerPhone: event.from?.number,
+        entryId: event.entry_id,
+      }));
     if (
       event.seq !== undefined &&
       call.providerSequence !== null &&
@@ -97,6 +102,12 @@ export const createMangoEventHandler = ({
     const disconnected = state === "disconnected";
     return repository.updateCall(call.id, {
       callerPhone: event.from?.number,
+      mangoCallId: event.call_id,
+      mangoTransferInitiator: event.from?.number
+        ? "from.number"
+        : event.to?.number
+          ? "to.number"
+          : undefined,
       endedAt: disconnected ? new Date(event.timestamp * 1_000) : undefined,
       providerEntryId: event.entry_id,
       providerSequence: event.seq,

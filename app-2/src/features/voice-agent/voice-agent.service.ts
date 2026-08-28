@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
+import { createLogger } from "../../lib/logger.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
@@ -13,25 +14,53 @@ import type {
 } from "./voice-agent.schemas.js";
 import { toolBodySchema } from "./voice-agent.schemas.js";
 
+const logger = createLogger();
+
+export const selectMangoTransferInitiator = (call: {
+  readonly mangoTransferInitiator?: string | null;
+  readonly callerPhone?: string | null;
+}) => {
+  if (
+    call.mangoTransferInitiator === "from.number" ||
+    call.mangoTransferInitiator === "to.number"
+  )
+    return call.mangoTransferInitiator;
+  if (call.callerPhone) return "from.number";
+  return undefined;
+};
+
+export const buildMangoTransferPayload = ({
+  callId,
+  destination,
+  initiator,
+}: {
+  readonly callId: string;
+  readonly destination: string;
+  readonly initiator: "from.number" | "to.number";
+}) => ({
+  command_id: `alsma-transfer-${randomUUID()}`,
+  call_id: callId,
+  method: "blind",
+  to_number: destination,
+  initiator,
+});
+
 const transferMangoCall = async ({
   apiKey,
   callId,
   destination,
+  initiator,
   salt,
 }: {
   readonly apiKey: string;
   readonly callId: string;
   readonly destination: string;
+  readonly initiator: "from.number" | "to.number";
   readonly salt: string;
 }) => {
-  const commandId = `alsma-transfer-${randomUUID()}`;
-  const json = JSON.stringify({
-    command_id: commandId,
-    call_id: callId,
-    method: "blind",
-    to_number: destination,
-    initiator: "to.number",
-  });
+  const payload = buildMangoTransferPayload({ callId, destination, initiator });
+  const commandId = payload.command_id;
+  const json = JSON.stringify(payload);
   const sign = createHash("sha256")
     .update(`${apiKey}${json}${salt}`)
     .digest("hex");
@@ -76,36 +105,6 @@ const transferMangoCall = async ({
       throw new Error(`Mango transfer rejected with ${String(result.result)}`);
   }
   throw new Error("Mango transfer result timed out");
-};
-
-const transferOpenAiCall = async ({
-  apiKey,
-  baseUrl,
-  callId,
-  destination,
-}: {
-  readonly apiKey: string;
-  readonly baseUrl: string;
-  readonly callId: string;
-  readonly destination: string;
-}) => {
-  const targetUri = /^(tel|sip):/iu.test(destination)
-    ? destination
-    : `tel:${destination}`;
-  const response = await fetch(
-    `${baseUrl.replace(/\/$/u, "")}/realtime/calls/${encodeURIComponent(callId)}/refer`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ target_uri: targetUri }),
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  if (!response.ok)
-    throw new Error(`OpenAI call transfer failed with ${response.status}`);
 };
 
 const parseJson = (value: string) => {
@@ -211,18 +210,22 @@ export const createVoiceAgentService = (
     const call = await repository.findCall(callId);
     if (call?.status === "transferring" || call?.status === "completed")
       return { accepted: true, duplicate: true };
-    if (!call?.providerCallId || !transfer?.destination)
-      return { accepted: false, reason: "transfer_not_configured" };
-    if (
-      call.provider !== "openai" &&
-      (!transfer.mangoApiKey || !transfer.mangoApiSalt)
-    )
-      return { accepted: false, reason: "transfer_not_configured" };
-    if (
-      call.provider === "openai" &&
-      (!transfer.openaiSipApiKey || !transfer.openaiSipBaseUrl)
-    )
-      return { accepted: false, reason: "transfer_not_configured" };
+    const transferFailure = (reason: string) => ({
+      accepted: false as const,
+      message:
+        "Не удалось соединить вас с менеджером. Пожалуйста, оставайтесь на линии или позвоните позднее.",
+      reason,
+    });
+    if (!call || !transfer?.destination)
+      return transferFailure("transfer_not_configured");
+    if (!transfer.mangoApiKey || !transfer.mangoApiSalt)
+      return transferFailure("transfer_not_configured");
+    const mangoCallId =
+      call.mangoCallId ??
+      (call.provider === "mango" ? call.providerCallId : undefined);
+    const initiator = selectMangoTransferInitiator(call);
+    if (!mangoCallId) return transferFailure("mango_call_id_missing");
+    if (!initiator) return transferFailure("mango_transfer_initiator_missing");
 
     const claimed = await repository.claimTransfer(
       callId,
@@ -231,27 +234,30 @@ export const createVoiceAgentService = (
     if (!claimed) return { accepted: true, duplicate: true };
 
     try {
-      if (call.provider === "openai") {
-        await transferOpenAiCall({
-          apiKey: transfer.openaiSipApiKey!,
-          baseUrl: transfer.openaiSipBaseUrl!,
-          callId: call.providerCallId.replace(/^openai:/u, ""),
-          destination: transfer.destination,
-        });
-      } else {
-        await transferMangoCall({
-          apiKey: transfer.mangoApiKey!,
-          callId: call.providerCallId,
-          destination: transfer.destination,
-          salt: transfer.mangoApiSalt!,
-        });
-      }
+      await transferMangoCall({
+        apiKey: transfer.mangoApiKey,
+        callId: mangoCallId,
+        destination: transfer.destination,
+        initiator,
+        salt: transfer.mangoApiSalt,
+      });
       return { accepted: true };
-    } catch {
+    } catch (error) {
+      logger.warn(
+        {
+          stage: "mango_transfer",
+          outcome: "failed",
+          errorCode:
+            error instanceof Error && error.message.includes("timed out")
+              ? "mango_transfer_timeout"
+              : "mango_transfer_rejected",
+        },
+        "Voice transfer failed",
+      );
       await repository
         .failTransfer(callId, "transfer_failed")
         .catch(() => undefined);
-      return { accepted: false, reason: "transfer_failed" };
+      return transferFailure("transfer_failed");
     }
   };
 
