@@ -67,8 +67,12 @@ export const createMangoEventHandler = ({
     callId: string;
     callerPhone?: string;
     entryId?: string;
+    sipCallId?: string;
   }) => {
-    const existing = await repository.findByProviderCallId(event.callId);
+    const existing =
+      (event.sipCallId
+        ? await repository.findBySipCallId(event.sipCallId)
+        : null) ?? (await repository.findByProviderCallId(event.callId));
     return (
       existing ??
       (await repository.ensureCall({
@@ -76,6 +80,7 @@ export const createMangoEventHandler = ({
         provider: "mango",
         providerCallId: event.callId,
         providerEntryId: event.entryId,
+        sipCallId: event.sipCallId,
       }))
     );
   };
@@ -90,6 +95,7 @@ export const createMangoEventHandler = ({
         callId: event.call_id,
         callerPhone: event.from?.number,
         entryId: event.entry_id,
+        sipCallId: event.sip_call_id,
       }));
     if (
       event.seq !== undefined &&
@@ -102,6 +108,7 @@ export const createMangoEventHandler = ({
     const disconnected = state === "disconnected";
     return repository.updateCall(call.id, {
       callerPhone: event.from?.number,
+      sipCallId: event.sip_call_id,
       mangoCallId: event.call_id,
       mangoTransferInitiator: event.from?.number
         ? "from.number"
@@ -126,7 +133,7 @@ export const createMangoEventHandler = ({
   const handleSummary = async (event: MangoSummaryEvent) => {
     const call =
       (event.sip_call_id
-        ? await repository.findByProviderCallId(event.sip_call_id)
+        ? await repository.findBySipCallId(event.sip_call_id)
         : null) ?? (await repository.findByProviderEntryId(event.entry_id));
     const target =
       call ??

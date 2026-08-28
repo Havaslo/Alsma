@@ -77,6 +77,7 @@ export const createVoiceAgentRepository = (database: Database) => ({
     providerEntryId?: string;
     mangoCallId?: string;
     mangoTransferInitiator?: string;
+    sipCallId?: string;
   }) => ensureCall(database, input),
   getKnowledgeContext: async () => {
     await ensureDefaultAgentPlaybook(database);
@@ -249,6 +250,8 @@ export const createVoiceAgentRepository = (database: Database) => ({
     }),
   findByProviderCallId: (providerCallId: string) =>
     database.client.voiceCall.findUnique({ where: { providerCallId } }),
+  findBySipCallId: (sipCallId: string) =>
+    database.client.voiceCall.findUnique({ where: { sipCallId } }),
   findByProviderEntryId: (providerEntryId: string) =>
     database.client.voiceCall.findFirst({
       orderBy: { startedAt: "desc" },
@@ -376,6 +379,7 @@ const ensureCall = async (
     recordingUrl,
     mangoCallId,
     mangoTransferInitiator,
+    sipCallId,
   }: {
     readonly callerPhone?: string;
     readonly provider: string;
@@ -384,6 +388,7 @@ const ensureCall = async (
     readonly recordingUrl?: string;
     readonly mangoCallId?: string;
     readonly mangoTransferInitiator?: string;
+    readonly sipCallId?: string;
   },
 ) => {
   const existing = providerCallId
@@ -397,6 +402,7 @@ const ensureCall = async (
         ...(callerPhone ? { callerPhone } : {}),
         ...(providerEntryId ? { providerEntryId } : {}),
         ...(recordingUrl ? { recordingUrl } : {}),
+        ...(sipCallId ? { sipCallId } : {}),
       },
       where: { id: existing.id },
     });
@@ -411,6 +417,7 @@ const ensureCall = async (
           providerEntryId,
           mangoCallId,
           mangoTransferInitiator,
+          sipCallId,
           recordingUrl,
         },
       });

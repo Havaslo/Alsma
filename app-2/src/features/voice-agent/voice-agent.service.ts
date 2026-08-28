@@ -419,7 +419,21 @@ export const createVoiceAgentService = (
       callerPhone?: string;
       provider: string;
       providerCallId: string;
-    }) => repository.ensureCall(input),
+    }) =>
+      (async () => {
+        const sipCallId = input.providerCallId.startsWith("openai:")
+          ? input.providerCallId.slice("openai:".length)
+          : undefined;
+        const linked = sipCallId
+          ? await repository.findBySipCallId(sipCallId)
+          : null;
+        if (linked)
+          return repository.updateCall(linked.id, {
+            providerCallId: input.providerCallId,
+            sipCallId,
+          });
+        return repository.ensureCall({ ...input, sipCallId });
+      })(),
     appendTranscriptByProvider: async (
       providerCallId: string,
       segment: TranscriptBody,

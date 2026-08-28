@@ -350,6 +350,7 @@ model VoiceCall {
   id                String        @id @default(uuid()) @db.Uuid
   provider          String        @default("t2")
   providerCallId    String?       @unique @map("provider_call_id")
+  sipCallId         String?       @unique @map("sip_call_id")
   mangoCallId       String?       @map("mango_call_id")
   mangoTransferInitiator String?  @map("mango_transfer_initiator")
   providerEntryId   String?       @map("provider_entry_id")
