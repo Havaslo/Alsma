@@ -33,12 +33,14 @@ export const buildMangoTransferPayload = ({
   callId,
   destination,
   initiator,
+  commandId = `alsma-transfer-${randomUUID()}`,
 }: {
   readonly callId: string;
   readonly destination: string;
   readonly initiator: "from.number" | "to.number";
+  readonly commandId?: string;
 }) => ({
-  command_id: `alsma-transfer-${randomUUID()}`,
+  command_id: commandId,
   call_id: callId,
   method: "blind",
   to_number: destination,
@@ -51,15 +53,21 @@ const transferMangoCall = async ({
   destination,
   initiator,
   salt,
+  commandId,
 }: {
   readonly apiKey: string;
   readonly callId: string;
   readonly destination: string;
   readonly initiator: "from.number" | "to.number";
   readonly salt: string;
+  readonly commandId: string;
 }) => {
-  const payload = buildMangoTransferPayload({ callId, destination, initiator });
-  const commandId = payload.command_id;
+  const payload = buildMangoTransferPayload({
+    callId,
+    commandId,
+    destination,
+    initiator,
+  });
   const json = JSON.stringify(payload);
   const sign = createHash("sha256")
     .update(`${apiKey}${json}${salt}`)
@@ -75,7 +83,6 @@ const transferMangoCall = async ({
   );
   if (!response.ok) throw new Error(`Mango API failed with ${response.status}`);
   const accepted = (await response.json()) as { result?: number | string };
-  if (String(accepted.result ?? "") === "1000") return accepted;
   for (const delay of [500, 1_000, 2_000]) {
     await new Promise((resolve) => setTimeout(resolve, delay));
     const resultJson = JSON.stringify({ command_id: commandId });
@@ -100,7 +107,7 @@ const transferMangoCall = async ({
     const result = (await resultResponse.json()) as {
       result?: number | string;
     };
-    if (String(result.result ?? "") === "1000") return result;
+    if (String(result.result ?? "") === "1000") return { ...result, commandId };
     if (result.result && String(result.result) !== "0")
       throw new Error(`Mango transfer rejected with ${String(result.result)}`);
   }
@@ -184,7 +191,17 @@ export const createVoiceAgentService = (
   ) => {
     const call = await repository.findCall(id);
     if (!call) return null;
-    const transcript = JSON.stringify(call.transcript);
+    const transcriptItems = Array.isArray(call.transcript)
+      ? call.transcript
+      : [];
+    if (transcriptItems.length === 0)
+      return repository.completeCall(id, {
+        outcome,
+        recordingUrl,
+        recordingObjectId,
+        extracted: {},
+      });
+    const transcript = JSON.stringify(transcriptItems);
     const result = parseJson(
       await completeWithOpenAI(
         `Проанализируй транскрипцию звонка и верни JSON с полями summary (краткое резюме на русском), intent (намерение), extracted (имя, телефон, даты, гости, тип номера, услуги, пожелания — только найденные поля). Транскрипция: ${transcript}`,
@@ -234,14 +251,22 @@ export const createVoiceAgentService = (
     if (!claimed) return { accepted: true, duplicate: true };
 
     try {
-      await transferMangoCall({
+      const commandId = `alsma-transfer-${randomUUID()}`;
+      await repository.setTransferCommand(callId, commandId, "requested");
+      const transferResult = await transferMangoCall({
         apiKey: transfer.mangoApiKey,
         callId: mangoCallId,
         destination: transfer.destination,
         initiator,
         salt: transfer.mangoApiSalt,
+        commandId,
       });
-      return { accepted: true };
+      await repository.setTransferCommand(
+        callId,
+        transferResult.commandId,
+        "accepted",
+      );
+      return { accepted: true, state: "accepted" };
     } catch (error) {
       logger.warn(
         {

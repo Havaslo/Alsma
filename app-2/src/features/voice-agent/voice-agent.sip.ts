@@ -116,6 +116,7 @@ export const createOpenAiSipHandler =
       providerCallId: string,
       role: "guest" | "assistant",
       text: string,
+      providerEventId?: string,
     ) => Promise<void>;
     readonly webhookSecret?: string;
   }): RequestHandler =>
@@ -235,6 +236,7 @@ export const createOpenAiSipHandler =
           `openai:${callId}`,
           event.type?.startsWith("response.") ? "assistant" : "guest",
           event.transcript.trim(),
+          event.item_id,
         );
       }
       if (isRealtimeReadyEvent(event.type)) {

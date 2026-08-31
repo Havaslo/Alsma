@@ -12,6 +12,12 @@ import { voiceAgentTools } from "./voice-agent.tools.js";
 const realtimePath = "/api/voice-agent/realtime";
 const realtimeModel = "gpt-realtime-2.1";
 
+const transcriptEventTypes = new Set([
+  "conversation.item.input_audio_transcription.completed",
+  "conversation.item.input_audio_transcription.done",
+  "response.audio_transcript.done",
+]);
+
 type GatewayError = {
   readonly code: string;
   readonly message: string;
@@ -115,6 +121,15 @@ export const attachVoiceAgentRealtime = (
                   retryable: false,
                 });
                 return;
+              }
+              if (transcriptEventTypes.has(event.type ?? "")) {
+                // This browser websocket has no authenticated call identity.
+                // Do not pretend these frames were persisted to a call: SIP
+                // ingress is the only route currently correlated to VoiceCall.
+                options.logger.warn(
+                  { stage: "realtime_transcript", outcome: "not_persisted" },
+                  "Realtime transcript received without a persistable call identity",
+                );
               }
               if (event.type === "session.created") {
                 upstream.send(

@@ -368,6 +368,9 @@ model VoiceCall {
   recordingUrl      String?       @map("recording_url")
   recordingObjectId String?       @map("recording_object_id")
   providerRecordingId String?     @map("provider_recording_id")
+  recordingStatus   String?       @map("recording_status")
+  transferCommandId String?       @map("transfer_command_id")
+  transferState     String?       @map("transfer_state")
   adminRequestId    String?       @unique @map("admin_request_id") @db.Uuid
   adminRequest      AdminRequest? @relation(fields: [adminRequestId], references: [id], onDelete: SetNull)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -377,6 +380,7 @@ model VoiceCall {
   @@index([callerPhone, createdAt])
   @@index([providerEntryId, startedAt])
   @@index([endedAt])
+  @@index([transferCommandId])
   @@map("voice_calls")
 }
 

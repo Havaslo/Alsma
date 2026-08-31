@@ -101,7 +101,13 @@ export const createApiRouter = ({
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
-  router.use("/admin", createAdminOperationsRouter(database, managedStorage));
+  router.use(
+    "/admin",
+    createAdminOperationsRouter(database, managedStorage, {
+      apiKey: voiceIntegration.mangoApiKey,
+      salt: voiceIntegration.mangoApiSalt,
+    }),
+  );
   router.use("/admin/settings", createAdminSettingsRouter(database));
   router.use(
     "/admin/integrations",

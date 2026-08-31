@@ -10,6 +10,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import { fetchMangoRecording } from "../voice-agent/voice-agent.recording.js";
 import {
   createBookingHandler,
   createCompleteTaskHandler,
@@ -38,6 +39,7 @@ import {
 export const createAdminOperationsRouter = (
   database: Database,
   managedStorage?: ManagedStorage,
+  mango?: { readonly apiKey?: string; readonly salt?: string },
 ): Router => {
   const router = Router();
   const repository = createAdminOperationsRepository(database);
@@ -161,10 +163,47 @@ export const createAdminOperationsRouter = (
       }
       const call = await database.client.voiceCall.findUnique({
         where: { id: response.locals.input.params.recordId },
-        select: { recordingObjectId: true },
+        select: { providerRecordingId: true, recordingObjectId: true },
       });
       if (!call?.recordingObjectId) {
-        response.status(404).json({ error: { code: "RECORDING_NOT_FOUND" } });
+        if (!call?.providerRecordingId || !mango?.apiKey || !mango.salt) {
+          response.status(404).json({ error: { code: "RECORDING_NOT_FOUND" } });
+          return;
+        }
+        try {
+          const recording = await fetchMangoRecording({
+            apiKey: mango.apiKey,
+            recordingId: call.providerRecordingId,
+            salt: mango.salt,
+          });
+          response.status(200);
+          response.setHeader(
+            "Content-Type",
+            recording.headers.get("content-type") ?? "audio/mpeg",
+          );
+          response.setHeader("Cache-Control", "private, no-store");
+          if (recording.body) {
+            const reader = recording.body.getReader();
+            let bytes = 0;
+            response.on("close", () => void reader.cancel());
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) break;
+              bytes += chunk.value.byteLength;
+              if (bytes > 100 * 1024 * 1024) {
+                await reader.cancel();
+                response.destroy();
+                return;
+              }
+              response.write(chunk.value);
+            }
+          }
+          response.end();
+        } catch {
+          response
+            .status(502)
+            .json({ error: { code: "RECORDING_UNAVAILABLE" } });
+        }
         return;
       }
       response.json(await managedStorage.getDownload(call.recordingObjectId));

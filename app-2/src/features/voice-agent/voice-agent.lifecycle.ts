@@ -148,7 +148,7 @@ export const createMangoEventHandler = ({
         providerCallId: `mango:entry:${event.entry_id}`,
         providerEntryId: event.entry_id,
       }));
-    return repository.updateCall(target.id, {
+    await repository.updateCall(target.id, {
       callerPhone: event.from?.number,
       durationSec: Math.max(0, event.end_time - event.create_time),
       endedAt: new Date(event.end_time * 1_000),
@@ -157,6 +157,7 @@ export const createMangoEventHandler = ({
       startedAt: new Date(event.create_time * 1_000),
       status: "completed",
     });
+    return completeCall(target.id, "summary");
   };
 
   const handleRecording = async (event: MangoRecordingEvent) => {
@@ -167,6 +168,7 @@ export const createMangoEventHandler = ({
     return repository.updateCall(call.id, {
       providerEntryId: event.entry_id,
       providerRecordingId: event.recording_id,
+      recordingStatus: "pending",
     });
   };
 
@@ -180,6 +182,7 @@ export const createMangoEventHandler = ({
       }));
     return repository.updateCall(call.id, {
       providerRecordingId: event.recording_id,
+      recordingStatus: "pending",
     });
   };
 

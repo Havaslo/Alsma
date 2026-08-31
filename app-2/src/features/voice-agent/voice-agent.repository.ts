@@ -4,56 +4,32 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import type { Database } from "../../lib/database/database.js";
 import { ensureDefaultAgentPlaybook } from "../agent/agent-playbook.js";
 import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
+import { canReplaceName, trustedName } from "./voice-agent.transcript.js";
 
 const asObject = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
 
-const safePersonName = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const name = value.trim().replace(/\s+/gu, " ");
-  return /^[а-яё-]{2,40}(?:\s+[а-яё-]{2,40})?$/iu.test(name) ? name : undefined;
-};
-
-const selfIntroducedName = (transcript: unknown) => {
-  if (!Array.isArray(transcript)) return undefined;
-  for (const item of transcript) {
-    const segment = asObject(item);
-    if (segment.role !== "guest") continue;
-    const text = typeof segment.text === "string" ? segment.text : "";
-    const match = text.match(
-      /(?:меня\s+зовут|это\s+я|я\s*[—-])\s*([а-яё-]{2,40}(?:\s+[а-яё-]{2,40})?)/iu,
-    );
-    const name = safePersonName(match?.[1]);
-    if (name) return name;
-  }
-  return undefined;
-};
-
-const trustedName = (extracted: Record<string, unknown>, transcript: unknown) =>
-  selfIntroducedName(transcript) ??
-  (Number(extracted.nameConfidence) >= 0.85
-    ? safePersonName(extracted.name)
-    : undefined);
-
-const canReplaceName = (value: string | null) =>
-  !value || /^(гость|клиент|неизвестн(?:ый|ая))$/iu.test(value.trim());
-
 const transcriptAuthor = (role: TranscriptBody["role"]) =>
   role === "assistant" ? "agent" : role;
 
 const transcriptExternalId = (callId: string, segment: TranscriptBody) =>
-  `voice:${callId}:${createHash("sha256")
-    .update(
-      JSON.stringify({
-        endedAt: segment.endedAt,
-        role: segment.role,
-        startedAt: segment.startedAt,
-        text: segment.text,
-      }),
-    )
-    .digest("hex")}`;
+  `voice:${callId}:${
+    segment.providerEventId ??
+    createHash("sha256")
+      .update(
+        JSON.stringify({
+          endedAt: segment.endedAt,
+          role: segment.role,
+          startedAt: segment.startedAt,
+          text: segment.text,
+        }),
+      )
+      .digest("hex")
+  }`;
+
+export const transcriptSegmentId = transcriptExternalId;
 
 export const createVoiceAgentRepository = (database: Database) => ({
   getAgentSettings: async () =>
@@ -143,11 +119,17 @@ export const createVoiceAgentRepository = (database: Database) => ({
         });
       }
       const transcript = Array.isArray(call.transcript) ? call.transcript : [];
+      const externalId = transcriptExternalId(id, segment);
+      const alreadyPersisted = transcript.some((item) => {
+        const value = asObject(item);
+        return value.externalId === externalId;
+      });
+      if (alreadyPersisted) return call;
       await transaction.chatMessage.upsert({
         where: {
           conversationId_externalId: {
             conversationId: adminRequestId,
-            externalId: transcriptExternalId(id, segment),
+            externalId,
           },
         },
         create: {
@@ -170,7 +152,7 @@ export const createVoiceAgentRepository = (database: Database) => ({
         data: {
           transcript: [
             ...transcript,
-            { ...segment, at: new Date().toISOString() },
+            { ...segment, at: new Date().toISOString(), externalId },
           ],
         },
       });
@@ -182,8 +164,8 @@ export const createVoiceAgentRepository = (database: Database) => ({
       outcome?: string;
       recordingUrl?: string;
       recordingObjectId?: string;
-      summary: string;
-      intent: string;
+      summary?: string;
+      intent?: string;
       extracted: Record<string, unknown>;
     },
   ) =>
@@ -360,14 +342,23 @@ export const createVoiceAgentRepository = (database: Database) => ({
   claimTransfer: async (id: string, outcome: string) => {
     const result = await database.client.voiceCall.updateMany({
       where: { id, status: { notIn: ["transferring", "completed"] } },
-      data: { status: "transferring", outcome },
+      data: { status: "transferring", transferState: "requested", outcome },
     });
     return result.count === 1;
   },
   failTransfer: (id: string, outcome: string) =>
     database.client.voiceCall.update({
       where: { id },
-      data: { status: "active", outcome },
+      data: { status: "active", transferState: "failed", outcome },
+    }),
+  setTransferCommand: (
+    id: string,
+    commandId: string,
+    transferState: "requested" | "accepted" = "accepted",
+  ) =>
+    database.client.voiceCall.update({
+      where: { id },
+      data: { transferCommandId: commandId, transferState },
     }),
 });
 
@@ -393,62 +384,95 @@ const ensureCall = async (
     readonly sipCallId?: string;
   },
 ) => {
-  const existing = providerCallId
-    ? await database.client.voiceCall.findUnique({
-        where: { providerCallId },
+  const identifiers = [
+    providerCallId,
+    sipCallId,
+    mangoCallId,
+    providerEntryId,
+  ].filter((value): value is string => Boolean(value));
+  const candidateWhere = identifiers.length
+    ? {
+        OR: [
+          ...(providerCallId ? [{ providerCallId }] : []),
+          ...(sipCallId ? [{ sipCallId }] : []),
+          ...(mangoCallId ? [{ mangoCallId }] : []),
+          ...(providerEntryId ? [{ providerEntryId }] : []),
+        ],
+      }
+    : undefined;
+  const candidates = candidateWhere
+    ? await database.client.voiceCall.findMany({
+        orderBy: { createdAt: "asc" },
+        where: candidateWhere,
       })
-    : null;
+    : [];
+  const existing = candidates[0];
   if (existing)
-    return database.client.voiceCall.update({
-      data: {
-        ...(callerPhone ? { callerPhone } : {}),
-        ...(providerEntryId ? { providerEntryId } : {}),
-        ...(recordingUrl ? { recordingUrl } : {}),
-        ...(sipCallId ? { sipCallId } : {}),
-      },
-      where: { id: existing.id },
+    return database.client.$transaction(async (transaction) => {
+      const updated = await transaction.voiceCall.update({
+        data: {
+          ...(callerPhone ? { callerPhone } : {}),
+          ...(providerCallId ? { providerCallId } : {}),
+          ...(providerEntryId ? { providerEntryId } : {}),
+          ...(recordingUrl ? { recordingUrl } : {}),
+          ...(sipCallId ? { sipCallId } : {}),
+          ...(mangoCallId ? { mangoCallId } : {}),
+          ...(mangoTransferInitiator ? { mangoTransferInitiator } : {}),
+        },
+        where: { id: existing.id },
+      });
+      for (const duplicate of candidates.slice(1))
+        await transaction.voiceCall.delete({ where: { id: duplicate.id } });
+      return updated;
     });
 
-  try {
-    return await database.client.$transaction(async (transaction) => {
-      const call = await transaction.voiceCall.create({
-        data: {
-          callerPhone,
-          provider,
-          providerCallId,
-          providerEntryId,
-          mangoCallId,
-          mangoTransferInitiator,
-          sipCallId,
-          recordingUrl,
-        },
-      });
-      const request = await transaction.adminRequest.create({
-        data: {
-          title: "Входящий звонок",
-          description: "Входящий звонок из телефонии.",
-          category: "voice-call",
-          details: {
-            source: "Звонки",
-            channelType: "call",
-            voiceCallId: call.id,
-          } as Prisma.InputJsonValue,
-        },
-      });
+  return database.client.$transaction(async (transaction) => {
+    const concurrent = candidateWhere
+      ? await transaction.voiceCall.findMany({
+          orderBy: { createdAt: "asc" },
+          where: candidateWhere,
+        })
+      : [];
+    if (concurrent[0])
       return transaction.voiceCall.update({
-        where: { id: call.id },
-        data: { adminRequestId: request.id },
+        where: { id: concurrent[0].id },
+        data: {
+          ...(providerCallId ? { providerCallId } : {}),
+          ...(sipCallId ? { sipCallId } : {}),
+          ...(mangoCallId ? { mangoCallId } : {}),
+          ...(providerEntryId ? { providerEntryId } : {}),
+          ...(callerPhone ? { callerPhone } : {}),
+        },
       });
+    const call = await transaction.voiceCall.create({
+      data: {
+        callerPhone,
+        provider,
+        providerCallId,
+        providerEntryId,
+        mangoCallId,
+        mangoTransferInitiator,
+        sipCallId,
+        recordingUrl,
+      },
     });
-  } catch (error) {
-    if (providerCallId) {
-      const raced = await database.client.voiceCall.findUnique({
-        where: { providerCallId },
-      });
-      if (raced) return raced;
-    }
-    throw error;
-  }
+    const request = await transaction.adminRequest.create({
+      data: {
+        title: "Входящий звонок",
+        description: "Входящий звонок из телефонии.",
+        category: "voice-call",
+        details: {
+          source: "Звонки",
+          channelType: "call",
+          voiceCallId: call.id,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return transaction.voiceCall.update({
+      where: { id: call.id },
+      data: { adminRequestId: request.id },
+    });
+  });
 };
 
 export type VoiceAgentRepository = ReturnType<

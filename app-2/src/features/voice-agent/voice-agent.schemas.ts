@@ -16,6 +16,7 @@ export const transcriptBodySchema = z.object({
   text: z.string().trim().min(1).max(10_000),
   startedAt: z.string().datetime().optional(),
   endedAt: z.string().datetime().optional(),
+  providerEventId: z.string().trim().min(1).max(200).optional(),
 });
 
 export const completeCallBodySchema = z.object({
