@@ -1,5 +1,6 @@
 import { createApp } from "./app.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
+import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
 import { readConfig } from "./lib/config.js";
 import { createDatabase } from "./lib/database/database.js";
@@ -48,6 +49,12 @@ const start = async (): Promise<void> => {
       apiKey: config.epteraApiKey,
       hotelId: config.epteraHotelId,
     }),
+  });
+  attachAdminRealtime(server, {
+    apiKey: config.openaiApiKey,
+    baseUrl: config.openaiBaseUrl,
+    database,
+    logger,
   });
   const keepDatabaseReady = async (): Promise<void> => {
     for (;;) {

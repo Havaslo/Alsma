@@ -35,6 +35,7 @@ import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminSiteLeadsRouteImport } from './routes/admin/site-leads'
+import { Route as AdminVoiceAgentTestRouteImport } from './routes/admin/voice-agent-test'
 import { Route as AdminVoiceCallsRouteImport } from './routes/admin/voice-calls'
 import { Route as AdminClientsIndexRouteImport } from './routes/admin/clients/index'
 import { Route as AdminClientsClientIdRouteImport } from './routes/admin/clients/$clientId'
@@ -187,6 +188,11 @@ const AdminSiteLeadsRoute = AdminSiteLeadsRouteImport.update({
   path: '/admin/site-leads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVoiceAgentTestRoute = AdminVoiceAgentTestRouteImport.update({
+  id: '/admin/voice-agent-test',
+  path: '/admin/voice-agent-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVoiceCallsRoute = AdminVoiceCallsRouteImport.update({
   id: '/admin/voice-calls',
   path: '/admin/voice-calls',
@@ -329,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
   '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
   '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
+  '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
   '/admin/voice-calls': typeof AdminVoiceCallsRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-agent-test'
     | '/admin/voice-calls'
     | '/admin/'
     | '/admin/clients/$clientId'
@@ -528,6 +538,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-agent-test'
     | '/admin/voice-calls'
     | '/admin'
     | '/admin/clients/$clientId'
@@ -577,6 +588,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/admin/settings'
     | '/admin/site-leads'
+    | '/admin/voice-agent-test'
     | '/admin/voice-calls'
     | '/admin/'
     | '/admin/clients/$clientId'
@@ -626,6 +638,7 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
+  AdminVoiceAgentTestRoute: typeof AdminVoiceAgentTestRoute
   AdminVoiceCallsRoute: typeof AdminVoiceCallsRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClientsClientIdRoute: typeof AdminClientsClientIdRoute
@@ -833,6 +846,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSiteLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/voice-agent-test': {
+      id: '/admin/voice-agent-test'
+      path: '/admin/voice-agent-test'
+      fullPath: '/admin/voice-agent-test'
+      preLoaderRoute: typeof AdminVoiceAgentTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/voice-calls': {
       id: '/admin/voice-calls'
       path: '/admin/voice-calls'
@@ -1031,6 +1051,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSiteLeadsRoute: AdminSiteLeadsRoute,
+  AdminVoiceAgentTestRoute: AdminVoiceAgentTestRoute,
   AdminVoiceCallsRoute: AdminVoiceCallsRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminClientsClientIdRoute: AdminClientsClientIdRoute,

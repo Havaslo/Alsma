@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   Gauge,
   LogOut,
+  MessageCircle,
   MessagesSquare,
   PanelTop,
   PhoneCall,
@@ -30,6 +31,12 @@ import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const navigation = [
+  {
+    active: (path: string) => path === ROUTES.adminVoiceAgentTest,
+    icon: MessageCircle,
+    label: "Тест realtime-агента",
+    to: ROUTES.adminVoiceAgentTest,
+  },
   {
     active: (path: string) => path.startsWith(ROUTES.adminVoiceCalls),
     icon: PhoneCall,
@@ -104,6 +111,7 @@ const adminPageTitle = (path: string): string => {
   if (path === ROUTES.adminSiteLeads) return "Заявки сайта";
   if (path === ROUTES.adminBookingRequests) return "Заявки от агентов";
   if (path === ROUTES.adminVoiceCalls) return "Входящие звонки";
+  if (path === ROUTES.adminVoiceAgentTest) return "Тест realtime-агента";
   if (path.startsWith(`${ROUTES.adminVoiceCalls}/`)) return "Входящий звонок";
   if (path.startsWith(ROUTES.adminClients)) return "Клиенты";
   if (path === ROUTES.adminRequests) return "Обращения";

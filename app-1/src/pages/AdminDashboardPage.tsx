@@ -27,6 +27,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
 import { AdminSitePlaceholder } from "@/components/admin/AdminSitePlaceholder";
 import { AdminSpaEditor } from "@/components/admin/AdminSpaEditor";
+import { AdminVoiceAgentTestPanel } from "@/components/admin/AdminVoiceAgentTestPanel";
 import { AdminVoiceCallDetail } from "@/components/admin/AdminVoiceCallDetail";
 import { AdminVoiceCallsPanel } from "@/components/admin/AdminVoiceCallsPanel";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
@@ -135,6 +136,9 @@ export const AdminDashboardPage = () => {
       )}
       {path === ROUTES.adminVoiceCalls && can("voice.calls.access") && (
         <AdminVoiceCallsPanel />
+      )}
+      {path === ROUTES.adminVoiceAgentTest && can("voice.calls.access") && (
+        <AdminVoiceAgentTestPanel />
       )}
       {params.callId && can("voice.calls.access") && (
         <AdminVoiceCallDetail callId={params.callId} />
