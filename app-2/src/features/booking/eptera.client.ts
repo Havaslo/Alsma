@@ -1,4 +1,5 @@
 import { HttpError } from "../../lib/http/http-error.js";
+import { type RoomDefinition, readDefinitions } from "./eptera.rooms.js";
 
 const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -110,87 +111,14 @@ const readTokenExpiry = (token: string): number | null => {
   }
 };
 
-type RoomDefinition = {
-  readonly imageUrls: readonly string[];
-  readonly area: number | null;
-  readonly count: number | null;
-  readonly capacity: number | null;
-  readonly description: string | null;
-  readonly bedOptions: string | null;
-};
-
-const readImageUrls = (room: Record<string, unknown>): string[] => {
-  const values = [
-    room["room-image-urls"],
-    room["room-images"],
-    room.images,
-    room.gallery,
-  ];
-  const urls = values.flatMap((value) => {
-    if (!Array.isArray(value)) return [];
-    return value.flatMap((item) => {
-      if (typeof item === "string") return [item];
-      const record = asRecord(item);
-      const url = record?.url ?? record?.["image-url"];
-      return typeof url === "string" ? [url] : [];
-    });
-  });
-  const primary = room["room-image-url"];
-  return Array.from(
-    new Set(
-      [...(typeof primary === "string" ? [primary] : []), ...urls].filter(
-        Boolean,
-      ),
-    ),
-  );
-};
-
-const readDefinitions = (payload: unknown): Map<number, RoomDefinition> => {
-  const response = asRecord(payload);
-  const items = response?.roomtype;
-  if (!Array.isArray(items)) return new Map();
-  return new Map(
-    items.flatMap((item) => {
-      const room = asRecord(item);
-      if (!room) return [];
-      const id = number(room, "room-id");
-      if (!Number.isInteger(id) || id < 1) return [];
-      const rules = asRecord(room["room-rules"]);
-      const readNullableNumber = (key: string) => {
-        const value = room[key];
-        return typeof value === "number" && Number.isFinite(value)
-          ? value
-          : null;
-      };
-      const count =
-        ["room-count", "room-counts", "number-of-rooms"]
-          .map((key) => readNullableNumber(key))
-          .find((value) => value !== null) ?? null;
-      return [
-        [
-          id,
-          {
-            imageUrls: readImageUrls(room),
-            area: readNullableNumber("room-area"),
-            count,
-            capacity: rules ? Number(rules["max-pax-capacity"]) || null : null,
-            description:
-              typeof room["room-property"] === "string"
-                ? room["room-property"]
-                : null,
-            bedOptions:
-              typeof room["room-bed-options"] === "string"
-                ? room["room-bed-options"]
-                : null,
-          } satisfies RoomDefinition,
-        ],
-      ] as const;
-    }),
-  );
-};
-
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+const addDays = (value: string, days: number): string => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+};
 
 export const createEpteraClient = ({
   apiKey,
@@ -429,21 +357,51 @@ export const createEpteraClient = ({
     }): Promise<EpteraOffer[]> => {
       const rooms = await getDefinitions();
       const { hotelId: configuredHotelId } = requireConfiguration();
-      const query = new URLSearchParams({
-        adult: String(input.adults),
-        childage: input.childAges.join(","),
-        currency: input.currency,
-        fromdate: input.checkIn,
-        language: input.language,
-        "min-room-count": String(input.roomCount),
-        nationality: input.nationality,
-        "promo-code": "",
-        onlybestoffer: "false",
-        todate: input.checkOut,
-      });
-      const payload = await request<unknown>(
-        `/hotel/${configuredHotelId}/price/?${query}`,
-      );
+      const pricePath = (checkIn: string, checkOut: string) => {
+        const query = new URLSearchParams({
+          adult: String(input.adults),
+          childage: input.childAges.join(","),
+          currency: input.currency,
+          fromdate: checkIn,
+          language: input.language,
+          "min-room-count": String(input.roomCount),
+          nationality: input.nationality,
+          "promo-code": "",
+          onlybestoffer: "false",
+          todate: checkOut,
+        });
+        return `/hotel/${configuredHotelId}/price/?${query}`;
+      };
+
+      let payload: unknown;
+      try {
+        payload = await request<unknown>(
+          pricePath(input.checkIn, input.checkOut),
+        );
+      } catch (error) {
+        // Eptera returns HTTP 500 for some unavailable multi-night windows,
+        // while the same dates queried as one-night windows return a
+        // successful price response. Confirm both boundary nights first so
+        // genuine provider outages and auth failures still propagate.
+        const isProviderAvailabilityError =
+          error instanceof HttpError &&
+          error.code === "EPTERA_REQUEST_FAILED" &&
+          asRecord(error.details)?.status === 500;
+        if (!isProviderAvailabilityError) throw error;
+        try {
+          await Promise.all([
+            request<unknown>(
+              pricePath(input.checkIn, addDays(input.checkIn, 1)),
+            ),
+            request<unknown>(
+              pricePath(addDays(input.checkOut, -1), input.checkOut),
+            ),
+          ]);
+        } catch {
+          throw error;
+        }
+        return [];
+      }
       return readOfferItems(payload).flatMap((item) => {
         const offer = asRecord(item);
         if (!offer) return [];
