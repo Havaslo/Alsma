@@ -11,6 +11,7 @@ import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
+  readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly openaiApiKey?: string;
@@ -59,6 +60,7 @@ export const mangoExternalEventPaths = [
 ];
 
 export const createApp = ({
+  corsAllowedOrigins,
   database,
   epteraApiKey,
   epteraHotelId,
@@ -76,7 +78,7 @@ export const createApp = ({
 }: CreateAppOptions): Express => {
   const app = express();
   app.disable("x-powered-by");
-  app.use(publicCorsMiddleware);
+  app.use(publicCorsMiddleware(corsAllowedOrigins));
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(
     pinoHttp({
@@ -99,6 +101,9 @@ export const createApp = ({
     }),
   );
   app.get("/health", (_request, response) => response.json({ status: "ok" }));
+  app.get("/", (_request, response) =>
+    response.json({ service: "booking-api", status: "ok" }),
+  );
   const apiRouter = createApiRouter({
     database,
     epteraApiKey,

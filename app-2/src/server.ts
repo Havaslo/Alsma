@@ -22,6 +22,7 @@ const start = async (): Promise<void> => {
   const database = createDatabase(config.databaseUrl);
   const managedStorage = createManagedStorage(config.managedStorage);
   const app = createApp({
+    corsAllowedOrigins: config.corsAllowedOrigins,
     database,
     logger,
     epteraApiKey: config.epteraApiKey,

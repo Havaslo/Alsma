@@ -17,6 +17,7 @@ const databaseUrlSchema = z
 const environmentSchema = z.object({
   AMAZI_STORAGE_API_URL: z.string().url(),
   AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
+  CORS_ALLOWED_ORIGINS: z.string().min(1),
   DATABASE_URL: databaseUrlSchema,
   NODE_ENV: z
     .enum(["development", "production", "test"])
@@ -52,6 +53,7 @@ const environmentSchema = z.object({
 
 export type AppConfig = {
   readonly databaseUrl: string;
+  readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly managedStorage: {
@@ -99,6 +101,7 @@ export const readConfig = (
   const parsed = environmentSchema.parse(environment);
   return {
     databaseUrl: parsed.DATABASE_URL,
+    corsAllowedOrigins: parseCorsOrigins(parsed.CORS_ALLOWED_ORIGINS),
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
     managedStorage: {
@@ -145,4 +148,24 @@ export const readConfig = (
       transferNumber: parsed.T2_TRANSFER_NUMBER,
     },
   };
+};
+
+const parseCorsOrigins = (value: string): string[] => {
+  const origins = value
+    .split(/[\s,]+/u)
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => {
+      const parsed = new URL(origin);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+        throw new Error("CORS_ALLOWED_ORIGINS must contain HTTP(S) origins.");
+      if (parsed.pathname !== "/" || parsed.search || parsed.hash)
+        throw new Error("CORS_ALLOWED_ORIGINS must contain origins only.");
+      return parsed.origin;
+    });
+
+  if (origins.length === 0)
+    throw new Error("CORS_ALLOWED_ORIGINS must contain at least one origin.");
+
+  return [...new Set(origins)];
 };

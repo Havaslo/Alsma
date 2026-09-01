@@ -26,6 +26,7 @@ const readPort = (): number | undefined => {
 
 export default defineConfig(() => {
   const port = readPort();
+  const previewHost = process.env.AMAZI_PREVIEW_HOST?.trim();
 
   return {
     build: {
@@ -56,13 +57,13 @@ export default defineConfig(() => {
       },
     },
     preview: {
-      allowedHosts: true as const,
+      ...(previewHost ? { allowedHosts: [previewHost] } : {}),
       host: "0.0.0.0",
       port,
       strictPort: port !== undefined,
     },
     server: {
-      allowedHosts: true as const,
+      ...(previewHost ? { allowedHosts: [previewHost] } : {}),
       host: "0.0.0.0",
       port,
       strictPort: port !== undefined,
