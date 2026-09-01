@@ -54,7 +54,7 @@ const authHeaders = () => {
 };
 
 export const loginGuest = (input: { email: string }) =>
-  apiClient.post<AuthState & { token: string }>("/auth/login", input);
+  apiClient.post<AuthState>("/auth/login", input);
 
 export const loadGuestProfile = (signal?: AbortSignal) =>
   apiClient.get<AuthState>("/auth/me", { headers: authHeaders(), signal });

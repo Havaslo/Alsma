@@ -20,9 +20,15 @@ export const createAdminInitializeHandler =
 export const createAdminLoginHandler =
   (service: AdminAuthService): RequestHandler =>
   async (_request, response) => {
-    response.json(
-      await service.login(response.locals.input.body as AdminCredentials),
+    const result = await service.login(
+      response.locals.input.body as AdminCredentials,
     );
+    response.setHeader(
+      "Set-Cookie",
+      `alsma_admin_session=${result.token}; Max-Age=43200; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`,
+    );
+    const { token: _token, ...safeResult } = result;
+    response.json(safeResult);
   };
 export const createAdminMeHandler =
   (service: AdminAuthService): RequestHandler =>
@@ -33,6 +39,10 @@ export const createAdminLogoutHandler =
   (service: AdminAuthService): RequestHandler =>
   async (request, response) => {
     const authorization = request.headers.authorization ?? "";
+    response.setHeader(
+      "Set-Cookie",
+      "alsma_admin_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None; Partitioned",
+    );
     response.json(
       await service.logout(
         authorization.startsWith("Bearer ") ? authorization.slice(7) : "",

@@ -16,6 +16,7 @@ export const publicCorsMiddleware = (
 
     response.setHeader("Access-Control-Allow-Headers", allowedHeaders);
     response.setHeader("Access-Control-Allow-Methods", allowedMethods);
+    response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     response.setHeader("Vary", "Origin, Access-Control-Request-Method");
 

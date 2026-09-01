@@ -20,7 +20,7 @@ export const LoginPage = () => {
     onError: (error) =>
       toast.error(getApiErrorMessage(error, "Не удалось войти в кабинет.")),
     onSuccess: ({ data }) => {
-      writeGuestSession(data.token);
+      writeGuestSession(null);
       navigate({ to: ROUTES.account });
     },
   });

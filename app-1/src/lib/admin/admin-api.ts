@@ -172,10 +172,7 @@ type Page<TItem> = {
 };
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
 export const adminLogin = (input: { email: string; password: string }) =>
-  apiClient.post<{ token: string; user: AdminUser }>(
-    "/admin/auth/login",
-    input,
-  );
+  apiClient.post<{ user: AdminUser }>("/admin/auth/login", input);
 export const loadAdmin = (signal?: AbortSignal) =>
   apiClient.get<{ user: AdminUser }>("/admin/auth/me", {
     headers: headers(),
