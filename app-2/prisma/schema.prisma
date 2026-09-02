@@ -82,10 +82,29 @@ model GuestUser {
   createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   loginCodes   GuestLoginCode[]
+  emailVerifications GuestEmailVerification[]
   bonusProgram GuestBonusProgram?
   bookings     GuestBooking[]
 
   @@map("guest_users")
+}
+
+model GuestEmailVerification {
+  id          String    @id @default(uuid()) @db.Uuid
+  email       String
+  codeHash    String    @map("code_hash")
+  messageId   String?   @unique @map("message_id")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(3)
+  sentAt      DateTime? @map("sent_at") @db.Timestamptz(3)
+  attempts    Int       @default(0)
+  lastSentAt  DateTime  @default(now()) @map("last_sent_at") @db.Timestamptz(3)
+  userId      String?   @map("user_id") @db.Uuid
+  user        GuestUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, createdAt])
+  @@map("guest_email_verifications")
 }
 
 model GuestLoginCode {

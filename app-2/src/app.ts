@@ -48,6 +48,7 @@ type CreateAppOptions = {
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
+  readonly mailRu: { readonly email?: string; readonly password?: string };
 };
 
 export const mangoExternalEventPaths = [
@@ -66,6 +67,7 @@ export const createApp = ({
   epteraHotelId,
   logger,
   managedStorage,
+  mailRu,
   openaiApiKey,
   openaiBaseUrl,
   openaiSip,
@@ -119,6 +121,7 @@ export const createApp = ({
     yooKassaSecretKey,
     yooKassaShopId,
     voiceIntegration,
+    mailRu,
   });
   // Mango appends event paths to the configured external-system origin. Keep
   // the bare origin and every documented event path on the same secured

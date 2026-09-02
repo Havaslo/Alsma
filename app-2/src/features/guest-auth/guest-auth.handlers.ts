@@ -1,6 +1,10 @@
 import type { RequestHandler } from "express";
 
-import type { CompleteProfileBody, LoginBody } from "./guest-auth.schemas.js";
+import type {
+  CompleteProfileBody,
+  LoginBody,
+  VerifyCodeBody,
+} from "./guest-auth.schemas.js";
 import type { GuestAuthService } from "./guest-auth.service.js";
 
 export const GUEST_SESSION_COOKIE = "alsma_guest_session";
@@ -40,10 +44,20 @@ export const createLogoutHandler =
     response.setHeader("Set-Cookie", sessionCookie("", 0));
   };
 
-export const createLoginHandler =
+export const createRequestCodeHandler =
   (service: GuestAuthService): RequestHandler =>
   async (_request, response) => {
-    const result = await service.login(response.locals.input.body as LoginBody);
+    response.json(
+      await service.requestCode(response.locals.input.body as LoginBody),
+    );
+  };
+
+export const createVerifyCodeHandler =
+  (service: GuestAuthService): RequestHandler =>
+  async (_request, response) => {
+    const result = await service.verifyCode(
+      response.locals.input.body as VerifyCodeBody,
+    );
     response.setHeader(
       "Set-Cookie",
       sessionCookie(result.token, 30 * 24 * 60 * 60),

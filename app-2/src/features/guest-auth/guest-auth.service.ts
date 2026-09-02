@@ -1,8 +1,19 @@
-import { createHash, randomBytes } from "node:crypto";
+import {
+  createHash,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
 
 import { HttpError } from "../../lib/http/http-error.js";
 import type { GuestAuthRepository } from "./guest-auth.repository.js";
-import type { CompleteProfileBody, LoginBody } from "./guest-auth.schemas.js";
+import type {
+  CompleteProfileBody,
+  LoginBody,
+  VerifyCodeBody,
+} from "./guest-auth.schemas.js";
+import { sendVerificationEmail } from "./mail.client.js";
 
 const hash = (value: string): string =>
   createHash("sha256").update(value).digest("hex");
@@ -47,7 +58,10 @@ const publicUser = (user: {
   requiresNameCompletion: !user.fullName,
 });
 
-export const createGuestAuthService = (repository: GuestAuthRepository) => ({
+export const createGuestAuthService = (
+  repository: GuestAuthRepository,
+  mailRu: { readonly email?: string; readonly password?: string },
+) => ({
   completeProfile: async (token: string, input: CompleteProfileBody) => {
     const session = await repository.findSession(hash(token));
     if (!session?.user)
@@ -67,10 +81,73 @@ export const createGuestAuthService = (repository: GuestAuthRepository) => ({
     if (token) await repository.revokeSession(hash(token));
     return { ok: true };
   },
-  login: async (input: LoginBody) => {
+  requestCode: async (input: LoginBody) => {
     const email = input.email.trim().toLowerCase();
-    // GuestUser.phone remains required for compatibility with existing records;
-    // email-only accounts use a non-contact technical value in that column.
+    if (!mailRu.email || !mailRu.password)
+      throw new HttpError(
+        503,
+        "EMAIL_NOT_CONFIGURED",
+        "Подтверждение по почте временно недоступно.",
+      );
+    const recent = await repository.findRecentVerification(email);
+    if (recent && Date.now() - recent.lastSentAt.getTime() < 60_000)
+      throw new HttpError(
+        429,
+        "CODE_RESEND_TOO_SOON",
+        "Новый код можно запросить через минуту.",
+      );
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const expiresAt = new Date(Date.now() + 10 * 60_000);
+    const verification = recent
+      ? await repository.updateVerificationForResend(recent.id, {
+          codeHash: hash(code),
+          expiresAt,
+        })
+      : await repository.createVerification({
+          codeHash: hash(code),
+          email,
+          expiresAt,
+          messageId: randomUUID(),
+        });
+    try {
+      await sendVerificationEmail(
+        mailRu as { email: string; password: string },
+        email,
+        code,
+        verification.messageId ?? verification.id,
+      );
+      const sent = await repository.markVerificationSent(verification.id);
+      if (sent.count !== 1) throw new Error("Verification was already sent.");
+    } catch {
+      throw new HttpError(
+        502,
+        "EMAIL_SEND_FAILED",
+        "Не удалось отправить код. Попробуйте ещё раз позже.",
+      );
+    }
+    return { sent: true };
+  },
+  verifyCode: async (input: VerifyCodeBody) => {
+    const email = input.email.trim().toLowerCase();
+    const verification = await repository.findRecentVerification(email);
+    if (
+      !verification ||
+      verification.expiresAt <= new Date() ||
+      verification.attempts >= 5
+    )
+      throw new HttpError(401, "CODE_INVALID", "Код недействителен или истёк.");
+    const attempt = await repository.incrementVerificationAttempts(
+      verification.id,
+    );
+    if (attempt.count !== 1)
+      throw new HttpError(401, "CODE_INVALID", "Код недействителен или истёк.");
+    const expected = Buffer.from(verification.codeHash, "hex");
+    const actual = Buffer.from(hash(input.code), "hex");
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
+      throw new HttpError(401, "CODE_INVALID", "Код недействителен или истёк.");
+    const consumed = await repository.consumeVerification(verification.id);
+    if (consumed.count !== 1)
+      throw new HttpError(401, "CODE_INVALID", "Код недействителен или истёк.");
     const technicalPhone = `email:${email}`;
     let user = await repository.findUserByEmail(email);
     user ??= await repository.findUserByPhone(technicalPhone);

@@ -49,6 +49,8 @@ const environmentSchema = z.object({
   VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
   VK_CALLBACK_SECRET: z.string().min(1).optional(),
   VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
+  MAIL_RU_EMAIL: z.string().email().optional(),
+  MAIL_RU_APP_PASSWORD: z.string().min(1).optional(),
 });
 
 export type AppConfig = {
@@ -93,6 +95,7 @@ export type AppConfig = {
     readonly publicWebhookConfigured: boolean;
     readonly transferNumber?: string;
   };
+  readonly mailRu: { readonly email?: string; readonly password?: string };
 };
 
 export const readConfig = (
@@ -146,6 +149,10 @@ export const readConfig = (
       t2TransferConfigured: Boolean(parsed.T2_TRANSFER_NUMBER),
       publicWebhookConfigured: Boolean(parsed.VOICE_AGENT_PUBLIC_WEBHOOK_URL),
       transferNumber: parsed.T2_TRANSFER_NUMBER,
+    },
+    mailRu: {
+      email: parsed.MAIL_RU_EMAIL,
+      password: parsed.MAIL_RU_APP_PASSWORD,
     },
   };
 };

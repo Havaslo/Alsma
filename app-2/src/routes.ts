@@ -66,6 +66,7 @@ type CreateApiRouterOptions = {
   readonly yooKassaSecretKey?: string;
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
+  readonly mailRu: { readonly email?: string; readonly password?: string };
 };
 
 export const createApiRouter = ({
@@ -83,6 +84,7 @@ export const createApiRouter = ({
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
+  mailRu,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService(database);
@@ -125,7 +127,7 @@ export const createApiRouter = ({
     }),
   );
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
-  router.use("/auth", createGuestAuthRouter(database));
+  router.use("/auth", createGuestAuthRouter(database, mailRu));
   router.use(
     "/booking",
     createBookingRouter(

@@ -6,6 +6,52 @@ const guestInclude = {
 } as const;
 
 export const createGuestAuthRepository = (database: Database) => ({
+  createVerification: (input: {
+    email: string;
+    codeHash: string;
+    expiresAt: Date;
+    messageId: string;
+    userId?: string;
+  }) => database.client.guestEmailVerification.create({ data: input }),
+  updateVerificationForResend: (
+    id: string,
+    input: {
+      codeHash: string;
+      expiresAt: Date;
+    },
+  ) =>
+    database.client.guestEmailVerification.update({
+      where: { id },
+      data: {
+        attempts: 0,
+        codeHash: input.codeHash,
+        expiresAt: input.expiresAt,
+        lastSentAt: new Date(),
+        sentAt: null,
+      },
+    }),
+  markVerificationSent: (id: string) =>
+    database.client.guestEmailVerification.updateMany({
+      where: { id, consumedAt: null, sentAt: null },
+      data: { sentAt: new Date() },
+    }),
+  findRecentVerification: (email: string) =>
+    database.client.guestEmailVerification.findFirst({
+      where: { email, consumedAt: null },
+      orderBy: { createdAt: "desc" },
+    }),
+  findUserById: (id: string) =>
+    database.client.guestUser.findUnique({ where: { id } }),
+  consumeVerification: (id: string) =>
+    database.client.guestEmailVerification.updateMany({
+      where: { id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    }),
+  incrementVerificationAttempts: (id: string) =>
+    database.client.guestEmailVerification.updateMany({
+      where: { id, consumedAt: null, attempts: { lt: 5 } },
+      data: { attempts: { increment: 1 } },
+    }),
   completeProfile: (userId: string, fullName: string) =>
     database.client.guestUser.update({
       data: { fullName },
