@@ -30,11 +30,13 @@ export const SiteHeader = ({
   bookingLabel = "Забронировать",
   bookingTo = ROUTES.booking,
   light = false,
+  staticPosition = false,
   transparentAtTop = true,
 }: {
   readonly bookingLabel?: string;
   readonly bookingTo?: string;
   readonly light?: boolean;
+  readonly staticPosition?: boolean;
   readonly transparentAtTop?: boolean;
 }) => {
   const location = useRouterState({ select: (state) => state.location });
@@ -70,7 +72,10 @@ export const SiteHeader = ({
   return (
     <header
       className={cn(
-        "fixed top-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[100rem] -translate-x-1/2 items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300",
+        "z-50 flex w-[calc(100%-2rem)] max-w-[100rem] items-center justify-between rounded-full border px-5 py-4 backdrop-blur-sm transition duration-300",
+        staticPosition
+          ? "relative top-4 mx-auto"
+          : "fixed top-4 left-1/2 -translate-x-1/2",
         useLightStyle
           ? "border-brand/10 bg-page text-brand shadow-xl"
           : "border-brand-foreground/15 bg-brand-foreground/5 text-brand-foreground",

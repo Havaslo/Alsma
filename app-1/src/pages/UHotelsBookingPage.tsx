@@ -106,21 +106,11 @@ export const UHotelsBookingPage = () => {
 
   return (
     <main className="min-h-screen bg-page pb-20 text-page-foreground">
-      <SiteHeader light transparentAtTop={false} />
-      <section className="mx-auto max-w-[100rem] px-5 pt-32 sm:px-8">
-        <p className="text-sm font-semibold tracking-[0.18em] text-accent-ui-foreground uppercase">
-          Онлайн-бронирование
-        </p>
-        <h1 className="mt-3 font-heading text-4xl font-semibold sm:text-6xl">
-          Забронировать отдых в АЛСМА
-        </h1>
-        <p className="mt-5 max-w-2xl text-base leading-7 text-muted-ui-foreground sm:text-lg">
-          Выберите даты проживания и подходящий номер в официальной системе
-          бронирования отеля.
-        </p>
+      <SiteHeader light staticPosition transparentAtTop={false} />
+      <section className="mx-auto max-w-[100rem] px-5 pt-12 sm:px-8">
         <section
           aria-label="Форма бронирования U-Hotels"
-          className="relative mt-10 min-h-[32rem] rounded-3xl border border-line bg-panel p-4 shadow-booking sm:p-8"
+          className="relative min-h-[32rem]"
         >
           {state === "loading" && (
             <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-3xl bg-panel/90">
@@ -150,7 +140,7 @@ export const UHotelsBookingPage = () => {
               </div>
             </div>
           )}
-          <div id="adg-booking-widget" ref={containerRef} />
+          <div className="mx-auto" id="adg-booking-widget" ref={containerRef} />
         </section>
       </section>
     </main>
