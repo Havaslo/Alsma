@@ -7,8 +7,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 const WIDGET_SCRIPT_ID = "uhotels-booking-widget-loader";
 const WIDGET_SCRIPT_URL =
   "https://api.uhotels.app/widget/booking2/loader.js?30";
-const WIDGET_CSS =
-  "data:text/css,:root{--widget-bg:rgb(246,243,237);--accent-color:rgb(31,77,59);--accent2-color:rgb(31,77,59);}";
+const WIDGET_CSS_PATH = "/uhotels-booking.css";
 
 type WidgetState = "loading" | "ready" | "error";
 
@@ -73,7 +72,7 @@ export const UHotelsBookingPage = () => {
       headerHeight: 0,
       footerHeight: 0,
       type: "2",
-      css: WIDGET_CSS,
+      css: `${window.location.origin}${WIDGET_CSS_PATH}`,
       country: "ru",
       yaMetrika: "",
       bookingRequest: "",

@@ -1,0 +1,9 @@
+:root {
+  --widget-bg: #f6f3ed;
+  --accent-color: #1f4d3b;
+  --accent2-color: #1f4d3b;
+}
+
+.wrapper {
+  background: #f6f3ed;
+}
