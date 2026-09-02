@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Menu, UserRound, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 
 import logoGreen from "@/assets/alsma/logo-green.svg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
@@ -129,25 +129,6 @@ export const SiteHeader = ({
         </div>
       </nav>
       <div className="flex items-center gap-2">
-        <Link
-          aria-label="Личный кабинет"
-          className={cn(
-            "hidden size-12 place-items-center rounded-full border outline-none sm:grid",
-            useLightStyle
-              ? "border-brand/15 text-brand"
-              : "border-brand-foreground/15 text-brand-foreground",
-          )}
-          to={ROUTES.account}
-        >
-          <span
-            className={cn(
-              "grid size-9 place-items-center rounded-full border",
-              useLightStyle ? "border-brand/15" : "border-brand-foreground/30",
-            )}
-          >
-            <UserRound className="size-5" />
-          </span>
-        </Link>
         <Link
           className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
           onClick={scrollToBooking}
