@@ -134,9 +134,8 @@ export const HomePage = () => {
                 ? hero.description
                 : "Загородный отель в окружении соснового леса: уютные номера, SPA, авторская кухня и настоящее спокойствие."}
             </p>
+            <HomeBookingBar />
           </div>
-
-          <HomeBookingBar />
         </div>
       </section>
 
