@@ -4,7 +4,7 @@ import { ROUTES } from "@/route-constants";
 
 export const HomeBookingBar = () => (
   <div
-    className="mx-auto flex min-h-32 w-full max-w-5xl items-center justify-center rounded-4xl border border-booking-line/12 bg-booking-shell p-4 text-page-foreground shadow-booking backdrop-blur-booking sm:min-h-36 sm:p-5"
+    className="mx-auto flex w-full max-w-5xl items-center justify-center p-4 text-page-foreground sm:p-5"
     id="booking"
   >
     <Link
