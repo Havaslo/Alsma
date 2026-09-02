@@ -26,6 +26,7 @@ const publicRoutes = new Set<string>([
   ROUTES.news,
   ROUTES.blog,
   ROUTES.booking,
+  ROUTES.bookingOld,
   ROUTES.privacy,
   ROUTES.faq,
 ]);
@@ -45,6 +46,7 @@ const documentTitles: Record<string, string> = {
   [ROUTES.adminSiteManagement]: "Управление сайтом — админ-панель АЛСМА",
   [ROUTES.blog]: "Блог — АЛСМА",
   [ROUTES.booking]: "Бронирование — АЛСМА",
+  [ROUTES.bookingOld]: "Бронирование — АЛСМА",
   [ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
   [ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
   [ROUTES.hardwareProcedures]: "Аппаратные процедуры — АЛСМА",

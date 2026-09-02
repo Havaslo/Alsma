@@ -37,6 +37,7 @@ export const ROUTES = {
   about: "/about",
   blog: "/blog",
   booking: "/booking",
+  bookingOld: "/booking-old",
   celebrations: "/celebrations",
   entertainment: "/entertainment",
   hardwareProcedures: "/hardware-procedures",
