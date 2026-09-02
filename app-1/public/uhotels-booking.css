@@ -7,3 +7,10 @@
 .wrapper {
   background: #f6f3ed;
 }
+
+.header__main,
+.room-item,
+.room-tariff,
+.cart {
+  background: #efe9dc !important;
+}
