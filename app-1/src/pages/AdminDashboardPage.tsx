@@ -22,6 +22,7 @@ import { AdminOffersEditor } from "@/components/admin/AdminOffersEditor";
 import { AdminRequestDetail } from "@/components/admin/AdminRequestDetail";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminRoomsEditor } from "@/components/admin/AdminRoomsEditor";
+import { AdminServicesCalendar } from "@/components/admin/AdminServicesCalendar";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
@@ -105,6 +106,9 @@ export const AdminDashboardPage = () => {
       )}
       {path === ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={user.id} />
+      )}
+      {path === ROUTES.adminServices && can("dashboard.access") && (
+        <AdminServicesCalendar />
       )}
       {path === ROUTES.adminSiteManagementHome &&
         (can("site.access") || can("site.manage")) && <AdminHomeEditor />}

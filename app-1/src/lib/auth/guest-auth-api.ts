@@ -2,6 +2,22 @@ import { apiClient } from "@/lib/api/api-client";
 import { readGuestSession } from "@/lib/auth/session";
 
 export type GuestProfile = {
+  readonly serviceOrders: Array<{
+    readonly id: string;
+    readonly status: string;
+    readonly total: string;
+    readonly currency: string;
+    readonly createdAt: string;
+    readonly items: Array<{
+      readonly quantity: number;
+      readonly serviceName: string;
+      readonly variantName: string;
+      readonly booking: {
+        readonly startsAt: string;
+        readonly status: string;
+      } | null;
+    }>;
+  }>;
   readonly bonusProgram: {
     readonly balance: number;
     readonly level: string;

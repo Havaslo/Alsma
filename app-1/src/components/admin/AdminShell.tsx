@@ -7,6 +7,7 @@ import {
   BookOpen,
   Cable,
   CalendarCheck,
+  CalendarDays,
   Gauge,
   LogOut,
   MessageCircle,
@@ -31,6 +32,12 @@ import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const navigation = [
+  {
+    active: (path: string) => path === ROUTES.adminServices,
+    icon: CalendarDays,
+    label: "Записи услуг",
+    to: ROUTES.adminServices,
+  },
   {
     active: (path: string) => path === ROUTES.adminVoiceAgentTest,
     icon: MessageCircle,

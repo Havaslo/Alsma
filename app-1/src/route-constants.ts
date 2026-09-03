@@ -17,6 +17,7 @@ export const ROUTES = {
   adminRequest: "/admin/requests/:requestId",
   adminRequests: "/admin/requests",
   adminSettings: "/admin/settings",
+  adminServices: "/admin/services",
   adminSiteLeads: "/admin/site-leads",
   adminSiteManagement: "/admin/site-management",
   adminSiteManagementAbout: "/admin/site-management/about",
@@ -48,6 +49,7 @@ export const ROUTES = {
   privacy: "/privacy",
   rooms: "/rooms",
   spa: "/spa",
+  services: "/services",
   faq: "/faq",
 } as const;
 

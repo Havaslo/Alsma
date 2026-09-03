@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 
 import { queryClient } from "@/lib/query/query-client";
+import { ServiceCartProvider } from "@/lib/services/service-cart";
 
 type AppProvidersProps = {
   readonly children: ReactNode;
@@ -11,7 +12,7 @@ type AppProvidersProps = {
 
 export const AppProviders = ({ children }: AppProvidersProps) => (
   <QueryClientProvider client={queryClient}>
-    {children}
+    <ServiceCartProvider>{children}</ServiceCartProvider>
     <Toaster richColors theme="light" />
   </QueryClientProvider>
 );

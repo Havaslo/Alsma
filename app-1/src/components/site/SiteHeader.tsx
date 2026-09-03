@@ -5,12 +5,15 @@ import { ChevronDown, Menu, X } from "lucide-react";
 
 import logoGreen from "@/assets/alsma/logo-green.svg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import { ServiceCartPopup } from "@/components/site/ServiceCartPopup";
 import { cn } from "@/lib/cn";
+import { useServiceCart } from "@/lib/services/service-cart";
 import { ROUTES } from "@/route-constants";
 
 const navigation = [
   { label: "Проживание", to: ROUTES.rooms },
   { label: "SPA", to: ROUTES.spa },
+  { label: "Услуги", to: ROUTES.services },
   { label: "Развлечения", to: ROUTES.entertainment },
   { label: "Все включено", to: ROUTES.allInclusive },
   { label: "О нас", to: ROUTES.about },
@@ -42,6 +45,8 @@ export const SiteHeader = ({
   const location = useRouterState({ select: (state) => state.location });
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const cart = useServiceCart();
   const useLightStyle = light || (transparentAtTop && scrolled);
 
   useEffect(() => {
@@ -129,6 +134,13 @@ export const SiteHeader = ({
         </div>
       </nav>
       <div className="flex items-center gap-2">
+        <button
+          className="rounded-full border border-current/20 px-4 py-2 text-sm"
+          onClick={() => setCartOpen(true)}
+          type="button"
+        >
+          Корзина ({cart.count})
+        </button>
         <Link
           className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
           onClick={scrollToBooking}
@@ -163,6 +175,7 @@ export const SiteHeader = ({
           </Link>
         </nav>
       )}
+      <ServiceCartPopup onClose={() => setCartOpen(false)} open={cartOpen} />
     </header>
   );
 };

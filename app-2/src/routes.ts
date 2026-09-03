@@ -21,6 +21,7 @@ import { createLeadsRouter } from "./features/leads/leads.routes.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
+import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
 import { createVkClient } from "./features/vk/vk.client.js";
@@ -168,6 +169,7 @@ export const createApiRouter = ({
   );
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
+  router.use("/services", createServicesRouter(database));
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
   router.get("/voice-agent/readiness", (_request, response) =>

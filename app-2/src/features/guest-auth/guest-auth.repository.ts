@@ -3,6 +3,12 @@ import type { Database } from "../../lib/database/database.js";
 const guestInclude = {
   bonusProgram: true,
   bookings: { orderBy: { checkInDate: "desc" as const } },
+  serviceOrders: {
+    orderBy: { createdAt: "desc" as const },
+    include: {
+      items: { include: { service: true, variant: true, booking: true } },
+    },
+  },
 } as const;
 
 export const createGuestAuthRepository = (database: Database) => ({

@@ -40,6 +40,19 @@ const publicUser = (user: {
     totalAmount: { toString(): string } | null;
     voucherNumber: string | null;
   }>;
+  serviceOrders: Array<{
+    id: string;
+    status: string;
+    total: { toString(): string };
+    currency: string;
+    createdAt: Date;
+    items: Array<{
+      quantity: number;
+      service: { name: string };
+      variant: { name: string };
+      booking: { startsAt: Date; status: string } | null;
+    }>;
+  }>;
   email: string | null;
   fullName: string | null;
   id: string;
@@ -50,6 +63,21 @@ const publicUser = (user: {
     ...booking,
     paymentAmount: booking.paymentAmount?.toString() ?? null,
     totalAmount: booking.totalAmount?.toString() ?? null,
+  })),
+  serviceOrders: user.serviceOrders.map((order) => ({
+    id: order.id,
+    status: order.status,
+    total: order.total.toString(),
+    currency: order.currency,
+    createdAt: order.createdAt,
+    items: order.items.map((item) => ({
+      quantity: item.quantity,
+      serviceName: item.service.name,
+      variantName: item.variant.name,
+      booking: item.booking
+        ? { startsAt: item.booking.startsAt, status: item.booking.status }
+        : null,
+    })),
   })),
   email: user.email,
   fullName: user.fullName,

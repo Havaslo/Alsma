@@ -25,6 +25,7 @@ import { Route as NewsRouteImport } from './routes/news'
 import { Route as OffersRouteImport } from './routes/offers'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoomsRouteImport } from './routes/rooms'
+import { Route as ServicesRouteImport } from './routes/services'
 import { Route as SpaRouteImport } from './routes/spa'
 import { Route as AccountSetupNameRouteImport } from './routes/account/setup-name'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -34,6 +35,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
 import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge-base'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminServicesRouteImport } from './routes/admin/services'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminSiteLeadsRouteImport } from './routes/admin/site-leads'
 import { Route as AdminVoiceAgentTestRouteImport } from './routes/admin/voice-agent-test'
@@ -139,6 +141,11 @@ const RoomsRoute = RoomsRouteImport.update({
   path: '/rooms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SpaRoute = SpaRouteImport.update({
   id: '/spa',
   path: '/spa',
@@ -182,6 +189,11 @@ const AdminKnowledgeBaseRoute = AdminKnowledgeBaseRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminServicesRoute = AdminServicesRouteImport.update({
+  id: '/admin/services',
+  path: '/admin/services',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -332,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
+  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -340,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
   '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
@@ -383,6 +397,7 @@ export interface FileRoutesByTo {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
+  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -391,6 +406,7 @@ export interface FileRoutesByTo {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
   '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
@@ -435,6 +451,7 @@ export interface FileRoutesById {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
+  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -443,6 +460,7 @@ export interface FileRoutesById {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
   '/admin/voice-agent-test': typeof AdminVoiceAgentTestRoute
@@ -488,6 +506,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
+    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -496,6 +515,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
     | '/admin/voice-agent-test'
@@ -539,6 +559,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
+    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -547,6 +568,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
     | '/admin/voice-agent-test'
@@ -590,6 +612,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
+    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -598,6 +621,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
     | '/admin/voice-agent-test'
@@ -642,6 +666,7 @@ export interface RootRouteChildren {
   OffersRoute: typeof OffersRoute
   PrivacyRoute: typeof PrivacyRoute
   RoomsRoute: typeof RoomsRoute
+  ServicesRoute: typeof ServicesRoute
   SpaRoute: typeof SpaRoute
   AdminAgentScenariosRoute: typeof AdminAgentScenariosRoute
   AdminBookingRequestsRoute: typeof AdminBookingRequestsRoute
@@ -649,6 +674,7 @@ export interface RootRouteChildren {
   AdminIntegrationsRoute: typeof AdminIntegrationsRoute
   AdminKnowledgeBaseRoute: typeof AdminKnowledgeBaseRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminServicesRoute: typeof AdminServicesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
   AdminVoiceAgentTestRoute: typeof AdminVoiceAgentTestRoute
@@ -789,6 +815,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/spa': {
       id: '/spa'
       path: '/spa'
@@ -850,6 +883,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/services': {
+      id: '/admin/services'
+      path: '/admin/services'
+      fullPath: '/admin/services'
+      preLoaderRoute: typeof AdminServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/settings': {
@@ -1063,6 +1103,7 @@ const rootRouteChildren: RootRouteChildren = {
   OffersRoute: OffersRoute,
   PrivacyRoute: PrivacyRoute,
   RoomsRoute: RoomsRoute,
+  ServicesRoute: ServicesRoute,
   SpaRoute: SpaRoute,
   AdminAgentScenariosRoute: AdminAgentScenariosRoute,
   AdminBookingRequestsRoute: AdminBookingRequestsRoute,
@@ -1070,6 +1111,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIntegrationsRoute: AdminIntegrationsRoute,
   AdminKnowledgeBaseRoute: AdminKnowledgeBaseRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AdminServicesRoute: AdminServicesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSiteLeadsRoute: AdminSiteLeadsRoute,
   AdminVoiceAgentTestRoute: AdminVoiceAgentTestRoute,
