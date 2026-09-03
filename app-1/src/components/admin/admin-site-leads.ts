@@ -5,6 +5,7 @@ const PAGE_LABELS: Readonly<Record<string, string>> = {
   "all-inclusive": "Всё включено",
   celebrations: "Торжества",
   entertainment: "Развлечения",
+  "hardware-procedures": "Аппаратные процедуры",
   home: "Главная",
   news: "Новости",
   offers: "Акции",
