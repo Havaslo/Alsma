@@ -32,6 +32,32 @@ type LeadRequestValues = {
   phone: string;
 };
 
+const formatPhone = (value: string) => {
+  let digits = value.replace(/\D/g, "");
+  if (digits === "7") return "+7";
+  if (digits.startsWith("8")) digits = digits.slice(1);
+  if (digits.startsWith("7")) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  if (!digits) return "";
+
+  const groups = [
+    digits.slice(0, 3),
+    digits.slice(3, 6),
+    digits.slice(6, 8),
+    digits.slice(8, 10),
+  ];
+  let result = "+7";
+  if (groups[0]) result += ` (${groups[0]}`;
+  if (groups[0]?.length === 3) result += ")";
+  if (groups[1]) result += ` ${groups[1]}`;
+  if (groups[2]) result += `-${groups[2]}`;
+  if (groups[3]) result += `-${groups[3]}`;
+  return result;
+};
+
+const isPhoneComplete = (value: string) =>
+  value.replace(/\D/g, "").length === 11;
+
 const inputClassName =
   "min-h-16 w-full rounded-2xl border border-line bg-page px-5 py-4 text-lg text-page-foreground outline-none placeholder:text-muted-ui-foreground/70 focus:border-brand focus:ring-4 focus:ring-focus/15";
 
@@ -61,6 +87,17 @@ export const LeadRequestModal = ({
       email: "",
       name: "",
       phone: "",
+    },
+  });
+  const phoneRegistration = form.register("phone", {
+    required: phoneRequired,
+    validate: (value) =>
+      !value || isPhoneComplete(value) || "Введите полный номер телефона",
+    onChange: (event) => {
+      form.setValue("phone", formatPhone(event.target.value), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     },
   });
 
@@ -128,8 +165,40 @@ export const LeadRequestModal = ({
             id={`${formCode}-phone`}
             placeholder="+7 (___) ___-__-__"
             type="tel"
-            {...form.register("phone", { required: phoneRequired })}
+            inputMode="tel"
+            {...phoneRegistration}
+            onKeyDown={(event) => {
+              if (
+                !/[0-9]/.test(event.key) &&
+                ![
+                  "Backspace",
+                  "Delete",
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "Home",
+                  "End",
+                  "Tab",
+                ].includes(event.key) &&
+                !(event.ctrlKey || event.metaKey)
+              ) {
+                event.preventDefault();
+              }
+            }}
+            onPaste={(event) => {
+              event.preventDefault();
+              form.setValue(
+                "phone",
+                formatPhone(event.clipboardData.getData("text")),
+                { shouldDirty: true, shouldValidate: true },
+              );
+            }}
           />
+          {form.formState.errors.phone && (
+            <span className="text-sm text-destructive">
+              {form.formState.errors.phone.message ||
+                "Введите корректный номер телефона"}
+            </span>
+          )}
         </label>
         <label className="block space-y-2" htmlFor={`${formCode}-email`}>
           <span className="text-lg font-medium">Почта</span>
