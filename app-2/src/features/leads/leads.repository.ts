@@ -10,6 +10,7 @@ export const createLeadsRepository = (database: Database) => ({
           checkOutDate: input.checkOutDate,
           comment: input.comment,
           guestsCount: input.guestsCount,
+          appointmentTime: input.appointmentTime,
         },
         email: input.email,
         formCode: input.formCode,

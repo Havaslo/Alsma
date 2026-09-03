@@ -20,10 +20,12 @@ type LeadRequestModalProps = {
   readonly eyebrow?: string;
   readonly namePlaceholder?: string;
   readonly commentPlaceholder: string;
+  readonly appointmentTimeRequired?: boolean;
   readonly successMessage?: string;
 };
 
 type LeadRequestValues = {
+  appointmentTime: string;
   comment: string;
   email: string;
   name: string;
@@ -35,6 +37,7 @@ const inputClassName =
 
 export const LeadRequestModal = ({
   commentPlaceholder,
+  appointmentTimeRequired = false,
   contextText,
   description,
   emailRequired = false,
@@ -52,12 +55,18 @@ export const LeadRequestModal = ({
 }: LeadRequestModalProps) => {
   const lead = useCreateLead();
   const form = useForm<LeadRequestValues>({
-    defaultValues: { comment: "", email: "", name: "", phone: "" },
+    defaultValues: {
+      appointmentTime: "",
+      comment: "",
+      email: "",
+      name: "",
+      phone: "",
+    },
   });
 
   return (
     <Modal
-      className="max-w-3xl rounded-4xl bg-page"
+      className="max-w-3xl rounded-4xl bg-[#FFFFFF]"
       closeLabel="Закрыть форму заявки"
       headerClassName="items-start border-b-0 px-6 pt-8 pb-0 sm:px-10 sm:pt-10"
       headerContent={
@@ -89,6 +98,7 @@ export const LeadRequestModal = ({
           lead.mutate(
             {
               comment: values.comment || undefined,
+              appointmentTime: values.appointmentTime || undefined,
               email: values.email || undefined,
               formCode,
               formTitle,
@@ -128,9 +138,53 @@ export const LeadRequestModal = ({
             id={`${formCode}-email`}
             placeholder="you@example.com"
             type="email"
-            {...form.register("email", { required: emailRequired })}
+            {...form.register("email", {
+              pattern: {
+                message: "Введите корректный email",
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              },
+              required: emailRequired,
+            })}
           />
+          {form.formState.errors.email && (
+            <span className="text-sm text-destructive">
+              {form.formState.errors.email.message ||
+                "Введите корректный email"}
+            </span>
+          )}
         </label>
+        {appointmentTimeRequired && (
+          <label
+            className="block space-y-2"
+            htmlFor={`${formCode}-appointment-time`}
+          >
+            <span className="text-lg font-medium">Удобное время</span>
+            <select
+              className={inputClassName}
+              id={`${formCode}-appointment-time`}
+              {...form.register("appointmentTime", {
+                required: "Выберите удобное время",
+              })}
+            >
+              <option value="">Выберите время</option>
+              {Array.from({ length: 48 }, (_, index) => {
+                const hours = String(Math.floor(index / 2)).padStart(2, "0");
+                const minutes = index % 2 === 0 ? "00" : "30";
+                const value = `${hours}:${minutes}`;
+                return (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                );
+              })}
+            </select>
+            {form.formState.errors.appointmentTime && (
+              <span className="text-sm text-destructive">
+                {form.formState.errors.appointmentTime.message}
+              </span>
+            )}
+          </label>
+        )}
         <label className="block space-y-2" htmlFor={`${formCode}-comment`}>
           <span className="text-lg font-medium">Комментарий</span>
           <textarea

@@ -34,6 +34,7 @@ export const SpaRequestModal = ({
     }
     onClose={onClose}
     open={open}
+    appointmentTimeRequired
     sourcePage={sourcePage}
     title="Записаться на процедуру"
   />

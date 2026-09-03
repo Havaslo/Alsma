@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api/api-client";
 
 export type LeadInput = {
+  readonly appointmentTime?: string;
   readonly checkInDate?: string;
   readonly checkOutDate?: string;
   readonly comment?: string;
