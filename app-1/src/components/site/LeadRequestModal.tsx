@@ -244,8 +244,11 @@ export const LeadRequestModal = ({
               })}
             >
               <option value="">Выберите время</option>
-              {Array.from({ length: 48 }, (_, index) => {
-                const hours = String(Math.floor(index / 2)).padStart(2, "0");
+              {Array.from({ length: 25 }, (_, index) => {
+                const minutesSinceStart = 9 * 60 + index * 30;
+                const hours = String(
+                  Math.floor(minutesSinceStart / 60),
+                ).padStart(2, "0");
                 const minutes = index % 2 === 0 ? "00" : "30";
                 const value = `${hours}:${minutes}`;
                 return (
