@@ -45,7 +45,7 @@ export const AdminSiteLeadModal = ({
 
   return (
     <Modal
-      className="max-w-2xl"
+      className="max-w-2xl bg-[#FFFFFF]"
       closeLabel="Закрыть заявку"
       onClose={onClose}
       open

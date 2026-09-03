@@ -132,9 +132,17 @@ export const LeadRequestModal = ({
         className="space-y-6 pt-6 pb-2 sm:pt-8"
         form={form}
         onSubmit={(values) => {
+          const comment = appointmentTimeRequired
+            ? [
+                `Выбранное клиентом время: ${values.appointmentTime}`,
+                values.comment.trim(),
+              ]
+                .filter(Boolean)
+                .join("\n")
+            : values.comment || undefined;
           lead.mutate(
             {
-              comment: values.comment || undefined,
+              comment,
               appointmentTime: values.appointmentTime || undefined,
               email: values.email || undefined,
               formCode,
