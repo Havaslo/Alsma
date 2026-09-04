@@ -54,7 +54,7 @@ export const CatalogSections = ({
                 {service.imageUrl && (
                   <img
                     alt=""
-                    className="-mx-6 -mt-6 mb-6 aspect-video w-[calc(100%+3rem)] rounded-t-3xl object-cover"
+                    className="-mx-6 -mt-6 mb-6 block aspect-video w-[calc(100%+3rem)] max-w-none rounded-t-3xl object-cover"
                     src={resolveMediaUrl(service.imageUrl)}
                   />
                 )}
