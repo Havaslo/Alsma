@@ -14,3 +14,9 @@
 .cart {
   background: #efe9dc !important;
 }
+
+@media (max-width: 767px) {
+  .header__main {
+    background: transparent !important;
+  }
+}
