@@ -22,7 +22,7 @@ export const ServicesPage = () => {
             сохранятся в общей корзине.
           </p>
         </header>
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {services.data?.services.map((service) => (
             <article
               className="rounded-3xl border border-line bg-white p-6"

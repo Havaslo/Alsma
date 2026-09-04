@@ -45,7 +45,7 @@ export const CatalogSections = ({
               </p>
             )}
           </div>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {section.services.map((service) => (
               <article
                 className="rounded-3xl border border-line bg-white p-6"
