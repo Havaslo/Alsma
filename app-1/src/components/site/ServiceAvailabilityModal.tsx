@@ -45,15 +45,18 @@ export const ServiceAvailabilityModal = ({
     onClose();
   };
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={`Выберите время: ${variant.name}`}
-    >
+    <Modal open={open} onClose={onClose} title="Выберите дату и время">
       <div className="space-y-5 p-5 sm:p-6">
-        <p className="text-sm text-muted-ui-foreground">
-          {service.name} · {variant.durationMin ?? 60} минут
-        </p>
+        <div className="space-y-1 text-sm text-muted-ui-foreground">
+          <p>
+            <span className="font-semibold text-brand">Услуга:</span>{" "}
+            {service.name}
+          </p>
+          <p>
+            <span className="font-semibold text-brand">Тип услуги:</span>{" "}
+            {variant.name}
+          </p>
+        </div>
         <label className="block text-sm font-semibold text-brand">
           Дата
           <input
