@@ -1,82 +1,95 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ShoppingBag, Wrench } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/cn";
 import {
-  createPlacement,
   createService,
+  createServiceSection,
   createVariant,
-  loadServiceCatalog,
+  loadServiceSections,
+  updateServiceSection,
 } from "@/lib/services/admin-services-api";
 
+const pages = [
+  ["home", "Главная"],
+  ["rooms", "Проживание"],
+  ["spa", "SPA"],
+  ["entertainment", "Развлечения"],
+  ["all-inclusive", "Всё включено"],
+  ["offers", "Акции"],
+  ["celebrations", "Торжества"],
+  ["hardware-procedures", "Аппаратные процедуры"],
+] as const;
 type CardKind = "service" | "product";
-type Section = { readonly slug: string; readonly name: string };
-const emptyCard = {
-  name: "",
-  description: "",
-  kind: "service" as CardKind,
-  price: "",
-  quantity: "",
+type VariantDraft = {
+  name: string;
+  price: string;
+  capacity: string;
+  durationMin: string;
 };
+const blankVariant = (): VariantDraft => ({
+  name: "",
+  price: "",
+  capacity: "",
+  durationMin: "",
+});
 
 export const AdminServicesCatalog = () => {
   const client = useQueryClient();
-  const catalog = useQuery({
-    queryKey: ["service-catalog"],
-    queryFn: loadServiceCatalog,
+  const query = useQuery({
+    queryKey: ["service-sections"],
+    queryFn: loadServiceSections,
   });
-  const [sections, setSections] = useState<Section[]>([]);
-  const [section, setSection] = useState<Section>();
-  const [sectionForm, setSectionForm] = useState({ name: "", slug: "" });
-  const [card, setCard] = useState(emptyCard);
-  const [variants, setVariants] = useState([
-    { name: "", price: "", capacity: "", durationMin: "" },
-  ]);
+  const [sectionId, setSectionId] = useState("");
+  const [section, setSection] = useState({
+    name: "",
+    pageSlug: "",
+    heading: "",
+    subheading: "",
+    blockNumber: "1",
+  });
+  const [card, setCard] = useState({
+    name: "",
+    description: "",
+    kind: "service" as CardKind,
+  });
+  const [variants, setVariants] = useState<VariantDraft[]>([blankVariant()]);
   const refresh = () =>
-    void client.invalidateQueries({ queryKey: ["service-catalog"] });
-  const existingSections = useMemo(() => {
-    const result = new Map<string, Section>();
-    catalog.data?.data.services.forEach((item) =>
-      item.placements.forEach((placement) =>
-        result.set(placement.pageSlug, {
-          name: placement.pageSlug,
-          slug: placement.pageSlug,
-        }),
-      ),
-    );
-    sections.forEach((item) => result.set(item.slug, item));
-    return [...result.values()];
-  }, [catalog.data, sections]);
-  const saveSection = (event: FormEvent) => {
+    void client.invalidateQueries({ queryKey: ["service-sections"] });
+  const saveSection = async (event: FormEvent) => {
     event.preventDefault();
-    const next = { ...sectionForm };
-    setSections((current) => [
-      ...current.filter((item) => item.slug !== next.slug),
-      next,
-    ]);
-    setSection(next);
-    setSectionForm({ name: "", slug: "" });
+    const input = {
+      ...section,
+      subheading: section.subheading || undefined,
+      blockNumber: Number(section.blockNumber),
+    };
+    const result = sectionId
+      ? await updateServiceSection(sectionId, {
+          ...input,
+          subheading: input.subheading ?? null,
+        })
+      : await createServiceSection(input);
+    setSectionId(result.data.section.id);
+    refresh();
   };
   const saveCard = async (event: FormEvent) => {
     event.preventDefault();
-    if (!section) return;
+    if (!sectionId) return;
     const result = await createService({
-      slug: `${section.slug}-${card.name.toLowerCase().replace(/[^a-zа-я0-9]+/gi, "-")}`,
+      slug: `${section.pageSlug}-${Date.now()}`,
       name: card.name,
       description: card.description,
+      sectionId,
     });
     const serviceId = (result.data as { service: { id: string } }).service.id;
-    await createPlacement(serviceId, { pageSlug: section.slug, position: 0 });
     const entries =
       card.kind === "product"
         ? [
             {
               name: "Товар",
-              price: card.price,
-              capacity: card.quantity,
+              price: variants[0].price,
+              capacity: variants[0].capacity,
               durationMin: "",
             },
           ]
@@ -91,93 +104,120 @@ export const AdminServicesCatalog = () => {
         }),
       ),
     );
-    setCard(emptyCard);
-    setVariants([{ name: "", price: "", capacity: "", durationMin: "" }]);
+    setCard({ name: "", description: "", kind: "service" });
+    setVariants([blankVariant()]);
     refresh();
   };
+  const updateVariant = (index: number, patch: Partial<VariantDraft>) =>
+    setVariants((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item,
+      ),
+    );
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm tracking-[0.18em] text-brand uppercase">
-              Шаг 1
-            </p>
-            <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
-              Разделы каталога
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-ui-foreground">
-              Раздел отвечает за место показа карточек: SPA, развлечения, номера
-              или любая другая страница сайта. Пока раздел сохраняется после
-              создания первой карточки.
-            </p>
-          </div>
-          <Wrench className="hidden size-7 text-brand sm:block" />
-        </div>
-        <form
-          className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
-          onSubmit={saveSection}
-        >
+        <p className="text-sm tracking-[0.18em] text-brand uppercase">
+          Раздел каталога
+        </p>
+        <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
+          Где показывать карточки
+        </h2>
+        <p className="mt-2 text-sm text-muted-ui-foreground">
+          Выберите реальную страницу сайта, задайте заголовки и номер блока.
+          Пустой раздел можно сохранить до добавления карточек.
+        </p>
+        <form className="mt-6 grid gap-3 md:grid-cols-2" onSubmit={saveSection}>
           <input
             className="rounded-xl border border-line bg-page p-3"
-            placeholder="Название раздела, например SPA"
+            placeholder="Название раздела"
             required
-            value={sectionForm.name}
+            value={section.name}
             onChange={(event) =>
-              setSectionForm({ ...sectionForm, name: event.target.value })
+              setSection({ ...section, name: event.target.value })
+            }
+          />
+          <select
+            className="rounded-xl border border-line bg-page p-3"
+            required
+            value={section.pageSlug}
+            onChange={(event) =>
+              setSection({ ...section, pageSlug: event.target.value })
+            }
+          >
+            <option value="">Страница сайта</option>
+            {pages.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <input
+            className="rounded-xl border border-line bg-page p-3"
+            placeholder="Заголовок блока"
+            required
+            value={section.heading}
+            onChange={(event) =>
+              setSection({ ...section, heading: event.target.value })
             }
           />
           <input
             className="rounded-xl border border-line bg-page p-3"
-            placeholder="Код страницы, например spa"
-            required
-            value={sectionForm.slug}
+            placeholder="Подзаголовок блока"
+            value={section.subheading}
             onChange={(event) =>
-              setSectionForm({ ...sectionForm, slug: event.target.value })
+              setSection({ ...section, subheading: event.target.value })
+            }
+          />
+          <input
+            className="rounded-xl border border-line bg-page p-3"
+            min="1"
+            placeholder="Номер блока на странице"
+            required
+            type="number"
+            value={section.blockNumber}
+            onChange={(event) =>
+              setSection({ ...section, blockNumber: event.target.value })
             }
           />
           <Button type="submit">
-            <Plus className="size-4" />
-            Создать раздел
+            {sectionId ? "Обновить раздел" : "Создать раздел"}
           </Button>
         </form>
         <div className="mt-5 flex flex-wrap gap-2">
-          {existingSections.map((item) => (
+          {query.data?.data.sections.map((item) => (
             <button
-              className={cn(
-                "rounded-full border px-4 py-2 text-sm",
-                section?.slug === item.slug
-                  ? "border-brand bg-brand text-brand-foreground"
-                  : "border-line text-brand",
-              )}
-              key={item.slug}
-              onClick={() => setSection(item)}
+              className={`rounded-full border px-4 py-2 text-sm ${item.id === sectionId ? "border-brand bg-brand text-brand-foreground" : "border-line text-brand"}`}
+              key={item.id}
+              onClick={() => {
+                setSectionId(item.id);
+                setSection({
+                  name: item.name,
+                  pageSlug: item.pageSlug,
+                  heading: item.heading,
+                  subheading: item.subheading ?? "",
+                  blockNumber: String(item.blockNumber),
+                });
+              }}
               type="button"
             >
-              {item.name}
+              {item.name} ·{" "}
+              {pages.find(([value]) => value === item.pageSlug)?.[1] ??
+                item.pageSlug}
             </button>
           ))}
         </div>
       </section>
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <div className="flex items-start gap-3">
-          <ShoppingBag className="mt-1 text-brand" />
-          <div>
-            <p className="text-sm tracking-[0.18em] text-brand uppercase">
-              Шаг 2
-            </p>
-            <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
-              Карточка в разделе{section ? ` «${section.name}»` : ""}
-            </h2>
-            <p className="mt-2 text-sm text-muted-ui-foreground">
-              Карточка может быть услугой с типами или товаром с ценой и
-              количеством.
-            </p>
-          </div>
-        </div>
-        {!section ? (
-          <p className="mt-6 rounded-2xl bg-page p-4 text-sm text-muted-ui-foreground">
-            Сначала выберите или создайте раздел.
+        <p className="text-sm tracking-[0.18em] text-brand uppercase">
+          Карточка
+        </p>
+        <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
+          Добавить в раздел{section.name ? ` «${section.name}»` : ""}
+        </h2>
+        {!sectionId ? (
+          <p className="mt-5 rounded-2xl bg-page p-4 text-sm text-muted-ui-foreground">
+            Сначала создайте или выберите раздел.
           </p>
         ) : (
           <form className="mt-6 space-y-4" onSubmit={saveCard}>
@@ -210,57 +250,35 @@ export const AdminServicesCatalog = () => {
                 setCard({ ...card, description: event.target.value })
               }
             />
-            {card.kind === "product" ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                <input
-                  className="rounded-xl border border-line bg-page p-3"
-                  placeholder="Цена"
-                  required
-                  type="number"
-                  min="0"
-                  value={card.price}
-                  onChange={(event) =>
-                    setCard({ ...card, price: event.target.value })
-                  }
-                />
-                <input
-                  className="rounded-xl border border-line bg-page p-3"
-                  placeholder="Количество на складе"
-                  required
-                  type="number"
-                  min="0"
-                  value={card.quantity}
-                  onChange={(event) =>
-                    setCard({ ...card, quantity: event.target.value })
-                  }
-                />
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-page p-4">
-                <h3 className="font-semibold text-brand">
-                  Тип услуги и параметры
-                </h3>
-                <div className="mt-3 space-y-3">
-                  {variants.map((entry, index) => (
-                    <div
-                      className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto]"
-                      key={index}
-                    >
-                      <input
-                        className="rounded-xl border border-line bg-panel p-3"
-                        placeholder="Тип: тайский массаж"
-                        required
-                        value={entry.name}
-                        onChange={(event) =>
-                          setVariants((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, name: event.target.value }
-                                : item,
-                            ),
-                          )
-                        }
-                      />
+            <div className="rounded-2xl bg-page p-4">
+              <h3 className="font-semibold text-brand">
+                {card.kind === "product" ? "Цена и остаток" : "Типы услуги"}
+              </h3>
+              {variants.map((entry, index) => (
+                <div
+                  className="mt-3 grid gap-3 md:grid-cols-[1.5fr_1fr_1fr_1fr_auto]"
+                  key={index}
+                >
+                  <input
+                    className="rounded-xl border border-line bg-panel p-3"
+                    placeholder={
+                      card.kind === "product"
+                        ? "Цена"
+                        : "Тип, например тайский массаж"
+                    }
+                    required
+                    value={card.kind === "product" ? entry.price : entry.name}
+                    onChange={(event) =>
+                      updateVariant(
+                        index,
+                        card.kind === "product"
+                          ? { price: event.target.value }
+                          : { name: event.target.value },
+                      )
+                    }
+                  />
+                  {card.kind === "service" && (
+                    <>
                       <input
                         className="rounded-xl border border-line bg-panel p-3"
                         placeholder="Цена"
@@ -269,115 +287,64 @@ export const AdminServicesCatalog = () => {
                         min="0"
                         value={entry.price}
                         onChange={(event) =>
-                          setVariants((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, price: event.target.value }
-                                : item,
-                            ),
-                          )
+                          updateVariant(index, { price: event.target.value })
                         }
                       />
                       <input
                         className="rounded-xl border border-line bg-panel p-3"
-                        placeholder="Длительность, мин"
+                        placeholder="Минуты"
                         required
                         type="number"
                         min="1"
                         value={entry.durationMin}
                         onChange={(event) =>
-                          setVariants((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, durationMin: event.target.value }
-                                : item,
-                            ),
-                          )
+                          updateVariant(index, {
+                            durationMin: event.target.value,
+                          })
                         }
                       />
-                      <input
-                        className="rounded-xl border border-line bg-panel p-3"
-                        placeholder="Количество мест"
-                        required
-                        type="number"
-                        min="1"
-                        value={entry.capacity}
-                        onChange={(event) =>
-                          setVariants((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, capacity: event.target.value }
-                                : item,
-                            ),
-                          )
-                        }
-                      />
-                      <button
-                        className="rounded-full border border-line px-3 text-sm text-brand disabled:opacity-40"
-                        disabled={variants.length === 1}
-                        onClick={() =>
-                          setVariants((current) =>
-                            current.filter(
-                              (_, itemIndex) => itemIndex !== index,
-                            ),
-                          )
-                        }
-                        type="button"
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  ))}
+                    </>
+                  )}
+                  <input
+                    className="rounded-xl border border-line bg-panel p-3"
+                    placeholder={card.kind === "product" ? "Остаток" : "Мест"}
+                    required
+                    type="number"
+                    min={card.kind === "product" ? "0" : "1"}
+                    value={entry.capacity}
+                    onChange={(event) =>
+                      updateVariant(index, { capacity: event.target.value })
+                    }
+                  />
                   <button
-                    className="rounded-full border border-brand px-4 py-2 text-sm text-brand"
+                    className="rounded-full border border-line px-3 text-sm text-brand disabled:opacity-40"
+                    disabled={variants.length === 1}
                     onClick={() =>
-                      setVariants((current) => [
-                        ...current,
-                        { name: "", price: "", capacity: "", durationMin: "" },
-                      ])
+                      setVariants((current) =>
+                        current.filter((_, itemIndex) => itemIndex !== index),
+                      )
                     }
                     type="button"
                   >
-                    Добавить тип услуги
+                    Удалить
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-muted-ui-foreground">
-                  Добавьте все типы услуги сейчас. Их можно отредактировать до
-                  сохранения.
-                </p>
-              </div>
-            )}
+              ))}
+              {card.kind === "service" && (
+                <button
+                  className="mt-3 rounded-full border border-brand px-4 py-2 text-sm text-brand"
+                  onClick={() =>
+                    setVariants((current) => [...current, blankVariant()])
+                  }
+                  type="button"
+                >
+                  Добавить тип
+                </button>
+              )}
+            </div>
             <Button type="submit">Сохранить карточку</Button>
           </form>
         )}
-      </section>
-      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <h2 className="font-heading text-2xl font-semibold text-brand">
-          Сохранённые карточки
-        </h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {catalog.data?.data.services.map((item) => (
-            <article className="rounded-2xl bg-page p-4" key={item.id}>
-              <div className="flex justify-between gap-3">
-                <strong>{item.name}</strong>
-                <span className="text-xs text-muted-ui-foreground">
-                  {item.placements.map((place) => place.pageSlug).join(", ") ||
-                    "Без раздела"}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted-ui-foreground">
-                {item.variants.length
-                  ? item.variants
-                      .map(
-                        (entry) =>
-                          `${entry.name}: ${entry.price} ₽ · ${entry.durationMin ? `${entry.durationMin} мин` : `остаток ${entry.capacity}`}`,
-                      )
-                      .join("; ")
-                  : "Карточка без вариантов"}
-              </p>
-            </article>
-          ))}
-        </div>
       </section>
     </div>
   );

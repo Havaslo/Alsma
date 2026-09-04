@@ -34,10 +34,63 @@ export const loadServiceCatalog = () =>
       }>;
     }>;
   }>("/services/admin/catalog", { headers: headers() });
+export type ServiceSection = {
+  readonly id: string;
+  readonly name: string;
+  readonly pageSlug: string;
+  readonly heading: string;
+  readonly subheading: string | null;
+  readonly blockNumber: number;
+  readonly services: Array<{
+    readonly id: string;
+    readonly name: string;
+    readonly description: string | null;
+    readonly variants: Array<{
+      readonly id: string;
+      readonly name: string;
+      readonly price: string;
+      readonly capacity: number;
+      readonly durationMin: number | null;
+    }>;
+    readonly placements: Array<{ readonly pageSlug: string }>;
+  }>;
+};
+export const loadServiceSections = () =>
+  apiClient.get<{ sections: ServiceSection[] }>("/services/admin/sections", {
+    headers: headers(),
+  });
+export const createServiceSection = (input: {
+  name: string;
+  pageSlug: string;
+  heading: string;
+  subheading?: string;
+  blockNumber: number;
+}) =>
+  apiClient.post<{ section: ServiceSection }>(
+    "/services/admin/sections",
+    input,
+    { headers: headers() },
+  );
+export const updateServiceSection = (
+  sectionId: string,
+  input: {
+    name: string;
+    pageSlug: string;
+    heading: string;
+    subheading: string | null;
+    blockNumber: number;
+  },
+) =>
+  apiClient.put<{ section: ServiceSection }>(
+    `/services/admin/sections/${sectionId}`,
+    input,
+    { headers: headers() },
+  );
 export const createService = (input: {
   slug: string;
   name: string;
   description?: string;
+  sectionId?: string;
 }) => apiClient.post("/services/admin/catalog", input, { headers: headers() });
 export const createVariant = (
   serviceId: string,

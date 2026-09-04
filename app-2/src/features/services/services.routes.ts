@@ -162,6 +162,17 @@ export const createServicesRouter = (database: Database): Router => {
     ),
   );
   admin.use(createRequireAdminPermission("dashboard.access"));
+  admin.get("/sections", async (_request, response) => {
+    response.json({ sections: await database.client.serviceSection.findMany({ include: { services: { include: { variants: true, placements: true } } }, orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }] }) });
+  });
+  admin.post("/sections", async (request, response) => {
+    const input = z.object({ name: z.string().min(1), pageSlug: z.string().min(1), heading: z.string().min(1), subheading: z.string().optional(), blockNumber: z.number().int().positive() }).parse(request.body);
+    response.status(201).json({ section: await database.client.serviceSection.create({ data: input }) });
+  });
+  admin.put("/sections/:sectionId", async (request, response) => {
+    const input = z.object({ name: z.string().min(1), pageSlug: z.string().min(1), heading: z.string().min(1), subheading: z.string().nullable(), blockNumber: z.number().int().positive() }).parse(request.body);
+    response.json({ section: await database.client.serviceSection.update({ where: { id: request.params.sectionId }, data: input }) });
+  });
   admin.get("/catalog", async (_request, response) => {
     response.json({
       services: await database.client.service.findMany({
@@ -176,6 +187,7 @@ export const createServicesRouter = (database: Database): Router => {
         name: z.string().min(1),
         description: z.string().optional(),
         status: z.enum(["draft", "published", "archived"]).default("draft"),
+        sectionId: z.string().uuid().optional(),
       })
       .parse(request.body);
     response
