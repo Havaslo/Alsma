@@ -11,7 +11,12 @@ export type SpaPromotion = {
   imageName?: string;
 };
 export type SpaMenuItem = { name: string; description: string; price: string };
-export type SpaAdditionalService = { service: string; price: string };
+export type SpaAdditionalService = {
+  service: string;
+  price: string;
+  description?: string;
+  duration?: string;
+};
 const get = <T>(
   items: SiteContentItem[] | undefined,
   key: string,

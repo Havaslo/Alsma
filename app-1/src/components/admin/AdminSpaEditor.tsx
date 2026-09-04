@@ -127,8 +127,10 @@ export const AdminSpaEditor = () => {
           fields={[
             { key: "service", label: "Услуга или тариф" },
             { key: "price", label: "Стоимость" },
+            { key: "description", label: "Описание" },
+            { key: "duration", label: "Длительность" },
           ]}
-          addItem={{ service: "", price: "" }}
+          addItem={{ service: "", price: "", description: "", duration: "" }}
           addLabel="Добавить услугу"
           layout="table"
           itemKey="additional-services"
