@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import {
   createService,
   createServiceSection,
@@ -44,6 +45,7 @@ export const AdminServicesCatalog = () => {
   });
   const [sectionId, setSectionId] = useState("");
   const [editingSection, setEditingSection] = useState(false);
+  const [newSectionOpen, setNewSectionOpen] = useState(false);
   const [section, setSection] = useState({
     name: "",
     pageSlug: "",
@@ -75,6 +77,7 @@ export const AdminServicesCatalog = () => {
         : await createServiceSection(input);
     setSectionId(result.data.section.id);
     setEditingSection(false);
+    setNewSectionOpen(false);
     refresh();
   };
   const saveCard = async (event: FormEvent) => {
@@ -121,19 +124,18 @@ export const AdminServicesCatalog = () => {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm tracking-[0.18em] text-brand uppercase">
               Разделы каталога
             </p>
             <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
-              Где показывать карточки
+              Выберите группу
             </h2>
           </div>
           <Button
             onClick={() => {
               setSectionId("");
-              setEditingSection(false);
               setSection({
                 name: "",
                 pageSlug: "",
@@ -141,18 +143,103 @@ export const AdminServicesCatalog = () => {
                 subheading: "",
                 blockNumber: "1",
               });
+              setNewSectionOpen(true);
             }}
             type="button"
           >
-            <Plus className="size-4" />
-            Новый раздел
+            <Plus className="size-4" /> Новый раздел
           </Button>
         </div>
-        <p className="mt-2 text-sm text-muted-ui-foreground">
-          Выберите реальную страницу сайта, задайте заголовки и номер блока.
-          Пустой раздел можно сохранить до добавления карточек.
-        </p>
-        <form className="mt-6 grid gap-3 md:grid-cols-2" onSubmit={saveSection}>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {query.data?.data.sections.map((item) => (
+            <button
+              className={`rounded-full border px-4 py-2 text-sm ${item.id === sectionId ? "border-brand bg-brand text-brand-foreground" : "border-line text-brand"}`}
+              key={item.id}
+              onClick={() => {
+                setSectionId(item.id);
+                setSection({
+                  name: item.name,
+                  pageSlug: item.pageSlug,
+                  heading: item.heading,
+                  subheading: item.subheading ?? "",
+                  blockNumber: String(item.blockNumber),
+                });
+              }}
+              type="button"
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+        {!query.data?.data.sections.length && (
+          <p className="mt-4 text-sm text-muted-ui-foreground">
+            Разделов пока нет. Создайте первый через кнопку «Новый раздел».
+          </p>
+        )}
+        {sectionId && (
+          <form
+            className="mt-6 grid gap-3 rounded-2xl bg-page p-4 md:grid-cols-2"
+            onSubmit={saveSection}
+          >
+            <div className="md:col-span-2">
+              <p className="text-xs tracking-[0.18em] text-brand uppercase">
+                Управление блоком
+              </p>
+              <p className="mt-1 text-sm text-muted-ui-foreground">
+                Настройки выбранного раздела
+              </p>
+            </div>
+            <input
+              className="rounded-xl border border-line bg-panel p-3"
+              placeholder="Заголовок"
+              required
+              value={section.heading}
+              onChange={(event) =>
+                setSection({ ...section, heading: event.target.value })
+              }
+            />
+            <input
+              className="rounded-xl border border-line bg-panel p-3"
+              placeholder="Описание / подзаголовок"
+              value={section.subheading}
+              onChange={(event) =>
+                setSection({ ...section, subheading: event.target.value })
+              }
+            />
+            <select
+              className="rounded-xl border border-line bg-panel p-3"
+              value={section.pageSlug}
+              onChange={(event) =>
+                setSection({ ...section, pageSlug: event.target.value })
+              }
+            >
+              {pages.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <input
+              className="rounded-xl border border-line bg-panel p-3"
+              min="1"
+              placeholder="Номер блока"
+              required
+              type="number"
+              value={section.blockNumber}
+              onChange={(event) =>
+                setSection({ ...section, blockNumber: event.target.value })
+              }
+            />
+            <Button type="submit">Сохранить блок</Button>
+          </form>
+        )}
+      </section>
+      <Modal
+        onClose={() => setNewSectionOpen(false)}
+        open={newSectionOpen}
+        title="Новый раздел"
+      >
+        <form className="grid gap-3 p-6 md:grid-cols-2" onSubmit={saveSection}>
           <input
             className="rounded-xl border border-line bg-page p-3"
             placeholder="Название раздела"
@@ -197,7 +284,7 @@ export const AdminServicesCatalog = () => {
           <input
             className="rounded-xl border border-line bg-page p-3"
             min="1"
-            placeholder="Номер блока на странице"
+            placeholder="Номер блока"
             required
             type="number"
             value={section.blockNumber}
@@ -205,44 +292,9 @@ export const AdminServicesCatalog = () => {
               setSection({ ...section, blockNumber: event.target.value })
             }
           />
-          <Button type="submit">
-            {editingSection ? "Сохранить изменения" : "Создать раздел"}
-          </Button>
+          <Button type="submit">Создать раздел</Button>
         </form>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {query.data?.data.sections.map((item) => (
-            <button
-              className={`w-full rounded-2xl border p-4 text-left ${item.id === sectionId ? "border-brand bg-brand/5" : "border-line"}`}
-              key={item.id}
-              onClick={() => {
-                setSectionId(item.id);
-                setEditingSection(true);
-                setSection({
-                  name: item.name,
-                  pageSlug: item.pageSlug,
-                  heading: item.heading,
-                  subheading: item.subheading ?? "",
-                  blockNumber: String(item.blockNumber),
-                });
-              }}
-              type="button"
-            >
-              <span className="block font-semibold text-brand">
-                {item.name}
-              </span>
-              <span className="mt-1 block text-sm text-muted-ui-foreground">
-                {pages.find(([value]) => value === item.pageSlug)?.[1] ??
-                  item.pageSlug}{" "}
-                · блок {item.blockNumber} · {item.services.length} карточек
-              </span>
-              <span className="mt-1 block text-sm text-muted-ui-foreground">
-                {item.heading}
-                {item.subheading ? ` — ${item.subheading}` : ""}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+      </Modal>
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <p className="text-sm tracking-[0.18em] text-brand uppercase">
           Карточка

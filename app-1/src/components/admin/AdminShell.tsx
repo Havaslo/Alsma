@@ -35,8 +35,14 @@ const navigation = [
   {
     active: (path: string) => path === ROUTES.adminServices,
     icon: CalendarDays,
-    label: "Записи услуг",
+    label: "Каталог услуг",
     to: ROUTES.adminServices,
+  },
+  {
+    active: (path: string) => path === ROUTES.adminServiceCalendar,
+    icon: CalendarDays,
+    label: "Календарь записей",
+    to: ROUTES.adminServiceCalendar,
   },
   {
     active: (path: string) => path === ROUTES.adminVoiceAgentTest,

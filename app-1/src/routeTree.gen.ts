@@ -35,6 +35,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
 import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge-base'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminServiceCalendarRouteImport } from './routes/admin/service-calendar'
 import { Route as AdminServicesRouteImport } from './routes/admin/services'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminSiteLeadsRouteImport } from './routes/admin/site-leads'
@@ -189,6 +190,11 @@ const AdminKnowledgeBaseRoute = AdminKnowledgeBaseRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminServiceCalendarRoute = AdminServiceCalendarRouteImport.update({
+  id: '/admin/service-calendar',
+  path: '/admin/service-calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminServicesRoute = AdminServicesRouteImport.update({
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/service-calendar': typeof AdminServiceCalendarRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
@@ -406,6 +413,7 @@ export interface FileRoutesByTo {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/service-calendar': typeof AdminServiceCalendarRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
@@ -460,6 +468,7 @@ export interface FileRoutesById {
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/service-calendar': typeof AdminServiceCalendarRoute
   '/admin/services': typeof AdminServicesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/site-leads': typeof AdminSiteLeadsRoute
@@ -515,6 +524,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/service-calendar'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
@@ -568,6 +578,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/service-calendar'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
@@ -621,6 +632,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/knowledge-base'
     | '/admin/login'
+    | '/admin/service-calendar'
     | '/admin/services'
     | '/admin/settings'
     | '/admin/site-leads'
@@ -674,6 +686,7 @@ export interface RootRouteChildren {
   AdminIntegrationsRoute: typeof AdminIntegrationsRoute
   AdminKnowledgeBaseRoute: typeof AdminKnowledgeBaseRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminServiceCalendarRoute: typeof AdminServiceCalendarRoute
   AdminServicesRoute: typeof AdminServicesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminSiteLeadsRoute: typeof AdminSiteLeadsRoute
@@ -883,6 +896,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/service-calendar': {
+      id: '/admin/service-calendar'
+      path: '/admin/service-calendar'
+      fullPath: '/admin/service-calendar'
+      preLoaderRoute: typeof AdminServiceCalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/services': {
@@ -1111,6 +1131,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIntegrationsRoute: AdminIntegrationsRoute,
   AdminKnowledgeBaseRoute: AdminKnowledgeBaseRoute,
   AdminLoginRoute: AdminLoginRoute,
+  AdminServiceCalendarRoute: AdminServiceCalendarRoute,
   AdminServicesRoute: AdminServicesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminSiteLeadsRoute: AdminSiteLeadsRoute,

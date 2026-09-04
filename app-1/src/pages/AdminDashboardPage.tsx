@@ -22,7 +22,7 @@ import { AdminOffersEditor } from "@/components/admin/AdminOffersEditor";
 import { AdminRequestDetail } from "@/components/admin/AdminRequestDetail";
 import { AdminRequestsPanel } from "@/components/admin/AdminRequestsPanel";
 import { AdminRoomsEditor } from "@/components/admin/AdminRoomsEditor";
-import { AdminServicesCalendar } from "@/components/admin/AdminServicesCalendar";
+import { AdminServicesCatalog } from "@/components/admin/AdminServicesCatalog";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSiteLeadsTable } from "@/components/admin/AdminSiteLeadsTable";
@@ -37,6 +37,7 @@ import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
 import { useAdmin } from "@/lib/admin/useAdmin";
 import { queryClient } from "@/lib/query/query-client";
+import { AdminServiceCalendarPage } from "@/pages/AdminServiceCalendarPage";
 import { ROUTES } from "@/route-constants";
 
 export const AdminDashboardPage = () => {
@@ -108,7 +109,10 @@ export const AdminDashboardPage = () => {
         <AdminSettingsPanel currentUserId={user.id} />
       )}
       {path === ROUTES.adminServices && can("dashboard.access") && (
-        <AdminServicesCalendar />
+        <AdminServicesCatalog />
+      )}
+      {path === ROUTES.adminServiceCalendar && can("dashboard.access") && (
+        <AdminServiceCalendarPage />
       )}
       {path === ROUTES.adminSiteManagementHome &&
         (can("site.access") || can("site.manage")) && <AdminHomeEditor />}

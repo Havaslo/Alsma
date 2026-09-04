@@ -18,6 +18,7 @@ export const ROUTES = {
   adminRequests: "/admin/requests",
   adminSettings: "/admin/settings",
   adminServices: "/admin/services",
+  adminServiceCalendar: "/admin/service-calendar",
   adminSiteLeads: "/admin/site-leads",
   adminSiteManagement: "/admin/site-management",
   adminSiteManagementAbout: "/admin/site-management/about",
