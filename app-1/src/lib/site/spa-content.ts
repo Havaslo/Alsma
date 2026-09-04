@@ -11,7 +11,12 @@ export type SpaPromotion = {
   imageName?: string;
 };
 export type SpaMenuItem = { name: string; description: string; price: string };
-export type SpaAdditionalService = { service: string; price: string };
+export type SpaAdditionalService = {
+  service: string;
+  price: string;
+  description?: string;
+  duration?: string;
+};
 const get = <T>(
   items: SiteContentItem[] | undefined,
   key: string,
@@ -36,16 +41,20 @@ const promotions = SPA_PROMOTIONS.map(
   }),
 );
 const additional = [
-  "Душ Шарко|800 ₽",
-  "Гидромассажная ванна|1 200 ₽",
-  "SPA-капсула водная|1 500 ₽",
-  "Дневное посещение — взрослые|1 000 ₽",
-  "Дневное посещение — дети|500 ₽",
-  "Абонемент на 8 посещений — взрослые|3 500 ₽",
-].map((v) => {
-  const [service, price] = v.split("|");
-  return { service, price };
-});
+  [
+    "Аренда SPA-комплекса",
+    "15 000 ₽",
+    "приватная аренда по предварительной записи",
+    "90 минут",
+  ],
+  ["Баня-бочка", "1 200 ₽", "минимальный заказ от 2 часов", "60 минут"],
+  ["Аренда халата", "150 ₽", "на время посещения", ""],
+].map(([service, price, description, duration]) => ({
+  service,
+  price,
+  description,
+  duration,
+}));
 const menu = [
   {
     name: "Травяной чай",
