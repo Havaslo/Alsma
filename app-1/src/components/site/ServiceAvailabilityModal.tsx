@@ -46,7 +46,7 @@ export const ServiceAvailabilityModal = ({
   };
   return (
     <Modal open={open} onClose={onClose} title="Выберите дату и время">
-      <div className="space-y-5 p-5 sm:p-6">
+      <div className="space-y-5 px-4 py-5 sm:px-6 sm:py-6">
         <div className="space-y-1 text-sm text-muted-ui-foreground">
           <p>
             <span className="font-semibold text-brand">Услуга:</span>{" "}
