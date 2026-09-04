@@ -2,6 +2,7 @@ import { Check, PartyPopper, Umbrella, Utensils, Waves } from "lucide-react";
 
 import heroImage from "@/assets/alsma/all-inclusive-hero.webp";
 import { AllInclusiveFinalSection } from "@/components/site/AllInclusiveSupportSections";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import {
@@ -76,6 +77,7 @@ export const AllInclusivePage = () => {
           })}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="all-inclusive" />
       <section className="py-10 sm:py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-3xl text-center">
@@ -119,11 +121,13 @@ export const AllInclusivePage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="all-inclusive" />
       <section className="px-5 pb-12 sm:px-8">
         <div className="mx-auto max-w-[100rem]">
           <FeatureSplit format={FEATURED_FORMATS[0]} />
         </div>
       </section>
+      <CatalogSections afterBlock={3} page="all-inclusive" />
       <DetailShowcase
         details={SPA_DETAILS}
         eyebrow="SPA-зона"
@@ -138,6 +142,7 @@ export const AllInclusivePage = () => {
         <FeatureSplit format={FEATURED_FORMATS[3]} reverse />
       </section>
       <AllInclusiveFinalSection />
+      <CatalogSections afterBlock={3} fallback page="all-inclusive" />
     </main>
   );
 };

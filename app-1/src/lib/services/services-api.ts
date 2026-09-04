@@ -20,6 +20,14 @@ export type Service = {
     readonly position: number;
   }>;
 };
+export type ServiceSection = {
+  readonly id: string;
+  readonly name: string;
+  readonly heading: string;
+  readonly subheading: string | null;
+  readonly blockNumber: number;
+  readonly services: Service[];
+};
 export type ServiceCartItem = {
   readonly variantId: string;
   readonly quantity: number;
@@ -32,6 +40,11 @@ export const loadServices = (signal?: AbortSignal, page?: string) =>
   apiClient.get<{ services: Service[] }>("/services", {
     signal,
     params: page ? { page } : undefined,
+  });
+export const loadServiceSections = (page: string, signal?: AbortSignal) =>
+  apiClient.get<{ sections: ServiceSection[] }>("/services/sections", {
+    signal,
+    params: { page },
   });
 export const loadServiceAvailability = (
   serviceId: string,

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import celebrationsHeroImage from "@/assets/alsma/celebrations-hero.jpg";
 import heroImage from "@/assets/alsma/spa-river-aerial.jpg";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { LeadRequestModal } from "@/components/site/LeadRequestModal";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -87,6 +88,7 @@ export const CelebrationsPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="celebrations" />
       <section className="mx-auto max-w-[100rem] px-5 pb-24 sm:px-8">
         <div className="relative overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground sm:px-10">
           <img
@@ -118,6 +120,7 @@ export const CelebrationsPage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="celebrations" />
       <section className="bg-panel py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
@@ -169,6 +172,7 @@ export const CelebrationsPage = () => {
         sourcePage="celebrations"
         title="Обсудим ваш визит"
       />
+      <CatalogSections afterBlock={2} fallback page="celebrations" />
     </main>
   );
 };

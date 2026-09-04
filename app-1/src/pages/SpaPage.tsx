@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 
 import spaHeroImage from "@/assets/alsma/spa-hero-new.jpg";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import {
@@ -74,6 +75,7 @@ export const SpaPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="spa" />
       <section className="py-8 sm:py-12 lg:py-12">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold">
@@ -108,6 +110,7 @@ export const SpaPage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="spa" />
       <section className="mx-auto max-w-[100rem] px-5 py-8 sm:px-8 sm:py-12 lg:py-12">
         <h2 className="text-center font-heading text-4xl font-semibold">
           Водные процедуры и бальнеотерапия
@@ -143,6 +146,7 @@ export const SpaPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={3} page="spa" />
       <SpaPromotionsSection
         items={spa.promotions}
         onOpenRequest={() => setOpen(true)}
@@ -152,6 +156,7 @@ export const SpaPage = () => {
         menu={spa.menu}
       />
       <SpaRequestModal onClose={() => setOpen(false)} open={open} />
+      <CatalogSections afterBlock={3} fallback page="spa" />
     </main>
   );
 };

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowUpRight, CalendarDays, Check, Tag } from "lucide-react";
 
 import heroImage from "@/assets/alsma/offers-hero.jpg";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Modal } from "@/components/ui/Modal";
@@ -187,6 +188,7 @@ export const OffersPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="offers" />
       <Modal
         className="bg-page text-page-foreground"
         hideHeader
@@ -292,6 +294,7 @@ export const OffersPage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="offers" />
       <section className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
@@ -448,6 +451,8 @@ export const OffersPage = () => {
           </ul>
         </div>
       </section>
+      <CatalogSections afterBlock={3} page="offers" />
+      <CatalogSections afterBlock={3} fallback page="offers" />
     </main>
   );
 };

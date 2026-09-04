@@ -1,5 +1,6 @@
 import corporateCheckinsImage from "@/assets/alsma/corporate-checkins.jpg";
 import heroImage from "@/assets/alsma/hero.jpg";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { HomeBookingBar } from "@/components/site/HomeBookingBar";
 import {
   HomePromotionsSection,
@@ -138,17 +139,23 @@ export const HomePage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="home" />
 
       <HomePromotionsSection offers={offers} />
+      <CatalogSections afterBlock={2} page="home" />
       <SocialLinksSection
         description="Публикуем специальные предложения, новости отеля, анонсы заездов и атмосферные кадры из лесного SPA-отдыха."
         title="Узнавайте первыми о новых акциях, событиях и красивых моментах отдыха в АЛСМА"
       />
+      <CatalogSections afterBlock={3} page="home" />
       <HomeRestSection cards={restCards} />
+      <CatalogSections afterBlock={4} page="home" />
       <HomeRoomsSection rooms={rooms} />
+      <CatalogSections afterBlock={5} page="home" />
       <HomeExperienceSections />
       <HomeReviewsSection reviews={reviews} />
       <HomeContactSections />
+      <CatalogSections afterBlock={5} fallback page="home" />
     </main>
   );
 };

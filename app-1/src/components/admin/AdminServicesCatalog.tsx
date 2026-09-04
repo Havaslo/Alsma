@@ -65,6 +65,7 @@ export const AdminServicesCatalog = () => {
     name: "",
     description: "",
     kind: "service" as "service" | "product",
+    status: "draft" as "draft" | "published" | "archived",
   });
   const [variants, setVariants] = useState<Variant[]>([blankVariant()]);
   const [originalVariantIds, setOriginalVariantIds] = useState<string[]>([]);
@@ -106,7 +107,7 @@ export const AdminServicesCatalog = () => {
   };
   const openNewCard = () => {
     setCardId(undefined);
-    setCard({ name: "", description: "", kind: "service" });
+    setCard({ name: "", description: "", kind: "service", status: "draft" });
     setVariants([blankVariant()]);
     setOriginalVariantIds([]);
     setCardError("");
@@ -122,6 +123,7 @@ export const AdminServicesCatalog = () => {
       name: item.name,
       description: item.description ?? "",
       kind: item.variants[0]?.name === "Товар" ? "product" : "service",
+      status: item.status,
     });
     const loadedVariants = item.variants.map((entry) => ({
       id: entry.id,
@@ -149,9 +151,7 @@ export const AdminServicesCatalog = () => {
           slug: `${section.pageSlug}-${serviceId}`,
           name: card.name,
           description: card.description,
-          status:
-            selected?.services.find((item) => item.id === serviceId)?.status ??
-            "draft",
+          status: card.status,
           sectionId,
         });
       else {
@@ -502,6 +502,23 @@ export const AdminServicesCatalog = () => {
             >
               <option value="service">Услуга</option>
               <option value="product">Товар</option>
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-brand">
+            Статус публикации
+            <select
+              className="mt-2 w-full rounded-xl border p-3"
+              value={card.status}
+              onChange={(event) =>
+                setCard({
+                  ...card,
+                  status: event.target.value as typeof card.status,
+                })
+              }
+            >
+              <option value="draft">Черновик</option>
+              <option value="published">Опубликовано</option>
+              <option value="archived">В архиве</option>
             </select>
           </label>
           <label className="block text-sm font-semibold text-brand">

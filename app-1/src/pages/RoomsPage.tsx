@@ -1,3 +1,4 @@
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { RoomCard } from "@/components/site/RoomCard";
 import { RoomsSupportSections } from "@/components/site/RoomsSupportSections";
@@ -55,6 +56,7 @@ export const RoomsPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="rooms" />
       <section className="bg-panel py-24">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold sm:text-5xl">
@@ -100,7 +102,9 @@ export const RoomsPage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="rooms" />
       <RoomsSupportSections rooms={rooms} />
+      <CatalogSections afterBlock={2} fallback page="rooms" />
     </main>
   );
 };

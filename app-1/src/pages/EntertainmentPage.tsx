@@ -1,6 +1,7 @@
 import { Check, RussianRuble } from "lucide-react";
 
 import entertainmentHeroImage from "@/assets/alsma/entertainment-hero-new.webp";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -129,6 +130,7 @@ export const EntertainmentPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="entertainment" />
       <section className="py-20">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
@@ -184,6 +186,7 @@ export const EntertainmentPage = () => {
           </HorizontalCarousel>
         </div>
       </section>
+      <CatalogSections afterBlock={2} page="entertainment" />
       <section className="mx-auto max-w-[100rem] px-5 py-20 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand">Каждый день</p>
@@ -221,6 +224,7 @@ export const EntertainmentPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={3} page="entertainment" />
       <section className="bg-panel py-20">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <div className="text-center">
@@ -338,6 +342,7 @@ export const EntertainmentPage = () => {
           </div>
         </div>
       </section>
+      <CatalogSections afterBlock={4} fallback page="entertainment" />
     </main>
   );
 };

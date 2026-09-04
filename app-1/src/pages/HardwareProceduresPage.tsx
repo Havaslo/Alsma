@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import heroImage from "@/assets/alsma/hardware-procedures-hero.webp";
+import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
@@ -98,6 +99,7 @@ export const HardwareProceduresPage = () => {
           ))}
         </div>
       </section>
+      <CatalogSections afterBlock={1} page="hardware-procedures" />
 
       <SpaRequestModal
         formCode="hardware-procedure-request"
@@ -106,6 +108,7 @@ export const HardwareProceduresPage = () => {
         procedureName={selectedProcedure ?? undefined}
         sourcePage="hardware-procedures"
       />
+      <CatalogSections afterBlock={1} fallback page="hardware-procedures" />
     </main>
   );
 };

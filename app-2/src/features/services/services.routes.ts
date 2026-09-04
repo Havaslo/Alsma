@@ -42,6 +42,24 @@ export const createServicesRouter = (database: Database): Router => {
     });
     response.json({ services });
   });
+  router.get("/sections", async (request, response) => {
+    const sections = await database.client.serviceSection.findMany({
+      where: { pageSlug: String(request.query.page ?? "") },
+      include: {
+        services: {
+          where: { status: "published" },
+          include: {
+            variants: {
+              where: { active: true },
+              orderBy: { price: "asc" },
+            },
+          },
+        },
+      },
+      orderBy: { blockNumber: "asc" },
+    });
+    response.json({ sections });
+  });
   router.get("/:serviceId/availability", async (request, response) => {
     const from = new Date(
       String(request.query.from ?? new Date().toISOString()),
