@@ -523,18 +523,22 @@ export const AdminServicesCatalog = () => {
               )}
             </div>
           ))}
-          {card.kind === "service" && (
-            <button
-              className="rounded-full border border-brand px-4 py-2 text-brand"
-              onClick={() =>
-                setVariants((current) => [...current, blankVariant()])
-              }
-              type="button"
-            >
-              + Добавить тип услуги
-            </button>
-          )}
-          <Button type="submit">Сохранить карточку</Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {card.kind === "service" && (
+              <button
+                className="rounded-full border border-brand px-4 py-2 text-brand"
+                onClick={() =>
+                  setVariants((current) => [...current, blankVariant()])
+                }
+                type="button"
+              >
+                + Добавить тип услуги
+              </button>
+            )}
+            <Button className="ml-auto" type="submit">
+              Сохранить карточку
+            </Button>
+          </div>
         </form>
       </Modal>
       <ConfirmModal

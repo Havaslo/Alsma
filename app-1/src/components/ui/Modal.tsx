@@ -132,7 +132,7 @@ export const Modal = ({
               aria-labelledby={titleId}
               aria-modal="true"
               className={cn(
-                "relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-2xl border border-line/70 bg-panel/95 text-panel-foreground shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl",
+                "relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-2xl border border-line/70 bg-white text-page-foreground shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl",
                 className,
               )}
               exit={{ opacity: 0, scale: 0.98, y: 8 }}
