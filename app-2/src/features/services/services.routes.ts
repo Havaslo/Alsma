@@ -270,7 +270,7 @@ export const createServicesRouter = (database: Database): Router => {
       const input = z
         .object({
           name: z.string().min(1),
-          description: z.string().nullable(),
+          description: z.string().nullable().optional(),
           price: z.number().nonnegative(),
           capacity: z.number().int().positive(),
           durationMin: z.number().int().positive().nullable(),

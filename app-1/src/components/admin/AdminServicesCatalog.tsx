@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -201,10 +202,14 @@ export const AdminServicesCatalog = () => {
       setCardOpen(false);
       refresh();
     } catch (error) {
+      const message = axios.isAxiosError<{ error?: { message?: string } }>(
+        error,
+      )
+        ? error.response?.data?.error?.message
+        : undefined;
       setCardError(
-        error instanceof Error
-          ? error.message
-          : "Не удалось сохранить карточку. Проверьте данные и попробуйте ещё раз.",
+        message ??
+          "Не удалось сохранить карточку. Проверьте данные и попробуйте ещё раз.",
       );
     }
   };
