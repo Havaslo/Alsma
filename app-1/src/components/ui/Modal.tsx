@@ -59,8 +59,13 @@ export const Modal = ({
 }: ModalProps) => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
   const reduceMotion = useReducedMotion();
   const titleId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,7 +75,7 @@ export const Modal = ({
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      onClose();
+      onCloseRef.current();
     };
     const focusFrame = window.requestAnimationFrame(() =>
       closeButtonRef.current?.focus(),
@@ -85,7 +90,7 @@ export const Modal = ({
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
-  }, [onClose, open]);
+  }, [open]);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     onKeyDown?.(event);

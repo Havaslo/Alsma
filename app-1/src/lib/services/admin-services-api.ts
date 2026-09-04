@@ -45,6 +45,7 @@ export type ServiceSection = {
     readonly id: string;
     readonly name: string;
     readonly description: string | null;
+    readonly status: "draft" | "published" | "archived";
     readonly variants: Array<{
       readonly id: string;
       readonly name: string;
@@ -98,6 +99,7 @@ export const updateService = (
     slug: string;
     name: string;
     description: string;
+    status: "draft" | "published" | "archived";
     sectionId?: string;
   },
 ) =>
@@ -134,6 +136,11 @@ export const updateVariant = (
   apiClient.put(
     `/services/admin/catalog/${serviceId}/variants/${variantId}`,
     input,
+    { headers: headers() },
+  );
+export const deleteVariant = (serviceId: string, variantId: string) =>
+  apiClient.delete(
+    `/services/admin/catalog/${serviceId}/variants/${variantId}`,
     { headers: headers() },
   );
 export const createPlacement = (

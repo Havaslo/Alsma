@@ -11,6 +11,7 @@ import {
   createServiceSection,
   createVariant,
   deleteService,
+  deleteVariant,
   loadServiceSections,
   updateService,
   updateServiceSection,
@@ -65,10 +66,12 @@ export const AdminServicesCatalog = () => {
     kind: "service" as "service" | "product",
   });
   const [variants, setVariants] = useState<Variant[]>([blankVariant()]);
+  const [originalVariantIds, setOriginalVariantIds] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
   }>();
+  const [cardError, setCardError] = useState("");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
   const selectSection = (id: string) => {
@@ -104,6 +107,8 @@ export const AdminServicesCatalog = () => {
     setCardId(undefined);
     setCard({ name: "", description: "", kind: "service" });
     setVariants([blankVariant()]);
+    setOriginalVariantIds([]);
+    setCardError("");
     setCardOpen(true);
   };
   const openEditCard = (
@@ -117,15 +122,16 @@ export const AdminServicesCatalog = () => {
       description: item.description ?? "",
       kind: item.variants[0]?.name === "Товар" ? "product" : "service",
     });
-    setVariants(
-      item.variants.map((entry) => ({
-        id: entry.id,
-        name: entry.name,
-        price: entry.price,
-        capacity: String(entry.capacity),
-        durationMin: entry.durationMin ? String(entry.durationMin) : "",
-      })),
-    );
+    const loadedVariants = item.variants.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      price: entry.price,
+      capacity: String(entry.capacity),
+      durationMin: entry.durationMin ? String(entry.durationMin) : "",
+    }));
+    setVariants(loadedVariants);
+    setOriginalVariantIds(item.variants.map((entry) => entry.id));
+    setCardError("");
     setCardOpen(true);
   };
   const saveCard = async (event: FormEvent) => {
@@ -135,43 +141,72 @@ export const AdminServicesCatalog = () => {
       card.kind === "product"
         ? [{ ...variants[0], name: "Товар", durationMin: "" }]
         : variants;
-    let serviceId = cardId;
-    if (serviceId)
-      await updateService(serviceId, {
-        slug: `${section.pageSlug}-${serviceId}`,
-        name: card.name,
-        description: card.description,
-        sectionId,
-      });
-    else {
-      const result = await createService({
-        slug: `${section.pageSlug}-${Date.now()}`,
-        name: card.name,
-        description: card.description,
-        sectionId,
-      });
-      serviceId = (result.data as { service: { id: string } }).service.id;
+    try {
+      let serviceId = cardId;
+      if (serviceId)
+        await updateService(serviceId, {
+          slug: `${section.pageSlug}-${serviceId}`,
+          name: card.name,
+          description: card.description,
+          status:
+            selected?.services.find((item) => item.id === serviceId)?.status ??
+            "draft",
+          sectionId,
+        });
+      else {
+        const result = await createService({
+          slug: `${section.pageSlug}-${card.name
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9а-яё]+/gi, "-")}`,
+          name: card.name,
+          description: card.description,
+          sectionId,
+        });
+        serviceId = (result.data as { service: { id: string } }).service.id;
+      }
+      const retainedIds = new Set(
+        entries.flatMap((entry) => (entry.id ? [entry.id] : [])),
+      );
+      if (cardId) {
+        const removed = originalVariantIds.filter(
+          (variantId) => !retainedIds.has(variantId),
+        );
+        await Promise.all(
+          removed.map((variantId) => deleteVariant(serviceId!, variantId)),
+        );
+      }
+      await Promise.all(
+        entries.map((entry) =>
+          entry.id
+            ? updateVariant(serviceId!, entry.id, {
+                name: entry.name,
+                price: Number(entry.price),
+                capacity: Number(entry.capacity),
+                durationMin: entry.durationMin
+                  ? Number(entry.durationMin)
+                  : null,
+                active: true,
+              })
+            : createVariant(serviceId!, {
+                name: entry.name,
+                price: Number(entry.price),
+                capacity: Number(entry.capacity),
+                durationMin: entry.durationMin
+                  ? Number(entry.durationMin)
+                  : null,
+              }),
+        ),
+      );
+      setCardOpen(false);
+      refresh();
+    } catch (error) {
+      setCardError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось сохранить карточку. Проверьте данные и попробуйте ещё раз.",
+      );
     }
-    await Promise.all(
-      entries.map((entry) =>
-        entry.id
-          ? updateVariant(serviceId!, entry.id, {
-              name: entry.name,
-              price: Number(entry.price),
-              capacity: Number(entry.capacity),
-              durationMin: entry.durationMin ? Number(entry.durationMin) : null,
-              active: true,
-            })
-          : createVariant(serviceId!, {
-              name: entry.name,
-              price: Number(entry.price),
-              capacity: Number(entry.capacity),
-              durationMin: entry.durationMin ? Number(entry.durationMin) : null,
-            }),
-      ),
-    );
-    setCardOpen(false);
-    refresh();
   };
   const updateVariantDraft = (index: number, patch: Partial<Variant>) =>
     setVariants((current) =>
@@ -428,6 +463,14 @@ export const AdminServicesCatalog = () => {
         title={cardId ? "Редактировать карточку" : "Создать карточку"}
       >
         <form className="space-y-4 p-6" onSubmit={saveCard}>
+          {cardError && (
+            <p
+              className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+              role="alert"
+            >
+              {cardError}
+            </p>
+          )}
           <label className="block text-sm font-semibold text-brand">
             Название карточки
             <input

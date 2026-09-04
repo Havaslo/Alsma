@@ -163,15 +163,45 @@ export const createServicesRouter = (database: Database): Router => {
   );
   admin.use(createRequireAdminPermission("dashboard.access"));
   admin.get("/sections", async (_request, response) => {
-    response.json({ sections: await database.client.serviceSection.findMany({ include: { services: { include: { variants: true, placements: true } } }, orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }] }) });
+    response.json({
+      sections: await database.client.serviceSection.findMany({
+        include: {
+          services: { include: { variants: true, placements: true } },
+        },
+        orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }],
+      }),
+    });
   });
   admin.post("/sections", async (request, response) => {
-    const input = z.object({ name: z.string().min(1), pageSlug: z.string().min(1), heading: z.string().min(1), subheading: z.string().optional(), blockNumber: z.number().int().positive() }).parse(request.body);
-    response.status(201).json({ section: await database.client.serviceSection.create({ data: input }) });
+    const input = z
+      .object({
+        name: z.string().min(1),
+        pageSlug: z.string().min(1),
+        heading: z.string().min(1),
+        subheading: z.string().optional(),
+        blockNumber: z.number().int().positive(),
+      })
+      .parse(request.body);
+    response.status(201).json({
+      section: await database.client.serviceSection.create({ data: input }),
+    });
   });
   admin.put("/sections/:sectionId", async (request, response) => {
-    const input = z.object({ name: z.string().min(1), pageSlug: z.string().min(1), heading: z.string().min(1), subheading: z.string().nullable(), blockNumber: z.number().int().positive() }).parse(request.body);
-    response.json({ section: await database.client.serviceSection.update({ where: { id: request.params.sectionId }, data: input }) });
+    const input = z
+      .object({
+        name: z.string().min(1),
+        pageSlug: z.string().min(1),
+        heading: z.string().min(1),
+        subheading: z.string().nullable(),
+        blockNumber: z.number().int().positive(),
+      })
+      .parse(request.body);
+    response.json({
+      section: await database.client.serviceSection.update({
+        where: { id: request.params.sectionId },
+        data: input,
+      }),
+    });
   });
   admin.get("/catalog", async (_request, response) => {
     response.json({
@@ -201,6 +231,7 @@ export const createServicesRouter = (database: Database): Router => {
         name: z.string().min(1),
         description: z.string().nullable(),
         status: z.enum(["draft", "published", "archived"]),
+        sectionId: z.string().uuid().optional(),
       })
       .parse(request.body);
     response.json({
@@ -211,7 +242,9 @@ export const createServicesRouter = (database: Database): Router => {
     });
   });
   admin.delete("/catalog/:serviceId", async (request, response) => {
-    await database.client.service.delete({ where: { id: request.params.serviceId } });
+    await database.client.service.delete({
+      where: { id: request.params.serviceId },
+    });
     response.status(204).end();
   });
   admin.post("/catalog/:serviceId/variants", async (request, response) => {
@@ -250,6 +283,24 @@ export const createServicesRouter = (database: Database): Router => {
           data: input,
         }),
       });
+    },
+  );
+  admin.delete(
+    "/catalog/:serviceId/variants/:variantId",
+    async (request, response) => {
+      const variant = await database.client.serviceVariant.findFirst({
+        where: {
+          id: request.params.variantId,
+          serviceId: request.params.serviceId,
+        },
+        select: { id: true },
+      });
+      if (!variant)
+        return response.status(404).json({ error: "VARIANT_NOT_FOUND" });
+      await database.client.serviceVariant.delete({
+        where: { id: variant.id },
+      });
+      response.status(204).end();
     },
   );
   admin.post("/catalog/:serviceId/placements", async (request, response) => {
