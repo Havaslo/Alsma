@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -421,6 +422,7 @@ export const AdminServicesCatalog = () => {
         </form>
       </Modal>
       <Modal
+        className="max-w-5xl"
         onClose={() => setCardOpen(false)}
         open={cardOpen}
         title={cardId ? "Редактировать карточку" : "Создать карточку"}
@@ -474,7 +476,10 @@ export const AdminServicesCatalog = () => {
             </span>
           </div>
           {variants.map((entry, index) => (
-            <div className="grid gap-3 md:grid-cols-4" key={entry.id ?? index}>
+            <div
+              className="grid items-end gap-3 md:grid-cols-[minmax(14rem,1.5fr)_minmax(7rem,1fr)_minmax(10rem,1fr)_minmax(9rem,1fr)_2.5rem]"
+              key={entry.id ?? index}
+            >
               <input
                 className="rounded-xl border p-3"
                 placeholder={card.kind === "product" ? "Цена" : "Тип услуги"}
@@ -528,7 +533,9 @@ export const AdminServicesCatalog = () => {
               />
               {card.kind === "service" && (
                 <button
-                  className="text-sm text-brand underline"
+                  aria-label="Удалить тип услуги"
+                  title="Удалить тип услуги"
+                  className="grid size-10 place-items-center rounded-full border border-line text-brand transition hover:border-red-300 hover:text-red-700"
                   disabled={variants.length === 1}
                   onClick={() =>
                     setVariants((current) =>
@@ -537,7 +544,7 @@ export const AdminServicesCatalog = () => {
                   }
                   type="button"
                 >
-                  Удалить
+                  <Trash2 className="size-4" />
                 </button>
               )}
             </div>
