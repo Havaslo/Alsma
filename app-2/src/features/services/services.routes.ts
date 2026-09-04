@@ -102,14 +102,12 @@ export const createServicesRouter = (database: Database): Router => {
         (item) => item.quantity > byId.get(item.variantId)!.capacity,
       )
     )
-      return response
-        .status(400)
-        .json({
-          error: {
-            code: "CAPACITY_EXCEEDED",
-            message: "Количество гостей превышает вместимость варианта.",
-          },
-        });
+      return response.status(400).json({
+        error: {
+          code: "CAPACITY_EXCEEDED",
+          message: "Количество гостей превышает вместимость варианта.",
+        },
+      });
     const total = input.items.reduce(
       (sum, item) =>
         sum + Number(byId.get(item.variantId)!.price) * item.quantity,
@@ -207,7 +205,7 @@ export const createServicesRouter = (database: Database): Router => {
         description: z.string().optional(),
         price: z.number().nonnegative(),
         capacity: z.number().int().positive(),
-        durationMin: z.number().int().positive(),
+        durationMin: z.number().int().positive().nullable(),
         active: z.boolean().default(true),
       })
       .parse(request.body);
@@ -226,7 +224,7 @@ export const createServicesRouter = (database: Database): Router => {
           description: z.string().nullable(),
           price: z.number().nonnegative(),
           capacity: z.number().int().positive(),
-          durationMin: z.number().int().positive(),
+          durationMin: z.number().int().positive().nullable(),
           active: z.boolean(),
         })
         .parse(request.body);
