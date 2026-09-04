@@ -210,6 +210,10 @@ export const createServicesRouter = (database: Database): Router => {
       }),
     });
   });
+  admin.delete("/catalog/:serviceId", async (request, response) => {
+    await database.client.service.delete({ where: { id: request.params.serviceId } });
+    response.status(204).end();
+  });
   admin.post("/catalog/:serviceId/variants", async (request, response) => {
     const input = z
       .object({

@@ -92,6 +92,22 @@ export const createService = (input: {
   description?: string;
   sectionId?: string;
 }) => apiClient.post("/services/admin/catalog", input, { headers: headers() });
+export const updateService = (
+  serviceId: string,
+  input: {
+    slug: string;
+    name: string;
+    description: string;
+    sectionId?: string;
+  },
+) =>
+  apiClient.put(`/services/admin/catalog/${serviceId}`, input, {
+    headers: headers(),
+  });
+export const deleteService = (serviceId: string) =>
+  apiClient.delete(`/services/admin/catalog/${serviceId}`, {
+    headers: headers(),
+  });
 export const createVariant = (
   serviceId: string,
   input: {
@@ -104,6 +120,22 @@ export const createVariant = (
   apiClient.post(`/services/admin/catalog/${serviceId}/variants`, input, {
     headers: headers(),
   });
+export const updateVariant = (
+  serviceId: string,
+  variantId: string,
+  input: {
+    name: string;
+    price: number;
+    capacity: number;
+    durationMin: number | null;
+    active: boolean;
+  },
+) =>
+  apiClient.put(
+    `/services/admin/catalog/${serviceId}/variants/${variantId}`,
+    input,
+    { headers: headers() },
+  );
 export const createPlacement = (
   serviceId: string,
   input: { pageSlug: string; position: number },
