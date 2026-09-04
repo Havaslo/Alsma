@@ -58,8 +58,7 @@ export const loadServiceAvailability = (
       signal,
       params: {
         variantId,
-        from: `${date}T00:00:00.000Z`,
-        to: `${date}T23:59:59.000Z`,
+        date,
       },
     },
   );

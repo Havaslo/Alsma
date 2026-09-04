@@ -1,93 +1,6 @@
-import { useState } from "react";
-
-import { CalendarDays } from "lucide-react";
-
+import { ServiceVariantCard } from "@/components/site/ServiceVariantCard";
 import { useApiQuery } from "@/lib/query/use-api-query";
-import { useServiceCart } from "@/lib/services/service-cart";
-import {
-  type Service,
-  type ServiceVariant,
-  loadServiceAvailability,
-  loadServiceSections,
-} from "@/lib/services/services-api";
-
-const VariantOption = ({
-  service,
-  variant,
-}: {
-  readonly service: Service;
-  readonly variant: ServiceVariant;
-}) => {
-  const cart = useServiceCart();
-  const [date, setDate] = useState("");
-  const availability = useApiQuery(
-    ["catalog-availability", variant.id, date],
-    (signal) => loadServiceAvailability(service.id, variant.id, date, signal),
-    { enabled: Boolean(date), errorMessage: "Не удалось загрузить слоты." },
-  );
-
-  return (
-    <div className="rounded-2xl bg-page p-4">
-      <div className="flex justify-between gap-3">
-        <strong>{variant.name}</strong>
-        <span className="font-semibold text-brand">
-          {Number(variant.price).toLocaleString("ru-RU")} ₽
-        </span>
-      </div>
-      <p className="mt-2 text-xs text-muted-ui-foreground">
-        {variant.durationMin ? `${variant.durationMin} минут · ` : ""}
-        Вместимость: {variant.capacity}
-      </p>
-      <label className="mt-3 block text-xs font-semibold text-brand">
-        Дата
-        <input
-          className="mt-1 w-full rounded-xl border border-line bg-panel p-2"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-      </label>
-      {date ? (
-        <label className="mt-3 block text-xs font-semibold text-brand">
-          Свободный слот
-          <select
-            className="mt-1 w-full rounded-xl border border-line bg-panel p-2"
-            defaultValue=""
-            onChange={(event) => {
-              if (event.target.value)
-                cart.add({
-                  variantId: variant.id,
-                  quantity: 1,
-                  startsAt: event.target.value,
-                  serviceName: service.name,
-                  variantName: variant.name,
-                });
-            }}
-          >
-            <option value="">Выберите время</option>
-            {availability.data?.blocks.map((slot) => (
-              <option key={slot.startsAt} value={slot.startsAt}>
-                {new Date(slot.startsAt).toLocaleTimeString("ru-RU", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-                –
-                {new Date(slot.endsAt).toLocaleTimeString("ru-RU", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <p className="mt-3 flex items-center gap-2 text-xs text-muted-ui-foreground">
-          <CalendarDays className="size-4" /> Выберите дату и слот
-        </p>
-      )}
-    </div>
-  );
-};
+import { loadServiceSections } from "@/lib/services/services-api";
 
 export const CatalogSections = ({
   afterBlock,
@@ -147,7 +60,7 @@ export const CatalogSections = ({
                 )}
                 <div className="mt-6 space-y-3">
                   {service.variants.map((variant) => (
-                    <VariantOption
+                    <ServiceVariantCard
                       key={variant.id}
                       service={service}
                       variant={variant}

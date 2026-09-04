@@ -8,6 +8,11 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import {
+  isProductVariant,
+  isServiceSlotAvailable,
+  listServiceAvailability,
+} from "./service-availability.js";
 
 const orderSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -61,48 +66,32 @@ export const createServicesRouter = (database: Database): Router => {
     response.json({ sections });
   });
   router.get("/:serviceId/availability", async (request, response) => {
-    const from = new Date(
-      String(request.query.from ?? new Date().toISOString()),
-    );
-    const to = new Date(
-      String(
-        request.query.to ?? new Date(Date.now() + 30 * 86400000).toISOString(),
-      ),
-    );
-    const blocks = await database.client.serviceScheduleBlock.findMany({
+    const variantId = String(request.query.variantId ?? "");
+    const date = String(request.query.date ?? "");
+    const quantity = Math.max(1, Number(request.query.quantity ?? 1));
+    const variant = await database.client.serviceVariant.findFirst({
       where: {
+        id: variantId,
         serviceId: request.params.serviceId,
-        variantId: request.query.variantId
-          ? String(request.query.variantId)
-          : undefined,
-        startsAt: { gte: from, lte: to },
+        active: true,
       },
-      orderBy: { startsAt: "asc" },
     });
-    const freeBlocks = await Promise.all(
-      blocks.map(async (block) => {
-        const booked = await database.client.serviceBooking.count({
-          where: {
-            variantId: String(request.query.variantId),
-            startsAt: { lt: block.endsAt },
-            endsAt: { gt: block.startsAt },
-            status: { not: "cancelled" },
-          },
-        });
-        return booked < block.capacity ? block : null;
-      }),
-    );
-    response.json({ blocks: freeBlocks.filter(Boolean) });
+    if (!variant)
+      return response
+        .status(404)
+        .json({ error: { code: "VARIANT_UNAVAILABLE" } });
+    response.json({
+      blocks: await listServiceAvailability(
+        database.client,
+        request.params.serviceId,
+        variant,
+        date,
+        quantity,
+      ),
+    });
   });
   router.post("/orders", async (request, response) => {
     const input = orderSchema.parse(request.body);
-    if (input.items.some((item) => !item.startsAt))
-      return response.status(400).json({
-        error: {
-          code: "BOOKING_SLOT_REQUIRED",
-          message: "Для каждой услуги выберите дату и слот.",
-        },
-      });
     const variants = await database.client.serviceVariant.findMany({
       where: {
         id: { in: input.items.map((item) => item.variantId) },
@@ -117,6 +106,18 @@ export const createServicesRouter = (database: Database): Router => {
     const byId = new Map(variants.map((variant) => [variant.id, variant]));
     if (
       input.items.some(
+        (item) =>
+          !isProductVariant(byId.get(item.variantId)!.name) && !item.startsAt,
+      )
+    )
+      return response.status(400).json({
+        error: {
+          code: "BOOKING_SLOT_REQUIRED",
+          message: "Для каждой услуги выберите дату и слот.",
+        },
+      });
+    if (
+      input.items.some(
         (item) => item.quantity > byId.get(item.variantId)!.capacity,
       )
     )
@@ -126,6 +127,27 @@ export const createServicesRouter = (database: Database): Router => {
           message: "Количество гостей превышает вместимость варианта.",
         },
       });
+    for (const item of input.items) {
+      const variant = byId.get(item.variantId)!;
+      if (isProductVariant(variant.name)) continue;
+      const startsAt = new Date(item.startsAt!);
+      if (
+        Number.isNaN(startsAt.getTime()) ||
+        !(await isServiceSlotAvailable(
+          database.client,
+          variant.serviceId,
+          variant,
+          startsAt,
+          item.quantity,
+        ))
+      )
+        return response.status(400).json({
+          error: {
+            code: "BOOKING_SLOT_UNAVAILABLE",
+            message: "Выбранное время больше недоступно. Выберите другой слот.",
+          },
+        });
+    }
     const total = input.items.reduce(
       (sum, item) =>
         sum + Number(byId.get(item.variantId)!.price) * item.quantity,
@@ -145,7 +167,7 @@ export const createServicesRouter = (database: Database): Router => {
               serviceId: variant.serviceId,
               quantity: item.quantity,
               unitPrice: variant.price,
-              ...(item.startsAt
+              ...(item.startsAt && !isProductVariant(variant.name)
                 ? {
                     booking: {
                       create: {

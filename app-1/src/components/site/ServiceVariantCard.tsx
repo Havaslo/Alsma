@@ -1,0 +1,60 @@
+import { useState } from "react";
+
+import { ServiceAvailabilityModal } from "@/components/site/ServiceAvailabilityModal";
+import { useServiceCart } from "@/lib/services/service-cart";
+import { type Service, type ServiceVariant } from "@/lib/services/services-api";
+
+export const ServiceVariantCard = ({
+  service,
+  variant,
+}: {
+  readonly service: Service;
+  readonly variant: ServiceVariant;
+}) => {
+  const cart = useServiceCart();
+  const [modalOpen, setModalOpen] = useState(false);
+  const isProduct = variant.name.trim().toLocaleLowerCase("ru-RU") === "товар";
+  return (
+    <>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-page p-4">
+        <div className="min-w-0">
+          <strong className="block truncate text-brand">{variant.name}</strong>
+          {!isProduct && (
+            <span className="mt-1 block text-xs text-muted-ui-foreground">
+              {variant.durationMin ?? 60} минут
+            </span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="font-semibold text-brand">
+            {Number(variant.price).toLocaleString("ru-RU")} ₽
+          </span>
+          <button
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
+            onClick={() => {
+              if (isProduct) {
+                cart.add({
+                  variantId: variant.id,
+                  quantity: 1,
+                  serviceName: service.name,
+                  variantName: variant.name,
+                });
+              } else setModalOpen(true);
+            }}
+            type="button"
+          >
+            Добавить
+          </button>
+        </div>
+      </div>
+      {!isProduct && (
+        <ServiceAvailabilityModal
+          onClose={() => setModalOpen(false)}
+          open={modalOpen}
+          service={service}
+          variant={variant}
+        />
+      )}
+    </>
+  );
+};

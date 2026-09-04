@@ -50,11 +50,14 @@ export const ServiceCartPopup = ({
                 >
                   <span>
                     {item.serviceName ?? "Услуга"} ·{" "}
-                    {item.variantName ?? item.variantId} ·{" "}
-                    {new Date(item.startsAt!).toLocaleString("ru-RU")}
+                    {item.variantName ?? item.variantId}
+                    {item.startsAt &&
+                      ` · ${item.startsAt.slice(0, 10)} ${item.startsAt.slice(11, 16)}`}
                   </span>
                   <button
-                    onClick={() => cart.remove(item.variantId, item.startsAt!)}
+                    onClick={() =>
+                      cart.remove(item.variantId, item.startsAt ?? "")
+                    }
                     type="button"
                   >
                     Убрать
