@@ -2,6 +2,7 @@ import { ServiceVariantCard } from "@/components/site/ServiceVariantCard";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { useApiQuery } from "@/lib/query/use-api-query";
 import { loadServices } from "@/lib/services/services-api";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 export const ServicesPage = () => {
   const services = useApiQuery(["services"], (signal) => loadServices(signal));
@@ -27,6 +28,13 @@ export const ServicesPage = () => {
               className="rounded-3xl border border-line bg-white p-6"
               key={service.id}
             >
+              {service.imageUrl && (
+                <img
+                  alt=""
+                  className="-mx-6 -mt-6 mb-6 aspect-video w-[calc(100%+3rem)] rounded-t-3xl object-cover"
+                  src={resolveMediaUrl(service.imageUrl)}
+                />
+              )}
               <h2 className="font-heading text-2xl font-semibold text-brand">
                 {service.name}
               </h2>

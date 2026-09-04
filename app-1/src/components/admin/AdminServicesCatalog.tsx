@@ -4,7 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Trash2 } from "lucide-react";
 
-import { AdminServiceCardModal } from "@/components/admin/AdminServiceCardModal";
+import {
+  AdminServiceCardModal,
+  type ServiceCardDraft,
+} from "@/components/admin/AdminServiceCardModal";
 import { AdminServicesTable } from "@/components/admin/AdminServicesTable";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -63,11 +66,12 @@ export const AdminServicesCatalog = () => {
   const [sectionOpen, setSectionOpen] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
   const [cardId, setCardId] = useState<string>();
-  const [card, setCard] = useState({
+  const [card, setCard] = useState<ServiceCardDraft>({
     name: "",
     description: "",
     kind: "service" as "service" | "product",
     status: "draft" as "draft" | "published" | "archived",
+    imageUrl: "",
   });
   const [variants, setVariants] = useState<Variant[]>([blankVariant()]);
   const [originalVariantIds, setOriginalVariantIds] = useState<string[]>([]);
@@ -113,7 +117,13 @@ export const AdminServicesCatalog = () => {
   };
   const openNewCard = () => {
     setCardId(undefined);
-    setCard({ name: "", description: "", kind: "service", status: "draft" });
+    setCard({
+      name: "",
+      description: "",
+      kind: "service",
+      status: "draft",
+      imageUrl: "",
+    });
     setVariants([blankVariant()]);
     setOriginalVariantIds([]);
     setCardError("");
@@ -130,6 +140,7 @@ export const AdminServicesCatalog = () => {
       description: item.description ?? "",
       kind: item.variants[0]?.name === "Товар" ? "product" : "service",
       status: item.status,
+      imageUrl: item.imageUrl ?? "",
     });
     const loadedVariants = item.variants.map((entry) => ({
       id: entry.id,
@@ -159,6 +170,7 @@ export const AdminServicesCatalog = () => {
           description: card.description,
           status: card.status,
           sectionId,
+          imageUrl: card.imageUrl || null,
         });
       else {
         const result = await createService({
@@ -169,6 +181,7 @@ export const AdminServicesCatalog = () => {
           name: card.name,
           description: card.description,
           sectionId,
+          imageUrl: card.imageUrl || null,
         });
         serviceId = (result.data as { service: { id: string } }).service.id;
       }

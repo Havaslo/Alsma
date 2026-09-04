@@ -256,6 +256,7 @@ export const createServicesRouter = (database: Database): Router => {
         slug: z.string().min(1),
         name: z.string().min(1),
         description: z.string().optional(),
+        imageUrl: z.string().url().nullable().optional(),
         status: z.enum(["draft", "published", "archived"]).default("draft"),
         sectionId: z.string().uuid().optional(),
       })
@@ -270,6 +271,7 @@ export const createServicesRouter = (database: Database): Router => {
         slug: z.string().min(1),
         name: z.string().min(1),
         description: z.string().nullable(),
+        imageUrl: z.string().url().nullable().optional(),
         status: z.enum(["draft", "published", "archived"]),
         sectionId: z.string().uuid().optional(),
       })

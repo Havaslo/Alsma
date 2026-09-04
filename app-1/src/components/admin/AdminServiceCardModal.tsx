@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { MediaUploadField } from "@/components/ui/MediaUploadField";
 import { Modal } from "@/components/ui/Modal";
 
 type Variant = {
@@ -12,17 +13,23 @@ type Variant = {
   capacity: string;
   durationMin: string;
 };
-type Card = { name: string; description: string; kind: "service" | "product" };
+export type ServiceCardDraft = {
+  name: string;
+  description: string;
+  kind: "service" | "product";
+  status: "draft" | "published" | "archived";
+  imageUrl: string;
+};
 
 type Props = {
   open: boolean;
   cardId?: string;
-  card: Card;
+  card: ServiceCardDraft;
   variants: Variant[];
   error: string;
   onClose: () => void;
   onSubmit: (event: FormEvent) => void;
-  onCardChange: (card: Card) => void;
+  onCardChange: (card: ServiceCardDraft) => void;
   onVariantChange: (index: number, patch: Partial<Variant>) => void;
   onRemoveVariant: (index: number) => void;
   onAddVariant: () => void;
@@ -68,13 +75,21 @@ export const AdminServiceCardModal = ({
           }
         />
       </label>
+      <MediaUploadField
+        currentUrl={card.imageUrl}
+        label="Загрузить изображение"
+        onUploaded={(asset) => onCardChange({ ...card, imageUrl: asset.url })}
+      />
       <label className="block text-sm font-semibold text-brand">
         Тип карточки
         <select
           className="mt-2 w-full rounded-xl border p-3"
           value={card.kind}
           onChange={(event) =>
-            onCardChange({ ...card, kind: event.target.value as Card["kind"] })
+            onCardChange({
+              ...card,
+              kind: event.target.value as ServiceCardDraft["kind"],
+            })
           }
         >
           <option value="service">Услуга</option>

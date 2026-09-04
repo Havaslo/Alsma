@@ -46,6 +46,7 @@ export type ServiceSection = {
     readonly name: string;
     readonly slug: string;
     readonly description: string | null;
+    readonly imageUrl: string | null;
     readonly status: "draft" | "published" | "archived";
     readonly variants: Array<{
       readonly id: string;
@@ -93,6 +94,7 @@ export const createService = (input: {
   name: string;
   description?: string;
   sectionId?: string;
+  imageUrl?: string | null;
 }) => apiClient.post("/services/admin/catalog", input, { headers: headers() });
 export const updateService = (
   serviceId: string,
@@ -102,6 +104,7 @@ export const updateService = (
     description: string;
     status: "draft" | "published" | "archived";
     sectionId?: string;
+    imageUrl?: string | null;
   },
 ) =>
   apiClient.put(`/services/admin/catalog/${serviceId}`, input, {

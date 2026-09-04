@@ -14,6 +14,7 @@ export type Service = {
   readonly slug: string;
   readonly name: string;
   readonly description: string | null;
+  readonly imageUrl: string | null;
   readonly variants: ServiceVariant[];
   readonly placements: Array<{
     readonly pageSlug: string;
