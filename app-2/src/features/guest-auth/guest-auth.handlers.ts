@@ -6,19 +6,9 @@ import type {
   VerifyCodeBody,
 } from "./guest-auth.schemas.js";
 import type { GuestAuthService } from "./guest-auth.service.js";
+import { readGuestToken } from "./guest-session.js";
 
 export const GUEST_SESSION_COOKIE = "alsma_guest_session";
-const bearerToken = (authorization: string | undefined): string | null =>
-  authorization?.startsWith("Bearer ") ? authorization.slice(7) : null;
-const requestToken = (request: {
-  headers: { authorization?: string; cookie?: string };
-}) => {
-  const cookie = request.headers.cookie?.split(";").map((item) => item.trim());
-  const token = cookie
-    ?.find((item) => item.startsWith(`${GUEST_SESSION_COOKIE}=`))
-    ?.split("=")[1];
-  return token ?? bearerToken(request.headers.authorization);
-};
 const sessionCookie = (token: string, maxAge: number) =>
   `${GUEST_SESSION_COOKIE}=${token}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`;
 
@@ -26,7 +16,7 @@ export const createCompleteProfileHandler =
   (service: GuestAuthService): RequestHandler =>
   async (request, response) => {
     const guest = await service.completeProfile(
-      requestToken(request) ?? "",
+      readGuestToken(request) ?? "",
       response.locals.input.body as CompleteProfileBody,
     );
     response.json({ authenticated: true, guest });
@@ -35,12 +25,12 @@ export const createCompleteProfileHandler =
 export const createMeHandler =
   (service: GuestAuthService): RequestHandler =>
   async (request, response) => {
-    response.json(await service.me(requestToken(request)));
+    response.json(await service.me(readGuestToken(request)));
   };
 export const createLogoutHandler =
   (service: GuestAuthService): RequestHandler =>
   async (request, response) => {
-    response.json(await service.logout(requestToken(request)));
+    response.json(await service.logout(readGuestToken(request)));
     response.setHeader("Set-Cookie", sessionCookie("", 0));
   };
 

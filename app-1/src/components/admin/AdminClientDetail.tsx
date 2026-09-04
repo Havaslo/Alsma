@@ -210,6 +210,41 @@ export const AdminClientDetail = ({
         </div>
       </section>
 
+      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+        <h2 className="text-xl font-semibold">Купленные услуги</h2>
+        <p className="mt-1 text-sm text-muted-ui-foreground">
+          Оплаченные покупки из личного кабинета клиента.
+        </p>
+        <div className="mt-5 space-y-3">
+          {client.serviceOrders.map((order) => (
+            <article
+              className="rounded-2xl border border-line bg-page p-4"
+              key={order.id}
+            >
+              <div className="flex flex-wrap justify-between gap-2">
+                <strong>{formatDate(order.createdAt)}</strong>
+                <span className="font-semibold text-brand">
+                  {formatMoney(order.total)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted-ui-foreground">
+                {order.items
+                  .map(
+                    ({ service, variant, quantity }) =>
+                      `${service.name} · ${variant.name} × ${quantity}`,
+                  )
+                  .join(", ")}
+              </p>
+            </article>
+          ))}
+          {!client.serviceOrders.length && (
+            <p className="rounded-2xl border border-line bg-page p-5 text-sm text-muted-ui-foreground">
+              Оплаченных услуг пока нет.
+            </p>
+          )}
+        </div>
+      </section>
+
       {editOpen && (
         <AdminClientEditModal
           client={client}

@@ -8,6 +8,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import { hashGuestToken, readGuestToken } from "../guest-auth/guest-session.js";
 import {
   isProductVariant,
   isServiceSlotAvailable,
@@ -126,6 +127,25 @@ export const createServicesRouter = (database: Database): Router => {
   });
   router.post("/orders", async (request, response) => {
     const input = orderSchema.parse(request.body);
+    const token = readGuestToken(request);
+    const session = token
+      ? await database.client.guestLoginCode.findFirst({
+          where: {
+            codeHash: hashGuestToken(token),
+            consumedAt: { not: null },
+            expiresAt: { gt: new Date() },
+          },
+          select: { userId: true },
+        })
+      : null;
+    const userId =
+      session?.userId ??
+      (
+        await database.client.guestUser.findFirst({
+          where: { email: input.email.trim().toLowerCase() },
+          select: { id: true },
+        })
+      )?.id;
     const variants = await database.client.serviceVariant.findMany({
       where: {
         id: { in: input.items.map((item) => item.variantId) },
@@ -192,6 +212,10 @@ export const createServicesRouter = (database: Database): Router => {
         name: input.name,
         email: input.email,
         phone: input.phone,
+        userId,
+        paymentStatus: "succeeded",
+        paidAt: new Date(),
+        status: "paid",
         total,
         items: {
           create: input.items.map((item) => {
@@ -221,6 +245,9 @@ export const createServicesRouter = (database: Database): Router => {
         },
       },
       include: { items: true },
+    });
+    await database.client.paymentAttempt.create({
+      data: { orderId: order.id, provider: "demo", status: "succeeded" },
     });
     response.status(201).json({
       orderId: order.id,

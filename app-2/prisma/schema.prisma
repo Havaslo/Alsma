@@ -192,6 +192,8 @@ model ServiceOrder {
   email           String
   phone           String
   status          String             @default("new")
+  paymentStatus   String             @default("pending") @map("payment_status")
+  paidAt          DateTime?          @map("paid_at") @db.Timestamptz(3)
   total           Decimal            @db.Decimal(12, 2)
   currency        String             @default("RUB")
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)

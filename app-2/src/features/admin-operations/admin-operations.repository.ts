@@ -250,7 +250,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
         include: {
           bonusProgram: true,
           bookings: { select: { epteraReservationId: true } },
-          _count: { select: { bookings: true } },
+          _count: { select: { bookings: true, serviceOrders: true } },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -271,6 +271,11 @@ export const createAdminOperationsRepository = (database: Database) => ({
       include: {
         bonusProgram: true,
         bookings: { orderBy: { checkInDate: "desc" } },
+        serviceOrders: {
+          where: { paymentStatus: "succeeded" },
+          orderBy: { createdAt: "desc" },
+          include: { items: { include: { service: true, variant: true } } },
+        },
         _count: { select: { bookings: true } },
       },
       where: { id: recordId },

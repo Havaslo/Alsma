@@ -57,7 +57,7 @@ export type AgentRequest = {
 };
 export type BookingRequest = AgentRequest;
 export type AdminClient = {
-  readonly _count: { bookings: number };
+  readonly _count: { bookings: number; serviceOrders: number };
   readonly bonusProgram: { balance: number; level: string } | null;
   readonly createdAt: string;
   readonly fullName: string | null;
@@ -79,6 +79,17 @@ export type AdminClientBooking = {
 };
 export type AdminClientDetail = AdminClient & {
   readonly bookings: AdminClientBooking[];
+  readonly serviceOrders: Array<{
+    readonly id: string;
+    readonly createdAt: string;
+    readonly total: string;
+    readonly currency: string;
+    readonly items: Array<{
+      readonly quantity: number;
+      readonly service: { readonly name: string };
+      readonly variant: { readonly name: string };
+    }>;
+  }>;
 };
 export type AdminRequest = {
   readonly agentStopped?: boolean;
