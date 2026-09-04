@@ -426,34 +426,53 @@ export const AdminServicesCatalog = () => {
         title={cardId ? "Редактировать карточку" : "Создать карточку"}
       >
         <form className="space-y-4 p-6" onSubmit={saveCard}>
-          <input
-            className="w-full rounded-xl border p-3"
-            placeholder="Название"
-            required
-            value={card.name}
-            onChange={(event) => setCard({ ...card, name: event.target.value })}
-          />
-          <select
-            className="w-full rounded-xl border p-3"
-            value={card.kind}
-            onChange={(event) =>
-              setCard({
-                ...card,
-                kind: event.target.value as "service" | "product",
-              })
-            }
-          >
-            <option value="service">Услуга</option>
-            <option value="product">Товар</option>
-          </select>
-          <textarea
-            className="min-h-24 w-full rounded-xl border p-3"
-            placeholder="Описание"
-            value={card.description}
-            onChange={(event) =>
-              setCard({ ...card, description: event.target.value })
-            }
-          />
+          <label className="block text-sm font-semibold text-brand">
+            Название карточки
+            <input
+              className="mt-2 w-full rounded-xl border p-3"
+              placeholder="Например, Массаж"
+              required
+              value={card.name}
+              onChange={(event) =>
+                setCard({ ...card, name: event.target.value })
+              }
+            />
+          </label>
+          <label className="block text-sm font-semibold text-brand">
+            Тип карточки
+            <select
+              className="mt-2 w-full rounded-xl border p-3"
+              value={card.kind}
+              onChange={(event) =>
+                setCard({
+                  ...card,
+                  kind: event.target.value as "service" | "product",
+                })
+              }
+            >
+              <option value="service">Услуга</option>
+              <option value="product">Товар</option>
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-brand">
+            Описание карточки
+            <textarea
+              className="mt-2 min-h-24 w-full rounded-xl border p-3 font-normal"
+              placeholder="Короткое описание"
+              value={card.description}
+              onChange={(event) =>
+                setCard({ ...card, description: event.target.value })
+              }
+            />
+          </label>
+          <div className="grid gap-3 text-sm font-semibold text-brand md:grid-cols-4">
+            <span>{card.kind === "product" ? "Цена, ₽" : "Тип услуги"}</span>
+            {card.kind === "service" && <span>Цена, ₽</span>}
+            {card.kind === "service" && <span>Длительность, мин</span>}
+            <span>
+              {card.kind === "product" ? "Остаток" : "Количество мест"}
+            </span>
+          </div>
           {variants.map((entry, index) => (
             <div className="grid gap-3 md:grid-cols-4" key={entry.id ?? index}>
               <input
