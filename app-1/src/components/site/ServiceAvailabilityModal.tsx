@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Modal } from "@/components/ui/Modal";
 import { useApiQuery } from "@/lib/query/use-api-query";
 import { useServiceCart } from "@/lib/services/service-cart";
@@ -10,6 +11,10 @@ import {
 } from "@/lib/services/services-api";
 
 const formatTime = (value: string) => value.slice(11, 16);
+const today = () => {
+  const value = new Date();
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+};
 
 export const ServiceAvailabilityModal = ({
   service,
@@ -23,7 +28,7 @@ export const ServiceAvailabilityModal = ({
   readonly open: boolean;
 }) => {
   const cart = useServiceCart();
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(today);
   const [selectedStart, setSelectedStart] = useState("");
   const availability = useApiQuery(
     ["catalog-availability", variant.id, date],
@@ -46,7 +51,7 @@ export const ServiceAvailabilityModal = ({
   };
   return (
     <Modal open={open} onClose={onClose} title="Выберите дату и время">
-      <div className="space-y-5 py-5 sm:py-6">
+      <div className="space-y-5 pt-3 pb-5 sm:pt-4 sm:pb-6">
         <div className="space-y-1 text-sm text-muted-ui-foreground">
           <p>
             <span className="font-semibold text-brand">Услуга:</span>{" "}
@@ -57,19 +62,19 @@ export const ServiceAvailabilityModal = ({
             {variant.name}
           </p>
         </div>
-        <label className="block text-sm font-semibold text-brand">
-          Дата
-          <input
-            className="mt-2 w-full rounded-xl border border-line bg-white p-3"
-            min={new Date().toISOString().slice(0, 10)}
-            type="date"
-            value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
+        <div className="text-sm font-semibold text-brand">
+          <p>Дата</p>
+          <DatePicker
+            ariaLabel="Выберите дату"
+            min={today()}
+            triggerClassName="mt-2 rounded-xl border border-line bg-white px-3 py-3"
+            value={date || today()}
+            onChange={(value) => {
+              setDate(value);
               setSelectedStart("");
             }}
           />
-        </label>
+        </div>
         {date && (
           <div>
             <p className="text-sm font-semibold text-brand">Доступное время</p>
