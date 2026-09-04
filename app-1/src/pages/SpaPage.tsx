@@ -82,10 +82,7 @@ export const SpaPage = () => {
         items={spa.promotions}
         onOpenRequest={() => setOpen(true)}
       />
-      <SpaInformationSections
-        additionalServices={spa.additional}
-        menu={spa.menu}
-      />
+      <SpaInformationSections menu={spa.menu} />
       <SpaRequestModal onClose={() => setOpen(false)} open={open} />
       <CatalogSections afterBlock={3} fallback page="spa" />
     </main>

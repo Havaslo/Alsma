@@ -6,11 +6,7 @@ import cafeImage from "@/assets/alsma/cafe-mineral-food.webp";
 import type { SpaRequestOpenHandler } from "@/components/site/SpaRequestModal";
 import { Modal } from "@/components/ui/Modal";
 import { resolveMediaUrl } from "@/lib/site/media-url";
-import type {
-  SpaAdditionalService,
-  SpaMenuItem,
-  SpaPromotion,
-} from "@/lib/site/spa-content";
+import type { SpaMenuItem, SpaPromotion } from "@/lib/site/spa-content";
 
 const contraindications = [
   "Онкология любого типа",
@@ -74,10 +70,8 @@ export const SpaPromotionsSection = ({
 );
 
 export const SpaInformationSections = ({
-  additionalServices,
   menu,
 }: {
-  readonly additionalServices: readonly SpaAdditionalService[];
   readonly menu: readonly SpaMenuItem[];
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -114,34 +108,6 @@ export const SpaInformationSections = ({
             </button>
           </div>
         </article>
-      </section>
-      <section className="px-5 py-8 sm:px-8 sm:py-12 lg:py-12">
-        <div className="mx-auto max-w-[100rem]">
-          <h2 className="text-center font-heading text-4xl font-semibold">
-            Дополнительные услуги и посещение SPA
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-center text-muted-ui-foreground">
-            Всё необходимое для комфортного посещения SPA-комплекса.
-          </p>
-          <div className="mt-8 overflow-hidden rounded-4xl bg-panel sm:mt-12">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-muted-ui/50">
-                  <th className="px-5 py-4">Услуга</th>
-                  <th className="px-5 py-4">Стоимость</th>
-                </tr>
-              </thead>
-              <tbody>
-                {additionalServices.map((item) => (
-                  <tr className="border-t border-line" key={item.service}>
-                    <td className="px-5 py-4">{item.service}</td>
-                    <td className="px-5 py-4 font-semibold">{item.price}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </section>
       <section className="bg-panel py-8 sm:py-12 lg:py-12">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
