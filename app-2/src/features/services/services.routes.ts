@@ -14,6 +14,15 @@ import {
   listServiceAvailability,
 } from "./service-availability.js";
 
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .min(1, "Укажите корректное изображение")
+  .refine(
+    (value) => value.startsWith("/api/media/") || /^https?:\/\//.test(value),
+    "Ссылка на изображение должна быть адресом медиафайла",
+  );
+
 const orderSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().email(),
@@ -256,7 +265,7 @@ export const createServicesRouter = (database: Database): Router => {
         slug: z.string().min(1),
         name: z.string().min(1),
         description: z.string().optional(),
-        imageUrl: z.string().url().nullable().optional(),
+        imageUrl: imageUrlSchema.nullable().optional(),
         status: z.enum(["draft", "published", "archived"]).default("draft"),
         sectionId: z.string().uuid().optional(),
       })
@@ -271,7 +280,7 @@ export const createServicesRouter = (database: Database): Router => {
         slug: z.string().min(1),
         name: z.string().min(1),
         description: z.string().nullable(),
-        imageUrl: z.string().url().nullable().optional(),
+        imageUrl: imageUrlSchema.nullable().optional(),
         status: z.enum(["draft", "published", "archived"]),
         sectionId: z.string().uuid().optional(),
       })
