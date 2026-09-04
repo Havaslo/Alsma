@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import {
@@ -42,6 +43,7 @@ export const AdminServicesCatalog = () => {
     queryFn: loadServiceSections,
   });
   const [sectionId, setSectionId] = useState("");
+  const [editingSection, setEditingSection] = useState(false);
   const [section, setSection] = useState({
     name: "",
     pageSlug: "",
@@ -64,13 +66,15 @@ export const AdminServicesCatalog = () => {
       subheading: section.subheading || undefined,
       blockNumber: Number(section.blockNumber),
     };
-    const result = sectionId
-      ? await updateServiceSection(sectionId, {
-          ...input,
-          subheading: input.subheading ?? null,
-        })
-      : await createServiceSection(input);
+    const result =
+      editingSection && sectionId
+        ? await updateServiceSection(sectionId, {
+            ...input,
+            subheading: input.subheading ?? null,
+          })
+        : await createServiceSection(input);
     setSectionId(result.data.section.id);
+    setEditingSection(false);
     refresh();
   };
   const saveCard = async (event: FormEvent) => {
@@ -117,12 +121,33 @@ export const AdminServicesCatalog = () => {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <p className="text-sm tracking-[0.18em] text-brand uppercase">
-          Раздел каталога
-        </p>
-        <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
-          Где показывать карточки
-        </h2>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm tracking-[0.18em] text-brand uppercase">
+              Разделы каталога
+            </p>
+            <h2 className="mt-1 font-heading text-3xl font-semibold text-brand">
+              Где показывать карточки
+            </h2>
+          </div>
+          <Button
+            onClick={() => {
+              setSectionId("");
+              setEditingSection(false);
+              setSection({
+                name: "",
+                pageSlug: "",
+                heading: "",
+                subheading: "",
+                blockNumber: "1",
+              });
+            }}
+            type="button"
+          >
+            <Plus className="size-4" />
+            Новый раздел
+          </Button>
+        </div>
         <p className="mt-2 text-sm text-muted-ui-foreground">
           Выберите реальную страницу сайта, задайте заголовки и номер блока.
           Пустой раздел можно сохранить до добавления карточек.
@@ -181,16 +206,17 @@ export const AdminServicesCatalog = () => {
             }
           />
           <Button type="submit">
-            {sectionId ? "Обновить раздел" : "Создать раздел"}
+            {editingSection ? "Сохранить изменения" : "Создать раздел"}
           </Button>
         </form>
         <div className="mt-5 flex flex-wrap gap-2">
           {query.data?.data.sections.map((item) => (
             <button
-              className={`rounded-full border px-4 py-2 text-sm ${item.id === sectionId ? "border-brand bg-brand text-brand-foreground" : "border-line text-brand"}`}
+              className={`w-full rounded-2xl border p-4 text-left ${item.id === sectionId ? "border-brand bg-brand/5" : "border-line"}`}
               key={item.id}
               onClick={() => {
                 setSectionId(item.id);
+                setEditingSection(true);
                 setSection({
                   name: item.name,
                   pageSlug: item.pageSlug,
@@ -201,9 +227,18 @@ export const AdminServicesCatalog = () => {
               }}
               type="button"
             >
-              {item.name} ·{" "}
-              {pages.find(([value]) => value === item.pageSlug)?.[1] ??
-                item.pageSlug}
+              <span className="block font-semibold text-brand">
+                {item.name}
+              </span>
+              <span className="mt-1 block text-sm text-muted-ui-foreground">
+                {pages.find(([value]) => value === item.pageSlug)?.[1] ??
+                  item.pageSlug}{" "}
+                · блок {item.blockNumber} · {item.services.length} карточек
+              </span>
+              <span className="mt-1 block text-sm text-muted-ui-foreground">
+                {item.heading}
+                {item.subheading ? ` — ${item.subheading}` : ""}
+              </span>
             </button>
           ))}
         </div>
