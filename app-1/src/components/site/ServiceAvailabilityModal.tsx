@@ -89,7 +89,7 @@ export const ServiceAvailabilityModal = ({
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {availability.data?.blocks.map((slot) => (
                 <button
-                  className={`rounded-xl border p-3 text-sm font-semibold transition ${selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-page text-brand hover:border-brand"}`}
+                  className={`rounded-xl border p-3 text-sm font-semibold transition ${selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-white text-brand hover:border-brand"}`}
                   key={slot.startsAt}
                   onClick={() => setSelectedStart(slot.startsAt)}
                   type="button"

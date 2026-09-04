@@ -82,7 +82,7 @@ export const DatePicker = ({
       {open && (
         <div
           className={cn(
-            "absolute bottom-[calc(100%+1rem)] left-1/2 z-50 w-80 -translate-x-1/2 rounded-3xl border border-line bg-panel p-4 text-panel-foreground shadow-2xl",
+            "absolute top-[calc(100%+0.5rem)] left-1/2 z-[80] w-80 -translate-x-1/2 rounded-3xl border border-line bg-white p-4 text-page-foreground shadow-2xl",
             panelClassName,
           )}
         >
