@@ -44,6 +44,7 @@ export type ServiceSection = {
   readonly services: Array<{
     readonly id: string;
     readonly name: string;
+    readonly slug: string;
     readonly description: string | null;
     readonly status: "draft" | "published" | "archived";
     readonly variants: Array<{

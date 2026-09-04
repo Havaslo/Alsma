@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Trash2 } from "lucide-react";
 
+import { AdminServiceCardModal } from "@/components/admin/AdminServiceCardModal";
+import { AdminServicesTable } from "@/components/admin/AdminServicesTable";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/Modal";
@@ -74,6 +76,10 @@ export const AdminServicesCatalog = () => {
     name: string;
   }>();
   const [cardError, setCardError] = useState("");
+  const [statusOverrides, setStatusOverrides] = useState<
+    Record<string, "draft" | "published" | "archived">
+  >({});
+  const [statusError, setStatusError] = useState("");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
   const selectSection = (id: string) => {
@@ -219,6 +225,40 @@ export const AdminServicesCatalog = () => {
         itemIndex === index ? { ...item, ...patch } : item,
       ),
     );
+  const togglePublication = async (
+    item: NonNullable<
+      typeof query.data
+    >["data"]["sections"][number]["services"][number],
+  ) => {
+    const currentStatus = statusOverrides[item.id] ?? item.status;
+    const nextStatus = currentStatus === "published" ? "draft" : "published";
+    setStatusError("");
+    setStatusOverrides((current) => ({ ...current, [item.id]: nextStatus }));
+    try {
+      await updateService(item.id, {
+        slug: item.slug,
+        name: item.name,
+        description: item.description ?? "",
+        status: nextStatus,
+        sectionId,
+      });
+      refresh();
+    } catch (error) {
+      setStatusOverrides((current) => ({
+        ...current,
+        [item.id]: currentStatus,
+      }));
+      const message = axios.isAxiosError<{ error?: { message?: string } }>(
+        error,
+      )
+        ? error.response?.data?.error?.message
+        : undefined;
+      setStatusError(
+        message ??
+          `Не удалось изменить публикацию карточки «${item.name}». Попробуйте ещё раз.`,
+      );
+    }
+  };
   const selected = query.data?.data.sections.find(
     (item) => item.id === sectionId,
   );
@@ -333,79 +373,16 @@ export const AdminServicesCatalog = () => {
             Выберите раздел, чтобы увидеть его карточки.
           </p>
         ) : (
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-line text-muted-ui-foreground">
-                <tr>
-                  <th className="px-3 py-3">Название</th>
-                  <th className="px-3 py-3">Тип</th>
-                  <th className="px-3 py-3">Варианты / цена</th>
-                  <th className="px-3 py-3">Длительность</th>
-                  <th className="px-3 py-3">Места / остаток</th>
-                  <th className="px-3 py-3">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {selected.services.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-3 py-4 font-semibold text-brand">
-                      {item.name}
-                      <div className="font-normal text-muted-ui-foreground">
-                        {item.description}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      {item.variants[0]?.name === "Товар" ? "Товар" : "Услуга"}
-                    </td>
-                    <td className="px-3 py-4">
-                      {item.variants.map((variant) => (
-                        <div key={variant.id}>
-                          {variant.name}: {variant.price} ₽
-                        </div>
-                      ))}
-                    </td>
-                    <td className="px-3 py-4">
-                      {item.variants.map((variant) => (
-                        <div key={variant.id}>
-                          {variant.durationMin
-                            ? `${variant.durationMin} мин`
-                            : "—"}
-                        </div>
-                      ))}
-                    </td>
-                    <td className="px-3 py-4">
-                      {item.variants.map((variant) => (
-                        <div key={variant.id}>{variant.capacity}</div>
-                      ))}
-                    </td>
-                    <td className="space-x-2 px-3 py-4 whitespace-nowrap">
-                      <button
-                        className="text-brand underline"
-                        onClick={() => openEditCard(item)}
-                        type="button"
-                      >
-                        Редактировать
-                      </button>
-                      <button
-                        className="text-red-700 underline"
-                        onClick={() =>
-                          setDeleteTarget({ id: item.id, name: item.name })
-                        }
-                        type="button"
-                      >
-                        Удалить
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!selected.services.length && (
-              <p className="p-6 text-muted-ui-foreground">
-                В этом разделе пока нет карточек.
-              </p>
-            )}
-          </div>
+          <AdminServicesTable
+            onDelete={(item) =>
+              setDeleteTarget({ id: item.id, name: item.name })
+            }
+            onEdit={openEditCard}
+            onTogglePublication={(item) => void togglePublication(item)}
+            selected={selected}
+            statusError={statusError}
+            statusOverrides={statusOverrides}
+          />
         )}
       </section>
       <Modal
@@ -461,177 +438,27 @@ export const AdminServicesCatalog = () => {
           <Button type="submit">Создать раздел</Button>
         </form>
       </Modal>
-      <Modal
-        className="max-w-5xl"
+      <AdminServiceCardModal
+        card={card}
+        cardId={cardId}
+        error={cardError}
+        onAddVariant={() =>
+          setVariants((current) => [...current, blankVariant()])
+        }
+        onCardChange={(nextCard) =>
+          setCard((current) => ({ ...current, ...nextCard }))
+        }
         onClose={() => setCardOpen(false)}
+        onRemoveVariant={(index) =>
+          setVariants((current) =>
+            current.filter((_, itemIndex) => itemIndex !== index),
+          )
+        }
+        onSubmit={saveCard}
+        onVariantChange={updateVariantDraft}
         open={cardOpen}
-        title={cardId ? "Редактировать карточку" : "Создать карточку"}
-      >
-        <form className="space-y-4 p-6" onSubmit={saveCard}>
-          {cardError && (
-            <p
-              className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
-              role="alert"
-            >
-              {cardError}
-            </p>
-          )}
-          <label className="block text-sm font-semibold text-brand">
-            Название карточки
-            <input
-              className="mt-2 w-full rounded-xl border p-3"
-              placeholder="Например, Массаж"
-              required
-              value={card.name}
-              onChange={(event) =>
-                setCard({ ...card, name: event.target.value })
-              }
-            />
-          </label>
-          <label className="block text-sm font-semibold text-brand">
-            Тип карточки
-            <select
-              className="mt-2 w-full rounded-xl border p-3"
-              value={card.kind}
-              onChange={(event) =>
-                setCard({
-                  ...card,
-                  kind: event.target.value as "service" | "product",
-                })
-              }
-            >
-              <option value="service">Услуга</option>
-              <option value="product">Товар</option>
-            </select>
-          </label>
-          <label className="block text-sm font-semibold text-brand">
-            Статус публикации
-            <select
-              className="mt-2 w-full rounded-xl border p-3"
-              value={card.status}
-              onChange={(event) =>
-                setCard({
-                  ...card,
-                  status: event.target.value as typeof card.status,
-                })
-              }
-            >
-              <option value="draft">Черновик</option>
-              <option value="published">Опубликовано</option>
-              <option value="archived">В архиве</option>
-            </select>
-          </label>
-          <label className="block text-sm font-semibold text-brand">
-            Описание карточки
-            <textarea
-              className="mt-2 min-h-24 w-full rounded-xl border p-3 font-normal"
-              placeholder="Короткое описание"
-              value={card.description}
-              onChange={(event) =>
-                setCard({ ...card, description: event.target.value })
-              }
-            />
-          </label>
-          <div className="grid gap-3 text-sm font-semibold text-brand md:grid-cols-4">
-            <span>{card.kind === "product" ? "Цена, ₽" : "Тип услуги"}</span>
-            {card.kind === "service" && <span>Цена, ₽</span>}
-            {card.kind === "service" && <span>Длительность, мин</span>}
-            <span>
-              {card.kind === "product" ? "Остаток" : "Количество мест"}
-            </span>
-          </div>
-          {variants.map((entry, index) => (
-            <div
-              className="grid items-end gap-3 md:grid-cols-[minmax(14rem,1.5fr)_minmax(7rem,1fr)_minmax(10rem,1fr)_minmax(9rem,1fr)_2.5rem]"
-              key={entry.id ?? index}
-            >
-              <input
-                className="rounded-xl border p-3"
-                placeholder={card.kind === "product" ? "Цена" : "Тип услуги"}
-                required
-                value={card.kind === "product" ? entry.price : entry.name}
-                onChange={(event) =>
-                  updateVariantDraft(
-                    index,
-                    card.kind === "product"
-                      ? { price: event.target.value }
-                      : { name: event.target.value },
-                  )
-                }
-              />
-              {card.kind === "service" && (
-                <>
-                  <input
-                    className="rounded-xl border p-3"
-                    placeholder="Цена"
-                    required
-                    type="number"
-                    value={entry.price}
-                    onChange={(event) =>
-                      updateVariantDraft(index, { price: event.target.value })
-                    }
-                  />
-                  <input
-                    className="rounded-xl border p-3"
-                    placeholder="Минуты"
-                    required
-                    type="number"
-                    value={entry.durationMin}
-                    onChange={(event) =>
-                      updateVariantDraft(index, {
-                        durationMin: event.target.value,
-                      })
-                    }
-                  />
-                </>
-              )}
-              <input
-                className="rounded-xl border p-3"
-                placeholder={card.kind === "product" ? "Остаток" : "Мест"}
-                required
-                type="number"
-                min={card.kind === "product" ? 0 : 1}
-                value={entry.capacity}
-                onChange={(event) =>
-                  updateVariantDraft(index, { capacity: event.target.value })
-                }
-              />
-              {card.kind === "service" && (
-                <button
-                  aria-label="Удалить тип услуги"
-                  title="Удалить тип услуги"
-                  className="grid size-10 place-items-center rounded-full border border-line text-brand transition hover:border-red-300 hover:text-red-700"
-                  disabled={variants.length === 1}
-                  onClick={() =>
-                    setVariants((current) =>
-                      current.filter((_, itemIndex) => itemIndex !== index),
-                    )
-                  }
-                  type="button"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              )}
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {card.kind === "service" && (
-              <button
-                className="rounded-full border border-brand px-4 py-2 text-brand"
-                onClick={() =>
-                  setVariants((current) => [...current, blankVariant()])
-                }
-                type="button"
-              >
-                + Добавить тип услуги
-              </button>
-            )}
-            <Button className="ml-auto" type="submit">
-              Сохранить карточку
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        variants={variants}
+      />
       <ConfirmModal
         confirmLabel="Удалить"
         onClose={() => setDeleteTarget(undefined)}
