@@ -14,6 +14,20 @@ import {
   listServiceAvailability,
 } from "./service-availability.js";
 
+const sortServicesByPlacement = <
+  T extends { placements: Array<{ pageSlug: string; position: number }> },
+>(
+  services: T[],
+  pageSlug?: string,
+) =>
+  [...services].sort(
+    (left, right) =>
+      (left.placements.find((placement) => placement.pageSlug === pageSlug)
+        ?.position ?? 0) -
+      (right.placements.find((placement) => placement.pageSlug === pageSlug)
+        ?.position ?? 0),
+  );
+
 const imageUrlSchema = z
   .string()
   .trim()
@@ -54,7 +68,12 @@ export const createServicesRouter = (database: Database): Router => {
         placements: true,
       },
     });
-    response.json({ services });
+    response.json({
+      services: sortServicesByPlacement(
+        services,
+        String(request.query.page ?? ""),
+      ),
+    });
   });
   router.get("/sections", async (request, response) => {
     const sections = await database.client.serviceSection.findMany({
@@ -63,6 +82,7 @@ export const createServicesRouter = (database: Database): Router => {
         services: {
           where: { status: "published" },
           include: {
+            placements: true,
             variants: {
               where: { active: true },
               orderBy: { price: "asc" },
@@ -72,7 +92,12 @@ export const createServicesRouter = (database: Database): Router => {
       },
       orderBy: { blockNumber: "asc" },
     });
-    response.json({ sections });
+    response.json({
+      sections: sections.map((section) => ({
+        ...section,
+        services: sortServicesByPlacement(section.services, section.pageSlug),
+      })),
+    });
   });
   router.get("/:serviceId/availability", async (request, response) => {
     const variantId = String(request.query.variantId ?? "");
@@ -212,13 +237,17 @@ export const createServicesRouter = (database: Database): Router => {
   );
   admin.use(createRequireAdminPermission("dashboard.access"));
   admin.get("/sections", async (_request, response) => {
+    const sections = await database.client.serviceSection.findMany({
+      include: {
+        services: { include: { variants: true, placements: true } },
+      },
+      orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }],
+    });
     response.json({
-      sections: await database.client.serviceSection.findMany({
-        include: {
-          services: { include: { variants: true, placements: true } },
-        },
-        orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }],
-      }),
+      sections: sections.map((section) => ({
+        ...section,
+        services: sortServicesByPlacement(section.services, section.pageSlug),
+      })),
     });
   });
   admin.post("/sections", async (request, response) => {
@@ -251,6 +280,40 @@ export const createServicesRouter = (database: Database): Router => {
         data: input,
       }),
     });
+  });
+  admin.put("/sections/:sectionId/reorder", async (request, response) => {
+    const input = z
+      .object({ serviceIds: z.array(z.string().uuid()).min(1) })
+      .parse(request.body);
+    const section = await database.client.serviceSection.findUnique({
+      where: { id: request.params.sectionId },
+      select: { id: true, pageSlug: true, services: { select: { id: true } } },
+    });
+    if (
+      !section ||
+      section.services.length !== input.serviceIds.length ||
+      new Set(section.services.map((service) => service.id)).size !==
+        new Set(input.serviceIds).size ||
+      input.serviceIds.some(
+        (id) => !section.services.some((service) => service.id === id),
+      )
+    ) {
+      return response.status(400).json({
+        error: { message: "Укажите все карточки раздела в новом порядке" },
+      });
+    }
+    await database.client.$transaction(
+      input.serviceIds.map((serviceId, position) =>
+        database.client.servicePagePlacement.upsert({
+          where: {
+            serviceId_pageSlug: { serviceId, pageSlug: section.pageSlug },
+          },
+          create: { serviceId, pageSlug: section.pageSlug, position },
+          update: { position },
+        }),
+      ),
+    );
+    response.json({ serviceIds: input.serviceIds });
   });
   admin.get("/catalog", async (_request, response) => {
     response.json({

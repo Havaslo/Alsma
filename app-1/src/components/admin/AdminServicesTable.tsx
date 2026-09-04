@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { GripVertical, Pencil, Trash2 } from "lucide-react";
 
 import type { ServiceSection } from "@/lib/services/admin-services-api";
 
@@ -11,6 +11,7 @@ type Props = {
   onTogglePublication: (item: ServiceItem) => void;
   onEdit: (item: ServiceItem) => void;
   onDelete: (item: ServiceItem) => void;
+  onReorder: (serviceIds: string[]) => void;
 };
 
 export const AdminServicesTable = ({
@@ -20,11 +21,15 @@ export const AdminServicesTable = ({
   onTogglePublication,
   onEdit,
   onDelete,
+  onReorder,
 }: Props) => (
   <div className="mt-5 overflow-x-auto">
     <table className="w-full min-w-[820px] text-left text-sm">
       <thead className="border-b border-line text-muted-ui-foreground">
         <tr>
+          <th className="w-12 px-3 py-3">
+            <span className="sr-only">Порядок</span>
+          </th>
           <th className="px-3 py-3">Название</th>
           <th className="px-3 py-3">Тип</th>
           <th className="px-3 py-3">Варианты / цена</th>
@@ -35,11 +40,54 @@ export const AdminServicesTable = ({
         </tr>
       </thead>
       <tbody className="divide-y divide-line">
-        {selected.services.map((item) => {
+        {selected.services.map((item, index) => {
           const status = statusOverrides[item.id] ?? item.status;
           const published = status === "published";
           return (
-            <tr key={item.id}>
+            <tr
+              className="transition-colors"
+              draggable={false}
+              key={item.id}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.currentTarget.classList.add("bg-page");
+              }}
+              onDragLeave={(event) =>
+                event.currentTarget.classList.remove("bg-page")
+              }
+              onDrop={(event) => {
+                event.preventDefault();
+                event.currentTarget.classList.remove("bg-page");
+                const draggedId = event.dataTransfer.getData("text/service-id");
+                if (!draggedId || draggedId === item.id) return;
+                const next = [...selected.services];
+                const from = next.findIndex((entry) => entry.id === draggedId);
+                if (from < 0) return;
+                const [dragged] = next.splice(from, 1);
+                next.splice(index, 0, dragged);
+                onReorder(next.map((entry) => entry.id));
+              }}
+            >
+              <td className="px-3 py-4">
+                <button
+                  aria-label={`Перетащить карточку «${item.name}»`}
+                  className="grid size-9 cursor-grab place-items-center rounded-lg text-muted-ui-foreground hover:bg-page hover:text-brand active:cursor-grabbing"
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/service-id", item.id);
+                  }}
+                  onDragEnd={(event) => {
+                    event.currentTarget
+                      .closest("tr")
+                      ?.classList.remove("bg-page");
+                  }}
+                  title="Перетащить для изменения порядка"
+                  type="button"
+                >
+                  <GripVertical className="size-4" />
+                </button>
+              </td>
               <td className="px-3 py-4 font-semibold text-brand">
                 {item.name}
                 <div className="font-normal text-muted-ui-foreground">

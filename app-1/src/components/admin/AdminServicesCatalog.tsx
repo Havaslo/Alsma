@@ -2,7 +2,6 @@ import { type FormEvent, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Trash2 } from "lucide-react";
 
 import {
   AdminServiceCardModal,
@@ -23,6 +22,7 @@ import {
   updateServiceSection,
   updateVariant,
 } from "@/lib/services/admin-services-api";
+import { useReorderServices } from "@/lib/services/use-reorder-services";
 
 const pages = [
   ["home", "Главная"],
@@ -86,6 +86,10 @@ export const AdminServicesCatalog = () => {
   const [statusError, setStatusError] = useState("");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
+  const selected = query.data?.data.sections.find(
+    (item) => item.id === sectionId,
+  );
+  const handleReorder = useReorderServices(selected, setStatusError);
   const selectSection = (id: string) => {
     const item = query.data?.data.sections.find((entry) => entry.id === id);
     if (!item) return;
@@ -272,9 +276,6 @@ export const AdminServicesCatalog = () => {
       );
     }
   };
-  const selected = query.data?.data.sections.find(
-    (item) => item.id === sectionId,
-  );
   const removeCard = async () => {
     if (!deleteTarget) return;
     await deleteService(deleteTarget.id);
@@ -392,6 +393,7 @@ export const AdminServicesCatalog = () => {
             }
             onEdit={openEditCard}
             onTogglePublication={(item) => void togglePublication(item)}
+            onReorder={(serviceIds) => void handleReorder(serviceIds)}
             selected={selected}
             statusError={statusError}
             statusOverrides={statusOverrides}

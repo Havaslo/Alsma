@@ -89,6 +89,12 @@ export const updateServiceSection = (
     input,
     { headers: headers() },
   );
+export const reorderServices = (sectionId: string, serviceIds: string[]) =>
+  apiClient.put(
+    `/services/admin/sections/${sectionId}/reorder`,
+    { serviceIds },
+    { headers: headers() },
+  );
 export const createService = (input: {
   slug: string;
   name: string;
