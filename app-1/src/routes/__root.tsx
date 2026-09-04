@@ -10,6 +10,7 @@ import {
 import { AppProviders } from "@/app/AppProviders";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
+import { ServiceCartWidget } from "@/components/site/ServiceCartWidget";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ROUTES } from "@/route-constants";
 
@@ -82,6 +83,7 @@ const RootLayout = () => {
       {publicRoutes.has(pathname) && (
         <>
           <SiteFooter />
+          <ServiceCartWidget />
           <ChatWidget />
         </>
       )}
