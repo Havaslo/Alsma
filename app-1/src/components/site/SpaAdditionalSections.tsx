@@ -115,36 +115,38 @@ export const SpaInformationSections = ({
           </div>
         </article>
       </section>
-      <section className="px-5 py-8 sm:px-8 sm:py-12 lg:py-12">
-        <div className="mx-auto max-w-[100rem]">
-          <h2 className="text-center font-heading text-4xl font-semibold">
-            Дополнительные услуги в SPA
-          </h2>
-          <div className="mt-8 grid gap-6 sm:mt-12 lg:grid-cols-3">
-            {additionalServices.map((item) => (
-              <article
-                className="flex flex-col rounded-3xl bg-panel p-7"
-                key={item.service}
-              >
-                <h3 className="font-heading text-2xl font-semibold text-brand">
-                  {item.service}
-                </h3>
-                {item.description && (
-                  <p className="mt-4 text-muted-ui-foreground">
-                    {item.description}
-                  </p>
-                )}
-                {item.duration && (
-                  <p className="mt-auto pt-6 text-sm text-muted-ui-foreground">
-                    Длительность: {item.duration}
-                  </p>
-                )}
-                <p className="mt-3 text-2xl font-semibold">{item.price}</p>
-              </article>
-            ))}
+      {additionalServices.length > 0 && (
+        <section className="px-5 py-8 sm:px-8 sm:py-12 lg:py-12">
+          <div className="mx-auto max-w-[100rem]">
+            <h2 className="text-center font-heading text-4xl font-semibold">
+              Дополнительные услуги в SPA
+            </h2>
+            <div className="mt-8 grid gap-6 sm:mt-12 lg:grid-cols-3">
+              {additionalServices.map((item) => (
+                <article
+                  className="flex flex-col rounded-3xl bg-panel p-7"
+                  key={item.service}
+                >
+                  <h3 className="font-heading text-2xl font-semibold text-brand">
+                    {item.service}
+                  </h3>
+                  {item.description && (
+                    <p className="mt-4 text-muted-ui-foreground">
+                      {item.description}
+                    </p>
+                  )}
+                  {item.duration && (
+                    <p className="mt-auto pt-6 text-sm text-muted-ui-foreground">
+                      Длительность: {item.duration}
+                    </p>
+                  )}
+                  <p className="mt-3 text-2xl font-semibold">{item.price}</p>
+                </article>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
       <section className="bg-panel py-8 sm:py-12 lg:py-12">
         <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
           <h2 className="text-center font-heading text-4xl font-semibold">

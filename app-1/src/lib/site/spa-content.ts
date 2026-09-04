@@ -40,17 +40,7 @@ const promotions = SPA_PROMOTIONS.map(
     imageName: "",
   }),
 );
-const additional = [
-  "Душ Шарко|800 ₽",
-  "Гидромассажная ванна|1 200 ₽",
-  "SPA-капсула водная|1 500 ₽",
-  "Дневное посещение — взрослые|1 000 ₽",
-  "Дневное посещение — дети|500 ₽",
-  "Абонемент на 8 посещений — взрослые|3 500 ₽",
-].map((value) => {
-  const [service, price] = value.split("|");
-  return { service, price };
-});
+const additional: SpaAdditionalService[] = [];
 const menu = [
   {
     name: "Травяной чай",
