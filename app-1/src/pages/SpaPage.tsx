@@ -13,7 +13,7 @@ import {
 import { SpaRequestModal } from "@/components/site/SpaRequestModal";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
-import { SPA_SPACES, WATER_PROCEDURES } from "@/lib/site/spa";
+import { SPA_SPACES } from "@/lib/site/spa";
 import { getSpaDefaults } from "@/lib/site/spa-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
@@ -76,76 +76,7 @@ export const SpaPage = () => {
         </div>
       </section>
       <CatalogSections afterBlock={1} page="spa" />
-      <section className="py-8 sm:py-12 lg:py-12">
-        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-          <h2 className="text-center font-heading text-4xl font-semibold">
-            Массажные процедуры
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-center text-muted-ui-foreground">
-            Выберите подходящий формат массажа, длительность и стоимость
-            процедуры.
-          </p>
-          <div className="mt-8 overflow-x-auto rounded-3xl bg-panel sm:mt-12">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr className="bg-muted-ui/50">
-                  <th className="px-7 py-4">Процедура</th>
-                  <th className="px-7 py-4">Длительность</th>
-                  <th className="px-7 py-4">Стоимость</th>
-                </tr>
-              </thead>
-              <tbody>
-                {spa.massages.map((item) => (
-                  <tr
-                    className="border-t border-line"
-                    key={`${item.name}:${item.duration}`}
-                  >
-                    <td className="px-7 py-4 font-semibold">{item.name}</td>
-                    <td className="px-7 py-4">{item.duration}</td>
-                    <td className="px-7 py-4 font-semibold">{item.price}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
       <CatalogSections afterBlock={2} page="spa" />
-      <section className="mx-auto max-w-[100rem] px-5 py-8 sm:px-8 sm:py-12 lg:py-12">
-        <h2 className="text-center font-heading text-4xl font-semibold">
-          Водные процедуры и бальнеотерапия
-        </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-muted-ui-foreground">
-          Минеральные ванны, гидропроцедуры и SPA-капсулы для глубокого
-          расслабления.
-        </p>
-        <div className="mt-8 grid gap-6 sm:mt-12 lg:grid-cols-3">
-          {WATER_PROCEDURES.map((group) => (
-            <article
-              className="overflow-hidden rounded-3xl bg-panel"
-              key={group.title}
-            >
-              <img
-                alt={group.title}
-                className="aspect-[16/9] w-full object-cover"
-                src={resolveMediaUrl(group.image)}
-              />
-              <div className="p-7">
-                <h3 className="font-heading text-2xl font-semibold text-brand">
-                  {group.title}
-                </h3>
-                <ul className="mt-6 space-y-3">
-                  {group.items.map((item) => (
-                    <li className="rounded-2xl bg-page px-4 py-3" key={item}>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
       <CatalogSections afterBlock={3} page="spa" />
       <SpaPromotionsSection
         items={spa.promotions}
