@@ -24,7 +24,7 @@ export const ServicesPage = () => {
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
           {services.data?.services.map((service) => (
             <article
-              className="rounded-3xl border border-line bg-panel p-6"
+              className="rounded-3xl border border-line bg-white p-6"
               key={service.id}
             >
               <h2 className="font-heading text-2xl font-semibold text-brand">
