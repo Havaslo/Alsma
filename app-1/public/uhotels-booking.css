@@ -15,7 +15,8 @@
   background: #efe9dc !important;
 }
 
-@media (max-width: 767px) {
+/* Keep the compact booking layout light on phones and narrow desktop widths. */
+@media (max-width: 1439px) {
   .header__main {
     background: transparent !important;
   }
