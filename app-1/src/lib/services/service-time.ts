@@ -1,5 +1,33 @@
 export const SERVICE_TIME_ZONE = "Europe/Moscow";
 
+export const serviceToday = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: SERVICE_TIME_ZONE,
+  }).format(new Date());
+
+export const isServiceSlotPast = (date: string, minutes: number) => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: SERVICE_TIME_ZONE,
+  }).formatToParts(now);
+  const value = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  const today = `${value("year")}-${String(value("month")).padStart(2, "0")}-${String(value("day")).padStart(2, "0")}`;
+  return (
+    date < today ||
+    (date === today && minutes <= value("hour") * 60 + value("minute"))
+  );
+};
+
 export const formatServiceDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",

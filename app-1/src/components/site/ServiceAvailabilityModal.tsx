@@ -4,17 +4,14 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Modal } from "@/components/ui/Modal";
 import { useApiQuery } from "@/lib/query/use-api-query";
 import { useServiceCart } from "@/lib/services/service-cart";
-import { formatServiceTime } from "@/lib/services/service-time";
+import { formatServiceTime, serviceToday } from "@/lib/services/service-time";
 import {
   type Service,
   type ServiceVariant,
   loadServiceAvailability,
 } from "@/lib/services/services-api";
 
-const today = () => {
-  const value = new Date();
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-};
+const today = serviceToday;
 
 export const ServiceAvailabilityModal = ({
   service,

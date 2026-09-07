@@ -18,6 +18,7 @@ import {
 } from "@/lib/services/admin-services-api";
 import {
   formatServiceTime,
+  isServiceSlotPast,
   serviceDateKey,
   serviceSlotDate,
 } from "@/lib/services/service-time";
@@ -173,14 +174,15 @@ export const AdminServiceCalendarPage = () => {
     refetchOnMount: "always",
   });
   const calendar = useQuery({
-    queryKey: ["service-calendar", range.from.toISOString()],
+    queryKey: ["service-calendar", selectedDate],
     queryFn: async () =>
       (
         await loadServiceCalendar(
-          range.from.toISOString(),
-          range.to.toISOString(),
+          serviceSlotDate(selectedDate, 0).toISOString(),
+          serviceSlotDate(selectedDate, 24 * 60 - 1).toISOString(),
         )
       ).data,
+    enabled: Boolean(selectedDate),
   });
   const services = catalog.data?.services ?? [];
   const activeServiceId = selectedServiceId ?? services[0]?.id;
@@ -341,7 +343,6 @@ export const AdminServiceCalendarPage = () => {
                   <span className="text-muted-ui-foreground">День</span>
                   <input
                     className="rounded-xl border border-line bg-brand-foreground px-3 py-2 font-normal"
-                    min={range.from.toISOString().slice(0, 10)}
                     onChange={(event) => setSelectedDate(event.target.value)}
                     type="date"
                     value={selectedDate}
@@ -370,13 +371,17 @@ export const AdminServiceCalendarPage = () => {
                           "min-h-20 rounded-xl border p-3 text-left transition",
                           slot.bookings.length > 0
                             ? "cursor-default border-brand/30 bg-brand/10"
-                            : "border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100",
+                            : isServiceSlotPast(selectedDate, slot.start)
+                              ? "cursor-not-allowed border-line bg-page opacity-60"
+                              : "border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100",
                         )}
                         key={`${slot.label}-${durationMinutes}`}
                         onClick={() =>
                           slot.bookings.length > 0
                             ? setSelectedBooking(slot.bookings[0])
-                            : setManualSlot(slot.start)
+                            : isServiceSlotPast(selectedDate, slot.start)
+                              ? undefined
+                              : setManualSlot(slot.start)
                         }
                         type="button"
                       >
@@ -401,6 +406,10 @@ export const AdminServiceCalendarPage = () => {
                               ),
                             )}
                           </>
+                        ) : isServiceSlotPast(selectedDate, slot.start) ? (
+                          <div className="mt-2 text-xs font-semibold text-muted-ui-foreground">
+                            Недоступно: время прошло
+                          </div>
                         ) : (
                           <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700">
                             <Check className="size-3" /> Свободно

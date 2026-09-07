@@ -54,6 +54,29 @@ const isValidDate = (date: string) => {
   );
 };
 
+const moscowDateTime = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Europe/Moscow",
+  }).formatToParts(new Date());
+  const value = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return {
+    date: `${value("year")}-${String(value("month")).padStart(2, "0")}-${String(value("day")).padStart(2, "0")}`,
+    minute: value("hour") * 60 + value("minute"),
+  };
+};
+
+export const isServiceSlotInThePast = (date: string, minute: number) => {
+  const now = moscowDateTime();
+  return date < now.date || (date === now.date && minute <= now.minute);
+};
+
 type AvailabilityVariant = {
   readonly id: string;
   readonly serviceId: string;
@@ -166,7 +189,12 @@ export const listServiceAvailabilityDetails = async (
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
     };
-    if (capacityUnavailable || resourceUnavailable) occupied.push(slot);
+    if (
+      isServiceSlotInThePast(date, minute) ||
+      capacityUnavailable ||
+      resourceUnavailable
+    )
+      occupied.push(slot);
     else available.push(slot);
   }
   return { available, occupied };
@@ -197,6 +225,11 @@ export const isServiceSlotAvailable = async (
   quantity: number,
 ) => {
   const date = startsAt.toISOString().slice(0, 10);
+  const minute =
+    startsAt.getUTCHours() * 60 +
+    startsAt.getUTCMinutes() +
+    SERVICE_TIME_ZONE_OFFSET_MINUTE;
+  if (isServiceSlotInThePast(date, minute)) return false;
   const slots = await listServiceAvailability(
     database,
     serviceId,
