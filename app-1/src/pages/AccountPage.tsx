@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
-import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
+import { AccountServicesSection } from "@/components/account/AccountServicesSection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { logoutGuest } from "@/lib/auth/guest-auth-api";
@@ -67,51 +67,7 @@ export const AccountPage = () => {
             Выйти
           </button>
         </section>
-        <nav className="mt-10 flex flex-wrap gap-3">
-          <button
-            className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
-            type="button"
-          >
-            История бронирований
-          </button>
-        </nav>
-        <AccountBookingsSection bookings={guest.bookings} profile={guest} />
-        <section className="mt-8 rounded-3xl border border-line bg-panel p-7">
-          <h2 className="font-heading text-3xl font-semibold text-brand">
-            Мои услуги
-          </h2>
-          {guest.serviceOrders.length === 0 ? (
-            <p className="mt-4 text-muted-ui-foreground">
-              Здесь появятся ваши заявки на услуги.
-            </p>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {guest.serviceOrders.map((order) => (
-                <div className="rounded-2xl bg-page p-4" key={order.id}>
-                  <div className="flex justify-between">
-                    <strong>
-                      {new Date(order.createdAt).toLocaleDateString("ru-RU")}
-                    </strong>
-                    <span>
-                      {order.total} {order.currency}
-                    </span>
-                  </div>
-                  {order.items.map((item) => (
-                    <p
-                      className="mt-2 text-sm text-muted-ui-foreground"
-                      key={`${order.id}-${item.variantName}`}
-                    >
-                      {item.serviceName} · {item.variantName} × {item.quantity}
-                      {item.booking
-                        ? ` — ${new Date(item.booking.startsAt).toLocaleString("ru-RU")}`
-                        : ""}
-                    </p>
-                  ))}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <AccountServicesSection serviceOrders={guest.serviceOrders} />
       </div>
     </main>
   );
