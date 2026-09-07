@@ -196,12 +196,12 @@ export const AdminServiceCardModal = ({
                   const assignment = (entry.resources ?? []).find(
                     (item) => item.resourceId === resource.id,
                   );
+                  const checkboxId = `resource-${index}-${resource.id}`;
                   return (
-                    <label
-                      className="flex items-center gap-2"
-                      key={resource.id}
-                    >
+                    <div className="flex items-center gap-2" key={resource.id}>
                       <input
+                        aria-label={`Использовать ресурс ${resource.name}`}
+                        id={checkboxId}
                         type="checkbox"
                         checked={Boolean(assignment)}
                         onChange={(event) => {
@@ -218,15 +218,18 @@ export const AdminServiceCardModal = ({
                           });
                         }}
                       />
-                      <span>
+                      <label className="cursor-pointer" htmlFor={checkboxId}>
                         {resource.name} (всего {resource.totalUnits})
-                      </span>
+                      </label>
                       {assignment && (
                         <input
                           className="w-20 rounded border p-1"
                           min="1"
                           type="number"
                           value={assignment.quantity}
+                          aria-label={`Количество ресурса ${resource.name}`}
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
                           onChange={(event) =>
                             onVariantChange(index, {
                               resources: (entry.resources ?? []).map((item) =>
@@ -241,7 +244,7 @@ export const AdminServiceCardModal = ({
                           }
                         />
                       )}
-                    </label>
+                    </div>
                   );
                 })}
               </div>

@@ -7,13 +7,13 @@ import {
   AdminServiceCardModal,
   type ServiceCardDraft,
 } from "@/components/admin/AdminServiceCardModal";
+import { AdminServiceDeleteDialog } from "@/components/admin/AdminServiceDeleteDialog";
+import { AdminServiceResourceDirectory } from "@/components/admin/AdminServiceResourceDirectory";
 import { AdminServicesTable } from "@/components/admin/AdminServicesTable";
 import { Button } from "@/components/ui/Button";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/Modal";
 import {
   createService,
-  createServiceResource,
   createServiceSection,
   createVariant,
   deleteService,
@@ -44,6 +44,8 @@ type Variant = {
   durationMin: string;
   resources?: Array<{ resourceId: string; quantity: number }>;
 };
+type ServiceStatus = "draft" | "published" | "archived";
+type DeleteTarget = { id: string; name: string };
 const blankVariant = (): Variant => ({
   name: "",
   price: "",
@@ -76,23 +78,18 @@ export const AdminServicesCatalog = () => {
   const [card, setCard] = useState<ServiceCardDraft>({
     name: "",
     description: "",
-    kind: "service" as "service" | "product",
-    status: "draft" as "draft" | "published" | "archived",
+    kind: "service",
+    status: "draft",
     imageUrl: "",
   });
   const [variants, setVariants] = useState<Variant[]>([blankVariant()]);
   const [originalVariantIds, setOriginalVariantIds] = useState<string[]>([]);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  }>();
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>();
   const [cardError, setCardError] = useState("");
   const [statusOverrides, setStatusOverrides] = useState<
-    Record<string, "draft" | "published" | "archived">
+    Record<string, ServiceStatus>
   >({});
   const [statusError, setStatusError] = useState("");
-  const [resourceName, setResourceName] = useState("");
-  const [resourceUnits, setResourceUnits] = useState("1");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
   const selected = query.data?.data.sections.find(
@@ -161,12 +158,7 @@ export const AdminServicesCatalog = () => {
       price: entry.price,
       capacity: String(entry.capacity),
       durationMin: entry.durationMin ? String(entry.durationMin) : "",
-      resources:
-        (
-          entry as typeof entry & {
-            resources?: Array<{ resourceId: string; quantity: number }>;
-          }
-        ).resources ?? [],
+      resources: entry.resources,
     }));
     setVariants(loadedVariants);
     setOriginalVariantIds(item.variants.map((entry) => entry.id));
@@ -307,58 +299,10 @@ export const AdminServicesCatalog = () => {
   };
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm tracking-[0.18em] text-brand uppercase">
-              Справочник ресурсов
-            </p>
-            <h2 className="mt-1 font-heading text-2xl font-semibold">
-              Ресурсы и доступные единицы
-            </h2>
-          </div>
-          <form
-            className="flex flex-wrap gap-2"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              await createServiceResource({
-                name: resourceName,
-                totalUnits: Number(resourceUnits),
-              });
-              setResourceName("");
-              setResourceUnits("1");
-              void resourcesQuery.refetch();
-            }}
-          >
-            <input
-              className="rounded-xl border p-2"
-              placeholder="Название ресурса"
-              required
-              value={resourceName}
-              onChange={(event) => setResourceName(event.target.value)}
-            />
-            <input
-              className="w-24 rounded-xl border p-2"
-              min="1"
-              required
-              type="number"
-              value={resourceUnits}
-              onChange={(event) => setResourceUnits(event.target.value)}
-            />
-            <Button type="submit">Добавить</Button>
-          </form>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {resourcesQuery.data?.data.resources.map((resource) => (
-            <span
-              className="rounded-full border border-line px-3 py-1 text-sm"
-              key={resource.id}
-            >
-              {resource.name} · {resource.totalUnits} ед.
-            </span>
-          ))}
-        </div>
-      </section>
+      <AdminServiceResourceDirectory
+        onResourceCreated={() => void resourcesQuery.refetch()}
+        resources={resourcesQuery.data?.data.resources ?? []}
+      />
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -550,17 +494,12 @@ export const AdminServicesCatalog = () => {
         variants={variants}
         resources={resourcesQuery.data?.data.resources}
       />
-      <ConfirmModal
-        confirmLabel="Удалить"
+      <AdminServiceDeleteDialog
         onClose={() => setDeleteTarget(undefined)}
         onConfirm={() => void removeCard()}
         open={Boolean(deleteTarget)}
-        title="Удалить карточку?"
-      >
-        <p>
-          Карточка «{deleteTarget?.name}» будет удалена вместе с вариантами.
-        </p>
-      </ConfirmModal>
+        name={deleteTarget?.name}
+      />
     </div>
   );
 };

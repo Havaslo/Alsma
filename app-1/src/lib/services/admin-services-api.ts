@@ -45,6 +45,10 @@ export const loadServiceCatalog = () =>
         price: string;
         capacity: number;
         durationMin: number | null;
+        resources: Array<{
+          resourceId: string;
+          quantity: number;
+        }>;
       }>;
     }>;
   }>("/services/admin/catalog", { headers: headers() });
@@ -68,6 +72,10 @@ export type ServiceSection = {
       readonly price: string;
       readonly capacity: number;
       readonly durationMin: number | null;
+      readonly resources: Array<{
+        readonly resourceId: string;
+        readonly quantity: number;
+      }>;
     }>;
     readonly placements: Array<{ readonly pageSlug: string }>;
   }>;
