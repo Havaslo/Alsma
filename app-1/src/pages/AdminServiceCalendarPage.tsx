@@ -16,6 +16,11 @@ import {
   loadServiceCalendar,
   loadServiceCatalog,
 } from "@/lib/services/admin-services-api";
+import {
+  formatServiceTime,
+  serviceDateKey,
+  serviceSlotDate,
+} from "@/lib/services/service-time";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -23,17 +28,8 @@ const formatDate = (value: string) =>
     month: "long",
     year: "numeric",
   }).format(new Date(`${value}T12:00:00`));
-const formatTime = (value: string) =>
-  new Intl.DateTimeFormat("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 const dateKey = (value: string) => {
-  const date = new Date(value);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return serviceDateKey(value);
 };
 const getCalendarRange = () => {
   const now = new Date();
@@ -70,14 +66,10 @@ const statusLabel = (status: string) =>
     requested: "Ожидает подтверждения",
   })[status] ?? status;
 const slotDate = (date: string, minutes: number) => {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
   // The API stores UTC instants, while the calendar is a local-time interface.
   // Constructing this as local time keeps the visible 08:00–22:00 workday and
   // serializes the selected wall-clock time to the correct UTC instant.
-  return new Date(
-    `${date}T${String(hours).padStart(2, "0")}:${String(remainder).padStart(2, "0")}:00`,
-  );
+  return serviceSlotDate(date, minutes);
 };
 const bookingInSlot = (
   booking: ServiceBooking,
@@ -93,10 +85,22 @@ const bookingInSlot = (
   );
 };
 
+const bookingStartsInSlot = (
+  booking: ServiceBooking,
+  date: string,
+  start: number,
+) => new Date(booking.startsAt).getTime() === slotDate(date, start).getTime();
+
 const BookingSlot = ({ booking }: { readonly booking: ServiceBooking }) => (
   <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-brand">
     <UsersRound className="size-3" /> Занято · запись{" "}
-    {formatTime(booking.startsAt)}–{formatTime(booking.endsAt)}
+    {formatServiceTime(booking.startsAt)}–{formatServiceTime(booking.endsAt)}
+  </div>
+);
+
+const OverlappingBookingSlot = () => (
+  <div className="mt-2 text-xs font-semibold text-brand">
+    Занято · пересечение записи
   </div>
 );
 
@@ -136,7 +140,8 @@ const BookingDetails = ({
         </p>
         <p>
           <span className="text-muted-ui-foreground">Время:</span>{" "}
-          {formatTime(booking.startsAt)} — {formatTime(booking.endsAt)}
+          {formatServiceTime(booking.startsAt)} —{" "}
+          {formatServiceTime(booking.endsAt)}
         </p>
         <p>
           <span className="text-muted-ui-foreground">Статус:</span>{" "}
@@ -171,6 +176,7 @@ export const AdminServiceCalendarPage = () => {
   const catalog = useQuery({
     queryKey: ["service-calendar-catalog"],
     queryFn: async () => (await loadServiceCatalog()).data,
+    refetchOnMount: "always",
   });
   const calendar = useQuery({
     queryKey: ["service-calendar", range.from.toISOString()],
@@ -213,6 +219,9 @@ export const AdminServiceCalendarPage = () => {
           slot.start,
           slot.start + durationMinutes,
         ),
+      ),
+      bookingStartsHere: bookings.some((booking) =>
+        bookingStartsInSlot(booking, selectedDate, slot.start),
       ),
     }));
 
@@ -376,8 +385,10 @@ export const AdminServiceCalendarPage = () => {
                         <div className="text-sm font-semibold">
                           {slot.label}
                         </div>
-                        {slot.booking ? (
+                        {slot.booking && slot.bookingStartsHere ? (
                           <BookingSlot booking={slot.booking} />
+                        ) : slot.booking ? (
+                          <OverlappingBookingSlot />
                         ) : (
                           <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700">
                             <Check className="size-3" /> Свободно

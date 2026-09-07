@@ -1,21 +1,13 @@
 import { ShoppingBag } from "lucide-react";
 
 import type { GuestProfile } from "@/lib/auth/guest-auth-api";
+import { formatServiceDateTime } from "@/lib/services/service-time";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
-
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 
 const formatStatus = (status: string) =>
@@ -89,7 +81,7 @@ const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
             {item.booking && (
               <div className="text-sm sm:text-right">
                 <p className="font-semibold text-brand">
-                  {formatDateTime(item.booking.startsAt)}
+                  {formatServiceDateTime(item.booking.startsAt)}
                 </p>
                 <p className="mt-1 text-muted-ui-foreground">
                   {formatStatus(item.booking.status)}

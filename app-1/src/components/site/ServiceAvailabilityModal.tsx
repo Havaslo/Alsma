@@ -4,13 +4,13 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { Modal } from "@/components/ui/Modal";
 import { useApiQuery } from "@/lib/query/use-api-query";
 import { useServiceCart } from "@/lib/services/service-cart";
+import { formatServiceTime } from "@/lib/services/service-time";
 import {
   type Service,
   type ServiceVariant,
   loadServiceAvailability,
 } from "@/lib/services/services-api";
 
-const formatTime = (value: string) => value.slice(11, 16);
 const today = () => {
   const value = new Date();
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -94,7 +94,8 @@ export const ServiceAvailabilityModal = ({
                   onClick={() => setSelectedStart(slot.startsAt)}
                   type="button"
                 >
-                  {formatTime(slot.startsAt)}–{formatTime(slot.endsAt)}
+                  {formatServiceTime(slot.startsAt)}–
+                  {formatServiceTime(slot.endsAt)}
                 </button>
               ))}
             </div>

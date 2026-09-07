@@ -3,16 +3,20 @@ import type { PrismaClient } from "../../generated/prisma/client.js";
 export const WORKDAY_START_MINUTE = 8 * 60;
 export const WORKDAY_END_MINUTE = 22 * 60;
 const SLOT_STEP_MINUTE = 30;
+// Service schedules are entered as Moscow wall-clock times. Persist their
+// corresponding instants so every client can render the same local time.
+const SERVICE_TIME_ZONE_OFFSET_MINUTE = 3 * 60;
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export const isProductVariant = (variantName: string) =>
   variantName.trim().toLocaleLowerCase("ru-RU") === "товар";
 
-const toUtcDate = (date: string, minute: number) =>
-  new Date(
-    `${date}T${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}:00.000Z`,
-  );
+const toUtcDate = (date: string, minute: number) => {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCMinutes(minute - SERVICE_TIME_ZONE_OFFSET_MINUTE);
+  return value;
+};
 
 const getDateRange = (date: string) => ({
   from: toUtcDate(date, 0),
