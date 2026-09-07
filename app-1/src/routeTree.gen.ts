@@ -25,7 +25,6 @@ import { Route as NewsRouteImport } from './routes/news'
 import { Route as OffersRouteImport } from './routes/offers'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoomsRouteImport } from './routes/rooms'
-import { Route as ServicesRouteImport } from './routes/services'
 import { Route as SpaRouteImport } from './routes/spa'
 import { Route as AccountSetupNameRouteImport } from './routes/account/setup-name'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -140,11 +139,6 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const RoomsRoute = RoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SpaRoute = SpaRouteImport.update({
@@ -350,7 +344,6 @@ export interface FileRoutesByFullPath {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
-  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -404,7 +397,6 @@ export interface FileRoutesByTo {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
-  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -459,7 +451,6 @@ export interface FileRoutesById {
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
-  '/services': typeof ServicesRoute
   '/spa': typeof SpaRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
@@ -515,7 +506,6 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
-    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -569,7 +559,6 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
-    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -623,7 +612,6 @@ export interface FileRouteTypes {
     | '/offers'
     | '/privacy'
     | '/rooms'
-    | '/services'
     | '/spa'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
@@ -678,7 +666,6 @@ export interface RootRouteChildren {
   OffersRoute: typeof OffersRoute
   PrivacyRoute: typeof PrivacyRoute
   RoomsRoute: typeof RoomsRoute
-  ServicesRoute: typeof ServicesRoute
   SpaRoute: typeof SpaRoute
   AdminAgentScenariosRoute: typeof AdminAgentScenariosRoute
   AdminBookingRequestsRoute: typeof AdminBookingRequestsRoute
@@ -826,13 +813,6 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/rooms'
       preLoaderRoute: typeof RoomsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/spa': {
@@ -1123,7 +1103,6 @@ const rootRouteChildren: RootRouteChildren = {
   OffersRoute: OffersRoute,
   PrivacyRoute: PrivacyRoute,
   RoomsRoute: RoomsRoute,
-  ServicesRoute: ServicesRoute,
   SpaRoute: SpaRoute,
   AdminAgentScenariosRoute: AdminAgentScenariosRoute,
   AdminBookingRequestsRoute: AdminBookingRequestsRoute,

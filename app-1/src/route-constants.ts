@@ -50,7 +50,6 @@ export const ROUTES = {
   privacy: "/privacy",
   rooms: "/rooms",
   spa: "/spa",
-  services: "/services",
   faq: "/faq",
 } as const;
 

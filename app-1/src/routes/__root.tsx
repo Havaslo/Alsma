@@ -18,7 +18,6 @@ const publicRoutes = new Set<string>([
   ROUTES.home,
   ROUTES.rooms,
   ROUTES.spa,
-  ROUTES.services,
   ROUTES.entertainment,
   ROUTES.allInclusive,
   ROUTES.offers,

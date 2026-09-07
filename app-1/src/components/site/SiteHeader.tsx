@@ -11,7 +11,6 @@ import { ROUTES } from "@/route-constants";
 const navigation = [
   { label: "Проживание", to: ROUTES.rooms },
   { label: "SPA", to: ROUTES.spa },
-  { label: "Услуги", to: ROUTES.services },
   { label: "Развлечения", to: ROUTES.entertainment },
   { label: "Все включено", to: ROUTES.allInclusive },
   { label: "О нас", to: ROUTES.about },
