@@ -1,7 +1,7 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 
-export const WORKDAY_START_MINUTE = 9 * 60;
-export const WORKDAY_END_MINUTE = 21 * 60;
+export const WORKDAY_START_MINUTE = 8 * 60;
+export const WORKDAY_END_MINUTE = 22 * 60;
 const SLOT_STEP_MINUTE = 30;
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;

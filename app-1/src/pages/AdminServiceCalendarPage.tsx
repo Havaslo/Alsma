@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Check, Clock3, UsersRound } from "lucide-react";
 
+import { AdminManualBookingModal } from "@/components/admin/AdminManualBookingModal";
 import { cn } from "@/lib/cn";
 import {
   type ServiceBooking,
@@ -20,16 +21,22 @@ const formatTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
   }).format(new Date(value));
 const dateKey = (value: string) => new Date(value).toISOString().slice(0, 10);
 const getCalendarRange = () => {
-  const from = new Date();
-  from.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const from = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
   const to = new Date(from);
   to.setDate(to.getDate() + 31);
   return { from, to };
 };
 
+// The services API stores and validates availability in UTC. Keep the grid on
+// the same contract so a displayed slot serializes to the exact slot checked
+// by the manual-booking endpoint.
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 22;
 const SLOT_MINUTES = 30;
@@ -52,9 +59,11 @@ const statusLabel = (status: string) =>
     requested: "Ожидает подтверждения",
   })[status] ?? status;
 const slotDate = (date: string, minutes: number) => {
-  const value = new Date(`${date}T00:00:00`);
-  value.setMinutes(minutes);
-  return value;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return new Date(
+    `${date}T${String(hours).padStart(2, "0")}:${String(remainder).padStart(2, "0")}:00.000Z`,
+  );
 };
 const bookingInSlot = (
   booking: ServiceBooking,
@@ -97,6 +106,7 @@ export const AdminServiceCalendarPage = () => {
     range.from.toISOString().slice(0, 10),
   );
   const [selectedServiceId, setSelectedServiceId] = useState<string>();
+  const [manualSlot, setManualSlot] = useState<number | null>(null);
   const catalog = useQuery({
     queryKey: ["service-calendar-catalog"],
     queryFn: async () => (await loadServiceCatalog()).data,
@@ -119,6 +129,7 @@ export const AdminServiceCalendarPage = () => {
   const bookings = (calendar.data?.bookings ?? []).filter(
     (booking) =>
       booking.service.id === activeServiceId &&
+      booking.status !== "cancelled" &&
       dateKey(booking.startsAt) === selectedDate,
   );
   const slots = timeSlots.map((slot) => ({
@@ -172,9 +183,6 @@ export const AdminServiceCalendarPage = () => {
                 onClick={() => setSelectedServiceId(service.id)}
                 type="button"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-current/10 text-sm font-bold">
-                  {service.name.slice(0, 1)}
-                </span>
                 <span className="min-w-0">
                   <strong className="block truncate text-sm">
                     {service.name}
@@ -221,35 +229,36 @@ export const AdminServiceCalendarPage = () => {
               )}
               {!calendar.isLoading && (
                 <div className="mt-6 overflow-hidden rounded-2xl border border-line">
-                  <div className="grid grid-cols-[5rem_1fr] border-b border-line bg-muted-ui/20 px-4 py-3 text-xs font-semibold tracking-[0.12em] text-muted-ui-foreground uppercase sm:grid-cols-[7rem_1fr]">
-                    <span>Время</span>
-                    <span>Состояние записи</span>
+                  <div className="border-b border-line bg-muted-ui/20 px-4 py-3 text-xs font-semibold tracking-[0.12em] text-muted-ui-foreground uppercase">
+                    Матрица доступности · нажмите на свободное время для ручной
+                    записи
                   </div>
-                  <div className="divide-y divide-line">
+                  <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                     {slots.map((slot) => (
-                      <div
-                        className="grid min-h-20 grid-cols-[5rem_1fr] items-stretch sm:grid-cols-[7rem_1fr]"
+                      <button
+                        className={cn(
+                          "min-h-20 rounded-xl border p-3 text-left transition",
+                          slot.booking
+                            ? "cursor-default border-brand/30 bg-brand/10"
+                            : "border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100",
+                        )}
                         key={slot.label}
+                        onClick={() =>
+                          !slot.booking && setManualSlot(slot.start)
+                        }
+                        type="button"
                       >
-                        <div className="flex items-start border-r border-line px-4 py-4 text-sm font-semibold text-muted-ui-foreground">
+                        <div className="text-sm font-semibold">
                           {slot.label}
                         </div>
-                        <div
-                          className={cn(
-                            "p-2",
-                            slot.booking ? "bg-brand/5" : "bg-brand-foreground",
-                          )}
-                        >
-                          {slot.booking ? (
-                            <BookingSlot booking={slot.booking} />
-                          ) : (
-                            <div className="flex h-full min-h-14 items-center gap-2 rounded-xl border border-dashed border-line px-3 text-sm text-muted-ui-foreground">
-                              <Check className="size-4 text-emerald-600" />{" "}
-                              Свободно
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        {slot.booking ? (
+                          <BookingSlot booking={slot.booking} />
+                        ) : (
+                          <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700">
+                            <Check className="size-3" /> Свободно
+                          </div>
+                        )}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -265,6 +274,16 @@ export const AdminServiceCalendarPage = () => {
           )}
         </div>
       </div>
+      {manualSlot !== null && selectedService && (
+        <AdminManualBookingModal
+          date={formatDate(selectedDate)}
+          onClose={() => setManualSlot(null)}
+          onCreated={() => void calendar.refetch()}
+          serviceName={selectedService.name}
+          startsAt={slotDate(selectedDate, manualSlot).toISOString()}
+          variants={selectedService.variants}
+        />
+      )}
     </section>
   );
 };

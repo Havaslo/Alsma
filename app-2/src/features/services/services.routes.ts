@@ -503,7 +503,10 @@ export const createServicesRouter = (database: Database): Router => {
       ),
     );
     const bookings = await database.client.serviceBooking.findMany({
-      where: { startsAt: { gte: from, lte: to } },
+      where: {
+        startsAt: { gte: from, lte: to },
+        status: { not: "cancelled" },
+      },
       include: {
         service: true,
         variant: true,
@@ -512,6 +515,92 @@ export const createServicesRouter = (database: Database): Router => {
       orderBy: { startsAt: "asc" },
     });
     response.json({ bookings });
+  });
+  admin.post("/manual-bookings", async (request, response) => {
+    const input = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        phone: z.string().trim().min(7).max(32),
+        email: z.string().email().optional().or(z.literal("")),
+        variantId: z.string().uuid(),
+        startsAt: z.string().datetime(),
+      })
+      .parse(request.body);
+    const variant = await database.client.serviceVariant.findFirst({
+      where: { id: input.variantId, active: true },
+    });
+    if (!variant)
+      return response
+        .status(404)
+        .json({ error: { code: "VARIANT_UNAVAILABLE" } });
+    const startsAt = new Date(input.startsAt);
+    if (
+      !(await isServiceSlotAvailable(
+        database.client,
+        variant.serviceId,
+        variant,
+        startsAt,
+        1,
+      ))
+    )
+      return response.status(409).json({
+        error: {
+          code: "BOOKING_SLOT_UNAVAILABLE",
+          message: "Выбранное время уже занято.",
+        },
+      });
+    const email =
+      input.email?.trim().toLowerCase() ||
+      `manual-${input.phone.replace(/\D/g, "")}@local.invalid`;
+    const order = await database.client.$transaction(async (transaction) => {
+      const existingByEmail = email.endsWith("@local.invalid")
+        ? null
+        : await transaction.guestUser.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
+          });
+      const user = existingByEmail
+        ? await transaction.guestUser.update({
+            where: { id: existingByEmail.id },
+            data: { fullName: input.name },
+          })
+        : await transaction.guestUser.upsert({
+            where: { phone: input.phone },
+            create: { email, phone: input.phone, fullName: input.name },
+            update: { email, fullName: input.name },
+          });
+      return transaction.serviceOrder.create({
+        data: {
+          name: input.name,
+          email,
+          phone: input.phone,
+          userId: user.id,
+          paymentStatus: "pending",
+          status: "new",
+          total: 0,
+          items: {
+            create: {
+              serviceId: variant.serviceId,
+              variantId: variant.id,
+              quantity: 1,
+              unitPrice: 0,
+              booking: {
+                create: {
+                  serviceId: variant.serviceId,
+                  variantId: variant.id,
+                  startsAt,
+                  endsAt: new Date(
+                    startsAt.getTime() + (variant.durationMin ?? 60) * 60000,
+                  ),
+                  status: "requested",
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+    });
+    response.status(201).json({ orderId: order.id });
   });
   router.use("/admin", admin);
   return router;

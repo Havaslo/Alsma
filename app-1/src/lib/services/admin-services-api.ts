@@ -16,6 +16,20 @@ export const loadServiceCalendar = (from: string, to: string) =>
   apiClient.get<{ bookings: ServiceBooking[] }>("/services/admin/calendar", {
     params: { from, to },
   });
+export const createManualServiceBooking = (input: {
+  name: string;
+  phone: string;
+  email?: string;
+  variantId: string;
+  startsAt: string;
+}) =>
+  apiClient.post<{ orderId: string }>(
+    "/services/admin/manual-bookings",
+    input,
+    {
+      headers: headers(),
+    },
+  );
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
 export const loadServiceCatalog = () =>
   apiClient.get<{
