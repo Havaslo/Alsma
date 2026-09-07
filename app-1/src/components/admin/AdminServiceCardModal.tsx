@@ -12,7 +12,9 @@ type Variant = {
   price: string;
   capacity: string;
   durationMin: string;
+  resources?: Array<{ resourceId: string; quantity: number }>;
 };
+type Resource = { id: string; name: string; totalUnits: number };
 export type ServiceCardDraft = {
   name: string;
   description: string;
@@ -33,6 +35,7 @@ type Props = {
   onVariantChange: (index: number, patch: Partial<Variant>) => void;
   onRemoveVariant: (index: number) => void;
   onAddVariant: () => void;
+  resources?: Resource[];
 };
 
 export const AdminServiceCardModal = ({
@@ -47,6 +50,7 @@ export const AdminServiceCardModal = ({
   onVariantChange,
   onRemoveVariant,
   onAddVariant,
+  resources = [],
 }: Props) => (
   <Modal
     className="max-w-5xl"
@@ -167,6 +171,65 @@ export const AdminServiceCardModal = ({
               onVariantChange(index, { capacity: event.target.value })
             }
           />
+          {card.kind === "service" && (
+            <div className="rounded-xl bg-muted-ui/20 p-3 text-sm md:col-span-5">
+              <p className="font-semibold">Ресурсы на одну запись</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {resources.map((resource) => {
+                  const assignment = (entry.resources ?? []).find(
+                    (item) => item.resourceId === resource.id,
+                  );
+                  return (
+                    <label
+                      className="flex items-center gap-2"
+                      key={resource.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(assignment)}
+                        onChange={(event) => {
+                          const current = (entry.resources ?? []).filter(
+                            (item) => item.resourceId !== resource.id,
+                          );
+                          onVariantChange(index, {
+                            resources: event.target.checked
+                              ? [
+                                  ...current,
+                                  { resourceId: resource.id, quantity: 1 },
+                                ]
+                              : current,
+                          });
+                        }}
+                      />
+                      <span>
+                        {resource.name} (всего {resource.totalUnits})
+                      </span>
+                      {assignment && (
+                        <input
+                          className="w-20 rounded border p-1"
+                          min="1"
+                          type="number"
+                          value={assignment.quantity}
+                          onChange={(event) =>
+                            onVariantChange(index, {
+                              resources: (entry.resources ?? []).map((item) =>
+                                item.resourceId === resource.id
+                                  ? {
+                                      ...item,
+                                      quantity: Number(event.target.value),
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {card.kind === "service" && (
             <button
               aria-label="Удалить тип услуги"

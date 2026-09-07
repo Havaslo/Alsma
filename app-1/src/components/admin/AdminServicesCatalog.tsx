@@ -13,10 +13,12 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/Modal";
 import {
   createService,
+  createServiceResource,
   createServiceSection,
   createVariant,
   deleteService,
   deleteVariant,
+  loadServiceResources,
   loadServiceSections,
   updateService,
   updateServiceSection,
@@ -40,6 +42,7 @@ type Variant = {
   price: string;
   capacity: string;
   durationMin: string;
+  resources?: Array<{ resourceId: string; quantity: number }>;
 };
 const blankVariant = (): Variant => ({
   name: "",
@@ -60,6 +63,10 @@ export const AdminServicesCatalog = () => {
   const query = useQuery({
     queryKey: ["service-sections"],
     queryFn: loadServiceSections,
+  });
+  const resourcesQuery = useQuery({
+    queryKey: ["service-resources"],
+    queryFn: loadServiceResources,
   });
   const [sectionId, setSectionId] = useState("");
   const [section, setSection] = useState(blankSection());
@@ -84,6 +91,8 @@ export const AdminServicesCatalog = () => {
     Record<string, "draft" | "published" | "archived">
   >({});
   const [statusError, setStatusError] = useState("");
+  const [resourceName, setResourceName] = useState("");
+  const [resourceUnits, setResourceUnits] = useState("1");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
   const selected = query.data?.data.sections.find(
@@ -152,6 +161,12 @@ export const AdminServicesCatalog = () => {
       price: entry.price,
       capacity: String(entry.capacity),
       durationMin: entry.durationMin ? String(entry.durationMin) : "",
+      resources:
+        (
+          entry as typeof entry & {
+            resources?: Array<{ resourceId: string; quantity: number }>;
+          }
+        ).resources ?? [],
     }));
     setVariants(loadedVariants);
     setOriginalVariantIds(item.variants.map((entry) => entry.id));
@@ -211,6 +226,7 @@ export const AdminServicesCatalog = () => {
                   ? Number(entry.durationMin)
                   : null,
                 active: true,
+                resources: entry.resources,
               })
             : createVariant(serviceId!, {
                 name: entry.name,
@@ -219,6 +235,7 @@ export const AdminServicesCatalog = () => {
                 durationMin: entry.durationMin
                   ? Number(entry.durationMin)
                   : null,
+                resources: entry.resources,
               }),
         ),
       );
@@ -284,6 +301,58 @@ export const AdminServicesCatalog = () => {
   };
   return (
     <div className="space-y-6">
+      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm tracking-[0.18em] text-brand uppercase">
+              Справочник ресурсов
+            </p>
+            <h2 className="mt-1 font-heading text-2xl font-semibold">
+              Ресурсы и доступные единицы
+            </h2>
+          </div>
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await createServiceResource({
+                name: resourceName,
+                totalUnits: Number(resourceUnits),
+              });
+              setResourceName("");
+              setResourceUnits("1");
+              void resourcesQuery.refetch();
+            }}
+          >
+            <input
+              className="rounded-xl border p-2"
+              placeholder="Название ресурса"
+              required
+              value={resourceName}
+              onChange={(event) => setResourceName(event.target.value)}
+            />
+            <input
+              className="w-24 rounded-xl border p-2"
+              min="1"
+              required
+              type="number"
+              value={resourceUnits}
+              onChange={(event) => setResourceUnits(event.target.value)}
+            />
+            <Button type="submit">Добавить</Button>
+          </form>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {resourcesQuery.data?.data.resources.map((resource) => (
+            <span
+              className="rounded-full border border-line px-3 py-1 text-sm"
+              key={resource.id}
+            >
+              {resource.name} · {resource.totalUnits} ед.
+            </span>
+          ))}
+        </div>
+      </section>
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -473,6 +542,7 @@ export const AdminServicesCatalog = () => {
         onVariantChange={updateVariantDraft}
         open={cardOpen}
         variants={variants}
+        resources={resourcesQuery.data?.data.resources}
       />
       <ConfirmModal
         confirmLabel="Удалить"

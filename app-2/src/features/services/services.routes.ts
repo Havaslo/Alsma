@@ -110,6 +110,7 @@ export const createServicesRouter = (database: Database): Router => {
         serviceId: request.params.serviceId,
         active: true,
       },
+      include: { resources: { include: { resource: true } } },
     });
     if (!variant)
       return response
@@ -166,7 +167,7 @@ export const createServicesRouter = (database: Database): Router => {
         id: { in: input.items.map((item) => item.variantId) },
         active: true,
       },
-      include: { service: true },
+      include: { service: true, resources: { include: { resource: true } } },
     });
     if (variants.length !== input.items.length)
       return response
@@ -281,7 +282,14 @@ export const createServicesRouter = (database: Database): Router => {
   admin.get("/sections", async (_request, response) => {
     const sections = await database.client.serviceSection.findMany({
       include: {
-        services: { include: { variants: true, placements: true } },
+        services: {
+          include: {
+            variants: {
+              include: { resources: { include: { resource: true } } },
+            },
+            placements: true,
+          },
+        },
       },
       orderBy: [{ pageSlug: "asc" }, { blockNumber: "asc" }],
     });
@@ -360,9 +368,51 @@ export const createServicesRouter = (database: Database): Router => {
   admin.get("/catalog", async (_request, response) => {
     response.json({
       services: await database.client.service.findMany({
-        include: { variants: true, placements: true, rules: true },
+        include: {
+          variants: { include: { resources: { include: { resource: true } } } },
+          placements: true,
+          rules: true,
+        },
       }),
     });
+  });
+  admin.get("/resources", async (_request, response) => {
+    response.json({
+      resources: await database.client.serviceResource.findMany({
+        orderBy: { name: "asc" },
+      }),
+    });
+  });
+  admin.post("/resources", async (request, response) => {
+    const input = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        totalUnits: z.number().int().positive(),
+      })
+      .parse(request.body);
+    response.status(201).json({
+      resource: await database.client.serviceResource.create({ data: input }),
+    });
+  });
+  admin.put("/resources/:resourceId", async (request, response) => {
+    const input = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        totalUnits: z.number().int().positive(),
+      })
+      .parse(request.body);
+    response.json({
+      resource: await database.client.serviceResource.update({
+        where: { id: request.params.resourceId },
+        data: input,
+      }),
+    });
+  });
+  admin.delete("/resources/:resourceId", async (request, response) => {
+    await database.client.serviceResource.delete({
+      where: { id: request.params.resourceId },
+    });
+    response.status(204).end();
   });
   admin.post("/catalog", async (request, response) => {
     const input = z
@@ -412,11 +462,23 @@ export const createServicesRouter = (database: Database): Router => {
         capacity: z.number().int().positive(),
         durationMin: z.number().int().positive().nullable(),
         active: z.boolean().default(true),
+        resources: z
+          .array(
+            z.object({
+              resourceId: z.string().uuid(),
+              quantity: z.number().int().positive(),
+            }),
+          )
+          .default([]),
       })
       .parse(request.body);
     response.status(201).json({
       variant: await database.client.serviceVariant.create({
-        data: { ...input, serviceId: request.params.serviceId },
+        data: {
+          ...input,
+          serviceId: request.params.serviceId,
+          resources: { create: input.resources },
+        },
       }),
     });
   });
@@ -431,12 +493,23 @@ export const createServicesRouter = (database: Database): Router => {
           capacity: z.number().int().positive(),
           durationMin: z.number().int().positive().nullable(),
           active: z.boolean(),
+          resources: z
+            .array(
+              z.object({
+                resourceId: z.string().uuid(),
+                quantity: z.number().int().positive(),
+              }),
+            )
+            .default([]),
         })
         .parse(request.body);
       response.json({
         variant: await database.client.serviceVariant.update({
           where: { id: request.params.variantId },
-          data: input,
+          data: {
+            ...input,
+            resources: { deleteMany: {}, create: input.resources },
+          },
         }),
       });
     },
@@ -528,6 +601,7 @@ export const createServicesRouter = (database: Database): Router => {
       .parse(request.body);
     const variant = await database.client.serviceVariant.findFirst({
       where: { id: input.variantId, active: true },
+      include: { resources: { include: { resource: true } } },
     });
     if (!variant)
       return response
@@ -546,7 +620,9 @@ export const createServicesRouter = (database: Database): Router => {
       return response.status(409).json({
         error: {
           code: "BOOKING_SLOT_UNAVAILABLE",
-          message: "Выбранное время уже занято.",
+          message: variant.resources.length
+            ? "Выбранное время недоступно: не хватает назначенного ресурса на всю длительность услуги."
+            : "Выбранное время уже занято.",
         },
       });
     const email =

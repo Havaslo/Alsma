@@ -141,6 +141,7 @@ export const createVariant = (
     price: number;
     capacity: number;
     durationMin: number | null;
+    resources?: Array<{ resourceId: string; quantity: number }>;
   },
 ) =>
   apiClient.post(`/services/admin/catalog/${serviceId}/variants`, input, {
@@ -155,6 +156,7 @@ export const updateVariant = (
     capacity: number;
     durationMin: number | null;
     active: boolean;
+    resources?: Array<{ resourceId: string; quantity: number }>;
   },
 ) =>
   apiClient.put(
@@ -162,6 +164,22 @@ export const updateVariant = (
     input,
     { headers: headers() },
   );
+export type ServiceResource = { id: string; name: string; totalUnits: number };
+export const loadServiceResources = () =>
+  apiClient.get<{ resources: ServiceResource[] }>("/services/admin/resources", {
+    headers: headers(),
+  });
+export const createServiceResource = (input: {
+  name: string;
+  totalUnits: number;
+}) =>
+  apiClient.post<{ resource: ServiceResource }>(
+    "/services/admin/resources",
+    input,
+    { headers: headers() },
+  );
+export const deleteServiceResource = (id: string) =>
+  apiClient.delete(`/services/admin/resources/${id}`, { headers: headers() });
 export const deleteVariant = (serviceId: string, variantId: string) =>
   apiClient.delete(
     `/services/admin/catalog/${serviceId}/variants/${variantId}`,

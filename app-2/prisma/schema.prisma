@@ -142,9 +142,30 @@ model ServiceVariant {
   orders         ServiceOrderItem[]
   bookings       ServiceBooking[]
   scheduleBlocks ServiceScheduleBlock[]
+  resources      ServiceVariantResource[]
 
   @@index([serviceId, active])
   @@map("service_variants")
+}
+
+model ServiceResource {
+  id         String                   @id @default(uuid()) @db.Uuid
+  name       String
+  totalUnits Int                      @map("total_units")
+  createdAt  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  variants   ServiceVariantResource[]
+  @@map("service_resources")
+}
+
+model ServiceVariantResource {
+  variantId  String         @map("variant_id") @db.Uuid
+  resourceId String         @map("resource_id") @db.Uuid
+  quantity   Int
+  variant    ServiceVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  resource   ServiceResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  @@id([variantId, resourceId])
+  @@map("service_variant_resources")
 }
 
 model ServicePagePlacement {

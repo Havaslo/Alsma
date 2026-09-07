@@ -33,6 +33,11 @@ type AvailabilityVariant = {
   readonly serviceId: string;
   readonly capacity: number;
   readonly durationMin: number | null;
+  readonly resources?: readonly {
+    resourceId: string;
+    quantity: number;
+    resource: { totalUnits: number };
+  }[];
 };
 
 export const listServiceAvailability = async (
@@ -62,7 +67,16 @@ export const listServiceAvailability = async (
       endsAt: { gt: from },
       status: { not: "cancelled" },
     },
-    include: { orderItem: { select: { quantity: true } } },
+    include: {
+      orderItem: { select: { quantity: true } },
+      variant: {
+        include: {
+          resources: {
+            include: { resource: { select: { totalUnits: true } } },
+          },
+        },
+      },
+    },
   });
   const hasBlocks = blocks.length > 0;
   const slots: Array<{ startsAt: string; endsAt: string }> = [];
@@ -89,6 +103,18 @@ export const listServiceAvailability = async (
       )
       .reduce((sum, booking) => sum + booking.orderItem.quantity, 0);
     if (booked + quantity > capacity) continue;
+    const resourceUnavailable = (variant.resources ?? []).some((assigned) => {
+      const used = bookings.reduce((sum, booking) => {
+        if (!(booking.startsAt < endsAt && booking.endsAt > startsAt))
+          return sum;
+        const usage = booking.variant.resources.find(
+          (item) => item.resourceId === assigned.resourceId,
+        );
+        return sum + (usage?.quantity ?? 0) * booking.orderItem.quantity;
+      }, 0);
+      return used + assigned.quantity * quantity > assigned.resource.totalUnits;
+    });
+    if (resourceUnavailable) continue;
     slots.push({
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
