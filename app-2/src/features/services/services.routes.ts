@@ -14,6 +14,7 @@ import {
   isServiceSlotAvailable,
   listServiceAvailability,
   listServiceAvailabilityDetails,
+  lockServiceAvailability,
 } from "./service-availability.js";
 
 const sortServicesByPlacement = <
@@ -246,71 +247,90 @@ export const createServicesRouter = (database: Database): Router => {
           message: "Количество гостей превышает вместимость варианта.",
         },
       });
-    for (const item of input.items) {
-      const variant = byId.get(item.variantId)!;
-      if (isProductVariant(variant.name)) continue;
-      const startsAt = new Date(item.startsAt!);
-      if (
-        Number.isNaN(startsAt.getTime()) ||
-        !(await isServiceSlotAvailable(
-          database.client,
-          variant.serviceId,
-          variant,
-          startsAt,
-          item.quantity,
-        ))
-      )
-        return response.status(400).json({
-          error: {
-            code: "BOOKING_SLOT_UNAVAILABLE",
-            message: "Выбранное время больше недоступно. Выберите другой слот.",
-          },
-        });
-    }
     const total = input.items.reduce(
       (sum, item) =>
         sum + Number(byId.get(item.variantId)!.price) * item.quantity,
       0,
     );
-    const order = await database.client.serviceOrder.create({
-      data: {
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        userId,
-        paymentStatus: "succeeded",
-        paidAt: new Date(),
-        status: "paid",
-        total,
-        items: {
-          create: input.items.map((item) => {
-            const variant = byId.get(item.variantId)!;
-            return {
-              variantId: variant.id,
-              serviceId: variant.serviceId,
-              quantity: item.quantity,
-              unitPrice: variant.price,
-              ...(item.startsAt && !isProductVariant(variant.name)
-                ? {
-                    booking: {
-                      create: {
-                        serviceId: variant.serviceId,
-                        variantId: variant.id,
-                        startsAt: new Date(item.startsAt),
-                        endsAt: new Date(
-                          new Date(item.startsAt).getTime() +
-                            (variant.durationMin ?? 60) * 60000,
-                        ),
-                      },
-                    },
-                  }
-                : {}),
-            };
-          }),
+    const order = await database.client
+      .$transaction(async (transaction) => {
+        for (const item of input.items) {
+          const variant = byId.get(item.variantId)!;
+          if (isProductVariant(variant.name)) continue;
+          await lockServiceAvailability(
+            transaction as typeof database.client,
+            variant.serviceId,
+            variant,
+          );
+          const startsAt = new Date(item.startsAt!);
+          if (
+            Number.isNaN(startsAt.getTime()) ||
+            !(await isServiceSlotAvailable(
+              transaction as typeof database.client,
+              variant.serviceId,
+              variant,
+              startsAt,
+              item.quantity,
+            ))
+          ) {
+            throw new Error("BOOKING_SLOT_UNAVAILABLE");
+          }
+        }
+        return transaction.serviceOrder.create({
+          data: {
+            name: input.name,
+            email: input.email,
+            phone: input.phone,
+            userId,
+            paymentStatus: "succeeded",
+            paidAt: new Date(),
+            status: "paid",
+            total,
+            items: {
+              create: input.items.map((item) => {
+                const variant = byId.get(item.variantId)!;
+                return {
+                  variantId: variant.id,
+                  serviceId: variant.serviceId,
+                  quantity: item.quantity,
+                  unitPrice: variant.price,
+                  ...(item.startsAt && !isProductVariant(variant.name)
+                    ? {
+                        booking: {
+                          create: {
+                            serviceId: variant.serviceId,
+                            variantId: variant.id,
+                            startsAt: new Date(item.startsAt),
+                            endsAt: new Date(
+                              new Date(item.startsAt).getTime() +
+                                (variant.durationMin ?? 60) * 60000,
+                            ),
+                          },
+                        },
+                      }
+                    : {}),
+                };
+              }),
+            },
+          },
+          include: { items: true },
+        });
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          error.message === "BOOKING_SLOT_UNAVAILABLE"
+        )
+          return null;
+        throw error;
+      });
+    if (!order)
+      return response.status(400).json({
+        error: {
+          code: "BOOKING_SLOT_UNAVAILABLE",
+          message: "Выбранное время больше недоступно. Выберите другой слот.",
         },
-      },
-      include: { items: true },
-    });
+      });
     await database.client.paymentAttempt.create({
       data: { orderId: order.id, provider: "demo", status: "succeeded" },
     });
@@ -687,15 +707,82 @@ export const createServicesRouter = (database: Database): Router => {
         .status(404)
         .json({ error: { code: "VARIANT_UNAVAILABLE" } });
     const startsAt = new Date(input.startsAt);
-    if (
-      !(await isServiceSlotAvailable(
-        database.client,
-        variant.serviceId,
-        variant,
-        startsAt,
-        1,
-      ))
-    )
+    const email =
+      input.email?.trim().toLowerCase() ||
+      `manual-${input.phone.replace(/\D/g, "")}@local.invalid`;
+    const order = await database.client
+      .$transaction(async (transaction) => {
+        await lockServiceAvailability(
+          transaction as typeof database.client,
+          variant.serviceId,
+          variant,
+        );
+        if (
+          !(await isServiceSlotAvailable(
+            transaction as typeof database.client,
+            variant.serviceId,
+            variant,
+            startsAt,
+            1,
+          ))
+        )
+          throw new Error("BOOKING_SLOT_UNAVAILABLE");
+        const existingByEmail = email.endsWith("@local.invalid")
+          ? null
+          : await transaction.guestUser.findFirst({
+              where: { email: { equals: email, mode: "insensitive" } },
+            });
+        const user = existingByEmail
+          ? await transaction.guestUser.update({
+              where: { id: existingByEmail.id },
+              data: { fullName: input.name },
+            })
+          : await transaction.guestUser.upsert({
+              where: { phone: input.phone },
+              create: { email, phone: input.phone, fullName: input.name },
+              update: { email, fullName: input.name },
+            });
+        return transaction.serviceOrder.create({
+          data: {
+            name: input.name,
+            email,
+            phone: input.phone,
+            userId: user.id,
+            paymentStatus: "pending",
+            status: "new",
+            total: 0,
+            items: {
+              create: {
+                serviceId: variant.serviceId,
+                variantId: variant.id,
+                quantity: 1,
+                unitPrice: 0,
+                booking: {
+                  create: {
+                    serviceId: variant.serviceId,
+                    variantId: variant.id,
+                    startsAt,
+                    endsAt: new Date(
+                      startsAt.getTime() + (variant.durationMin ?? 60) * 60000,
+                    ),
+                    status: "requested",
+                  },
+                },
+              },
+            },
+          },
+          select: { id: true },
+        });
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          error.message === "BOOKING_SLOT_UNAVAILABLE"
+        )
+          return null;
+        throw error;
+      });
+    if (!order)
       return response.status(409).json({
         error: {
           code: "BOOKING_SLOT_UNAVAILABLE",
@@ -704,57 +791,6 @@ export const createServicesRouter = (database: Database): Router => {
             : "Выбранное время уже занято.",
         },
       });
-    const email =
-      input.email?.trim().toLowerCase() ||
-      `manual-${input.phone.replace(/\D/g, "")}@local.invalid`;
-    const order = await database.client.$transaction(async (transaction) => {
-      const existingByEmail = email.endsWith("@local.invalid")
-        ? null
-        : await transaction.guestUser.findFirst({
-            where: { email: { equals: email, mode: "insensitive" } },
-          });
-      const user = existingByEmail
-        ? await transaction.guestUser.update({
-            where: { id: existingByEmail.id },
-            data: { fullName: input.name },
-          })
-        : await transaction.guestUser.upsert({
-            where: { phone: input.phone },
-            create: { email, phone: input.phone, fullName: input.name },
-            update: { email, fullName: input.name },
-          });
-      return transaction.serviceOrder.create({
-        data: {
-          name: input.name,
-          email,
-          phone: input.phone,
-          userId: user.id,
-          paymentStatus: "pending",
-          status: "new",
-          total: 0,
-          items: {
-            create: {
-              serviceId: variant.serviceId,
-              variantId: variant.id,
-              quantity: 1,
-              unitPrice: 0,
-              booking: {
-                create: {
-                  serviceId: variant.serviceId,
-                  variantId: variant.id,
-                  startsAt,
-                  endsAt: new Date(
-                    startsAt.getTime() + (variant.durationMin ?? 60) * 60000,
-                  ),
-                  status: "requested",
-                },
-              },
-            },
-          },
-        },
-        select: { id: true },
-      });
-    });
     response.status(201).json({ orderId: order.id });
   });
   router.use("/admin", admin);

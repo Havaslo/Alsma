@@ -1,5 +1,7 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 
+type AdvisoryLockExecutor = Pick<PrismaClient, "$queryRaw">;
+
 export const WORKDAY_START_MINUTE = 8 * 60;
 export const WORKDAY_END_MINUTE = 22 * 60;
 // Service schedules are entered as Moscow wall-clock times. Persist their
@@ -10,6 +12,23 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export const isProductVariant = (variantName: string) =>
   variantName.trim().toLocaleLowerCase("ru-RU") === "товар";
+
+/** Serialize writes that could consume the same resource (or capacity slot). */
+export const lockServiceAvailability = async (
+  database: AdvisoryLockExecutor,
+  serviceId: string,
+  variant: Pick<AvailabilityVariant, "id" | "resources">,
+) => {
+  const resourceIds = [...(variant.resources ?? [])]
+    .map((resource) => resource.resourceId)
+    .sort();
+  const lockKeys = resourceIds.length
+    ? resourceIds.map((resourceId) => `service-resource:${resourceId}`)
+    : [`service-capacity:${serviceId}:${variant.id}`];
+  for (const lockKey of lockKeys) {
+    await database.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+  }
+};
 
 const toUtcDate = (date: string, minute: number) => {
   const value = new Date(`${date}T00:00:00.000Z`);
@@ -72,10 +91,18 @@ export const listServiceAvailabilityDetails = async (
       endsAt: { gt: from },
     },
   });
+  const resourceIds = (variant.resources ?? []).map(
+    (assigned) => assigned.resourceId,
+  );
   const bookings = await database.serviceBooking.findMany({
     where: {
-      serviceId,
-      variantId: variant.id,
+      ...(resourceIds.length
+        ? {
+            variant: {
+              resources: { some: { resourceId: { in: resourceIds } } },
+            },
+          }
+        : { serviceId, variantId: variant.id }),
       startsAt: { lt: toUtcDate(date, WORKDAY_END_MINUTE) },
       endsAt: { gt: from },
       status: { not: "cancelled" },
