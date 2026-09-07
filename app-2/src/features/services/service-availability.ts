@@ -43,16 +43,26 @@ type AvailabilityVariant = {
   }[];
 };
 
-export const listServiceAvailability = async (
+export type ServiceAvailabilitySlot = {
+  startsAt: string;
+  endsAt: string;
+};
+
+export type ServiceAvailabilityDetails = {
+  available: ServiceAvailabilitySlot[];
+  occupied: ServiceAvailabilitySlot[];
+};
+
+export const listServiceAvailabilityDetails = async (
   database: PrismaClient,
   serviceId: string,
   variant: AvailabilityVariant,
   date: string,
   quantity = 1,
-) => {
-  if (!isValidDate(date)) return [];
+): Promise<ServiceAvailabilityDetails> => {
+  if (!isValidDate(date)) return { available: [], occupied: [] };
   const duration = variant.durationMin ?? 60;
-  if (duration <= 0) return [];
+  if (duration <= 0) return { available: [], occupied: [] };
   const { from, to } = getDateRange(date);
   const blocks = await database.serviceScheduleBlock.findMany({
     where: {
@@ -82,7 +92,8 @@ export const listServiceAvailability = async (
     },
   });
   const hasBlocks = blocks.length > 0;
-  const slots: Array<{ startsAt: string; endsAt: string }> = [];
+  const available: ServiceAvailabilitySlot[] = [];
+  const occupied: ServiceAvailabilitySlot[] = [];
   for (
     let minute = WORKDAY_START_MINUTE;
     minute + duration <= WORKDAY_END_MINUTE;
@@ -108,7 +119,7 @@ export const listServiceAvailability = async (
         (booking) => booking.startsAt < endsAt && booking.endsAt > startsAt,
       )
       .reduce((sum, booking) => sum + booking.orderItem.quantity, 0);
-    if (booked + quantity > capacity) continue;
+    const capacityUnavailable = booked + quantity > capacity;
     const resourceUnavailable = (variant.resources ?? []).some((assigned) => {
       const used = bookings.reduce((sum, booking) => {
         if (!(booking.startsAt < endsAt && booking.endsAt > startsAt))
@@ -120,13 +131,31 @@ export const listServiceAvailability = async (
       }, 0);
       return used + assigned.quantity * quantity > assigned.resource.totalUnits;
     });
-    if (resourceUnavailable) continue;
-    slots.push({
+    const slot = {
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
-    });
+    };
+    if (capacityUnavailable || resourceUnavailable) occupied.push(slot);
+    else available.push(slot);
   }
-  return slots;
+  return { available, occupied };
+};
+
+export const listServiceAvailability = async (
+  database: PrismaClient,
+  serviceId: string,
+  variant: AvailabilityVariant,
+  date: string,
+  quantity = 1,
+) => {
+  const details = await listServiceAvailabilityDetails(
+    database,
+    serviceId,
+    variant,
+    date,
+    quantity,
+  );
+  return details.available;
 };
 
 export const isServiceSlotAvailable = async (

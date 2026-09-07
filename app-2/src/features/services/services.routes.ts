@@ -13,6 +13,7 @@ import {
   isProductVariant,
   isServiceSlotAvailable,
   listServiceAvailability,
+  listServiceAvailabilityDetails,
 } from "./service-availability.js";
 
 const sortServicesByPlacement = <
@@ -162,14 +163,16 @@ export const createServicesRouter = (database: Database): Router => {
       return response
         .status(404)
         .json({ error: { code: "VARIANT_UNAVAILABLE" } });
+    const availability = await listServiceAvailabilityDetails(
+      database.client,
+      request.params.serviceId,
+      variant,
+      date,
+      quantity,
+    );
     response.json({
-      blocks: await listServiceAvailability(
-        database.client,
-        request.params.serviceId,
-        variant,
-        date,
-        quantity,
-      ),
+      blocks: availability.available,
+      occupiedBlocks: availability.occupied,
     });
   });
   router.post("/orders", async (request, response) => {

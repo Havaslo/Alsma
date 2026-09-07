@@ -38,6 +38,19 @@ export const ServiceAvailabilityModal = ({
       errorMessage: "Не удалось загрузить слоты.",
     },
   );
+  const availabilitySlots = [
+    ...(availability.data?.blocks ?? []).map((slot) => ({
+      ...slot,
+      occupied: false,
+    })),
+    ...(availability.data?.occupiedBlocks ?? []).map((slot) => ({
+      ...slot,
+      occupied: true,
+    })),
+  ].sort(
+    (left, right) =>
+      new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+  );
   const addToCart = () => {
     if (!selectedStart) return;
     cart.add({
@@ -87,17 +100,35 @@ export const ServiceAvailabilityModal = ({
               </p>
             )}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {availability.data?.blocks.map((slot) => (
-                <button
-                  className={`rounded-xl border p-3 text-sm font-semibold transition ${selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-white text-brand hover:border-brand"}`}
-                  key={slot.startsAt}
-                  onClick={() => setSelectedStart(slot.startsAt)}
-                  type="button"
-                >
-                  {formatServiceTime(slot.startsAt)}–
-                  {formatServiceTime(slot.endsAt)}
-                </button>
-              ))}
+              {availabilitySlots.map((slot) =>
+                slot.occupied ? (
+                  <button
+                    aria-label={`Занято: ${formatServiceTime(slot.startsAt)}–${formatServiceTime(slot.endsAt)}`}
+                    className="cursor-not-allowed rounded-xl border border-line bg-page p-3 text-sm font-semibold text-muted-ui-foreground opacity-60"
+                    disabled
+                    key={slot.startsAt}
+                    type="button"
+                  >
+                    <span className="block">
+                      {formatServiceTime(slot.startsAt)}–
+                      {formatServiceTime(slot.endsAt)}
+                    </span>
+                    <span className="mt-1 block text-xs font-medium">
+                      Занято
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    className={`rounded-xl border p-3 text-sm font-semibold transition ${selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-white text-brand hover:border-brand"}`}
+                    key={slot.startsAt}
+                    onClick={() => setSelectedStart(slot.startsAt)}
+                    type="button"
+                  >
+                    {formatServiceTime(slot.startsAt)}–
+                    {formatServiceTime(slot.endsAt)}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         )}

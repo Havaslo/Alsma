@@ -53,16 +53,16 @@ export const loadServiceAvailability = (
   date: string,
   signal?: AbortSignal,
 ) =>
-  apiClient.get<{ blocks: Array<{ startsAt: string; endsAt: string }> }>(
-    `/services/${serviceId}/availability`,
-    {
-      signal,
-      params: {
-        variantId,
-        date,
-      },
+  apiClient.get<{
+    blocks: Array<{ startsAt: string; endsAt: string }>;
+    occupiedBlocks: Array<{ startsAt: string; endsAt: string }>;
+  }>(`/services/${serviceId}/availability`, {
+    signal,
+    params: {
+      variantId,
+      date,
     },
-  );
+  });
 export const createServiceOrder = (input: {
   name: string;
   email: string;
