@@ -91,12 +91,15 @@ export const listServiceAvailability = async (
       (block) => block.startsAt <= startsAt && block.endsAt >= endsAt,
     );
     if (hasBlocks && !matchingBlocks.length) continue;
-    const capacity = hasBlocks
-      ? Math.min(
-          variant.capacity,
-          ...matchingBlocks.map((block) => block.capacity),
-        )
-      : variant.capacity;
+    const hasResources = (variant.resources?.length ?? 0) > 0;
+    const capacity = hasResources
+      ? Number.POSITIVE_INFINITY
+      : hasBlocks
+        ? Math.min(
+            variant.capacity,
+            ...matchingBlocks.map((block) => block.capacity),
+          )
+        : variant.capacity;
     const booked = bookings
       .filter(
         (booking) => booking.startsAt < endsAt && booking.endsAt > startsAt,

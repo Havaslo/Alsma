@@ -221,7 +221,10 @@ export const AdminServicesCatalog = () => {
             ? updateVariant(serviceId!, entry.id, {
                 name: entry.name,
                 price: Number(entry.price),
-                capacity: Number(entry.capacity),
+                capacity:
+                  card.kind === "service" && (entry.resources?.length ?? 0) > 0
+                    ? 1
+                    : Number(entry.capacity),
                 durationMin: entry.durationMin
                   ? Number(entry.durationMin)
                   : null,
@@ -231,7 +234,10 @@ export const AdminServicesCatalog = () => {
             : createVariant(serviceId!, {
                 name: entry.name,
                 price: Number(entry.price),
-                capacity: Number(entry.capacity),
+                capacity:
+                  card.kind === "service" && (entry.resources?.length ?? 0) > 0
+                    ? 1
+                    : Number(entry.capacity),
                 durationMin: entry.durationMin
                   ? Number(entry.durationMin)
                   : null,

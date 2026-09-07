@@ -167,10 +167,27 @@ export const AdminServiceCardModal = ({
             type="number"
             min={card.kind === "product" ? 0 : 1}
             value={entry.capacity}
+            disabled={
+              card.kind === "service" && (entry.resources?.length ?? 0) > 0
+            }
+            aria-describedby={
+              card.kind === "service" && (entry.resources?.length ?? 0) > 0
+                ? `capacity-help-${index}`
+                : undefined
+            }
             onChange={(event) =>
               onVariantChange(index, { capacity: event.target.value })
             }
           />
+          {card.kind === "service" && (entry.resources?.length ?? 0) > 0 && (
+            <p
+              className="text-muted-foreground text-xs font-normal md:col-span-4"
+              id={`capacity-help-${index}`}
+            >
+              Вместимость определяется выбранными ресурсами и не используется
+              для доступности.
+            </p>
+          )}
           {card.kind === "service" && (
             <div className="rounded-xl bg-muted-ui/20 p-3 text-sm md:col-span-5">
               <p className="font-semibold">Ресурсы на одну запись</p>
