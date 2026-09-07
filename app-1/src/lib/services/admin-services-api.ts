@@ -48,6 +48,7 @@ export const loadServiceCatalog = () =>
         resources: Array<{
           resourceId: string;
           quantity: number;
+          resource?: { id: string; name: string; totalUnits: number };
         }>;
       }>;
     }>;
@@ -75,6 +76,11 @@ export type ServiceSection = {
       readonly resources: Array<{
         readonly resourceId: string;
         readonly quantity: number;
+        readonly resource?: {
+          readonly id: string;
+          readonly name: string;
+          readonly totalUnits: number;
+        };
       }>;
     }>;
     readonly placements: Array<{ readonly pageSlug: string }>;

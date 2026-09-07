@@ -158,7 +158,10 @@ export const AdminServicesCatalog = () => {
       price: entry.price,
       capacity: String(entry.capacity),
       durationMin: entry.durationMin ? String(entry.durationMin) : "",
-      resources: entry.resources,
+      resources: entry.resources.map(({ resourceId, quantity }) => ({
+        resourceId,
+        quantity,
+      })),
     }));
     setVariants(loadedVariants);
     setOriginalVariantIds(item.variants.map((entry) => entry.id));

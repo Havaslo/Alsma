@@ -29,6 +29,28 @@ const sortServicesByPlacement = <
         ?.position ?? 0),
   );
 
+const serializeAdminVariant = (variant: object) => {
+  const resourceEntries = (
+    variant as {
+      resources?: Array<{
+        resourceId: string;
+        quantity: number;
+        resource: { id: string; name: string; totalUnits: number };
+      }>;
+    }
+  ).resources;
+  return {
+    ...variant,
+    resources: (resourceEntries ?? []).map(
+      ({ resourceId, quantity, resource }) => ({
+        resourceId,
+        quantity,
+        resource,
+      }),
+    ),
+  };
+};
+
 const imageUrlSchema = z
   .string()
   .trim()
@@ -96,7 +118,13 @@ export const createServicesRouter = (database: Database): Router => {
     response.json({
       sections: sections.map((section) => ({
         ...section,
-        services: sortServicesByPlacement(section.services, section.pageSlug),
+        services: sortServicesByPlacement(
+          section.services.map((service) => ({
+            ...service,
+            variants: service.variants.map(serializeAdminVariant),
+          })),
+          section.pageSlug,
+        ),
       })),
     });
   });
@@ -366,14 +394,18 @@ export const createServicesRouter = (database: Database): Router => {
     response.json({ serviceIds: input.serviceIds });
   });
   admin.get("/catalog", async (_request, response) => {
+    const services = await database.client.service.findMany({
+      include: {
+        variants: { include: { resources: { include: { resource: true } } } },
+        placements: true,
+        rules: true,
+      },
+    });
     response.json({
-      services: await database.client.service.findMany({
-        include: {
-          variants: { include: { resources: { include: { resource: true } } } },
-          placements: true,
-          rules: true,
-        },
-      }),
+      services: services.map((service) => ({
+        ...service,
+        variants: service.variants.map(serializeAdminVariant),
+      })),
     });
   });
   admin.get("/resources", async (_request, response) => {
@@ -473,13 +505,15 @@ export const createServicesRouter = (database: Database): Router => {
       })
       .parse(request.body);
     response.status(201).json({
-      variant: await database.client.serviceVariant.create({
-        data: {
-          ...input,
-          serviceId: request.params.serviceId,
-          resources: { create: input.resources },
-        },
-      }),
+      variant: serializeAdminVariant(
+        await database.client.serviceVariant.create({
+          data: {
+            ...input,
+            serviceId: request.params.serviceId,
+            resources: { create: input.resources },
+          },
+        }),
+      ),
     });
   });
   admin.put(
@@ -504,13 +538,15 @@ export const createServicesRouter = (database: Database): Router => {
         })
         .parse(request.body);
       response.json({
-        variant: await database.client.serviceVariant.update({
-          where: { id: request.params.variantId },
-          data: {
-            ...input,
-            resources: { deleteMany: {}, create: input.resources },
-          },
-        }),
+        variant: serializeAdminVariant(
+          await database.client.serviceVariant.update({
+            where: { id: request.params.variantId },
+            data: {
+              ...input,
+              resources: { deleteMany: {}, create: input.resources },
+            },
+          }),
+        ),
       });
     },
   );

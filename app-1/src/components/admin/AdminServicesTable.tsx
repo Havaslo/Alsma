@@ -112,9 +112,21 @@ export const AdminServicesTable = ({
                 ))}
               </td>
               <td className="px-3 py-4">
-                {item.variants.map((variant) => (
-                  <div key={variant.id}>{variant.capacity}</div>
-                ))}
+                {item.variants.map((variant) => {
+                  const resources = variant.resources ?? [];
+                  return (
+                    <div key={variant.id}>
+                      {resources.length
+                        ? resources
+                            .map(
+                              ({ resource, quantity }) =>
+                                `${resource?.name ?? "Ресурс"} × ${quantity}`,
+                            )
+                            .join(", ")
+                        : variant.capacity}
+                    </div>
+                  );
+                })}
               </td>
               <td className="px-3 py-4">
                 <button
