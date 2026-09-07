@@ -46,18 +46,6 @@ const getCalendarRange = () => {
 // by the manual-booking endpoint.
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 22;
-const SLOT_MINUTES = 30;
-const timeSlots = Array.from(
-  { length: ((DAY_END_HOUR - DAY_START_HOUR) * 60) / SLOT_MINUTES },
-  (_, index) => {
-    const minutes = DAY_START_HOUR * 60 + index * SLOT_MINUTES;
-    return {
-      end: minutes + SLOT_MINUTES,
-      label: `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`,
-      start: minutes,
-    };
-  },
-);
 const statusLabel = (status: string) =>
   ({
     cancelled: "Отменена",
@@ -206,24 +194,32 @@ export const AdminServiceCalendarPage = () => {
       booking.status !== "cancelled" &&
       dateKey(booking.startsAt) === selectedDate,
   );
-  const durationMinutes = selectedVariant?.durationMin ?? SLOT_MINUTES;
-  const slots = timeSlots
-    .filter((slot) => slot.start + durationMinutes <= DAY_END_HOUR * 60)
-    .map((slot) => ({
-      ...slot,
-      end: slot.start + durationMinutes,
-      booking: bookings.find((booking) =>
-        bookingInSlot(
-          booking,
-          selectedDate,
-          slot.start,
-          slot.start + durationMinutes,
+  const durationMinutes = selectedVariant?.durationMin ?? 60;
+  // A service's duration is also the calendar step. This prevents a 60-minute
+  // service from exposing overlapping 30-minute start times.
+  const slots = Array.from(
+    {
+      length: Math.max(
+        0,
+        Math.floor(((DAY_END_HOUR - DAY_START_HOUR) * 60) / durationMinutes),
+      ),
+    },
+    (_, index) => {
+      const start = DAY_START_HOUR * 60 + index * durationMinutes;
+      const end = start + durationMinutes;
+      return {
+        booking: bookings.find((booking) =>
+          bookingInSlot(booking, selectedDate, start, end),
         ),
-      ),
-      bookingStartsHere: bookings.some((booking) =>
-        bookingStartsInSlot(booking, selectedDate, slot.start),
-      ),
-    }));
+        bookingStartsHere: bookings.some((booking) =>
+          bookingStartsInSlot(booking, selectedDate, start),
+        ),
+        end,
+        label: `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`,
+        start,
+      };
+    },
+  );
 
   return (
     <section className="space-y-6">
@@ -315,8 +311,7 @@ export const AdminServiceCalendarPage = () => {
                             }}
                             type="button"
                           >
-                            {variant.name} ·{" "}
-                            {variant.durationMin ?? SLOT_MINUTES} мин
+                            {variant.name} · {variant.durationMin ?? 60} мин
                           </button>
                         );
                       })}

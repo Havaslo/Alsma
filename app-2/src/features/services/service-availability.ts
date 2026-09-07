@@ -2,7 +2,6 @@ import type { PrismaClient } from "../../generated/prisma/client.js";
 
 export const WORKDAY_START_MINUTE = 8 * 60;
 export const WORKDAY_END_MINUTE = 22 * 60;
-const SLOT_STEP_MINUTE = 30;
 // Service schedules are entered as Moscow wall-clock times. Persist their
 // corresponding instants so every client can render the same local time.
 const SERVICE_TIME_ZONE_OFFSET_MINUTE = 3 * 60;
@@ -87,7 +86,7 @@ export const listServiceAvailability = async (
   for (
     let minute = WORKDAY_START_MINUTE;
     minute + duration <= WORKDAY_END_MINUTE;
-    minute += SLOT_STEP_MINUTE
+    minute += duration
   ) {
     const startsAt = toUtcDate(date, minute);
     const endsAt = toUtcDate(date, minute + duration);
