@@ -8,6 +8,7 @@ export const AdminManualBookingModal = ({
   date,
   onClose,
   onCreated,
+  selectedVariantId,
   serviceName,
   startsAt,
   variants,
@@ -17,12 +18,15 @@ export const AdminManualBookingModal = ({
   readonly onCreated: () => void;
   readonly serviceName: string;
   readonly startsAt: string;
+  readonly selectedVariantId?: string;
   readonly variants: ReadonlyArray<{ id: string; name: string }>;
 }) => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
+  const [variantId, setVariantId] = useState(
+    selectedVariantId ?? variants[0]?.id ?? "",
+  );
   const mutation = useMutation({
     mutationFn: () =>
       createManualServiceBooking({

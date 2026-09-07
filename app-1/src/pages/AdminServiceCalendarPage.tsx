@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Check, Clock3, UsersRound } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  UsersRound,
+} from "lucide-react";
 
 import { AdminManualBookingModal } from "@/components/admin/AdminManualBookingModal";
 import { cn } from "@/lib/cn";
@@ -80,22 +86,63 @@ const bookingInSlot = (
 };
 
 const BookingSlot = ({ booking }: { readonly booking: ServiceBooking }) => (
-  <div className="rounded-xl border border-brand/20 bg-brand/5 p-3">
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand">
-          <Clock3 className="size-4" /> {formatTime(booking.startsAt)} —{" "}
-          {formatTime(booking.endsAt)}
-        </div>
-        <p className="mt-1 text-sm font-medium">{booking.variant.name}</p>
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-ui-foreground">
-          <UsersRound className="size-4" />
-          {booking.orderItem.order.name} · {booking.orderItem.order.phone}
+  <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-brand">
+    <UsersRound className="size-3" /> {booking.orderItem.order.name}
+  </div>
+);
+
+const BookingDetails = ({
+  booking,
+  onClose,
+}: {
+  readonly booking: ServiceBooking;
+  readonly onClose: () => void;
+}) => (
+  <div
+    className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+    onClick={onClose}
+    role="presentation"
+  >
+    <div
+      aria-labelledby="booking-details-title"
+      className="w-full max-w-md rounded-3xl bg-brand-foreground p-6 shadow-2xl"
+      onClick={(event) => event.stopPropagation()}
+      role="dialog"
+    >
+      <p className="text-sm text-muted-ui-foreground">Занятая запись</p>
+      <h2
+        className="mt-1 font-heading text-2xl font-semibold"
+        id="booking-details-title"
+      >
+        {booking.orderItem.order.name}
+      </h2>
+      <div className="mt-4 grid gap-2 text-sm">
+        <p>
+          <span className="text-muted-ui-foreground">Телефон:</span>{" "}
+          {booking.orderItem.order.phone}
+        </p>
+        <p>
+          <span className="text-muted-ui-foreground">Услуга:</span>{" "}
+          {booking.service.name} · {booking.variant.name}
+        </p>
+        <p>
+          <span className="text-muted-ui-foreground">Время:</span>{" "}
+          {formatTime(booking.startsAt)} — {formatTime(booking.endsAt)}
+        </p>
+        <p>
+          <span className="text-muted-ui-foreground">Статус:</span>{" "}
+          {statusLabel(booking.status)}
         </p>
       </div>
-      <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground">
-        {statusLabel(booking.status)}
-      </span>
+      <div className="mt-6 flex justify-end">
+        <button
+          className="rounded-full bg-brand px-5 py-2 font-semibold text-brand-foreground"
+          onClick={onClose}
+          type="button"
+        >
+          Закрыть
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -106,7 +153,12 @@ export const AdminServiceCalendarPage = () => {
     range.from.toISOString().slice(0, 10),
   );
   const [selectedServiceId, setSelectedServiceId] = useState<string>();
+  const [expandedServiceId, setExpandedServiceId] = useState<string>();
+  const [selectedVariantIds, setSelectedVariantIds] = useState<
+    Record<string, string>
+  >({});
   const [manualSlot, setManualSlot] = useState<number | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ServiceBooking>();
   const catalog = useQuery({
     queryKey: ["service-calendar-catalog"],
     queryFn: async () => (await loadServiceCatalog()).data,
@@ -126,18 +178,34 @@ export const AdminServiceCalendarPage = () => {
   const selectedService = services.find(
     (service) => service.id === activeServiceId,
   );
+  const selectedVariantId = selectedService
+    ? (selectedVariantIds[selectedService.id] ??
+      selectedService.variants[0]?.id)
+    : undefined;
+  const selectedVariant = selectedService?.variants.find(
+    (variant) => variant.id === selectedVariantId,
+  );
   const bookings = (calendar.data?.bookings ?? []).filter(
     (booking) =>
       booking.service.id === activeServiceId &&
       booking.status !== "cancelled" &&
       dateKey(booking.startsAt) === selectedDate,
   );
-  const slots = timeSlots.map((slot) => ({
-    ...slot,
-    booking: bookings.find((booking) =>
-      bookingInSlot(booking, selectedDate, slot.start, slot.end),
-    ),
-  }));
+  const durationMinutes = selectedVariant?.durationMin ?? SLOT_MINUTES;
+  const slots = timeSlots
+    .filter((slot) => slot.start + durationMinutes <= DAY_END_HOUR * 60)
+    .map((slot) => ({
+      ...slot,
+      end: slot.start + durationMinutes,
+      booking: bookings.find((booking) =>
+        bookingInSlot(
+          booking,
+          selectedDate,
+          slot.start,
+          slot.start + durationMinutes,
+        ),
+      ),
+    }));
 
   return (
     <section className="space-y-6">
@@ -171,28 +239,74 @@ export const AdminServiceCalendarPage = () => {
                 Услуг пока нет.
               </p>
             )}
-            {services.map((service) => (
-              <button
-                className={cn(
-                  "mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition",
-                  service.id === activeServiceId
-                    ? "bg-brand text-brand-foreground shadow-sm"
-                    : "hover:bg-muted-ui/50",
-                )}
-                key={service.id}
-                onClick={() => setSelectedServiceId(service.id)}
-                type="button"
-              >
-                <span className="min-w-0">
-                  <strong className="block truncate text-sm">
-                    {service.name}
-                  </strong>
-                  <span className="mt-1 block text-xs opacity-70">
-                    {service.variants.length} варианта
-                  </span>
-                </span>
-              </button>
-            ))}
+            {services.map((service) => {
+              const isActive = service.id === activeServiceId;
+              const isExpanded =
+                service.id === (expandedServiceId ?? activeServiceId);
+              const currentVariantId =
+                selectedVariantIds[service.id] ?? service.variants[0]?.id;
+              return (
+                <div
+                  className={cn(
+                    "mb-1 rounded-2xl px-3 py-2 transition",
+                    isActive
+                      ? "bg-brand text-brand-foreground shadow-sm"
+                      : "hover:bg-muted-ui/50",
+                  )}
+                  key={service.id}
+                >
+                  <button
+                    aria-expanded={isExpanded}
+                    className="flex w-full items-center gap-2 py-1 text-left"
+                    onClick={() => {
+                      setSelectedServiceId(service.id);
+                      setExpandedServiceId((current) =>
+                        current === service.id ? undefined : service.id,
+                      );
+                    }}
+                    type="button"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="size-4 shrink-0" />
+                    ) : (
+                      <ChevronRight className="size-4 shrink-0" />
+                    )}
+                    <strong className="block truncate text-sm">
+                      {service.name}
+                    </strong>
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-1 ml-6 grid gap-1 border-l border-current/20 pl-2">
+                      {service.variants.map((variant) => {
+                        const isVariantActive = variant.id === currentVariantId;
+                        return (
+                          <button
+                            className={cn(
+                              "rounded-lg px-2 py-1.5 text-left text-xs transition",
+                              isVariantActive
+                                ? "bg-brand-foreground/15 font-semibold"
+                                : "opacity-75 hover:bg-brand-foreground/10 hover:opacity-100",
+                            )}
+                            key={variant.id}
+                            onClick={() => {
+                              setSelectedServiceId(service.id);
+                              setSelectedVariantIds((current) => ({
+                                ...current,
+                                [service.id]: variant.id,
+                              }));
+                            }}
+                            type="button"
+                          >
+                            {variant.name} ·{" "}
+                            {variant.durationMin ?? SLOT_MINUTES} мин
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </aside>
         <div className="min-w-0 p-5 sm:p-7">
@@ -230,8 +344,8 @@ export const AdminServiceCalendarPage = () => {
               {!calendar.isLoading && (
                 <div className="mt-6 overflow-hidden rounded-2xl border border-line">
                   <div className="border-b border-line bg-muted-ui/20 px-4 py-3 text-xs font-semibold tracking-[0.12em] text-muted-ui-foreground uppercase">
-                    Матрица доступности · нажмите на свободное время для ручной
-                    записи
+                    Матрица доступности · {selectedVariant?.name} ·{" "}
+                    {durationMinutes} мин
                   </div>
                   <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                     {slots.map((slot) => (
@@ -242,9 +356,11 @@ export const AdminServiceCalendarPage = () => {
                             ? "cursor-default border-brand/30 bg-brand/10"
                             : "border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100",
                         )}
-                        key={slot.label}
+                        key={`${slot.label}-${durationMinutes}`}
                         onClick={() =>
-                          !slot.booking && setManualSlot(slot.start)
+                          slot.booking
+                            ? setSelectedBooking(slot.booking)
+                            : setManualSlot(slot.start)
                         }
                         type="button"
                       >
@@ -258,6 +374,11 @@ export const AdminServiceCalendarPage = () => {
                             <Check className="size-3" /> Свободно
                           </div>
                         )}
+                        <div className="mt-1 text-xs text-muted-ui-foreground">
+                          до{" "}
+                          {String(Math.floor(slot.end / 60)).padStart(2, "0")}:
+                          {String(slot.end % 60).padStart(2, "0")}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -279,9 +400,16 @@ export const AdminServiceCalendarPage = () => {
           date={formatDate(selectedDate)}
           onClose={() => setManualSlot(null)}
           onCreated={() => void calendar.refetch()}
+          selectedVariantId={selectedVariantId}
           serviceName={selectedService.name}
           startsAt={slotDate(selectedDate, manualSlot).toISOString()}
           variants={selectedService.variants}
+        />
+      )}
+      {selectedBooking && (
+        <BookingDetails
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(undefined)}
         />
       )}
     </section>
