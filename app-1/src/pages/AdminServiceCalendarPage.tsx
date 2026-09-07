@@ -27,9 +27,14 @@ const formatTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
   }).format(new Date(value));
-const dateKey = (value: string) => new Date(value).toISOString().slice(0, 10);
+const dateKey = (value: string) => {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 const getCalendarRange = () => {
   const now = new Date();
   const from = new Date(
@@ -67,8 +72,11 @@ const statusLabel = (status: string) =>
 const slotDate = (date: string, minutes: number) => {
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
+  // The API stores UTC instants, while the calendar is a local-time interface.
+  // Constructing this as local time keeps the visible 08:00–22:00 workday and
+  // serializes the selected wall-clock time to the correct UTC instant.
   return new Date(
-    `${date}T${String(hours).padStart(2, "0")}:${String(remainder).padStart(2, "0")}:00.000Z`,
+    `${date}T${String(hours).padStart(2, "0")}:${String(remainder).padStart(2, "0")}:00`,
   );
 };
 const bookingInSlot = (
@@ -87,7 +95,8 @@ const bookingInSlot = (
 
 const BookingSlot = ({ booking }: { readonly booking: ServiceBooking }) => (
   <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-brand">
-    <UsersRound className="size-3" /> {booking.orderItem.order.name}
+    <UsersRound className="size-3" /> Занято · запись{" "}
+    {formatTime(booking.startsAt)}–{formatTime(booking.endsAt)}
   </div>
 );
 
