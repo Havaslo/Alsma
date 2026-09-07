@@ -248,10 +248,10 @@ export const AdminServiceCalendarPage = () => {
               return (
                 <div
                   className={cn(
-                    "mb-1 rounded-2xl px-3 py-2 transition",
+                    "mb-1 rounded-2xl border px-3 py-2 transition",
                     isActive
-                      ? "bg-brand text-brand-foreground shadow-sm"
-                      : "hover:bg-muted-ui/50",
+                      ? "text-foreground border-brand/35 bg-muted-ui/35 shadow-sm"
+                      : "border-transparent hover:bg-muted-ui/50",
                   )}
                   key={service.id}
                 >
@@ -276,16 +276,16 @@ export const AdminServiceCalendarPage = () => {
                     </strong>
                   </button>
                   {isExpanded && (
-                    <div className="mt-1 ml-6 grid gap-1 border-l border-current/20 pl-2">
+                    <div className="mt-1 ml-6 grid gap-1 border-l border-brand/25 pl-2">
                       {service.variants.map((variant) => {
                         const isVariantActive = variant.id === currentVariantId;
                         return (
                           <button
                             className={cn(
-                              "rounded-lg px-2 py-1.5 text-left text-xs transition",
+                              "rounded-lg border px-2 py-1.5 text-left text-xs transition",
                               isVariantActive
-                                ? "bg-brand-foreground/15 font-semibold"
-                                : "opacity-75 hover:bg-brand-foreground/10 hover:opacity-100",
+                                ? "text-foreground border-brand/35 bg-brand-foreground font-semibold shadow-sm"
+                                : "hover:text-foreground border-transparent text-muted-ui-foreground hover:bg-muted-ui/50",
                             )}
                             key={variant.id}
                             onClick={() => {
