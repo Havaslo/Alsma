@@ -55,3 +55,17 @@ export const createVerifyCodeHandler =
     const { token: _token, ...safeResult } = result;
     response.json(safeResult);
   };
+
+export const createEmailLoginHandler =
+  (service: GuestAuthService): RequestHandler =>
+  async (request, response) => {
+    const result = await service.emailLogin(
+      response.locals.input.body as LoginBody,
+    );
+    response.setHeader(
+      "Set-Cookie",
+      sessionCookie(result.token, 30 * 24 * 60 * 60),
+    );
+    const { token: _token, ...safeResult } = result;
+    response.json(safeResult);
+  };

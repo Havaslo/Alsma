@@ -10,8 +10,8 @@ import { useAdminClients } from "@/lib/admin/useAdmin";
 type ActivityFilter = "all" | "with-bookings" | "without-bookings";
 const ACTIVITY_OPTIONS = [
   { label: "Все клиенты", value: "all" },
-  { label: "Есть брони", value: "with-bookings" },
-  { label: "Без броней", value: "without-bookings" },
+  { label: "Есть покупки", value: "with-bookings" },
+  { label: "Без покупок", value: "without-bookings" },
 ] as const;
 
 export const AdminClientsPanel = () => {
@@ -30,8 +30,8 @@ export const AdminClientsPanel = () => {
           .includes(term);
       const matchesActivity =
         activity === "all" ||
-        (activity === "with-bookings" && item._count.bookings > 0) ||
-        (activity === "without-bookings" && item._count.bookings === 0);
+        (activity === "with-bookings" && item._count.serviceOrders > 0) ||
+        (activity === "without-bookings" && item._count.serviceOrders === 0);
       return matchesSearch && matchesActivity;
     });
   }, [activity, clients.data?.items, search]);
@@ -41,9 +41,9 @@ export const AdminClientsPanel = () => {
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <h1 className="text-3xl font-semibold">Клиенты</h1>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-ui-foreground">
-          Раздел со списком гостей, источником данных и количеством
-          бронирований. Нажмите на строку управления карточкой клиента, чтобы
-          открыть подробности.
+          Раздел со списком гостей, источником данных и количеством покупок
+          услуг. Нажмите на строку управления карточкой клиента, чтобы открыть
+          подробности.
         </p>
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_14rem]">
           <label>
@@ -87,7 +87,7 @@ export const AdminClientsPanel = () => {
                 <th className="px-5 py-4">Телефон</th>
                 <th className="px-5 py-4">Почта</th>
                 <th className="px-5 py-4">Источник</th>
-                <th className="px-5 py-4">Кол-во броней</th>
+                <th className="px-5 py-4">Покупок услуг</th>
                 <th className="px-5 py-4 text-right">Действия</th>
               </tr>
             </thead>

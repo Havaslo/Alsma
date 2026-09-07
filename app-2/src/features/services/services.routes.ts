@@ -138,14 +138,29 @@ export const createServicesRouter = (database: Database): Router => {
           select: { userId: true },
         })
       : null;
-    const userId =
+    let userId =
       session?.userId ??
       (
         await database.client.guestUser.findFirst({
-          where: { email: input.email.trim().toLowerCase() },
+          where: {
+            email: {
+              equals: input.email.trim().toLowerCase(),
+              mode: "insensitive",
+            },
+          },
           select: { id: true },
         })
       )?.id;
+    if (!userId) {
+      const email = input.email.trim().toLowerCase();
+      const user = await database.client.guestUser.upsert({
+        where: { phone: `email:${email}` },
+        create: { email, phone: `email:${email}`, fullName: input.name },
+        update: { email },
+        select: { id: true },
+      });
+      userId = user.id;
+    }
     const variants = await database.client.serviceVariant.findMany({
       where: {
         id: { in: input.items.map((item) => item.variantId) },

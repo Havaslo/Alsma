@@ -135,7 +135,10 @@ export const createGuestAuthRepository = (database: Database) => ({
       where: { codeHash: tokenHash, consumedAt: { not: null } },
     }),
   findUserByEmail: (email: string) =>
-    database.client.guestUser.findFirst({ where: { email } }),
+    database.client.guestUser.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+      orderBy: { createdAt: "asc" },
+    }),
   findUserByPhone: (phone: string) =>
     database.client.guestUser.findUnique({ where: { phone } }),
 });

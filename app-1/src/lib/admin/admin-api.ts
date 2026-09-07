@@ -57,7 +57,7 @@ export type AgentRequest = {
 };
 export type BookingRequest = AgentRequest;
 export type AdminClient = {
-  readonly _count: { bookings: number; serviceOrders: number };
+  readonly _count: { serviceOrders: number };
   readonly bonusProgram: { balance: number; level: string } | null;
   readonly createdAt: string;
   readonly fullName: string | null;
@@ -67,18 +67,7 @@ export type AdminClient = {
   readonly source: "Eptera" | "Личный кабинет";
   readonly updatedAt: string;
 };
-export type AdminClientBooking = {
-  readonly checkInDate: string;
-  readonly checkOutDate: string;
-  readonly createdAt: string;
-  readonly guestsCount: number;
-  readonly id: string;
-  readonly roomName: string;
-  readonly status: string;
-  readonly totalAmount: string | null;
-};
 export type AdminClientDetail = AdminClient & {
-  readonly bookings: AdminClientBooking[];
   readonly serviceOrders: Array<{
     readonly id: string;
     readonly createdAt: string;

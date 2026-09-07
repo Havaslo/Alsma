@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useMutation } from "@tanstack/react-query";
@@ -9,27 +8,18 @@ import { Form } from "@/components/Form";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
-import { requestGuestCode, verifyGuestCode } from "@/lib/auth/guest-auth-api";
+import { loginByEmail } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
 import { ROUTES } from "@/route-constants";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const form = useForm({ defaultValues: { email: "", code: "" } });
-  const [codeRequested, setCodeRequested] = useState(false);
-  const requestMutation = useMutation({
-    mutationFn: requestGuestCode,
-    onSuccess: () => {
-      setCodeRequested(true);
-      toast.success("Код отправлен на вашу почту.");
-    },
+  const loginMutation = useMutation({
+    mutationFn: loginByEmail,
     onError: (error) =>
-      toast.error(getApiErrorMessage(error, "Не удалось отправить код.")),
-  });
-  const verifyMutation = useMutation({
-    mutationFn: verifyGuestCode,
-    onError: (error) => toast.error(getApiErrorMessage(error, "Неверный код.")),
-    onSuccess: ({ data }) => {
+      toast.error(getApiErrorMessage(error, "Не удалось войти.")),
+    onSuccess: () => {
       writeGuestSession(null);
       navigate({ to: ROUTES.account });
     },
@@ -43,17 +33,13 @@ export const LoginPage = () => {
           Вход в личный кабинет
         </h1>
         <p className="mt-3 leading-7 text-muted-ui-foreground">
-          Введите электронную почту — мы отправим на неё одноразовый код
-          подтверждения.
+          Введите электронную почту, чтобы открыть личный кабинет и увидеть
+          историю покупок.
         </p>
         <Form
           className="mt-7 space-y-5"
           form={form}
-          onSubmit={(values) =>
-            codeRequested
-              ? verifyMutation.mutate(values)
-              : requestMutation.mutate({ email: values.email })
-          }
+          onSubmit={(values) => loginMutation.mutate({ email: values.email })}
         >
           <label className="block text-sm font-medium">
             Электронная почта
@@ -70,44 +56,13 @@ export const LoginPage = () => {
               })}
             />
           </label>
-          {codeRequested && (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium">
-                Код из письма
-                <input
-                  className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 tracking-[0.4em] outline-none focus:border-focus"
-                  inputMode="numeric"
-                  maxLength={6}
-                  {...form.register("code", {
-                    pattern: {
-                      value: /^\d{6}$/u,
-                      message: "Введите 6 цифр",
-                    },
-                    required: true,
-                  })}
-                />
-              </label>
-              <button
-                className="text-sm font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-60"
-                disabled={requestMutation.isPending}
-                onClick={() =>
-                  requestMutation.mutate({ email: form.getValues("email") })
-                }
-                type="button"
-              >
-                Отправить код повторно
-              </button>
-            </div>
-          )}
           <button
             className="flex w-full items-center justify-center rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground disabled:opacity-60"
-            disabled={requestMutation.isPending || verifyMutation.isPending}
+            disabled={loginMutation.isPending}
             type="submit"
           >
-            {(requestMutation.isPending || verifyMutation.isPending) && (
-              <Loader className="mr-2" size="sm" />
-            )}
-            {codeRequested ? "Подтвердить код" : "Получить код"}
+            {loginMutation.isPending && <Loader className="mr-2" size="sm" />}
+            Войти в личный кабинет
           </button>
         </Form>
         <p className="mt-5 text-center text-sm leading-6 text-muted-ui-foreground">

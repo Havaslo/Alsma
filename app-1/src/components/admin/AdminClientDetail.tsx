@@ -8,7 +8,6 @@ import { AdminClientEditModal } from "@/components/admin/AdminClientEditModal";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Loader } from "@/components/ui/Loader";
-import type { AdminClientBooking } from "@/lib/admin/admin-api";
 import { useAdminClient, useDeleteAdminClient } from "@/lib/admin/useAdmin";
 import { ROUTES } from "@/route-constants";
 
@@ -26,44 +25,6 @@ const levelLabel = (level?: string) =>
   ({ gold: "Gold", silver: "Silver", standard: "Standard" })[
     level ?? "standard"
   ] ?? level;
-
-const BookingCard = ({ booking }: { readonly booking: AdminClientBooking }) => (
-  <article className="rounded-2xl border border-line bg-page p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h3 className="font-semibold text-brand">{booking.roomName}</h3>
-        <p className="mt-1 text-xs text-muted-ui-foreground">{booking.id}</p>
-      </div>
-      <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-        {booking.status}
-      </span>
-    </div>
-    <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-4">
-      <div>
-        <dt className="text-muted-ui-foreground">Заезд</dt>
-        <dd className="mt-1 font-semibold">
-          {formatDate(booking.checkInDate)}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-muted-ui-foreground">Выезд</dt>
-        <dd className="mt-1 font-semibold">
-          {formatDate(booking.checkOutDate)}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-muted-ui-foreground">Гости</dt>
-        <dd className="mt-1 font-semibold">{booking.guestsCount}</dd>
-      </div>
-      <div>
-        <dt className="text-muted-ui-foreground">Сумма</dt>
-        <dd className="mt-1 font-semibold">
-          {formatMoney(booking.totalAmount)}
-        </dd>
-      </div>
-    </dl>
-  </article>
-);
 
 export const AdminClientDetail = ({
   clientId,
@@ -108,7 +69,7 @@ export const AdminClientDetail = ({
               {client.fullName || "Без имени"}
             </h1>
             <p className="mt-2 text-sm text-muted-ui-foreground">
-              Контакт, бонусная программа и история бронирований клиента.
+              Контакт, бонусная программа и история покупок услуг клиента.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -145,8 +106,10 @@ export const AdminClientDetail = ({
               <dd className="mt-1 font-semibold">{client.source}</dd>
             </div>
             <div>
-              <dt className="text-muted-ui-foreground">Кол-во броней</dt>
-              <dd className="mt-1 font-semibold">{client._count.bookings}</dd>
+              <dt className="text-muted-ui-foreground">Покупок услуг</dt>
+              <dd className="mt-1 font-semibold">
+                {client._count.serviceOrders}
+              </dd>
             </div>
           </dl>
         </section>
@@ -189,26 +152,14 @@ export const AdminClientDetail = ({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-ui-foreground">Заездов</dt>
-              <dd className="mt-1 font-semibold">{client.bookings.length}</dd>
+              <dt className="text-muted-ui-foreground">Покупок услуг</dt>
+              <dd className="mt-1 font-semibold">
+                {client._count.serviceOrders}
+              </dd>
             </div>
           </dl>
         </section>
       </div>
-
-      <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <h2 className="text-xl font-semibold">Брони</h2>
-        <div className="mt-5 space-y-4">
-          {client.bookings.map((booking) => (
-            <BookingCard booking={booking} key={booking.id} />
-          ))}
-          {!client.bookings.length && (
-            <p className="rounded-2xl border border-line bg-page p-6 text-sm text-muted-ui-foreground">
-              У клиента пока нет бронирований.
-            </p>
-          )}
-        </div>
-      </section>
 
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <h2 className="text-xl font-semibold">Купленные услуги</h2>
@@ -270,8 +221,8 @@ export const AdminClientDetail = ({
         open={deleteOpen}
         title="Удалить клиента?"
       >
-        Клиент, его бонусная программа и история бронирований будут удалены без
-        возможности восстановления.
+        Клиент, его бонусная программа и история купленных услуг будут удалены
+        без возможности восстановления.
       </ConfirmModal>
     </div>
   );

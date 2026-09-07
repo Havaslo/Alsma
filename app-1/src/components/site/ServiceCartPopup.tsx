@@ -18,15 +18,10 @@ export const ServiceCartPopup = ({
   const cart = useServiceCart();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
-  const [step, setStep] = useState<"details" | "payment" | "success">(
-    "details",
-  );
+  const [step, setStep] = useState<"details" | "success">("details");
   const [orderTotal, setOrderTotal] = useState<string | null>(null);
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setStep("payment");
-  };
-  const pay = async () => {
     const result = await createServiceOrder({ ...form, items: cart.items });
     setOrderTotal(result.data.total);
     cart.clear();
@@ -55,35 +50,6 @@ export const ServiceCartPopup = ({
             type="button"
           >
             Перейти в личный кабинет
-          </button>
-        </div>
-      ) : step === "payment" ? (
-        <div className="py-8">
-          <div className="rounded-2xl border border-line bg-panel p-5">
-            <p className="text-sm font-semibold tracking-[0.16em] text-brand uppercase">
-              Демонстрационная оплата
-            </p>
-            <h3 className="mt-3 font-heading text-2xl font-semibold text-brand">
-              Почти готово
-            </h3>
-            <p className="mt-3 text-muted-ui-foreground">
-              Нажмите кнопку ниже, чтобы завершить тестовую оплату. Реальный
-              платёжный сервис подключим следующим этапом.
-            </p>
-          </div>
-          <button
-            className="mt-6 w-full rounded-full bg-brand p-3 font-semibold text-brand-foreground"
-            onClick={() => void pay()}
-            type="button"
-          >
-            Оплатить в демо-режиме
-          </button>
-          <button
-            className="mt-3 w-full rounded-full border border-line p-3 font-semibold text-brand"
-            onClick={() => setStep("details")}
-            type="button"
-          >
-            Вернуться к данным
           </button>
         </div>
       ) : (

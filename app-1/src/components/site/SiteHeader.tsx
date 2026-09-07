@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, UserRound, X } from "lucide-react";
 
 import logoGreen from "@/assets/alsma/logo-green.svg";
 import logoWhite from "@/assets/alsma/logo-white.svg";
@@ -131,6 +131,17 @@ export const SiteHeader = ({
       </nav>
       <div className="flex items-center gap-2">
         <Link
+          aria-label="Личный кабинет"
+          className={cn(
+            "grid size-11 place-items-center rounded-full border border-current/15 transition hover:scale-105",
+            useLightStyle ? "text-brand" : "text-brand-foreground",
+          )}
+          title="Личный кабинет"
+          to={ROUTES.account}
+        >
+          <UserRound className="size-5" />
+        </Link>
+        <Link
           className="hidden rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground sm:block"
           onClick={scrollToBooking}
           to={bookingTo}
@@ -161,6 +172,9 @@ export const SiteHeader = ({
             to={bookingTo}
           >
             {bookingLabel}
+          </Link>
+          <Link onClick={() => setOpen(false)} to={ROUTES.account}>
+            Личный кабинет
           </Link>
         </nav>
       )}

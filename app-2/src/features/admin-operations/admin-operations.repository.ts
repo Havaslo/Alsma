@@ -8,13 +8,6 @@ import type {
   UpdateRequestStatusBody,
 } from "./admin-operations.schemas.js";
 
-const clientSource = (
-  bookings: readonly { epteraReservationId: string | null }[],
-) =>
-  bookings.some((booking) => Boolean(booking.epteraReservationId))
-    ? "Eptera"
-    : "Личный кабинет";
-
 export const createAdminOperationsRepository = (database: Database) => ({
   getAnalytics: async (start: Date, end: Date) => {
     const range = { gte: start, lt: end } as const;
@@ -249,8 +242,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
       database.client.guestUser.findMany({
         include: {
           bonusProgram: true,
-          bookings: { select: { epteraReservationId: true } },
-          _count: { select: { bookings: true, serviceOrders: true } },
+          _count: { select: { serviceOrders: true } },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -259,9 +251,9 @@ export const createAdminOperationsRepository = (database: Database) => ({
       database.client.guestUser.count(),
     ]);
     return {
-      items: items.map(({ bookings, ...client }) => ({
+      items: items.map((client) => ({
         ...client,
-        source: clientSource(bookings),
+        source: "Сайт" as const,
       })),
       total,
     };
@@ -270,17 +262,16 @@ export const createAdminOperationsRepository = (database: Database) => ({
     const client = await database.client.guestUser.findUnique({
       include: {
         bonusProgram: true,
-        bookings: { orderBy: { checkInDate: "desc" } },
         serviceOrders: {
           where: { paymentStatus: "succeeded" },
           orderBy: { createdAt: "desc" },
           include: { items: { include: { service: true, variant: true } } },
         },
-        _count: { select: { bookings: true } },
+        _count: { select: { serviceOrders: true } },
       },
       where: { id: recordId },
     });
-    return client ? { ...client, source: clientSource(client.bookings) } : null;
+    return client ? { ...client, source: "Сайт" as const } : null;
   },
   listRequests: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);

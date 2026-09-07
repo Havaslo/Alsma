@@ -35,7 +35,7 @@ export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
           {item.source}
         </span>
       </td>
-      <td className="px-5 py-4">{item._count.bookings}</td>
+      <td className="px-5 py-4">{item._count.serviceOrders}</td>
       <td className="px-5 py-4 text-right">
         <ChevronRight className="ml-auto size-4 text-muted-ui-foreground" />
       </td>
