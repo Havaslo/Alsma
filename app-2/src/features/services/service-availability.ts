@@ -26,7 +26,11 @@ export const lockServiceAvailability = async (
     ? resourceIds.map((resourceId) => `service-resource:${resourceId}`)
     : [`service-capacity:${serviceId}:${variant.id}`];
   for (const lockKey of lockKeys) {
-    await database.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+    // Prisma's pg adapter cannot deserialize PostgreSQL's `void` result.
+    // Keep the lock in the transaction while returning a scalar value.
+    await database.$queryRaw`
+      SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0)) IS NULL AS locked
+    `;
   }
 };
 

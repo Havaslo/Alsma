@@ -107,7 +107,11 @@ export const createServicesRouter = (database: Database): Router => {
           : {}),
       },
       include: {
-        variants: { where: { active: true }, orderBy: { price: "asc" } },
+        variants: {
+          where: { active: true },
+          orderBy: { price: "asc" },
+          include: { resources: { include: { resource: true } } },
+        },
         placements: true,
       },
     });
@@ -129,6 +133,7 @@ export const createServicesRouter = (database: Database): Router => {
             variants: {
               where: { active: true },
               orderBy: { price: "asc" },
+              include: { resources: { include: { resource: true } } },
             },
           },
         },
@@ -681,7 +686,7 @@ export const createServicesRouter = (database: Database): Router => {
       },
       include: {
         service: true,
-        variant: true,
+        variant: { include: { resources: { include: { resource: true } } } },
         orderItem: { include: { order: true } },
       },
       orderBy: { startsAt: "asc" },

@@ -92,6 +92,12 @@ const OverlappingBookingSlot = () => (
   </div>
 );
 
+const BookingCount = ({ count }: { readonly count: number }) => (
+  <div className="mt-2 text-xs font-semibold text-brand">
+    Записей в слоте: {count}
+  </div>
+);
+
 const BookingDetails = ({
   booking,
   onClose,
@@ -208,11 +214,8 @@ export const AdminServiceCalendarPage = () => {
       const start = DAY_START_HOUR * 60 + index * durationMinutes;
       const end = start + durationMinutes;
       return {
-        booking: bookings.find((booking) =>
+        bookings: bookings.filter((booking) =>
           bookingInSlot(booking, selectedDate, start, end),
-        ),
-        bookingStartsHere: bookings.some((booking) =>
-          bookingStartsInSlot(booking, selectedDate, start),
         ),
         end,
         label: `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`,
@@ -365,14 +368,14 @@ export const AdminServiceCalendarPage = () => {
                       <button
                         className={cn(
                           "min-h-20 rounded-xl border p-3 text-left transition",
-                          slot.booking
+                          slot.bookings.length > 0
                             ? "cursor-default border-brand/30 bg-brand/10"
                             : "border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100",
                         )}
                         key={`${slot.label}-${durationMinutes}`}
                         onClick={() =>
-                          slot.booking
-                            ? setSelectedBooking(slot.booking)
+                          slot.bookings.length > 0
+                            ? setSelectedBooking(slot.bookings[0])
                             : setManualSlot(slot.start)
                         }
                         type="button"
@@ -380,10 +383,24 @@ export const AdminServiceCalendarPage = () => {
                         <div className="text-sm font-semibold">
                           {slot.label}
                         </div>
-                        {slot.booking && slot.bookingStartsHere ? (
-                          <BookingSlot booking={slot.booking} />
-                        ) : slot.booking ? (
-                          <OverlappingBookingSlot />
+                        {slot.bookings.length > 0 ? (
+                          <>
+                            <BookingCount count={slot.bookings.length} />
+                            {slot.bookings.map((booking) =>
+                              bookingStartsInSlot(
+                                booking,
+                                selectedDate,
+                                slot.start,
+                              ) ? (
+                                <BookingSlot
+                                  booking={booking}
+                                  key={booking.id}
+                                />
+                              ) : (
+                                <OverlappingBookingSlot key={booking.id} />
+                              ),
+                            )}
+                          </>
                         ) : (
                           <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700">
                             <Check className="size-3" /> Свободно
