@@ -175,6 +175,25 @@ export const AdminServicesCatalog = () => {
       card.kind === "product"
         ? [{ ...variants[0], name: "Товар", durationMin: "" }]
         : variants;
+    const resourceLimits = new Map(
+      (resourcesQuery.data?.data.resources ?? []).map((resource) => [
+        resource.id,
+        resource,
+      ]),
+    );
+    const invalidAssignment = entries
+      .flatMap((entry) => entry.resources ?? [])
+      .find((assignment) => {
+        const resource = resourceLimits.get(assignment.resourceId);
+        return resource && assignment.quantity > resource.totalUnits;
+      });
+    if (invalidAssignment) {
+      const resource = resourceLimits.get(invalidAssignment.resourceId);
+      setCardError(
+        `Количество ресурса «${resource?.name ?? ""}» не может превышать ${resource?.totalUnits ?? 0}.`,
+      );
+      return;
+    }
     try {
       let serviceId = cardId;
       if (serviceId)

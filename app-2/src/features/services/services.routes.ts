@@ -51,6 +51,24 @@ const serializeAdminVariant = (variant: object) => {
   };
 };
 
+const validateVariantResources = async (
+  database: Database,
+  resources: Array<{ resourceId: string; quantity: number }>,
+) => {
+  const resourceIds = [
+    ...new Set(resources.map(({ resourceId }) => resourceId)),
+  ];
+  const records = await database.client.serviceResource.findMany({
+    where: { id: { in: resourceIds } },
+    select: { id: true, name: true, totalUnits: true },
+  });
+  const byId = new Map(records.map((resource) => [resource.id, resource]));
+  return resources.find((assignment) => {
+    const resource = byId.get(assignment.resourceId);
+    return !resource || assignment.quantity > resource.totalUnits;
+  });
+};
+
 const imageUrlSchema = z
   .string()
   .trim()
@@ -504,6 +522,17 @@ export const createServicesRouter = (database: Database): Router => {
           .default([]),
       })
       .parse(request.body);
+    const invalidResource = await validateVariantResources(
+      database,
+      input.resources,
+    );
+    if (invalidResource) {
+      return response.status(400).json({
+        error: "RESOURCE_QUANTITY_EXCEEDS_TOTAL_UNITS",
+        message: "Количество ресурса не может превышать доступное количество",
+        resourceId: invalidResource.resourceId,
+      });
+    }
     response.status(201).json({
       variant: serializeAdminVariant(
         await database.client.serviceVariant.create({
@@ -537,6 +566,17 @@ export const createServicesRouter = (database: Database): Router => {
             .default([]),
         })
         .parse(request.body);
+      const invalidResource = await validateVariantResources(
+        database,
+        input.resources,
+      );
+      if (invalidResource) {
+        return response.status(400).json({
+          error: "RESOURCE_QUANTITY_EXCEEDS_TOTAL_UNITS",
+          message: "Количество ресурса не может превышать доступное количество",
+          resourceId: invalidResource.resourceId,
+        });
+      }
       response.json({
         variant: serializeAdminVariant(
           await database.client.serviceVariant.update({

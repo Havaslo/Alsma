@@ -222,27 +222,38 @@ export const AdminServiceCardModal = ({
                         {resource.name} (всего {resource.totalUnits})
                       </label>
                       {assignment && (
-                        <input
-                          className="w-20 rounded border p-1"
-                          min="1"
-                          type="number"
-                          value={assignment.quantity}
-                          aria-label={`Количество ресурса ${resource.name}`}
-                          onClick={(event) => event.stopPropagation()}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onChange={(event) =>
-                            onVariantChange(index, {
-                              resources: (entry.resources ?? []).map((item) =>
-                                item.resourceId === resource.id
-                                  ? {
-                                      ...item,
-                                      quantity: Number(event.target.value),
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
+                        <>
+                          <input
+                            className="w-20 rounded border p-1"
+                            min="1"
+                            max={resource.totalUnits}
+                            type="number"
+                            value={assignment.quantity}
+                            aria-label={`Количество ресурса ${resource.name}`}
+                            onClick={(event) => event.stopPropagation()}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onChange={(event) => {
+                              const requested = Number(event.target.value);
+                              const quantity = Number.isFinite(requested)
+                                ? Math.min(
+                                    resource.totalUnits,
+                                    Math.max(1, Math.trunc(requested)),
+                                  )
+                                : 1;
+                              onVariantChange(index, {
+                                resources: (entry.resources ?? []).map(
+                                  (item) =>
+                                    item.resourceId === resource.id
+                                      ? { ...item, quantity }
+                                      : item,
+                                ),
+                              });
+                            }}
+                          />
+                          <span className="text-muted-foreground text-xs">
+                            максимум {resource.totalUnits}
+                          </span>
+                        </>
                       )}
                     </div>
                   );
