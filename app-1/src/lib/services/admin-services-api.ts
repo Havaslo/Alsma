@@ -6,7 +6,7 @@ export type ServiceBooking = {
   readonly startsAt: string;
   readonly endsAt: string;
   readonly status: string;
-  readonly service: { readonly name: string };
+  readonly service: { readonly id: string; readonly name: string };
   readonly variant: { readonly name: string };
   readonly orderItem: {
     readonly order: { readonly name: string; readonly phone: string };

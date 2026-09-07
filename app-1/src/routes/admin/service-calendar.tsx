@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AdminServiceCalendarPage } from "@/pages/AdminServiceCalendarPage";
+import { AdminDashboardPage } from "@/pages/AdminDashboardPage";
 
 export const Route = createFileRoute("/admin/service-calendar")({
-  component: AdminServiceCalendarPage,
+  component: AdminDashboardPage,
 });
