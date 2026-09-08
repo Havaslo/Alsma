@@ -178,11 +178,18 @@ export const createMangoEventHandler = ({
       providerRecordingId: event.recording_id,
       recordingStatus: "pending",
     });
-    if (event.recording_state === "Completed" && transcribeRecording)
+    // Mango can deliver the recording event before (or without) a separate
+    // `Completed` notification. The recording endpoint is already the source
+    // of truth for availability, so do not gate transcription on that optional
+    // provider event. Failed downloads/transcription still reject the webhook
+    // and release its claim, allowing Mango to retry the real event.
+    if (transcribeRecording) {
       await transcribeRecording({
         callId: call.id,
         recordingId: event.recording_id,
       });
+      await repository.updateCall(call.id, { recordingStatus: "completed" });
+    }
     logger.info(
       {
         callId: call.id,
