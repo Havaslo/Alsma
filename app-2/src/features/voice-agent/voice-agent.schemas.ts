@@ -12,7 +12,15 @@ export const providerCallParamsSchema = z.object({
 });
 
 export const transcriptBodySchema = z.object({
-  role: z.enum(["guest", "assistant", "manager"]),
+  role: z.enum([
+    "guest",
+    "assistant",
+    "manager",
+    "speaker_0",
+    "speaker_1",
+    "speaker_2",
+    "speaker_3",
+  ]),
   text: z.string().trim().min(1).max(10_000),
   startedAt: z.string().datetime().optional(),
   endedAt: z.string().datetime().optional(),

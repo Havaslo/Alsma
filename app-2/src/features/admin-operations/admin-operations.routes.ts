@@ -100,15 +100,6 @@ export const createAdminOperationsRouter = (
         });
         return;
       }
-      if (Array.isArray(call.transcript) && call.transcript.length > 0) {
-        response.status(409).json({
-          error: {
-            code: "TRANSCRIPT_ALREADY_EXISTS",
-            message: "Транскрипция для этого звонка уже существует.",
-          },
-        });
-        return;
-      }
       try {
         await reprocessRecording({
           callId: call.id,

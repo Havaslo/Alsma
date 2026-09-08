@@ -2,6 +2,25 @@ import { createLogger } from "../../lib/logger.js";
 import { fetchMangoRecording } from "./voice-agent.recording.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 
+type DiarizedSegment = {
+  readonly end?: number;
+  readonly speaker?: string;
+  readonly start?: number;
+  readonly text?: string;
+};
+
+type DiarizedResponse = {
+  readonly segments?: DiarizedSegment[];
+  readonly text?: string;
+};
+
+const speakerRole = (speaker: string, speakers: string[]) => {
+  const index = speakers.indexOf(speaker);
+  if (index === 0) return "assistant" as const;
+  if (index === 1) return "guest" as const;
+  return index === 2 ? "speaker_2" : "speaker_3";
+};
+
 const logger = createLogger();
 
 export const transcribeMangoRecording = async ({
@@ -46,7 +65,9 @@ export const transcribeMangoRecording = async ({
     new Blob([audio], { type: contentType }),
     `call-recording.${extension}`,
   );
-  form.append("model", "gpt-4o-mini-transcribe");
+  form.append("model", "gpt-4o-transcribe-diarize");
+  form.append("response_format", "diarized_json");
+  form.append("chunking_strategy", "auto");
   const response = await fetchImpl(
     `${openaiBaseUrl.replace(/\/$/u, "")}/audio/transcriptions`,
     {
@@ -71,12 +92,38 @@ export const transcribeMangoRecording = async ({
     );
     throw new Error(`Call transcription failed with status ${response.status}`);
   }
-  const result = (await response.json()) as { text?: string };
-  const text = result.text?.trim();
-  if (!text) throw new Error("Call transcription returned empty text");
-  return repository.appendTranscript(callId, {
-    role: "guest",
-    text,
-    providerEventId: `mango-recording:${recordingId}`,
-  });
+  const result = (await response.json()) as DiarizedResponse;
+  const segments = (result.segments ?? []).filter(
+    (segment): segment is DiarizedSegment & { speaker: string; text: string } =>
+      Boolean(segment.speaker && segment.text?.trim()),
+  );
+  if (segments.length === 0) {
+    const text = result.text?.trim();
+    if (!text) throw new Error("Call transcription returned empty text");
+    return repository.appendTranscript(callId, {
+      role: "guest",
+      text,
+      providerEventId: `mango-recording:${recordingId}`,
+    });
+  }
+  const speakers = [...new Set(segments.map((segment) => segment.speaker))];
+  if ("replaceTranscript" in repository)
+    await repository.replaceTranscript(callId);
+  let lastResult: unknown = null;
+  for (const [index, segment] of segments.entries()) {
+    lastResult = await repository.appendTranscript(callId, {
+      endedAt:
+        segment.end === undefined
+          ? undefined
+          : new Date(Date.now() + segment.end * 1_000).toISOString(),
+      role: speakerRole(segment.speaker, speakers),
+      startedAt:
+        segment.start === undefined
+          ? undefined
+          : new Date(Date.now() + segment.start * 1_000).toISOString(),
+      text: segment.text.trim(),
+      providerEventId: `mango-recording:${recordingId}:segment:${index}`,
+    });
+  }
+  return lastResult;
 };

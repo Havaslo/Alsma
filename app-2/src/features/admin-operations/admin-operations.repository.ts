@@ -324,22 +324,19 @@ export const createAdminOperationsRepository = (database: Database) => ({
       database.client.voiceCall.count(),
     ]);
     return {
-      items: items.map(
-        ({
-          providerRecordingId: _providerRecordingId,
-          recordingUrl: _recordingUrl,
-          ...call
-        }) => ({
-          ...call,
+      items: items.map((call) => {
+        const { recordingUrl: _recordingUrl, ...publicCall } = call;
+        return {
+          ...publicCall,
           // Mango recordings can be fetched on demand before they are copied to
           // managed storage. Do not hide those calls from the journal.
           hasRecording: Boolean(
-            call.recordingObjectId || _recordingUrl || _providerRecordingId,
+            call.recordingObjectId || _recordingUrl || call.providerRecordingId,
           ),
           hasTranscript:
             Array.isArray(call.transcript) && call.transcript.length > 0,
-        }),
-      ),
+        };
+      }),
       total,
     };
   },
@@ -348,15 +345,11 @@ export const createAdminOperationsRepository = (database: Database) => ({
       where: { id: recordId },
     });
     if (!call) return null;
-    const {
-      providerRecordingId: _providerRecordingId,
-      recordingUrl: _recordingUrl,
-      ...result
-    } = call;
+    const { recordingUrl: _recordingUrl, ...publicCall } = call;
     return {
-      ...result,
+      ...publicCall,
       hasRecording: Boolean(
-        call.recordingObjectId || _recordingUrl || _providerRecordingId,
+        call.recordingObjectId || _recordingUrl || call.providerRecordingId,
       ),
       hasTranscript:
         Array.isArray(call.transcript) && call.transcript.length > 0,

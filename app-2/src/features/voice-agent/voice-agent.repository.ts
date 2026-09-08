@@ -158,6 +158,22 @@ export const createVoiceAgentRepository = (database: Database) => ({
       });
     });
   },
+  replaceTranscript: async (id: string) =>
+    database.client.$transaction(async (transaction) => {
+      const call = await transaction.voiceCall.findUnique({ where: { id } });
+      if (!call) return null;
+      if (call.adminRequestId)
+        await transaction.chatMessage.deleteMany({
+          where: {
+            conversationId: call.adminRequestId,
+            externalId: { startsWith: `voice:${id}:` },
+          },
+        });
+      return transaction.voiceCall.update({
+        where: { id },
+        data: { transcript: [] },
+      });
+    }),
   completeCall: (
     id: string,
     data: {

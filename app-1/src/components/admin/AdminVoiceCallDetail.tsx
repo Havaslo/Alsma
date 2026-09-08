@@ -14,6 +14,10 @@ const roleLabel = (role?: string) =>
     guest: "Клиент",
     manager: "Менеджер",
     system: "Система",
+    speaker_0: "Спикер 1",
+    speaker_1: "Спикер 2",
+    speaker_2: "Спикер 3",
+    speaker_3: "Спикер 4",
   })[role ?? "system"] ?? "Система";
 const durationLabel = (seconds: number | null) =>
   seconds === null
@@ -124,7 +128,7 @@ export const AdminVoiceCallDetail = ({
               <Meta label="Намерение" value={call.intent ?? "—"} />
             </dl>
             {call.hasRecording && <AdminVoiceCallPlayer callId={callId} />}
-            {call.hasRecording && !call.hasTranscript && (
+            {call.hasRecording && call.providerRecordingId && (
               <div className="mt-4">
                 <button
                   className="min-h-10 w-full rounded-xl border border-line px-3 text-sm font-semibold text-brand transition hover:bg-page disabled:cursor-wait disabled:opacity-60"
@@ -133,18 +137,18 @@ export const AdminVoiceCallDetail = ({
                   type="button"
                 >
                   {reprocess.isPending
-                    ? "Повторяем транскрибацию…"
-                    : "Повторить транскрибацию"}
+                    ? "Определяем реплики…"
+                    : "Повторить с распределением ролей"}
                 </button>
                 {reprocess.isSuccess && (
                   <p className="mt-2 text-xs text-brand">
-                    Транскрибация завершена. Обновляем карточку…
+                    Диаризация завершена. Обновляем карточку…
                   </p>
                 )}
                 {reprocess.isError && (
                   <p className="mt-2 text-xs leading-5 text-destructive">
-                    Не удалось повторить транскрибацию. Запись или AI-шлюз
-                    сейчас недоступны.
+                    Не удалось определить реплики. Запись или AI-шлюз сейчас
+                    недоступны.
                   </p>
                 )}
               </div>
@@ -161,6 +165,13 @@ export const AdminVoiceCallDetail = ({
               </p>
             )}
           </section>
+          {call.hasTranscript && (
+            <p className="text-xs leading-5 text-muted-ui-foreground">
+              Запись смешанная, без отдельных каналов. AI определяет разных
+              говорящих; первый говорящий отмечается как голосовой помощник,
+              поэтому это не является подтверждением личности по каналу.
+            </p>
+          )}
           <section className="rounded-3xl border border-line bg-brand-foreground p-6">
             <h2 className="text-xl font-semibold">Состояние данных</h2>
             <p className="mt-3 text-sm leading-6 text-muted-ui-foreground">
