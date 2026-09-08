@@ -1,12 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Headphones, Play, ScrollText } from "lucide-react";
+import { ArrowLeft, ScrollText } from "lucide-react";
 
-import { Button } from "@/components/ui/Button";
-import { readAdminSession } from "@/lib/admin/admin-session";
+import { AdminVoiceCallPlayer } from "@/components/admin/AdminVoiceCallPlayer";
 import { useAdminVoiceCall } from "@/lib/admin/useAdmin";
-import { apiClient } from "@/lib/api/api-client";
 import { ROUTES } from "@/route-constants";
 
 const roleLabel = (role?: string) =>
@@ -31,71 +27,10 @@ export const AdminVoiceCallDetail = ({
   readonly callId: string;
 }) => {
   const query = useAdminVoiceCall(callId);
-  const [playing, setPlaying] = useState(false);
-  const [recordingError, setRecordingError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
   const call = query.data?.call;
   const transcript = [...(call?.transcript ?? [])].sort((left, right) =>
     segmentTime(left).localeCompare(segmentTime(right)),
   );
-  useEffect(
-    () => () => {
-      audioRef.current?.pause();
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    },
-    [],
-  );
-  const play = async () => {
-    setPlaying(true);
-    setRecordingError(null);
-    try {
-      audioRef.current?.pause();
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-      const response = await apiClient.get<Blob>(
-        `/admin/voice-calls/${callId}/recording`,
-        {
-          headers: { Authorization: `Bearer ${readAdminSession() ?? ""}` },
-          responseType: "blob",
-        },
-      );
-      let sourceUrl: string;
-      if (response.data.type.includes("json")) {
-        const payload = (await response.data.text()) as string;
-        const { downloadUrl } = JSON.parse(payload) as {
-          downloadUrl?: string;
-        };
-        if (!downloadUrl) throw new Error("Recording URL is missing");
-        sourceUrl = downloadUrl;
-      } else {
-        sourceUrl = URL.createObjectURL(response.data);
-        objectUrlRef.current = sourceUrl;
-      }
-      const audio = new Audio(sourceUrl);
-      audioRef.current = audio;
-      const finish = () => {
-        setPlaying(false);
-        audioRef.current = null;
-        if (objectUrlRef.current) {
-          URL.revokeObjectURL(objectUrlRef.current);
-          objectUrlRef.current = null;
-        }
-      };
-      audio.addEventListener("ended", finish, { once: true });
-      audio.addEventListener("error", finish, { once: true });
-      await audio.play();
-    } catch {
-      setPlaying(false);
-      audioRef.current = null;
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-      setRecordingError(
-        "Запись пока недоступна. Проверьте, что она сохранилась в Mango, и повторите позже.",
-      );
-    }
-  };
 
   if (query.isLoading)
     return (
@@ -184,20 +119,7 @@ export const AdminVoiceCallDetail = ({
               <Meta label="Результат" value={call.outcome ?? "—"} />
               <Meta label="Намерение" value={call.intent ?? "—"} />
             </dl>
-            {call.hasRecording && (
-              <Button
-                className="mt-5 w-full"
-                onClick={() => void play()}
-                variant="secondary"
-              >
-                {playing ? (
-                  <Headphones className="size-4" />
-                ) : (
-                  <Play className="size-4" />
-                )}
-                {playing ? "Воспроизводится" : "Прослушать запись"}
-              </Button>
-            )}
+            {call.hasRecording && <AdminVoiceCallPlayer callId={callId} />}
             {call.recordingStatus === "pending" && (
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
                 Запись найдена в Mango и будет запрошена при прослушивании.
@@ -207,11 +129,6 @@ export const AdminVoiceCallDetail = ({
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
                 Запись для этого звонка ещё не доступна. Карточка звонка
                 продолжает отображать остальные данные.
-              </p>
-            )}
-            {recordingError && (
-              <p className="mt-3 text-xs leading-5 text-destructive">
-                {recordingError}
               </p>
             )}
           </section>
