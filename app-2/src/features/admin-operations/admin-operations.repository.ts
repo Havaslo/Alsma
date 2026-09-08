@@ -280,7 +280,19 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { createdAt: "desc" },
         skip,
         take,
-        include: { _count: { select: { chatMessages: true } } },
+        include: {
+          _count: { select: { chatMessages: true } },
+          voiceCalls: {
+            select: {
+              id: true,
+              recordingObjectId: true,
+              providerRecordingId: true,
+              recordingUrl: true,
+              recordingStatus: true,
+              transcript: true,
+            },
+          },
+        },
       }),
       database.client.adminRequest.count(),
       database.client.appSetting.findUnique({
@@ -294,8 +306,22 @@ export const createAdminOperationsRepository = (database: Database) => ({
         : {};
     const stopped = settings.enabled === false || settings.site === false;
     return {
-      items: items.map((item) => ({
+      items: items.map(({ voiceCalls, ...item }) => ({
         ...item,
+        voiceCall: voiceCalls[0]
+          ? {
+              id: voiceCalls[0].id,
+              hasRecording: Boolean(
+                voiceCalls[0].recordingObjectId ||
+                voiceCalls[0].recordingUrl ||
+                voiceCalls[0].providerRecordingId,
+              ),
+              hasTranscript:
+                Array.isArray(voiceCalls[0].transcript) &&
+                voiceCalls[0].transcript.length > 0,
+              recordingStatus: voiceCalls[0].recordingStatus,
+            }
+          : null,
         agentStopped:
           stopped &&
           (item.details as Record<string, unknown> | null)?.source === "Сайт",
@@ -326,7 +352,11 @@ export const createAdminOperationsRepository = (database: Database) => ({
           ...call
         }) => ({
           ...call,
-          hasRecording: Boolean(call.recordingObjectId),
+          // Mango recordings can be fetched on demand before they are copied to
+          // managed storage. Do not hide those calls from the journal.
+          hasRecording: Boolean(
+            call.recordingObjectId || _recordingUrl || _providerRecordingId,
+          ),
           hasTranscript:
             Array.isArray(call.transcript) && call.transcript.length > 0,
         }),
@@ -351,7 +381,9 @@ export const createAdminOperationsRepository = (database: Database) => ({
     } = call;
     return {
       ...result,
-      hasRecording: Boolean(call.recordingObjectId),
+      hasRecording: Boolean(
+        call.recordingObjectId || _recordingUrl || _providerRecordingId,
+      ),
       hasTranscript:
         Array.isArray(call.transcript) && call.transcript.length > 0,
     };

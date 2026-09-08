@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
 import {
@@ -39,24 +39,68 @@ export const AdminVoiceCallDetail = ({
 }) => {
   const query = useAdminVoiceCall(callId);
   const [playing, setPlaying] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const call = query.data?.call;
   const transcript = [...(call?.transcript ?? [])].sort((left, right) =>
     segmentTime(left).localeCompare(segmentTime(right)),
   );
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    },
+    [],
+  );
   const play = async () => {
     setPlaying(true);
+    setRecordingError(null);
     try {
-      const { data } = await apiClient.get<{ downloadUrl: string }>(
+      audioRef.current?.pause();
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      const response = await apiClient.get<Blob>(
         `/admin/voice-calls/${callId}/recording`,
         {
           headers: { Authorization: `Bearer ${readAdminSession() ?? ""}` },
+          responseType: "blob",
         },
       );
-      const audio = new Audio(data.downloadUrl);
-      audio.addEventListener("ended", () => setPlaying(false), { once: true });
+      let sourceUrl: string;
+      if (response.data.type.includes("json")) {
+        const payload = (await response.data.text()) as string;
+        const { downloadUrl } = JSON.parse(payload) as {
+          downloadUrl?: string;
+        };
+        if (!downloadUrl) throw new Error("Recording URL is missing");
+        sourceUrl = downloadUrl;
+      } else {
+        sourceUrl = URL.createObjectURL(response.data);
+        objectUrlRef.current = sourceUrl;
+      }
+      const audio = new Audio(sourceUrl);
+      audioRef.current = audio;
+      const finish = () => {
+        setPlaying(false);
+        audioRef.current = null;
+        if (objectUrlRef.current) {
+          URL.revokeObjectURL(objectUrlRef.current);
+          objectUrlRef.current = null;
+        }
+      };
+      audio.addEventListener("ended", finish, { once: true });
+      audio.addEventListener("error", finish, { once: true });
       await audio.play();
     } catch {
       setPlaying(false);
+      audioRef.current = null;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      setRecordingError(
+        "Запись пока недоступна. Проверьте, что она сохранилась в Mango, и повторите позже.",
+      );
     }
   };
 
@@ -129,7 +173,8 @@ export const AdminVoiceCallDetail = ({
               </div>
             ) : (
               <p className="mt-4 text-sm text-muted-ui-foreground">
-                Транскрипция для этого звонка не поступила.
+                Запись разговора сама по себе не содержит транскрипцию. Для
+                этого звонка транскрипция ещё не поступила.
               </p>
             )}
           </section>
@@ -159,6 +204,21 @@ export const AdminVoiceCallDetail = ({
                 )}
                 {playing ? "Воспроизводится" : "Прослушать запись"}
               </Button>
+            )}
+            {call.recordingStatus === "pending" && (
+              <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
+                Запись найдена в Mango и будет запрошена при прослушивании.
+              </p>
+            )}
+            {!call.hasRecording && (
+              <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
+                Запись для этого звонка не найдена.
+              </p>
+            )}
+            {recordingError && (
+              <p className="mt-3 text-xs leading-5 text-destructive">
+                {recordingError}
+              </p>
             )}
           </section>
           {call.adminRequest && (

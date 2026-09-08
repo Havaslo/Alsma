@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import { createLogger } from "../../lib/logger.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import {
   createRequireAdmin,
@@ -42,6 +43,7 @@ export const createAdminOperationsRouter = (
   mango?: { readonly apiKey?: string; readonly salt?: string },
 ): Router => {
   const router = Router();
+  const logger = createLogger();
   const repository = createAdminOperationsRepository(database);
   router.use(
     createRequireAdmin(
@@ -157,20 +159,26 @@ export const createAdminOperationsRouter = (
     createRequireAdminPermission("voice.calls.access", "requests.access"),
     validateRequest({ params: recordParamsSchema }),
     async (_request, response) => {
-      if (!managedStorage) {
-        response.status(404).json({ error: { code: "RECORDING_UNAVAILABLE" } });
-        return;
-      }
       const call = await database.client.voiceCall.findUnique({
         where: { id: response.locals.input.params.recordId },
         select: { providerRecordingId: true, recordingObjectId: true },
       });
-      if (!call?.recordingObjectId) {
+      if (!call) {
+        response.status(404).json({ error: { code: "RECORDING_NOT_FOUND" } });
+        return;
+      }
+      // Prefer the durable copy, but do not require managed storage for a
+      // recording that is still available from Mango.
+      if (!call.recordingObjectId) {
         if (!call?.providerRecordingId || !mango?.apiKey || !mango.salt) {
           response.status(404).json({ error: { code: "RECORDING_NOT_FOUND" } });
           return;
         }
         try {
+          logger.info(
+            { callId: call.providerRecordingId },
+            "Fetching Mango recording on demand",
+          );
           const recording = await fetchMangoRecording({
             apiKey: mango.apiKey,
             recordingId: call.providerRecordingId,
@@ -199,11 +207,19 @@ export const createAdminOperationsRouter = (
             }
           }
           response.end();
-        } catch {
+        } catch (error) {
+          logger.warn(
+            { callId: call.providerRecordingId, error },
+            "Mango recording fetch failed",
+          );
           response
             .status(502)
             .json({ error: { code: "RECORDING_UNAVAILABLE" } });
         }
+        return;
+      }
+      if (!managedStorage) {
+        response.status(404).json({ error: { code: "RECORDING_UNAVAILABLE" } });
         return;
       }
       response.json(await managedStorage.getDownload(call.recordingObjectId));

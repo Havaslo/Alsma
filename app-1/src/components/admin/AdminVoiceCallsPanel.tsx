@@ -96,10 +96,20 @@ export const AdminVoiceCallsPanel = () => {
                           Запись
                         </span>
                       )}
+                      {call.recordingStatus === "pending" && (
+                        <span className="text-muted-ui-foreground">
+                          Запись получена, готовится к прослушиванию
+                        </span>
+                      )}
                       {call.hasTranscript && (
                         <span>
                           <ScrollText className="mr-1 inline size-3.5" />
                           Транскрипция
+                        </span>
+                      )}
+                      {!call.hasTranscript && call.hasRecording && (
+                        <span className="text-muted-ui-foreground">
+                          Транскрипция не поступила
                         </span>
                       )}
                     </div>

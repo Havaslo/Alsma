@@ -1,3 +1,4 @@
+import { createLogger } from "../../lib/logger.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 
@@ -28,6 +29,7 @@ export const createMangoEventHandler = ({
   readonly completeCall: CompleteCall;
   readonly repository: VoiceAgentRepository;
 }) => {
+  const logger = createLogger();
   const handleNormalized = async (
     event: Extract<MangoProviderEvent, { kind: "normalized" }>["event"],
   ) => {
@@ -165,11 +167,20 @@ export const createMangoEventHandler = ({
       callId: event.call_id,
       entryId: event.entry_id,
     });
-    return repository.updateCall(call.id, {
+    const updated = await repository.updateCall(call.id, {
       providerEntryId: event.entry_id,
       providerRecordingId: event.recording_id,
       recordingStatus: "pending",
     });
+    logger.info(
+      {
+        callId: call.id,
+        entryId: event.entry_id,
+        recordingId: event.recording_id,
+      },
+      "Mango recording linked to voice call",
+    );
+    return updated;
   };
 
   const handleRecordingAdded = async (event: MangoRecordingAddedEvent) => {
@@ -180,10 +191,19 @@ export const createMangoEventHandler = ({
         providerCallId: `mango:entry:${event.entry_id}`,
         providerEntryId: event.entry_id,
       }));
-    return repository.updateCall(call.id, {
+    const updated = await repository.updateCall(call.id, {
       providerRecordingId: event.recording_id,
       recordingStatus: "pending",
     });
+    logger.info(
+      {
+        callId: call.id,
+        entryId: event.entry_id,
+        recordingId: event.recording_id,
+      },
+      "Mango recording-added event linked to voice call",
+    );
+    return updated;
   };
 
   const handle = async (providerEvent: MangoProviderEvent) => {
