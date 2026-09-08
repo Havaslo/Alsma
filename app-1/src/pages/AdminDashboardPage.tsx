@@ -142,9 +142,10 @@ export const AdminDashboardPage = () => {
       {path === ROUTES.adminIntegrations && can("integrations.access") && (
         <AdminIntegrationsPanel />
       )}
-      {path === ROUTES.adminVoiceCalls && can("voice.calls.access") && (
-        <AdminVoiceCallsPanel />
-      )}
+      {path === ROUTES.adminVoiceCalls &&
+        (can("voice.calls.access") || can("requests.access")) && (
+          <AdminVoiceCallsPanel />
+        )}
       {path === ROUTES.adminVoiceAgentTest && can("voice.calls.access") && (
         <AdminVoiceAgentTestPanel />
       )}
