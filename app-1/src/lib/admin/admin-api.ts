@@ -238,6 +238,12 @@ export const loadAdminVoiceCall = (recordId: string, signal?: AbortSignal) =>
     headers: headers(),
     signal,
   });
+export const reprocessAdminVoiceCall = (recordId: string) =>
+  apiClient.post<{ ok: boolean }>(
+    `/admin/voice-calls/${recordId}/transcription`,
+    {},
+    { headers: headers() },
+  );
 export const loadAdminAnalytics = (
   start: string,
   end: string,

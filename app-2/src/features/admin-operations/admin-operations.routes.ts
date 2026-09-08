@@ -41,6 +41,10 @@ export const createAdminOperationsRouter = (
   database: Database,
   managedStorage?: ManagedStorage,
   mango?: { readonly apiKey?: string; readonly salt?: string },
+  reprocessRecording?: (input: {
+    readonly callId: string;
+    readonly recordingId: string;
+  }) => Promise<unknown>,
 ): Router => {
   const router = Router();
   const logger = createLogger();
@@ -68,6 +72,66 @@ export const createAdminOperationsRouter = (
       response.json({
         analytics: await repository.getAnalytics(parsed.data.start, end),
       });
+    },
+  );
+  router.post(
+    "/voice-calls/:recordId/transcription",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ params: recordParamsSchema }),
+    async (_request, response) => {
+      const call = await database.client.voiceCall.findUnique({
+        where: { id: response.locals.input.params.recordId },
+        select: {
+          id: true,
+          providerRecordingId: true,
+          transcript: true,
+        },
+      });
+      if (!call) {
+        response.status(404).json({ error: { code: "VOICE_CALL_NOT_FOUND" } });
+        return;
+      }
+      if (!call.providerRecordingId || !reprocessRecording) {
+        response.status(409).json({
+          error: {
+            code: "RETRANSCRIPTION_UNAVAILABLE",
+            message: "Для этого звонка повторная транскрибация недоступна.",
+          },
+        });
+        return;
+      }
+      if (Array.isArray(call.transcript) && call.transcript.length > 0) {
+        response.status(409).json({
+          error: {
+            code: "TRANSCRIPT_ALREADY_EXISTS",
+            message: "Транскрипция для этого звонка уже существует.",
+          },
+        });
+        return;
+      }
+      try {
+        await reprocessRecording({
+          callId: call.id,
+          recordingId: call.providerRecordingId,
+        });
+        await database.client.voiceCall.update({
+          where: { id: call.id },
+          data: { recordingStatus: "completed" },
+        });
+        response.json({ ok: true });
+      } catch {
+        await database.client.voiceCall.update({
+          where: { id: call.id },
+          data: { recordingStatus: "error" },
+        });
+        response.status(502).json({
+          error: {
+            code: "RETRANSCRIPTION_FAILED",
+            message:
+              "Не удалось повторить транскрибацию. Проверьте доступность записи и AI-шлюза.",
+          },
+        });
+      }
     },
   );
   router.get(

@@ -2,7 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ScrollText } from "lucide-react";
 
 import { AdminVoiceCallPlayer } from "@/components/admin/AdminVoiceCallPlayer";
-import { useAdminVoiceCall } from "@/lib/admin/useAdmin";
+import {
+  useAdminVoiceCall,
+  useReprocessAdminVoiceCall,
+} from "@/lib/admin/useAdmin";
 import { ROUTES } from "@/route-constants";
 
 const roleLabel = (role?: string) =>
@@ -27,6 +30,7 @@ export const AdminVoiceCallDetail = ({
   readonly callId: string;
 }) => {
   const query = useAdminVoiceCall(callId);
+  const reprocess = useReprocessAdminVoiceCall();
   const call = query.data?.call;
   const transcript = [...(call?.transcript ?? [])].sort((left, right) =>
     segmentTime(left).localeCompare(segmentTime(right)),
@@ -120,6 +124,31 @@ export const AdminVoiceCallDetail = ({
               <Meta label="Намерение" value={call.intent ?? "—"} />
             </dl>
             {call.hasRecording && <AdminVoiceCallPlayer callId={callId} />}
+            {call.hasRecording && !call.hasTranscript && (
+              <div className="mt-4">
+                <button
+                  className="min-h-10 w-full rounded-xl border border-line px-3 text-sm font-semibold text-brand transition hover:bg-page disabled:cursor-wait disabled:opacity-60"
+                  disabled={reprocess.isPending}
+                  onClick={() => reprocess.mutate(callId)}
+                  type="button"
+                >
+                  {reprocess.isPending
+                    ? "Повторяем транскрибацию…"
+                    : "Повторить транскрибацию"}
+                </button>
+                {reprocess.isSuccess && (
+                  <p className="mt-2 text-xs text-brand">
+                    Транскрибация завершена. Обновляем карточку…
+                  </p>
+                )}
+                {reprocess.isError && (
+                  <p className="mt-2 text-xs leading-5 text-destructive">
+                    Не удалось повторить транскрибацию. Запись или AI-шлюз
+                    сейчас недоступны.
+                  </p>
+                )}
+              </div>
+            )}
             {call.recordingStatus === "pending" && (
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
                 Запись найдена в Mango и будет запрошена при прослушивании.

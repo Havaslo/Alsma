@@ -26,7 +26,9 @@ import { createSiteContentRouter } from "./features/site-content/site-content.ro
 import { createSystemRouter } from "./features/system/system.routes.js";
 import { createVkClient } from "./features/vk/vk.client.js";
 import { createVkRouter } from "./features/vk/vk.routes.js";
+import { createVoiceAgentRepository } from "./features/voice-agent/voice-agent.repository.js";
 import { createVoiceAgentRouter } from "./features/voice-agent/voice-agent.routes.js";
+import { transcribeMangoRecording } from "./features/voice-agent/voice-agent.transcription.js";
 import type { Database } from "./lib/database/database.js";
 import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 
@@ -106,10 +108,28 @@ export const createApiRouter = ({
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
   router.use(
     "/admin",
-    createAdminOperationsRouter(database, managedStorage, {
-      apiKey: voiceIntegration.mangoApiKey,
-      salt: voiceIntegration.mangoApiSalt,
-    }),
+    createAdminOperationsRouter(
+      database,
+      managedStorage,
+      {
+        apiKey: voiceIntegration.mangoApiKey,
+        salt: voiceIntegration.mangoApiSalt,
+      },
+      openaiApiKey &&
+        openaiBaseUrl &&
+        voiceIntegration.mangoApiKey &&
+        voiceIntegration.mangoApiSalt
+        ? ({ callId, recordingId }) =>
+            transcribeMangoRecording({
+              apiKey: voiceIntegration.mangoApiKey!,
+              callId,
+              openaiBaseUrl,
+              recordingId,
+              repository: createVoiceAgentRepository(database),
+              salt: voiceIntegration.mangoApiSalt!,
+            })
+        : undefined,
+    ),
   );
   router.use("/admin/settings", createAdminSettingsRouter(database));
   router.use(

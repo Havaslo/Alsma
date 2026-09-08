@@ -6,7 +6,6 @@ import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
-import { fetchMangoRecording } from "./voice-agent.recording.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
@@ -14,6 +13,7 @@ import type {
   TranscriptBody,
 } from "./voice-agent.schemas.js";
 import { toolBodySchema } from "./voice-agent.schemas.js";
+import { transcribeMangoRecording } from "./voice-agent.transcription.js";
 
 const logger = createLogger();
 
@@ -228,42 +228,14 @@ export const createVoiceAgentService = (
     transfer.mangoApiSalt
       ? {
           transcribeRecording: async ({ callId, recordingId }) => {
-            const recording = await fetchMangoRecording({
+            await transcribeMangoRecording({
               apiKey: transfer.mangoApiKey!,
+              callId,
+              openaiBaseUrl,
               recordingId,
+              repository,
               salt: transfer.mangoApiSalt!,
             });
-            const audio = Buffer.from(await recording.arrayBuffer());
-            const form = new FormData();
-            form.append(
-              "file",
-              new Blob([audio], {
-                type: recording.headers.get("content-type") ?? "audio/mpeg",
-              }),
-              "call-recording.mp3",
-            );
-            form.append("model", "gpt-4o-mini-transcribe");
-            const response = await fetch(
-              `${openaiBaseUrl.replace(/\/$/u, "")}/audio/transcriptions`,
-              {
-                method: "POST",
-                headers: { Authorization: `Bearer ${apiKey}` },
-                body: form,
-                signal: AbortSignal.timeout(60_000),
-              },
-            );
-            if (!response.ok)
-              throw new Error(
-                `Call transcription failed with status ${response.status}`,
-              );
-            const result = (await response.json()) as { text?: string };
-            const text = result.text?.trim();
-            if (text)
-              await repository.appendTranscript(callId, {
-                role: "guest",
-                text,
-                providerEventId: `mango-recording:${recordingId}`,
-              });
           },
         }
       : {}),

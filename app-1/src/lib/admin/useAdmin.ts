@@ -16,6 +16,7 @@ import {
   loadIntegrationStatuses,
   loadManagerTasks,
   markBookingPaid,
+  reprocessAdminVoiceCall,
   updateAdminClient,
   updateAdminLead,
   updateAdminRequest,
@@ -73,6 +74,15 @@ export const useAdminVoiceCall = (recordId: string) =>
     (signal) => loadAdminVoiceCall(recordId, signal),
     { enabled: Boolean(recordId) },
   );
+export const useReprocessAdminVoiceCall = () => {
+  const client = useQueryClient();
+  return useApiMutation(reprocessAdminVoiceCall, {
+    onSuccess: (_data, recordId) =>
+      void client.invalidateQueries({
+        queryKey: [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls", recordId],
+      }),
+  });
+};
 export const useAdminAnalytics = (start: string, end: string) =>
   useApiQuery(
     [...ADMIN_OPERATIONS_QUERY_KEY, "analytics", start, end],
