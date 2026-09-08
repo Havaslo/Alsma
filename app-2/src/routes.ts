@@ -121,9 +121,10 @@ export const createApiRouter = ({
         voiceIntegration.mangoApiSalt
         ? ({ callId, recordingId }) =>
             transcribeMangoRecording({
-              apiKey: voiceIntegration.mangoApiKey!,
+              mangoApiKey: voiceIntegration.mangoApiKey!,
               callId,
               openaiBaseUrl,
+              openaiApiKey,
               recordingId,
               repository: createVoiceAgentRepository(database),
               salt: voiceIntegration.mangoApiSalt!,

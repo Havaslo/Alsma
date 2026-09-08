@@ -229,9 +229,10 @@ export const createVoiceAgentService = (
       ? {
           transcribeRecording: async ({ callId, recordingId }) => {
             await transcribeMangoRecording({
-              apiKey: transfer.mangoApiKey!,
+              mangoApiKey: transfer.mangoApiKey!,
               callId,
               openaiBaseUrl,
+              openaiApiKey: apiKey,
               recordingId,
               repository,
               salt: transfer.mangoApiSalt!,

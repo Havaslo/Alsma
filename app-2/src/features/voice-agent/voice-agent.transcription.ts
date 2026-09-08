@@ -5,21 +5,30 @@ import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 const logger = createLogger();
 
 export const transcribeMangoRecording = async ({
-  apiKey,
+  mangoApiKey,
   callId,
   openaiBaseUrl,
+  openaiApiKey,
   recordingId,
   repository,
   salt,
+  fetchImpl = fetch,
 }: {
-  readonly apiKey: string;
+  readonly mangoApiKey: string;
   readonly callId: string;
   readonly openaiBaseUrl: string;
+  readonly openaiApiKey: string;
   readonly recordingId: string;
   readonly repository: VoiceAgentRepository;
   readonly salt: string;
+  readonly fetchImpl?: typeof fetch;
 }) => {
-  const recording = await fetchMangoRecording({ apiKey, recordingId, salt });
+  const recording = await fetchMangoRecording({
+    apiKey: mangoApiKey,
+    fetchImpl,
+    recordingId,
+    salt,
+  });
   const audio = Buffer.from(await recording.arrayBuffer());
   const contentType =
     recording.headers.get("content-type")?.split(";", 1)[0] ?? "audio/mpeg";
@@ -38,11 +47,11 @@ export const transcribeMangoRecording = async ({
     `call-recording.${extension}`,
   );
   form.append("model", "gpt-4o-mini-transcribe");
-  const response = await fetch(
+  const response = await fetchImpl(
     `${openaiBaseUrl.replace(/\/$/u, "")}/audio/transcriptions`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { Authorization: `Bearer ${openaiApiKey}` },
       body: form,
       signal: AbortSignal.timeout(60_000),
     },
