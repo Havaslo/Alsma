@@ -320,11 +320,6 @@ export const createAdminOperationsRepository = (database: Database) => ({
         orderBy: { startedAt: "desc" },
         skip,
         take,
-        include: {
-          adminRequest: {
-            select: { id: true, requester: true, status: true, title: true },
-          },
-        },
       }),
       database.client.voiceCall.count(),
     ]);
@@ -351,11 +346,6 @@ export const createAdminOperationsRepository = (database: Database) => ({
   getVoiceCall: async (recordId: string) => {
     const call = await database.client.voiceCall.findUnique({
       where: { id: recordId },
-      include: {
-        adminRequest: {
-          select: { id: true, requester: true, status: true, title: true },
-        },
-      },
     });
     if (!call) return null;
     const {

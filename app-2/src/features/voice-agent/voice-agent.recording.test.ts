@@ -47,11 +47,10 @@ test("recording proxy follows a trusted temporary redirect without returning it"
   const fetchImpl: typeof fetch = async (input) => {
     requests.push(String(input));
     if (requests.length === 1)
-      return new Response(
-        JSON.stringify({
-          result: { url: "https://media.mango-office.ru/audio" },
-        }),
-      );
+      return new Response(null, {
+        status: 302,
+        headers: { location: "https://files.mango-office.ru/audio" },
+      });
     return new Response(new Uint8Array([1, 2, 3]), {
       headers: { "content-type": "audio/mpeg" },
     });

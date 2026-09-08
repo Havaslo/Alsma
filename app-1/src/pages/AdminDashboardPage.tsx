@@ -149,9 +149,10 @@ export const AdminDashboardPage = () => {
       {path === ROUTES.adminVoiceAgentTest && can("voice.calls.access") && (
         <AdminVoiceAgentTestPanel />
       )}
-      {params.callId && can("voice.calls.access") && (
-        <AdminVoiceCallDetail callId={params.callId} />
-      )}
+      {params.callId &&
+        (can("voice.calls.access") || can("requests.access")) && (
+          <AdminVoiceCallDetail callId={params.callId} />
+        )}
     </AdminShell>
   );
 };

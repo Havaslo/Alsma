@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const mangoRecordingQueryPath = "/vpbx/queries/recording";
+const mangoRecordingQueryPath = "/vpbx/queries/recording/post";
 const mangoHost = "app.mango-office.ru";
 const maxRecordingBytes = 100 * 1024 * 1024;
 
@@ -40,7 +40,7 @@ export const fetchMangoRecording = async ({
   readonly salt: string;
   readonly fetchImpl?: typeof fetch;
 }): Promise<Response> => {
-  const json = JSON.stringify({ recording_id: recordingId });
+  const json = JSON.stringify({ recording_id: recordingId, action: "play" });
   const response = await fetchImpl(
     `https://${mangoHost}${mangoRecordingQueryPath}`,
     {
@@ -51,14 +51,19 @@ export const fetchMangoRecording = async ({
         sign: signRequest(apiKey, json, salt),
         json,
       }),
+      redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     },
   );
-  if (!response.ok)
-    throw new Error(
-      `Mango recording request failed with status ${response.status}`,
-    );
-  const redirect = readRecordingUrl(await response.json());
+  if (response.status < 300 || response.status >= 400)
+    if (!response.ok)
+      throw new Error(
+        `Mango recording request failed with status ${response.status}`,
+      );
+  const location = response.headers.get("location");
+  const redirect = location
+    ? safeRedirect(location)
+    : readRecordingUrl(await response.json());
   const recording = await fetchImpl(redirect, {
     signal: AbortSignal.timeout(30_000),
     redirect: "follow",

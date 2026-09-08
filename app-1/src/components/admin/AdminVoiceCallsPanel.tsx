@@ -1,11 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import {
-  ClipboardList,
-  Eye,
-  Headphones,
-  PhoneCall,
-  ScrollText,
-} from "lucide-react";
+import { Eye, Headphones, PhoneCall, ScrollText } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useAdminVoiceCalls } from "@/lib/admin/useAdmin";
@@ -39,9 +33,8 @@ export const AdminVoiceCallsPanel = () => {
           Входящие звонки
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-ui-foreground">
-          Отдельный журнал звонков: запись, транскрипция и результат разговора.
-          Связанное обращение открывается отдельно и не смешивает звонок с
-          чатом.
+          Отдельный журнал звонков: звонящий, запись, транскрипция и результат
+          разговора. Звонки не являются обращениями.
         </p>
       </section>
 
@@ -54,7 +47,6 @@ export const AdminVoiceCallsPanel = () => {
                 <th className="px-5 py-4">Начало и длительность</th>
                 <th className="px-5 py-4">Статус и результат</th>
                 <th className="px-5 py-4">Содержание</th>
-                <th className="px-5 py-4">Связь</th>
                 <th className="px-5 py-4 text-right">Действие</th>
               </tr>
             </thead>
@@ -63,11 +55,8 @@ export const AdminVoiceCallsPanel = () => {
                 <tr className="border-t border-line align-top" key={call.id}>
                   <td className="px-5 py-4">
                     <strong className="block">
-                      {call.adminRequest?.requester ?? "Клиент не представился"}
-                    </strong>
-                    <span className="mt-1 block text-xs text-muted-ui-foreground">
                       {call.callerPhone ?? "Номер не определён"}
-                    </span>
+                    </strong>
                   </td>
                   <td className="px-5 py-4">
                     <span className="block text-muted-ui-foreground">
@@ -113,27 +102,6 @@ export const AdminVoiceCallsPanel = () => {
                         </span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {call.adminRequest ? (
-                      <button
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand underline"
-                        onClick={() =>
-                          navigate({
-                            to: buildRoute(ROUTES.adminRequest, {
-                              requestId: call.adminRequest!.id,
-                            }),
-                          })
-                        }
-                        type="button"
-                      >
-                        <ClipboardList className="size-3.5" /> Обращение
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-ui-foreground">
-                        Не связано
-                      </span>
-                    )}
                   </td>
                   <td className="px-5 py-4 text-right">
                     <Button

@@ -21,13 +21,19 @@ type MangoRecordingAddedEvent = Extract<
   MangoProviderEvent,
   { kind: "recording_added" }
 >["event"];
+type TranscribeRecording = (input: {
+  readonly callId: string;
+  readonly recordingId: string;
+}) => Promise<void>;
 
 export const createMangoEventHandler = ({
   completeCall,
   repository,
+  transcribeRecording,
 }: {
   readonly completeCall: CompleteCall;
   readonly repository: VoiceAgentRepository;
+  readonly transcribeRecording?: TranscribeRecording;
 }) => {
   const logger = createLogger();
   const handleNormalized = async (
@@ -172,6 +178,11 @@ export const createMangoEventHandler = ({
       providerRecordingId: event.recording_id,
       recordingStatus: "pending",
     });
+    if (event.recording_state === "Completed" && transcribeRecording)
+      await transcribeRecording({
+        callId: call.id,
+        recordingId: event.recording_id,
+      });
     logger.info(
       {
         callId: call.id,
@@ -195,6 +206,11 @@ export const createMangoEventHandler = ({
       providerRecordingId: event.recording_id,
       recordingStatus: "pending",
     });
+    if (transcribeRecording)
+      await transcribeRecording({
+        callId: call.id,
+        recordingId: event.recording_id,
+      });
     logger.info(
       {
         callId: call.id,

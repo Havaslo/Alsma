@@ -122,12 +122,6 @@ export type AdminVoiceCall = {
   readonly recordingStatus?: string | null;
   readonly hasRecording: boolean;
   readonly hasTranscript: boolean;
-  readonly adminRequest: {
-    readonly id: string;
-    readonly requester: string | null;
-    readonly status: SiteLead["status"];
-    readonly title: string;
-  } | null;
 };
 export type AdminNotification = {
   readonly id: string;

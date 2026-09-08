@@ -1,19 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ClipboardList,
-  Headphones,
-  Play,
-  ScrollText,
-} from "lucide-react";
+import { ArrowLeft, Headphones, Play, ScrollText } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { readAdminSession } from "@/lib/admin/admin-session";
 import { useAdminVoiceCall } from "@/lib/admin/useAdmin";
 import { apiClient } from "@/lib/api/api-client";
-import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const roleLabel = (role?: string) =>
@@ -131,7 +124,7 @@ export const AdminVoiceCallDetail = ({
             Входящий звонок
           </p>
           <h1 className="mt-2 text-2xl font-semibold">
-            {call.adminRequest?.requester ?? "Клиент не представился"}
+            {call.callerPhone ?? "Номер не определён"}
           </h1>
           <p className="mt-2 text-sm text-muted-ui-foreground">
             {call.callerPhone ?? "Номер не определён"} ·{" "}
@@ -212,7 +205,8 @@ export const AdminVoiceCallDetail = ({
             )}
             {!call.hasRecording && (
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-                Запись для этого звонка не найдена.
+                Запись для этого звонка ещё не доступна. Карточка звонка
+                продолжает отображать остальные данные.
               </p>
             )}
             {recordingError && (
@@ -221,16 +215,24 @@ export const AdminVoiceCallDetail = ({
               </p>
             )}
           </section>
-          {call.adminRequest && (
-            <Link
-              className="flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground"
-              to={buildRoute(ROUTES.adminRequest, {
-                requestId: call.adminRequest.id,
-              })}
-            >
-              <ClipboardList className="size-4" /> Открыть связанное обращение
-            </Link>
-          )}
+          <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+            <h2 className="text-xl font-semibold">Состояние данных</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-ui-foreground">
+              Этот звонок хранится отдельно от раздела «Обращения». Отсутствие
+              записи или транскрибации не скрывает карточку и не создаёт ссылку
+              на обращение.
+            </p>
+            <dl className="mt-5 space-y-3 text-sm">
+              <Meta
+                label="Запись"
+                value={call.hasRecording ? "Доступна" : "Не поступила"}
+              />
+              <Meta
+                label="Транскрибация"
+                value={call.hasTranscript ? "Доступна" : "Не поступила"}
+              />
+            </dl>
+          </section>
         </aside>
       </div>
     </div>
