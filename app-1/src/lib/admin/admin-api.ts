@@ -93,12 +93,6 @@ export type AdminRequest = {
     readonly source?: string;
     readonly [key: string]: string | boolean | undefined;
   };
-  readonly voiceCall: {
-    readonly id: string;
-    readonly hasRecording: boolean;
-    readonly hasTranscript: boolean;
-    readonly recordingStatus: string | null;
-  } | null;
   readonly id: string;
   readonly _count?: { readonly chatMessages: number };
   readonly requester: string | null;

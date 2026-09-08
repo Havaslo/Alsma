@@ -12,7 +12,6 @@ import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 type StatusFilter = "all" | "cancelled" | "completed" | "new" | "processing";
-type RequestType = "all" | "call" | "chat";
 const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
   cancelled: "Отменено",
   completed: "Выполнено",
@@ -26,26 +25,10 @@ const statusOptions: { label: string; value: StatusFilter }[] = [
     value: value as Exclude<StatusFilter, "all">,
   })),
 ];
-const typeOptions: { label: string; value: RequestType }[] = [
-  { label: "Все типы", value: "all" },
-  { label: "Звонки", value: "call" },
-  { label: "Чаты", value: "chat" },
-];
-const requestType = (item: AdminRequest): Exclude<RequestType, "all"> =>
-  item.details.channelType === "call" ? "call" : "chat";
-const requestTypeLabel = (type: Exclude<RequestType, "all">) =>
-  type === "call" ? "Звонок" : "Чат";
 const sourceLabel = (source: string | undefined) => {
   const value = source?.toLocaleLowerCase("ru-RU") ?? "";
   if (value.includes("vk")) return "VK";
   if (value.includes("telegram") || value.includes("max")) return "MAX";
-  if (
-    value.includes("phone") ||
-    value.includes("call") ||
-    value.includes("телефон") ||
-    value.includes("звон")
-  )
-    return "Звонки";
   return "Сайт";
 };
 const readKey = (id: string) => `alsma-admin-request-read-${id}`;
@@ -76,14 +59,9 @@ const assignee = (item: AdminRequest) => {
   };
 };
 
-export const AdminRequestsPanel = ({
-  initialType = "all",
-}: {
-  readonly initialType?: RequestType;
-}) => {
+export const AdminRequestsPanel = () => {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [type, setType] = useState<RequestType>(initialType);
   const [readAt, setReadAt] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const requests = useAdminRequests();
@@ -91,6 +69,8 @@ export const AdminRequestsPanel = ({
     const term = search.trim().toLocaleLowerCase("ru-RU");
     return (requests.data?.items ?? [])
       .filter((item) => {
+        const isVoiceCall =
+          item.category === "voice-call" || item.details.channelType === "call";
         const haystack = [
           item.title,
           item.description,
@@ -102,8 +82,8 @@ export const AdminRequestsPanel = ({
           .join(" ")
           .toLocaleLowerCase("ru-RU");
         return (
+          !isVoiceCall &&
           (status === "all" || item.status === status) &&
-          (type === "all" || requestType(item) === type) &&
           (!term || haystack.includes(term))
         );
       })
@@ -112,7 +92,7 @@ export const AdminRequestsPanel = ({
           new Date(right.updatedAt).getTime() -
           new Date(left.updatedAt).getTime(),
       );
-  }, [requests.data?.items, search, status, type]);
+  }, [requests.data?.items, search, status]);
   const openRequest = (item: AdminRequest) => {
     localStorage.setItem(readKey(item.id), item.updatedAt);
     setReadAt((current) => ({ ...current, [item.id]: item.updatedAt }));
@@ -129,13 +109,7 @@ export const AdminRequestsPanel = ({
   return (
     <div className="space-y-5">
       <section className="space-y-2">
-        {initialType === "call" && (
-          <p className="text-sm text-muted-ui-foreground">
-            Быстрый фильтр обращений с каналом «Звонок». История, транскрипция и
-            запись находятся внутри единого обращения.
-          </p>
-        )}
-        <div className="grid gap-4 md:grid-cols-[minmax(20rem,1fr)_12rem_12rem]">
+        <div className="grid gap-4 md:grid-cols-[minmax(20rem,1fr)_12rem]">
           <label>
             <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
               Поиск
@@ -149,18 +123,6 @@ export const AdminRequestsPanel = ({
                 value={search}
               />
             </span>
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
-              Тип обращения
-            </span>
-            <DropdownSelect<RequestType>
-              ariaLabel="Фильтр по типу обращения"
-              onChange={setType}
-              options={typeOptions}
-              triggerClassName="min-h-12 rounded-2xl border border-line bg-brand-foreground px-4 text-sm"
-              value={type}
-            />
           </label>
           <label>
             <span className="mb-2 block text-sm font-medium text-muted-ui-foreground">
@@ -194,7 +156,6 @@ export const AdminRequestsPanel = ({
             </thead>
             <tbody>
               {items.map((item) => {
-                const currentType = requestType(item);
                 const newMessage = isNewMessage(item);
                 const currentAssignee = assignee(item);
                 const AssigneeIcon = currentAssignee.Icon;
@@ -211,7 +172,7 @@ export const AdminRequestsPanel = ({
                         {sourceLabel(item.details.source)}
                       </strong>
                       <span className="mt-1 block text-xs text-muted-ui-foreground">
-                        {requestTypeLabel(currentType)}
+                        {item.details.channelType === "chat" ? "Чат" : "Сайт"}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-muted-ui-foreground">

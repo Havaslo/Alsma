@@ -275,26 +275,24 @@ export const createAdminOperationsRepository = (database: Database) => ({
   },
   listRequests: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
+    // Voice calls have their own journal. Keep both the explicit call category
+    // and legacy call-channel requests out of the Requests page at the query
+    // boundary, before pagination is applied.
+    const requestsWhere = {
+      NOT: [
+        { category: "voice-call" },
+        { details: { path: ["channelType"], equals: "call" } },
+      ],
+    };
     const [items, total, setting] = await database.client.$transaction([
       database.client.adminRequest.findMany({
         orderBy: { createdAt: "desc" },
         skip,
         take,
-        include: {
-          _count: { select: { chatMessages: true } },
-          voiceCalls: {
-            select: {
-              id: true,
-              recordingObjectId: true,
-              providerRecordingId: true,
-              recordingUrl: true,
-              recordingStatus: true,
-              transcript: true,
-            },
-          },
-        },
+        where: requestsWhere,
+        include: { _count: { select: { chatMessages: true } } },
       }),
-      database.client.adminRequest.count(),
+      database.client.adminRequest.count({ where: requestsWhere }),
       database.client.appSetting.findUnique({
         where: { key: "agent.settings" },
         select: { value: true },
@@ -306,22 +304,8 @@ export const createAdminOperationsRepository = (database: Database) => ({
         : {};
     const stopped = settings.enabled === false || settings.site === false;
     return {
-      items: items.map(({ voiceCalls, ...item }) => ({
+      items: items.map((item) => ({
         ...item,
-        voiceCall: voiceCalls[0]
-          ? {
-              id: voiceCalls[0].id,
-              hasRecording: Boolean(
-                voiceCalls[0].recordingObjectId ||
-                voiceCalls[0].recordingUrl ||
-                voiceCalls[0].providerRecordingId,
-              ),
-              hasTranscript:
-                Array.isArray(voiceCalls[0].transcript) &&
-                voiceCalls[0].transcript.length > 0,
-              recordingStatus: voiceCalls[0].recordingStatus,
-            }
-          : null,
         agentStopped:
           stopped &&
           (item.details as Record<string, unknown> | null)?.source === "Сайт",

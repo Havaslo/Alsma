@@ -1,10 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Headphones, ScrollText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { RequestChat } from "@/components/admin/RequestChat";
 import { useAdminRequests } from "@/lib/admin/useAdmin";
 import { cn } from "@/lib/cn";
-import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
 
 const statusLabels = {
@@ -89,33 +88,6 @@ export const AdminRequestDetail = ({
             </p>
           </div>
           <RequestChat conversationId={request.id} initialMessages={[]} />
-          {request.voiceCall && (
-            <section className="mt-6 rounded-2xl border border-line bg-page/50 p-5">
-              <div className="flex items-center gap-2">
-                <Headphones className="size-5 text-brand" />
-                <h2 className="text-xl font-semibold">Материалы звонка</h2>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-muted-ui-foreground">
-                {request.voiceCall.hasRecording
-                  ? "Запись звонка доступна в Mango и запрашивается при прослушивании."
-                  : "Запись звонка пока не найдена."}
-              </p>
-              <p className="mt-2 flex items-center gap-2 text-sm text-muted-ui-foreground">
-                <ScrollText className="size-4" />
-                {request.voiceCall.hasTranscript
-                  ? "Транскрипция доступна."
-                  : "Транскрипция не поступила: запись сама по себе её не содержит."}
-              </p>
-              <Link
-                className="mt-4 inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground"
-                to={buildRoute(ROUTES.adminVoiceCall, {
-                  callId: request.voiceCall.id,
-                })}
-              >
-                Открыть материалы звонка
-              </Link>
-            </section>
-          )}
         </section>
         <aside className="space-y-5">
           <DetailsCard
