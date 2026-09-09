@@ -128,7 +128,7 @@ export const HomePage = () => {
             <h1 className="max-w-4xl font-heading text-4xl leading-[1.02] font-semibold sm:text-5xl md:text-6xl lg:text-7xl">
               {typeof hero?.title === "string"
                 ? hero.title
-                : "Отдых, который возвращает к себе"}
+                : "Перезагрузка в красоте реликтового леса"}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-foreground/85 sm:mt-8">
               {typeof hero?.description === "string"
