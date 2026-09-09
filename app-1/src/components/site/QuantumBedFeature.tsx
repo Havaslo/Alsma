@@ -1,4 +1,4 @@
-import quantumBedImage from "@/assets/alsma/quantum-bed-new.png";
+import quantumBedImage from "@/assets/alsma/quantum-bed-feature.webp";
 
 const quantumBedBenefits = [
   {
@@ -25,15 +25,15 @@ const quantumBedBenefits = [
 
 export const QuantumBedFeature = () => (
   <section className="mx-auto w-full max-w-[100rem] px-5 py-16 sm:px-8 sm:py-24">
-    <div className="max-w-4xl">
+    <div className="mx-auto max-w-4xl text-center">
       <p className="text-sm font-semibold tracking-[0.2em] text-brand uppercase">
         SPA нового поколения
       </p>
-      <h2 className="mt-4 max-w-4xl font-heading text-4xl leading-[1.08] font-semibold text-page-foreground sm:text-5xl lg:text-6xl">
+      <h2 className="mx-auto mt-4 max-w-4xl font-heading text-4xl leading-[1.08] font-semibold text-page-foreground sm:text-5xl lg:text-6xl">
         Современные технологии для глубокого расслабления, комфорта и нового
         опыта заботы о себе.
       </h2>
-      <p className="mt-6 max-w-3xl text-base leading-7 text-muted-ui-foreground sm:text-lg sm:leading-8">
+      <p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-muted-ui-foreground sm:text-lg sm:leading-8">
         Технологичный формат SPA-процедуры, где для отдыха не требуется никаких
         усилий. Просто расположитесь с комфортом и позвольте себе несколько
         минут абсолютного спокойствия.
