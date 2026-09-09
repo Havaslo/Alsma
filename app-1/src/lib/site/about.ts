@@ -64,6 +64,8 @@ export const HOTEL_CONTACTS = [
   ["Бронирование", "+7 986 725-57-77", "tel:+79867255777"],
 ] as const;
 
+export const HOTEL_COORDINATES = "56.537617, 44.113128";
+
 export const HOTEL_SERVICE_HOURS = [
   {
     hours: "Завтрак: 8:30–10:30 · Обед: 13:00–15:00 · Ужин: 18:00–19:30",

@@ -20,6 +20,7 @@ import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import {
   HOTEL_ADVANTAGES,
   HOTEL_CONTACTS,
+  HOTEL_COORDINATES,
   HOTEL_SERVICE_HOURS,
   TRANSFER_OPTIONS,
 } from "@/lib/site/about";
@@ -31,6 +32,7 @@ import { getSiteCollection } from "@/lib/site/content-collections";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
+import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
 
 const advantageIcons = [Waves, Utensils, Droplets, House, Trees, CalendarDays];
 const advantageIconTones = [
@@ -56,6 +58,8 @@ export const AboutPage = () => {
     "documents",
     ABOUT_DOCUMENTS,
   );
+  const { copy: copyCoordinates, status: coordinatesCopyStatus } =
+    useCopyToClipboard();
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
@@ -132,6 +136,21 @@ export const AboutPage = () => {
                   <p className="mt-2 leading-7">
                     Нижегородская обл., г. Бор, д. Васильково, ул. Лесная, д. 7
                   </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-ui-foreground">Координаты</p>
+                  <button
+                    aria-label={`Скопировать координаты ${HOTEL_COORDINATES}`}
+                    className="mt-2 text-left font-semibold text-brand underline-offset-4 transition hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                    onClick={() => void copyCoordinates(HOTEL_COORDINATES)}
+                    type="button"
+                  >
+                    {coordinatesCopyStatus === "copied"
+                      ? "Скопировано"
+                      : coordinatesCopyStatus === "failed"
+                        ? "Не удалось скопировать"
+                        : HOTEL_COORDINATES}
+                  </button>
                 </div>
                 {HOTEL_CONTACTS.map(([label, value, href]) => (
                   <div key={label}>

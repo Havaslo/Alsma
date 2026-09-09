@@ -19,7 +19,9 @@ import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { HOTEL_COORDINATES } from "@/lib/site/about";
 import { resolveMediaUrl } from "@/lib/site/media-url";
+import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
 import { ROUTES } from "@/route-constants";
 
 const spaCards = [
@@ -107,41 +109,6 @@ const mapMarkers = [
   { label: "Пляж", position: "top-[69%] left-[80.2%]" },
   { label: "Шатер", position: "top-[84.2%] left-[66.3%]" },
 ] as const;
-
-const hotelCoordinates = "56.537617, 44.113128";
-
-const copyTextWithFallback = async (text: string) => {
-  if (navigator.clipboard?.writeText) {
-    try {
-      await Promise.race([
-        navigator.clipboard.writeText(text),
-        new Promise<never>((_, reject) => {
-          window.setTimeout(
-            () => reject(new Error("Clipboard request timed out")),
-            700,
-          );
-        }),
-      ]);
-      return true;
-    } catch {
-      // Continue with the legacy fallback when clipboard permissions are denied.
-    }
-  }
-
-  const textArea = document.createElement("textarea");
-  textArea.value = text;
-  textArea.setAttribute("readonly", "");
-  textArea.style.position = "fixed";
-  textArea.style.opacity = "0";
-  document.body.appendChild(textArea);
-  textArea.select();
-
-  try {
-    return document.execCommand("copy");
-  } finally {
-    document.body.removeChild(textArea);
-  }
-};
 
 const HomeMapSection = () => (
   <section className="hidden bg-brand py-24 text-brand-foreground md:block">
@@ -328,19 +295,8 @@ export const HomeExperienceSections = () => (
 export const HomeContactSections = () => {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [coordinatesCopied, setCoordinatesCopied] = useState(false);
-  const [coordinatesCopyFailed, setCoordinatesCopyFailed] = useState(false);
-
-  const handleCopyCoordinates = async () => {
-    const copied = await copyTextWithFallback(hotelCoordinates);
-    setCoordinatesCopied(copied);
-    setCoordinatesCopyFailed(!copied);
-
-    window.setTimeout(() => {
-      setCoordinatesCopied(false);
-      setCoordinatesCopyFailed(false);
-    }, 2400);
-  };
+  const { copy: copyCoordinates, status: coordinatesCopyStatus } =
+    useCopyToClipboard();
 
   return (
     <>
@@ -360,16 +316,16 @@ export const HomeContactSections = () => {
               <div>
                 <p className="text-xs text-muted-ui-foreground">Координаты</p>
                 <button
-                  aria-label={`Скопировать координаты ${hotelCoordinates}`}
+                  aria-label={`Скопировать координаты ${HOTEL_COORDINATES}`}
                   className="mt-2 text-left font-medium text-brand underline-offset-4 transition hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
-                  onClick={handleCopyCoordinates}
+                  onClick={() => void copyCoordinates(HOTEL_COORDINATES)}
                   type="button"
                 >
-                  {coordinatesCopied
+                  {coordinatesCopyStatus === "copied"
                     ? "Скопировано"
-                    : coordinatesCopyFailed
+                    : coordinatesCopyStatus === "failed"
                       ? "Не удалось скопировать"
-                      : hotelCoordinates}
+                      : HOTEL_COORDINATES}
                 </button>
               </div>
               <div>
