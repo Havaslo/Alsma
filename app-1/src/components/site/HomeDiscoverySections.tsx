@@ -108,6 +108,41 @@ const mapMarkers = [
   { label: "Шатер", position: "top-[84.2%] left-[66.3%]" },
 ] as const;
 
+const hotelCoordinates = "56.537617, 44.113128";
+
+const copyTextWithFallback = async (text: string) => {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(
+            () => reject(new Error("Clipboard request timed out")),
+            700,
+          );
+        }),
+      ]);
+      return true;
+    } catch {
+      // Continue with the legacy fallback when clipboard permissions are denied.
+    }
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  document.body.appendChild(textArea);
+  textArea.select();
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textArea);
+  }
+};
+
 const HomeMapSection = () => (
   <section className="hidden bg-brand py-24 text-brand-foreground md:block">
     <div className="mx-auto max-w-[100rem] px-6">
@@ -293,6 +328,19 @@ export const HomeExperienceSections = () => (
 export const HomeContactSections = () => {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [coordinatesCopied, setCoordinatesCopied] = useState(false);
+  const [coordinatesCopyFailed, setCoordinatesCopyFailed] = useState(false);
+
+  const handleCopyCoordinates = async () => {
+    const copied = await copyTextWithFallback(hotelCoordinates);
+    setCoordinatesCopied(copied);
+    setCoordinatesCopyFailed(!copied);
+
+    window.setTimeout(() => {
+      setCoordinatesCopied(false);
+      setCoordinatesCopyFailed(false);
+    }, 2400);
+  };
 
   return (
     <>
@@ -308,6 +356,21 @@ export const HomeContactSections = () => {
                 <p className="mt-2">
                   Нижегородская обл., г. Бор, д. Васильково, ул. Лесная, д. 7
                 </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-ui-foreground">Координаты</p>
+                <button
+                  aria-label={`Скопировать координаты ${hotelCoordinates}`}
+                  className="mt-2 text-left font-medium text-brand underline-offset-4 transition hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                  onClick={handleCopyCoordinates}
+                  type="button"
+                >
+                  {coordinatesCopied
+                    ? "Скопировано"
+                    : coordinatesCopyFailed
+                      ? "Не удалось скопировать"
+                      : hotelCoordinates}
+                </button>
               </div>
               <div>
                 <p className="text-xs text-muted-ui-foreground">Телефоны</p>
