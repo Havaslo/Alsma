@@ -1,6 +1,7 @@
 import heroImage from "@/assets/alsma/hardware-procedures-hero.webp";
 import { CatalogSections } from "@/components/site/CatalogSections";
 import { PublicHero } from "@/components/site/PublicHero";
+import { QuantumBedFeature } from "@/components/site/QuantumBedFeature";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
@@ -24,6 +25,7 @@ export const HardwareProceduresPage = () => {
         image={typeof hero?.image === "string" ? hero.image : heroImage}
         title={title}
       />
+      <QuantumBedFeature />
       <CatalogSections afterBlock={1} fallback page="hardware-procedures" />
     </main>
   );

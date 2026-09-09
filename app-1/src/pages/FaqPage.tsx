@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
+
 import { ChevronDown } from "lucide-react";
+
 import faqHeroImage from "@/assets/alsma/nature.jpg";
 import { PublicHero } from "@/components/site/PublicHero";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -8,20 +10,36 @@ import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const FaqPage = () => {
   const content = usePublishedSiteContent("faq");
-  const publishedFaq = useMemo(() => getPublishedFaq(content.data?.items), [content.data?.items]);
+  const publishedFaq = useMemo(
+    () => getPublishedFaq(content.data?.items),
+    [content.data?.items],
+  );
   const questions = publishedFaq.length ? publishedFaq : FAQ_FALLBACK;
   const [open, setOpen] = useState(0);
   const id = useId();
   useEffect(() => {
     document.title = "Частые вопросы — АЛСМА";
-    document.querySelector('meta[name="description"]')?.setAttribute("content", "Ответы на частые вопросы о проживании, SPA, развлечениях и отдыхе в загородном SPA-отеле АЛСМА.");
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute(
+        "content",
+        "Ответы на частые вопросы о проживании, SPA, развлечениях и отдыхе в загородном SPA-отеле АЛСМА.",
+      );
     const existing = document.querySelector('script[data-seo="faq-jsonld"]');
     existing?.remove();
     if (!publishedFaq.length) return;
     const script = document.createElement("script");
     script.dataset.seo = "faq-jsonld";
     script.type = "application/ld+json";
-    script.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: publishedFaq.map(({ question, answer }) => ({ "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: answer } })) });
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: publishedFaq.map(({ question, answer }) => ({
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: { "@type": "Answer", text: answer },
+      })),
+    });
     document.head.append(script);
     return () => script.remove();
   }, [publishedFaq]);

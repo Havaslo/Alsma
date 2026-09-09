@@ -1,3 +1,5 @@
+import type { SiteContentItem } from "@/lib/site/site-content-api";
+
 export type PrivacySection = {
   readonly paragraphs: readonly string[];
   readonly title: string;
@@ -177,7 +179,6 @@ export const PRIVACY_SECTIONS: readonly PrivacySection[] = [
     ],
   },
 ];
-import type { SiteContentItem } from "@/lib/site/site-content-api";
 
 export type FaqItem = {
   readonly answer: string;
@@ -187,31 +188,86 @@ export type FaqItem = {
 };
 
 export const FAQ_FALLBACK: readonly FaqItem[] = [
-  { question: "Какие варианты проживания есть в АЛСМА?", answer: "На странице проживания опубликованы номера разных категорий, а также отдельные дома и коттеджи.", category: "Проживание", position: 1 },
-  { question: "Что есть в SPA-центре?", answer: "В SPA-центре представлены термальная зона, бассейн с минеральной водой, массажные кабинеты, уход за лицом и водные процедуры.", category: "SPA", position: 2 },
-  { question: "Какие развлечения доступны гостям?", answer: "На территории есть спортивная площадка, детский клуб, экологические тропы, сезонные активности и вечерние программы.", category: "Развлечения", position: 3 },
-  { question: "Что включает формат «всё включено»?", answer: "На странице формата указаны завтрак, обед и ужин, активности в течение дня, SPA, пляж и анимация.", category: "Всё включено", position: 4 },
-  { question: "Проводятся ли в АЛСМА события?", answer: "АЛСМА принимает свадьбы, семейные торжества, юбилеи, частные события и корпоративные выезды.", category: "События", position: 5 },
-  { question: "Где находится АЛСМА?", answer: "АЛСМА находится в Нижегородской области, в городе Бор, в деревне Васильково, на улице Лесной, 7.", category: "Расположение", position: 6 },
-  { question: "Как забронировать проживание?", answer: "Для бронирования используйте страницу «Бронирование» или свяжитесь с отделом бронирования по телефону, указанному в футере сайта.", category: "Бронирование", position: 7 },
-  { question: "Подходит ли АЛСМА для семейного отдыха?", answer: "На сайте представлены семейные номера, детский клуб, анимация и развлечения для гостей разных возрастов.", category: "Семейный отдых", position: 8 },
+  {
+    question: "Какие варианты проживания есть в АЛСМА?",
+    answer:
+      "На странице проживания опубликованы номера разных категорий, а также отдельные дома и коттеджи.",
+    category: "Проживание",
+    position: 1,
+  },
+  {
+    question: "Что есть в SPA-центре?",
+    answer:
+      "В SPA-центре представлены термальная зона, бассейн с минеральной водой, массажные кабинеты, уход за лицом и водные процедуры.",
+    category: "SPA",
+    position: 2,
+  },
+  {
+    question: "Какие развлечения доступны гостям?",
+    answer:
+      "На территории есть спортивная площадка, детский клуб, экологические тропы, сезонные активности и вечерние программы.",
+    category: "Развлечения",
+    position: 3,
+  },
+  {
+    question: "Что включает формат «всё включено»?",
+    answer:
+      "На странице формата указаны завтрак, обед и ужин, активности в течение дня, SPA, пляж и анимация.",
+    category: "Всё включено",
+    position: 4,
+  },
+  {
+    question: "Проводятся ли в АЛСМА события?",
+    answer:
+      "АЛСМА принимает свадьбы, семейные торжества, юбилеи, частные события и корпоративные выезды.",
+    category: "События",
+    position: 5,
+  },
+  {
+    question: "Где находится АЛСМА?",
+    answer:
+      "АЛСМА находится в Нижегородской области, в городе Бор, в деревне Васильково, на улице Лесной, 7.",
+    category: "Расположение",
+    position: 6,
+  },
+  {
+    question: "Как забронировать проживание?",
+    answer:
+      "Для бронирования используйте страницу «Бронирование» или свяжитесь с отделом бронирования по телефону, указанному в футере сайта.",
+    category: "Бронирование",
+    position: 7,
+  },
+  {
+    question: "Подходит ли АЛСМА для семейного отдыха?",
+    answer:
+      "На сайте представлены семейные номера, детский клуб, анимация и развлечения для гостей разных возрастов.",
+    category: "Семейный отдых",
+    position: 8,
+  },
 ];
 
 export const getPublishedFaq = (items?: SiteContentItem[]) => {
   const stored = items?.flatMap((item, index) => {
     const value = item.content;
-    const question = typeof value.question === "string" ? value.question.trim() : "";
+    const question =
+      typeof value.question === "string" ? value.question.trim() : "";
     const answer = typeof value.answer === "string" ? value.answer.trim() : "";
     if (!question || !answer) return [];
-    const position = typeof value.position === "number" && Number.isFinite(value.position)
-      ? value.position
-      : item.position || index + 1;
-    return [{
-      question,
-      answer,
-      category: typeof value.category === "string" && value.category.trim() ? value.category.trim() : "Общее",
-      position,
-    }];
+    const position =
+      typeof value.position === "number" && Number.isFinite(value.position)
+        ? value.position
+        : item.position || index + 1;
+    return [
+      {
+        question,
+        answer,
+        category:
+          typeof value.category === "string" && value.category.trim()
+            ? value.category.trim()
+            : "Общее",
+        position,
+      },
+    ];
   });
   return (stored ?? []).sort((a, b) => a.position - b.position);
 };
