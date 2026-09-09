@@ -11,6 +11,7 @@ const normalizeSettings = (value: unknown) => {
   const record = source as Record<string, unknown>;
   return {
     ...record,
+    canCheckAvailability: false,
     enabled: typeof record.enabled === "boolean" ? record.enabled : true,
     site: typeof record.site === "boolean" ? record.site : true,
     voice: typeof record.voice === "boolean" ? record.voice : true,

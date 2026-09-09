@@ -126,15 +126,6 @@ export const toolBodySchema = z.discriminatedUnion("name", [
       .optional(),
   }),
   z.object({
-    name: z.literal("check_availability"),
-    callId: z.string().uuid().optional(),
-    checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    adults: z.number().int().min(1).max(20),
-    children: z.array(z.number().int().min(0).max(17)).max(20).default([]),
-    roomCount: z.number().int().min(1).max(20).default(1),
-  }),
-  z.object({
     name: z.literal("create_booking_request"),
     callId: z.string().uuid(),
     extracted: z.record(z.string(), z.unknown()),

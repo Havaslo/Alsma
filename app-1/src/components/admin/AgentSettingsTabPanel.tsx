@@ -30,9 +30,9 @@ const DEFAULT_VALUES: AgentSettings = {
   language:
     "Русский язык. Если клиент пишет на другом языке — отвечать на языке клиента.",
   greeting:
-    "Здравствуйте! Я AI-ассистент отеля АЛСМА. Помогу с вопросами, проверю наличие и передам заявку сотруднику, если понадобится.",
+    "Здравствуйте! Я AI-ассистент отеля АЛСМА. Помогу с вопросами о проживании, дам ссылку на страницу бронирования или передам диалог менеджеру.",
   bookingUrl: "/booking",
-  canCheckAvailability: true,
+  canCheckAvailability: false,
   canCreateRequest: true,
   canTransferToEmployee: true,
   canCreateBooking: false,
@@ -75,12 +75,12 @@ export const AgentSettingsTabPanel = ({
             title="Источник знаний"
           >
             <p>
-              Eptera Booking API — основной источник актуальных данных об отеле,
-              тарифах, услугах и наличии.
+              Проверка наличия и бронирование через API сейчас недоступны. Агент
+              не ищет номера и не оформляет бронирования вне виджета.
             </p>
             <p className="mt-2 text-xs text-muted-ui-foreground">
-              Статьи и правила из раздела «База знаний» используются как
-              дополнительный контекст и инструкции поведения.
+              Для текстовых каналов клиенту можно отправить ссылку на страницу
+              бронирования или передать диалог менеджеру.
             </p>
           </InfoCard>
           <div className="grid gap-5 lg:grid-cols-2">
@@ -111,13 +111,30 @@ export const AgentSettingsTabPanel = ({
           <div className="rounded-2xl border border-line bg-page p-4">
             <h2 className="font-semibold text-brand">Каналы агента</h2>
             <p className="mt-1 text-sm text-muted-ui-foreground">
-              Независимые переключатели. Общий переключатель сайта не меняет их автоматически.
+              Независимые переключатели. Общий переключатель сайта не меняет их
+              автоматически.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <SettingCheckbox checked={watched.site} label="Агент активен на сайте" onChange={(checked) => form.setValue("site", checked)} />
-              <SettingCheckbox checked={watched.voice} label="Агент активен в звонках" onChange={(checked) => form.setValue("voice", checked)} />
-              <SettingCheckbox checked={watched.vk} label="Агент активен в VK" onChange={(checked) => form.setValue("vk", checked)} />
-              <SettingCheckbox checked={watched.max} label="Агент активен в MAX" onChange={(checked) => form.setValue("max", checked)} />
+              <SettingCheckbox
+                checked={watched.site}
+                label="Агент активен на сайте"
+                onChange={(checked) => form.setValue("site", checked)}
+              />
+              <SettingCheckbox
+                checked={watched.voice}
+                label="Агент активен в звонках"
+                onChange={(checked) => form.setValue("voice", checked)}
+              />
+              <SettingCheckbox
+                checked={watched.vk}
+                label="Агент активен в VK"
+                onChange={(checked) => form.setValue("vk", checked)}
+              />
+              <SettingCheckbox
+                checked={watched.max}
+                label="Агент активен в MAX"
+                onChange={(checked) => form.setValue("max", checked)}
+              />
             </div>
           </div>
         </div>
@@ -133,13 +150,16 @@ export const AgentSettingsTabPanel = ({
               имеет права самостоятельно создавать бронь.
             </p>
           </InfoCard>
-          <SettingCheckbox
-            checked={watched.canCheckAvailability}
-            label="Проверять наличие и актуальные условия через Eptera"
-            onChange={(checked) =>
-              form.setValue("canCheckAvailability", checked)
-            }
-          />
+          <div className="rounded-2xl border border-line bg-page p-4">
+            <p className="font-medium text-page-foreground">
+              Проверка наличия через API недоступна
+            </p>
+            <p className="mt-1 text-sm text-muted-ui-foreground">
+              Этот режим отключён по правилам проекта и не может быть включён из
+              админ-панели. Используйте ссылку на виджет бронирования или
+              передачу менеджеру.
+            </p>
+          </div>
           <SettingCheckbox
             checked={watched.canCreateRequest}
             label="Создавать заявку клиента в разделе обращений"

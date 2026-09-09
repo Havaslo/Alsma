@@ -4,7 +4,6 @@ import type { Logger } from "pino";
 import WebSocket, { WebSocketServer } from "ws";
 
 import type { Database } from "../../lib/database/database.js";
-import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
@@ -46,7 +45,6 @@ export const attachVoiceAgentRealtime = (
     readonly database: Database;
     readonly logger: Logger;
     readonly openaiBaseUrl?: string;
-    readonly eptera?: EpteraClient;
   },
 ): void => {
   const websocketServer = new WebSocketServer({
@@ -168,8 +166,7 @@ export const attachVoiceAgentRealtime = (
                 };
                 if (
                   functionEvent.call_id &&
-                  (functionEvent.name === "check_availability" ||
-                    functionEvent.name === "get_events")
+                  functionEvent.name === "get_events"
                 ) {
                   let output: unknown = {
                     available: false,
@@ -178,31 +175,15 @@ export const attachVoiceAgentRealtime = (
                   try {
                     const args = JSON.parse(
                       functionEvent.arguments ?? "{}",
-                    ) as {
-                      checkIn: string;
-                      checkOut: string;
-                      adults: number;
-                      children?: number[];
-                      roomCount?: number;
+                    ) as { date?: string };
+                    const found = await listPublishedEvents(
+                      options.database,
+                      args.date,
+                    );
+                    output = {
+                      events: found,
+                      context: formatEventsContext(found),
                     };
-                    if (functionEvent.name === "get_events") {
-                      const found = await listPublishedEvents(
-                        options.database,
-                        (args as { date?: string }).date,
-                      );
-                      output = {
-                        events: found,
-                        context: formatEventsContext(found),
-                      };
-                    } else if (options.eptera) {
-                      output = await options.eptera.checkAvailability({
-                        adults: args.adults,
-                        checkIn: args.checkIn,
-                        checkOut: args.checkOut,
-                        children: args.children ?? [],
-                        roomCount: args.roomCount ?? 1,
-                      });
-                    }
                   } catch {
                     // Return a safe tool result; the model will explain the failure and offer a transfer.
                   }

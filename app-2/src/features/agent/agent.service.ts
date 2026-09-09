@@ -54,7 +54,7 @@ const asSettings = (value: unknown) => ({
   tone: "доброжелательный, спокойный и полезный",
   language: "русский",
   bookingUrl: "",
-  canCheckAvailability: true,
+  canCheckAvailability: false,
   canCreateRequest: true,
   canTransferToEmployee: true,
   showAiDisclosure: true,
@@ -78,26 +78,6 @@ const monthNumbers: Record<string, string> = {
   ноября: "11",
   декабря: "12",
 };
-const monthNames = [
-  "января",
-  "февраля",
-  "марта",
-  "апреля",
-  "мая",
-  "июня",
-  "июля",
-  "августа",
-  "сентября",
-  "октября",
-  "ноября",
-  "декабря",
-] as const;
-const formatFullDate = (value: string) => {
-  const [year = "", monthText = "", day = ""] = value.split("-");
-  const month = Number(monthText);
-  return `${Number(day)} ${monthNames[month - 1] ?? ""} ${year}`;
-};
-
 const hasDateInMessage = (text: string) =>
   /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s*(?:[-–]\s*|по\s+)\d{1,2}\s+[а-яё]+(?:\s+\d{4})?/iu.test(
     text,
@@ -114,10 +94,6 @@ const calendarDateInMessage = (text: string): string | undefined => {
 };
 const asksForOtherDates = (text: string) =>
   /друг(?:ие|их)\s+дат|друг(?:ую|ие)\s+дат|перенести|провер(?:ь|ить)\s+друг/iu.test(
-    text,
-  );
-const asksToRepeatAvailability = (text: string) =>
-  /провер(?:ь|ьте|ить|им)\s+(?:наличие|свободн)|повтор(?:и|ить|но)\s+(?:провер|запрос)|попроб(?:уй|уйте)\s+ещ[ёе]\s+раз|проверь(?:те)?\s+ещ[ёе]\s+раз/iu.test(
     text,
   );
 const serviceMention = (
@@ -253,6 +229,8 @@ const bookingFromContext = (context?: BookingContext) => {
   const parsed = bookingSchema.safeParse(context);
   return parsed.success ? parsed.data : null;
 };
+const bookingLink = (settingsUrl: string, fallbackUrl: string) =>
+  settingsUrl.trim() || fallbackUrl || "/booking";
 
 export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
@@ -502,6 +480,13 @@ export const createAiAgentService = (options: AgentOptions) => {
         answer: "Передаю диалог менеджеру — он подключится к вам.",
       };
     }
+    if (isBookingRequest(message, previousState.booking)) {
+      const url = bookingLink(settings.bookingUrl, options.bookingUrl);
+      const answer =
+        "Для бронирования можно перейти на страницу бронирования по ссылке ниже или я могу передать вас менеджеру. Какой вариант удобнее?";
+      await options.chat.publish(conversationId, "agent", answer, url);
+      return { action: "answer" as const, answer };
+    }
     if (awaitingContacts && !hasContactData) {
       const missing = detectedName
         ? "номер телефона"
@@ -543,7 +528,6 @@ export const createAiAgentService = (options: AgentOptions) => {
     const currentMessageHasDate = hasDateInMessage(message);
     const requestedOtherDates =
       asksForOtherDates(message) && !currentMessageHasDate;
-    const explicitAvailabilityRetry = asksToRepeatAvailability(message);
     const entities = extractEntities(message);
     const nextBooking: BookingContext = requestedOtherDates
       ? {
@@ -558,32 +542,6 @@ export const createAiAgentService = (options: AgentOptions) => {
         : { ...previousState.booking, ...entities };
     const nextServiceContext =
       serviceMention(message) ?? previousState.serviceContext;
-    const currentDates =
-      nextBooking.checkInDate && nextBooking.checkOutDate
-        ? `${nextBooking.checkInDate}/${nextBooking.checkOutDate}`
-        : undefined;
-    const datesChanged =
-      Boolean(currentDates) &&
-      currentDates !== previousState.booking?.lastCheckedDates;
-    const shouldCheckAvailability =
-      Boolean(currentDates) &&
-      (datesChanged ||
-        explicitAvailabilityRetry ||
-        (requestedOtherDates === false &&
-          !previousState.booking?.lastCheckedDates));
-    options.logger.info(
-      {
-        channel: "text-agent",
-        conversationId,
-        previousDates: previousState.booking?.lastCheckedDates,
-        currentDates,
-        datesChanged,
-        explicitAvailabilityRetry,
-        repeatedBookingRequest:
-          Boolean(currentDates) && !shouldCheckAvailability,
-      },
-      "Agent booking check decision",
-    );
     await options.database.client.adminRequest.update({
       where: { id: conversationId },
       data: {
@@ -655,14 +613,14 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
-      "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для проживания собери недостающие параметры и проверь наличие; URL в текст не вставляй.",
+      "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для любого запроса о бронировании, проживании, датах заезда или номерах не ищи наличие и не оформляй бронь: предложи перейти по настроенной ссылке бронирования или передать диалог менеджеру.",
       "Для вопросов о мероприятиях используй только опубликованный календарь ниже. Не выдумывай названия, даты или условия; если подходящего события нет или календарь недоступен, честно скажи, что у тебя нет подтверждённой информации, и предложи уточнить у менеджера.",
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. Используй transfer только если гость прямо попросил менеджера/сотрудника или выполнено конкретное правило передачи; фраза «попробуйте ещё раз» сама по себе НЕ является передачей. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
-      `Агент может проверить наличие: ${settings.canCheckAvailability}. Может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Самостоятельно создавать бронь запрещено всегда. Не выводи URL и не пиши путь /booking в тексте ответа: если booking подтверждён и варианты найдены, ссылка будет добавлена системой отдельной кнопкой.`,
-      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers.",
+      `Проверка наличия и оформление бронирования через API недоступны и запрещены. Агент может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Для бронирования используй настроенную ссылку отдельной кнопкой и предложи также передачу менеджеру. Не придумывай номера, цены или наличие.`,
+      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers. Запрос бронирования обрабатывай предложением ссылки бронирования или менеджера.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
-      "Не придумывай недостающие значения. Заполняй booking только когда даты с подтверждённым годом, взрослые и количество номеров известны; иначе задай один короткий уточняющий вопрос. Если booking заполнен, ответь, что сейчас проверишь варианты.",
+      "Не собирай параметры проживания для поиска и не заполняй booking ради проверки: U-Hotels API недоступен. При запросе бронирования сразу предложи ссылку бронирования или менеджера.",
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен. Если выбранный сценарий задаёт action или page, следуй ему.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
@@ -773,80 +731,6 @@ export const createAiAgentService = (options: AgentOptions) => {
             ? "/offers"
             : "/spa";
     }
-    let availabilityResult: "available" | "unavailable" | "error" | null = null;
-    let availableOfferCount = 0;
-    const modelBooking = bookingSchema.safeParse(result.booking);
-    const booking =
-      requestedOtherDates || nextBooking.awaitingNewDates
-        ? bookingSchema.safeParse(undefined)
-        : extractedBooking
-          ? { success: true as const, data: extractedBooking }
-          : modelBooking;
-    if (booking.success && shouldCheckAvailability) {
-      options.chat.publishStatus(
-        conversationId,
-        "checking_availability",
-        "Проверяю актуальное наличие номеров",
-      );
-      try {
-        const offers = await options.eptera.getOffers({
-          adults: booking.data.adults,
-          checkIn: booking.data.checkInDate,
-          checkOut: booking.data.checkOutDate,
-          childAges: booking.data.childAges,
-          currency: "RUB",
-          language: "ru",
-          nationality: "RU",
-          roomCount: booking.data.roomCount,
-        });
-        const availableOffers = offers.filter(
-          (offer) =>
-            offer.roomToSell === null ||
-            offer.roomToSell >= booking.data.roomCount,
-        );
-        availableOfferCount = new Set(
-          availableOffers.map((offer) => offer.roomTypeId),
-        ).size;
-        availabilityResult = availableOfferCount ? "available" : "unavailable";
-        if (availabilityResult === "available") {
-          const base = settings.bookingUrl || options.bookingUrl || "/booking";
-          const url = new URL(base, "https://alsma.ru");
-          url.search = new URLSearchParams({
-            checkIn: booking.data.checkInDate,
-            checkOut: booking.data.checkOutDate,
-            adults: String(booking.data.adults),
-            childAges: booking.data.childAges.join(","),
-            roomCount: String(booking.data.roomCount),
-          }).toString();
-          bookingUrl = /^https?:/u.test(base)
-            ? url.toString()
-            : url.pathname + url.search;
-        }
-      } catch {
-        availabilityResult = "error";
-        bookingUrl = undefined;
-      }
-    }
-    if (booking.success && availabilityResult) {
-      await options.database.client.adminRequest.update({
-        where: { id: conversationId },
-        data: {
-          details: {
-            ...(requestState?.details &&
-            typeof requestState.details === "object"
-              ? requestState.details
-              : {}),
-            bookingContext: {
-              ...nextBooking,
-              ...booking.data,
-              lastCheckedDates: `${booking.data.checkInDate}/${booking.data.checkOutDate}`,
-              awaitingNewDates: false,
-            },
-            serviceContext: nextServiceContext,
-          },
-        },
-      });
-    }
     const transferNotice =
       "Я передал диалог сотруднику — он подключится к вам.";
     const answerWithTransfer =
@@ -869,20 +753,6 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     let answer =
       guestSafeAnswer || "Подскажите, пожалуйста, чем я могу помочь?";
-    if (requestedOtherDates && result.action !== "transfer") {
-      answer =
-        "Назовите, пожалуйста, новые даты заезда и выезда — я проверю актуальное наличие.";
-    }
-    if (booking.success && availabilityResult) {
-      const dateRange = `${formatFullDate(booking.data.checkInDate)} — ${formatFullDate(booking.data.checkOutDate)}`;
-      if (availabilityResult === "available") {
-        answer = `На даты ${dateRange} найдено подходящих вариантов номеров: ${availableOfferCount}. Откройте подборку по кнопке ниже.`;
-      } else if (availabilityResult === "unavailable") {
-        answer = `На даты ${dateRange} свободных номеров не найдено. Могу проверить другие даты или передать вопрос менеджеру.`;
-      } else {
-        answer = `Не удалось получить актуальное наличие на даты ${dateRange}. Попробуйте ещё раз — я повторю проверку, когда вы отправите запрос снова.`;
-      }
-    }
     const finalAction = effectiveAction;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };

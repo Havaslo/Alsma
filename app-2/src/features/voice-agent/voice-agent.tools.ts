@@ -13,23 +13,6 @@ export const voiceAgentTools = [
   },
   {
     type: "function",
-    name: "check_availability",
-    description:
-      "Проверить актуальную доступность номеров по датам и числу гостей.",
-    parameters: {
-      type: "object",
-      properties: {
-        checkIn: { type: "string" },
-        checkOut: { type: "string" },
-        adults: { type: "integer", minimum: 1 },
-        children: { type: "array", items: { type: "integer", minimum: 0 } },
-        roomCount: { type: "integer", minimum: 1 },
-      },
-      required: ["checkIn", "checkOut", "adults"],
-    },
-  },
-  {
-    type: "function",
     name: "transfer_to_manager",
     description:
       "Перевести звонок сотруднику по просьбе гостя или при отсутствии уверенного ответа. После вызова этого инструмента не продолжай диалог.",

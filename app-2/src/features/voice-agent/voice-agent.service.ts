@@ -336,17 +336,6 @@ export const createVoiceAgentService = (
       );
       return { requestId: request.id, accepted: true };
     }
-    if (input.name === "check_availability") {
-      if (!eptera)
-        return { available: false, reason: "availability_not_configured" };
-      return eptera.checkAvailability({
-        adults: input.adults,
-        checkIn: input.checkIn,
-        checkOut: input.checkOut,
-        children: input.children,
-        roomCount: input.roomCount,
-      });
-    }
     return transferToManager(input.callId, input.reason);
   };
 
