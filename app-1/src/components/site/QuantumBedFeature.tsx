@@ -29,7 +29,7 @@ export const QuantumBedFeature = () => (
       <p className="text-sm font-semibold tracking-[0.2em] text-brand uppercase">
         SPA нового поколения
       </p>
-      <h2 className="mx-auto mt-4 max-w-4xl font-heading text-4xl leading-[1.08] font-semibold text-page-foreground sm:text-5xl lg:text-6xl">
+      <h2 className="mx-auto mt-4 max-w-4xl font-heading text-4xl font-semibold text-page-foreground sm:text-5xl">
         Современные технологии для глубокого расслабления, комфорта и нового
         опыта заботы о себе.
       </h2>
