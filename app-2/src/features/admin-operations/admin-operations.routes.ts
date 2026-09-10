@@ -12,6 +12,7 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { fetchMangoRecording } from "../voice-agent/voice-agent.recording.js";
+import { MangoTranscriptionError } from "../voice-agent/voice-agent.transcription.js";
 import {
   createBookingHandler,
   createCompleteTaskHandler,
@@ -110,14 +111,31 @@ export const createAdminOperationsRouter = (
           data: { recordingStatus: "completed" },
         });
         response.json({ ok: true });
-      } catch {
+      } catch (error) {
         await database.client.voiceCall.update({
           where: { id: call.id },
           data: { recordingStatus: "error" },
         });
+        const diagnostic =
+          error instanceof MangoTranscriptionError
+            ? {
+                stage: error.stage,
+                providerCode: error.providerCode,
+                requestId: error.requestId,
+              }
+            : { stage: "unknown" as const };
+        logger.error(
+          {
+            callId: call.id,
+            recordingId: call.providerRecordingId,
+            ...diagnostic,
+          },
+          "Admin retranscription failed",
+        );
         response.status(502).json({
           error: {
             code: "RETRANSCRIPTION_FAILED",
+            diagnosticCode: `RETRANSCRIPTION_${diagnostic.stage.toUpperCase()}`,
             message:
               "Не удалось повторить транскрибацию. Проверьте доступность записи и AI-шлюза.",
           },

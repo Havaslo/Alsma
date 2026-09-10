@@ -23,6 +23,53 @@ const speakerRole = (speaker: string, speakers: string[]) => {
 
 const logger = createLogger();
 
+export type TranscriptionFailureStage =
+  "mango_recording" | "gateway" | "result";
+
+export class MangoTranscriptionError extends Error {
+  constructor(
+    message: string,
+    readonly stage: TranscriptionFailureStage,
+    readonly providerCode?: string,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = "MangoTranscriptionError";
+  }
+}
+
+const gatewayErrorDetails = async (response: Response) => {
+  const body = (await response.text()).slice(0, 2_000);
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: {
+        code?: unknown;
+        message?: unknown;
+        requestId?: unknown;
+        stage?: unknown;
+      };
+    };
+    return {
+      code:
+        typeof parsed.error?.code === "string" ? parsed.error.code : undefined,
+      message:
+        typeof parsed.error?.message === "string"
+          ? parsed.error.message
+          : undefined,
+      requestId:
+        typeof parsed.error?.requestId === "string"
+          ? parsed.error.requestId
+          : undefined,
+      stage:
+        typeof parsed.error?.stage === "string"
+          ? parsed.error.stage
+          : undefined,
+    };
+  } catch {
+    return { message: body.replace(/\s+/gu, " ").trim() || undefined };
+  }
+};
+
 export const transcribeMangoRecording = async ({
   mangoApiKey,
   callId,
@@ -42,12 +89,28 @@ export const transcribeMangoRecording = async ({
   readonly salt: string;
   readonly fetchImpl?: typeof fetch;
 }) => {
-  const recording = await fetchMangoRecording({
-    apiKey: mangoApiKey,
-    fetchImpl,
-    recordingId,
-    salt,
-  });
+  let recording: Response;
+  try {
+    recording = await fetchMangoRecording({
+      apiKey: mangoApiKey,
+      fetchImpl,
+      recordingId,
+      salt,
+    });
+  } catch (error) {
+    logger.warn(
+      {
+        callId,
+        recordingId,
+        error: error instanceof Error ? error.message : "unknown",
+      },
+      "Mango recording fetch failed during transcription",
+    );
+    throw new MangoTranscriptionError(
+      "Mango recording could not be fetched",
+      "mango_recording",
+    );
+  }
   const audio = Buffer.from(await recording.arrayBuffer());
   const contentType =
     recording.headers.get("content-type")?.split(";", 1)[0] ?? "audio/mpeg";
@@ -78,7 +141,7 @@ export const transcribeMangoRecording = async ({
     },
   );
   if (!response.ok) {
-    const details = (await response.text()).slice(0, 1_000);
+    const details = await gatewayErrorDetails(response);
     logger.error(
       {
         callId,
@@ -90,7 +153,12 @@ export const transcribeMangoRecording = async ({
       },
       "Call transcription request failed",
     );
-    throw new Error(`Call transcription failed with status ${response.status}`);
+    throw new MangoTranscriptionError(
+      `Call transcription failed with status ${response.status}`,
+      "gateway",
+      details.code,
+      details.requestId,
+    );
   }
   const result = (await response.json()) as DiarizedResponse;
   const segments = (result.segments ?? []).filter(
@@ -99,7 +167,11 @@ export const transcribeMangoRecording = async ({
   );
   if (segments.length === 0) {
     const text = result.text?.trim();
-    if (!text) throw new Error("Call transcription returned empty text");
+    if (!text)
+      throw new MangoTranscriptionError(
+        "Call transcription returned empty text",
+        "result",
+      );
     return repository.appendTranscript(callId, {
       role: "guest",
       text,
