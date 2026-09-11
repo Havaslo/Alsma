@@ -104,3 +104,96 @@ test("stores diarized turns as assistant and guest segments", async () => {
     ["assistant", "guest"],
   );
 });
+
+test("falls back through plain STT models and stores one neutral segment", async () => {
+  const requests: string[] = [];
+  let mangoCalls = 0;
+  const segments: Array<{ role?: string; text?: string }> = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    mangoCalls += 1;
+    if (mangoCalls === 1)
+      return new Response(null, {
+        status: 302,
+        headers: { location: "https://files.mango-office.ru/recording" },
+      });
+    if (mangoCalls === 2)
+      return new Response(new Uint8Array([1]), {
+        headers: { "content-type": "audio/mpeg" },
+      });
+    const body = init?.body as FormData;
+    requests.push(String(body.get("model")));
+    if (requests.length <= 3)
+      return new Response(
+        JSON.stringify({ error: { code: "MODEL_UNAVAILABLE" } }),
+        {
+          status: 404,
+        },
+      );
+    assert.equal(body.get("response_format"), "json");
+    return new Response(JSON.stringify({ text: "Обычная расшифровка" }));
+  };
+  const repository = {
+    appendTranscript: async (
+      _callId: string,
+      segment: { role?: string; text?: string },
+    ) => {
+      segments.push(segment);
+      return segment;
+    },
+    replaceTranscript: async () => null,
+  } as unknown as VoiceAgentRepository;
+
+  await transcribeMangoRecording({
+    callId: "call-1",
+    fetchImpl,
+    mangoApiKey: "mango-secret",
+    openaiApiKey: "openai-secret",
+    openaiBaseUrl: "https://gateway.example.test/v1",
+    recordingId: "recording-1",
+    repository,
+    salt: "mango-salt",
+  });
+
+  assert.deepEqual(requests, [
+    "gpt-4o-transcribe-diarize",
+    "gpt-4o-transcribe",
+    "gpt-4o-mini-transcribe",
+    "whisper-1",
+  ]);
+  assert.deepEqual(segments, [
+    {
+      role: "guest",
+      text: "Обычная расшифровка",
+      providerEventId: "mango-recording:recording-1:plain",
+    },
+  ]);
+});
+
+test("does not call STT when Mango recording download fails", async () => {
+  let calls = 0;
+  const fetchImpl: typeof fetch = async () => {
+    calls += 1;
+    if (calls === 1)
+      return new Response(null, {
+        status: 302,
+        headers: { location: "https://files.mango-office.ru/recording" },
+      });
+    return new Response(null, { status: 503 });
+  };
+  await assert.rejects(
+    () =>
+      transcribeMangoRecording({
+        callId: "call-1",
+        fetchImpl,
+        mangoApiKey: "mango-secret",
+        openaiApiKey: "openai-secret",
+        openaiBaseUrl: "https://gateway.example.test/v1",
+        recordingId: "recording-1",
+        repository: {} as VoiceAgentRepository,
+        salt: "mango-salt",
+      }),
+    (error: unknown) =>
+      error instanceof Error && error.name === "MangoTranscriptionError",
+  );
+  assert.equal(calls, 2);
+});

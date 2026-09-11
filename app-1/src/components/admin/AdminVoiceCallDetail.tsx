@@ -142,13 +142,13 @@ export const AdminVoiceCallDetail = ({
                 </button>
                 {reprocess.isSuccess && (
                   <p className="mt-2 text-xs text-brand">
-                    Диаризация завершена. Обновляем карточку…
+                    Транскрибация завершена. Обновляем карточку…
                   </p>
                 )}
                 {reprocess.isError && (
                   <p className="mt-2 text-xs leading-5 text-destructive">
-                    Не удалось определить реплики. Запись или AI-шлюз сейчас
-                    недоступны.
+                    Не удалось повторить транскрибацию. Запись в Mango есть;
+                    проверьте доступность AI-шлюза и попробуйте ещё раз.
                   </p>
                 )}
               </div>
