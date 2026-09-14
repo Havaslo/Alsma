@@ -71,6 +71,96 @@ const nullableNumber = (
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const PROVIDER_DIAGNOSTIC_MAX_LENGTH = 256;
+const providerDiagnosticKeys = {
+  code: [
+    "provider-code",
+    "providerCode",
+    "error-code",
+    "errorCode",
+    "code",
+    "Code",
+  ],
+  description: [
+    "provider-description",
+    "providerDescription",
+    "error-description",
+    "errorDescription",
+    "description",
+    "Description",
+  ],
+  message: [
+    "provider-message",
+    "providerMessage",
+    "error-message",
+    "errorMessage",
+    "message",
+    "Message",
+  ],
+} as const;
+
+const providerDiagnosticRecords = (
+  payload: unknown,
+): Record<string, unknown>[] => {
+  const root = asRecord(payload);
+  if (!root) return [];
+  const records = [root];
+  for (const key of ["error", "Error", "data", "Data", "result", "Result"]) {
+    const nested = asRecord(root[key]);
+    if (nested) records.push(nested);
+  }
+  return records;
+};
+
+const safeProviderDiagnostic = (value: unknown): string | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return undefined;
+  const normalized = value
+    .replace(
+      /((?:authorization|bearer|login\s*token|api\s*key|token)\s*[:=]\s*)\S+/gi,
+      "$1[redacted]",
+    )
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, PROVIDER_DIAGNOSTIC_MAX_LENGTH);
+  return normalized || undefined;
+};
+
+const readProviderDiagnostic = (
+  records: readonly Record<string, unknown>[],
+  keys: readonly string[],
+): string | undefined => {
+  for (const record of records) {
+    for (const key of keys) {
+      const value = safeProviderDiagnostic(record[key]);
+      if (value !== undefined) return value;
+    }
+  }
+  return undefined;
+};
+
+const readProviderDiagnostics = (payload: unknown): Record<string, string> => {
+  const records = providerDiagnosticRecords(payload);
+  const providerCode = readProviderDiagnostic(
+    records,
+    providerDiagnosticKeys.code,
+  );
+  const providerDescription = readProviderDiagnostic(
+    records,
+    providerDiagnosticKeys.description,
+  );
+  const providerMessage = readProviderDiagnostic(
+    records,
+    providerDiagnosticKeys.message,
+  );
+  return {
+    ...(providerCode ? { providerCode } : {}),
+    ...(providerDescription ? { providerDescription } : {}),
+    ...(providerMessage ? { providerMessage } : {}),
+  };
+};
+
 const isFalseProviderValue = (value: unknown): boolean =>
   value === false ||
   value === 0 ||
@@ -329,7 +419,7 @@ export const createEpteraClient = ({
         response.status >= 500 ? 502 : 400,
         "EPTERA_REQUEST_FAILED",
         "Сервис бронирования не смог обработать запрос.",
-        { status: response.status },
+        { status: response.status, ...readProviderDiagnostics(payload) },
       );
     }
     return payload as T;

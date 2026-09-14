@@ -194,9 +194,14 @@ export const createBookingService = (
       fullName: `${input.contact.firstName} ${input.contact.lastName}`,
       phone,
     });
+    const elderChildCount = input.childAges.filter((age) => age >= 7).length;
+    const youngerChildCount = input.childAges.filter(
+      (age) => age >= 1 && age < 7,
+    ).length;
+    const babyCount = input.childAges.filter((age) => age < 1).length;
     const epteraResponse = await eptera.createReservation({
       "adult-count": input.adults,
-      "baby-count": input.childAges.filter((age) => age < 1).length,
+      "baby-count": babyCount,
       "board-type-id": offer.boardTypeId,
       "check-in": input.checkIn,
       "check-out": input.checkOut,
@@ -214,6 +219,7 @@ export const createBookingService = (
           guestEntry.type === "adult" ? 0 : guestEntry.type === "child" ? 2 : 3,
       })),
       nationality: input.nationality,
+      "elder-child-count": elderChildCount,
       "payment-type": 2,
       "price-agency-id": offer.priceAgencyId,
       "rate-code-id": offer.rateCodeId,
@@ -222,9 +228,7 @@ export const createBookingService = (
       "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
       "total-price": offer.discountedPrice || offer.price,
-      "younger-child-count": input.childAges.filter(
-        (age) => age >= 1 && age < 7,
-      ).length,
+      "younger-child-count": youngerChildCount,
     });
     const epteraResult = record(epteraResponse);
     const reservationId = epteraResult
