@@ -52,6 +52,18 @@ const numericEpteraReference = (value: string | null): string | null => {
   return Number.isSafeInteger(parsed) && parsed > 0 ? normalized : null;
 };
 
+const readReservationIdentifier = (payload: unknown): string | null => {
+  const response = record(payload);
+  if (!response) return null;
+  for (const key of ["reservation-id", "reservationId", "id"]) {
+    const value = response[key];
+    if (typeof value === "number" && Number.isSafeInteger(value) && value > 0)
+      return String(value);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+};
+
 const isPositiveSafeInteger = (value: number): boolean =>
   Number.isSafeInteger(value) && value > 0;
 
@@ -125,6 +137,19 @@ const withoutEpteraPaymentSyncState = <
     ...publicBooking
   } = booking;
   return publicBooking;
+};
+
+const cancelReservationBestEffort = async (
+  eptera: Pick<EpteraClient, "cancelReservation">,
+  reservationId: string,
+) => {
+  const numericReservationId = numericEpteraReference(reservationId);
+  if (!numericReservationId) return;
+  try {
+    await eptera.cancelReservation(Number(numericReservationId));
+  } catch {
+    // Keep the original persistence or payment error as the public failure.
+  }
 };
 
 type CalendarPrice = {
@@ -260,6 +285,30 @@ export const createBookingService = (
         "Тип детского гостя не совпадает с параметрами поиска.",
       );
     }
+    const expectedChildCount = input.childAges.filter((age) => age >= 1).length;
+    if (
+      input.guests.filter((guest) => guest.type === "child").length !==
+      expectedChildCount
+    ) {
+      throw new HttpError(
+        400,
+        "GUESTS_INVALID",
+        "Тип детского гостя не совпадает с параметрами поиска.",
+      );
+    }
+    if (
+      input.guests.some((guest) =>
+        guest.type === "adult"
+          ? guest.birthDate !== undefined && !isValidDate(guest.birthDate)
+          : !isValidDate(guest.birthDate),
+      )
+    ) {
+      throw new HttpError(
+        400,
+        "GUESTS_INVALID",
+        "Укажите корректную дату рождения для каждого ребёнка.",
+      );
+    }
     const offers = await eptera.getOffers({
       adults: input.adults,
       checkIn: input.checkIn,
@@ -271,7 +320,10 @@ export const createBookingService = (
       roomCount: input.roomCount,
     });
     const offer = offers.find((candidate) => candidate.id === input.offerId);
-    if (!offer || offer.roomToSell === 0) {
+    if (
+      !offer ||
+      (offer.roomToSell !== null && offer.roomToSell < input.roomCount)
+    ) {
       throw new HttpError(
         409,
         "OFFER_UNAVAILABLE",
@@ -280,11 +332,6 @@ export const createBookingService = (
     }
     const reservationOffer = validateReservationOffer(offer, input);
     const phone = normalizePhone(input.contact.phone);
-    const guest = await repository.findOrCreateGuest({
-      email: input.contact.email.toLowerCase(),
-      fullName: `${input.contact.firstName} ${input.contact.lastName}`,
-      phone,
-    });
     const elderChildCount = input.childAges.filter((age) => age >= 7).length;
     const youngerChildCount = input.childAges.filter(
       (age) => age >= 1 && age < 7,
@@ -323,72 +370,85 @@ export const createBookingService = (
       "room-type-id": offer.roomTypeId,
       "total-price": reservationOffer.totalPrice,
       "younger-child-count": youngerChildCount,
+      ...(offer.roomId !== null && isPositiveSafeInteger(offer.roomId)
+        ? { "room-id": offer.roomId }
+        : {}),
     });
     const epteraResult = record(epteraResponse);
-    const reservationId = epteraResult
-      ? String(
-          epteraResult["reservation-id"] ??
-            epteraResult.reservationId ??
-            epteraResult.id ??
-            "",
-        ) || null
-      : null;
+    const reservationId = readReservationIdentifier(epteraResponse);
+    if (!reservationId) {
+      throw new HttpError(
+        502,
+        "EPTERA_RESPONSE_INVALID",
+        "Сервис бронирования вернул неполный ответ.",
+      );
+    }
     const voucherNumber = epteraResult
       ? String(epteraResult["voucher-no"] ?? epteraResult.voucherNo ?? "") ||
         null
       : null;
     const totalAmount = reservationOffer.totalPrice;
-    const booking = await repository.createGuestBooking({
-      checkInDate: date(input.checkIn),
-      checkOutDate: date(input.checkOut),
-      contactComment: input.notes ?? null,
-      contactEmail: input.contact.email.toLowerCase(),
-      contactFirstName: input.contact.firstName,
-      contactLastName: input.contact.lastName,
-      contactPhone: phone,
-      currency: reservationOffer.currency,
-      epteraReservationId: reservationId,
-      guestsCount: input.guests.length,
-      guestList: JSON.parse(JSON.stringify(input.guests)),
-      roomName: offer.roomType,
-      selectedOffer: JSON.parse(JSON.stringify(offer)),
-      paymentMethod: input.paymentMethod,
-      totalAmount,
-      userId: guest.id,
-      voucherNumber,
-    });
-    const paymentAmount =
-      input.paymentMethod === "first_night"
-        ? totalAmount / nightsBetween(input.checkIn, input.checkOut)
-        : totalAmount;
-    const payment = await yookassa.createPayment({
-      amount: amountText(paymentAmount),
-      bookingId: booking.id,
-      currency: offer.currency,
-      description: `Бронирование ${voucherNumber ?? booking.id}`,
-      customer: { email: input.contact.email.toLowerCase(), phone },
-      returnUrl: input.returnUrl,
-    });
-    const savedBooking = await repository.updatePayment({
-      bookingId: booking.id,
-      paymentAmount,
-      paymentId: payment.id,
-      paymentStatus: payment.status,
-      status: "awaiting_payment",
-    });
-    const publicBooking = withoutEpteraPaymentSyncState(savedBooking);
-    return {
-      booking: {
-        ...publicBooking,
-        totalAmount: publicBooking.totalAmount?.toString() ?? null,
-      },
-      payment: {
-        amount: payment.amount,
-        confirmationUrl: payment.confirmation?.confirmation_url ?? null,
-        id: payment.id,
-        status: payment.status,
-      },
-    };
+    try {
+      const guest = await repository.findOrCreateGuest({
+        email: input.contact.email.toLowerCase(),
+        fullName: `${input.contact.firstName} ${input.contact.lastName}`,
+        phone,
+      });
+      const booking = await repository.createGuestBooking({
+        checkInDate: date(input.checkIn),
+        checkOutDate: date(input.checkOut),
+        contactComment: input.notes ?? null,
+        contactEmail: input.contact.email.toLowerCase(),
+        contactFirstName: input.contact.firstName,
+        contactLastName: input.contact.lastName,
+        contactPhone: phone,
+        currency: reservationOffer.currency,
+        epteraReservationId: reservationId,
+        guestsCount: input.guests.length,
+        guestList: JSON.parse(JSON.stringify(input.guests)),
+        roomName: offer.roomType,
+        selectedOffer: JSON.parse(JSON.stringify(offer)),
+        paymentMethod: input.paymentMethod,
+        totalAmount,
+        userId: guest.id,
+        voucherNumber,
+      });
+      const paymentAmount =
+        input.paymentMethod === "first_night"
+          ? totalAmount / nightsBetween(input.checkIn, input.checkOut)
+          : totalAmount;
+      const payment = await yookassa.createPayment({
+        amount: amountText(paymentAmount),
+        bookingId: booking.id,
+        currency: offer.currency,
+        description: `Бронирование ${voucherNumber ?? booking.id}`,
+        customer: { email: input.contact.email.toLowerCase(), phone },
+        returnUrl: input.returnUrl,
+      });
+      const savedBooking = await repository.updatePayment({
+        bookingId: booking.id,
+        paymentAmount,
+        paymentId: payment.id,
+        paymentStatus: payment.status,
+        status: "awaiting_payment",
+      });
+      const publicBooking = withoutEpteraPaymentSyncState(savedBooking);
+      return {
+        booking: {
+          ...publicBooking,
+          totalAmount: publicBooking.totalAmount?.toString() ?? null,
+        },
+        payment: {
+          amount: payment.amount,
+          confirmationUrl: payment.confirmation?.confirmation_url ?? null,
+          id: payment.id,
+          status: payment.status,
+        },
+      };
+    } catch (error) {
+      await cancelReservationBestEffort(eptera, reservationId);
+      throw error;
+    }
   },
   reconcilePayment: async (payment: YooPayment) => {
     const bookingId = payment.metadata?.bookingId;

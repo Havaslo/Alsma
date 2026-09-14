@@ -1,6 +1,18 @@
 import { z } from "zod";
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isRealIsoDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+};
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isRealIsoDate, "Введите существующую дату.");
 
 export const offersQuerySchema = z.object({
   adults: z.coerce.number().int().min(1).max(12).default(1),
@@ -35,12 +47,24 @@ export const calendarPricesQuerySchema = z.object({
   roomCount: z.coerce.number().int().min(1).max(2).default(1),
 });
 
-const guestSchema = z.object({
+const adultGuestSchema = z.object({
   birthDate: isoDate.optional(),
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
-  type: z.enum(["adult", "child", "baby"]),
+  type: z.literal("adult"),
 });
+
+const childGuestSchema = z.object({
+  birthDate: isoDate,
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
+  type: z.enum(["child", "baby"]),
+});
+
+const guestSchema = z.discriminatedUnion("type", [
+  adultGuestSchema,
+  childGuestSchema,
+]);
 
 export const createReservationBodySchema = z.object({
   adults: z.number().int().min(1).max(12),

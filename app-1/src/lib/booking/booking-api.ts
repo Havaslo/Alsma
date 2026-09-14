@@ -16,6 +16,7 @@ export type BookingOffer = {
   readonly id: string;
   readonly price: number;
   readonly rateType: string;
+  readonly roomId: number | null;
   readonly roomToSell: number;
   readonly roomType: string;
   readonly roomImageUrl: string | null;
@@ -44,12 +45,21 @@ export type BookingSearch = {
   readonly roomCount: number;
 };
 
-export type BookingGuest = {
+type AdultBookingGuest = {
   readonly birthDate?: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly type: "adult" | "baby" | "child";
+  readonly type: "adult";
 };
+
+type ChildBookingGuest = {
+  readonly birthDate: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly type: "baby" | "child";
+};
+
+export type BookingGuest = AdultBookingGuest | ChildBookingGuest;
 
 export type CreateBookingInput = Omit<BookingSearch, "language"> & {
   readonly contact: {

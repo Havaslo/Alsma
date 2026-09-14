@@ -30,6 +30,7 @@ export type EpteraOffer = {
   readonly rateType: string;
   readonly rateCodeId: number;
   readonly priceAgencyId: number;
+  readonly roomId: number | null;
   readonly currency: string;
   readonly price: number;
   readonly discountedPrice: number;
@@ -576,6 +577,7 @@ export const createEpteraClient = ({
             rateType: string(offer, "rate-type"),
             rateCodeId: number(offer, "rate-code-id"),
             priceAgencyId: number(offer, "price-agency-id"),
+            roomId: nullableNumber(offer, "room-id"),
             currency: string(offer, "currency"),
             price: number(offer, "price"),
             discountedPrice: number(offer, "discounted-price"),
@@ -610,6 +612,20 @@ export const createEpteraClient = ({
           "hotel-id": Number(configuredHotelId),
           ...body,
         }),
+        method: "POST",
+      });
+    },
+    cancelReservation: async (reservationId: number) => {
+      const { hotelId: configuredHotelId } = requireConfiguration();
+      if (!Number.isSafeInteger(reservationId) || reservationId < 1) {
+        throw new HttpError(
+          409,
+          "EPTERA_BOOKING_REFERENCE_INVALID",
+          "Не удалось определить номер бронирования для отмены.",
+        );
+      }
+      await request<unknown>(`/hotel/${configuredHotelId}/cancel-reservation`, {
+        body: JSON.stringify({ "reservation-id": reservationId }),
         method: "POST",
       });
     },
