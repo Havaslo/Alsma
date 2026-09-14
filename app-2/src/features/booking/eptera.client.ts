@@ -21,6 +21,7 @@ type Session = {
 export type EpteraOffer = {
   readonly id: string;
   readonly hotelId: number;
+  readonly marketId: number | null;
   readonly roomTypeId: number;
   readonly roomType: string;
   readonly boardTypeId: number;
@@ -258,11 +259,13 @@ export const createEpteraClient = ({
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
     const normalizedApiKey = apiKey?.trim();
     const normalizedHotelId = hotelId?.trim();
+    const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
     if (
       !normalizedApiKey ||
       !normalizedHotelId ||
       !/^\d+$/.test(normalizedHotelId) ||
-      Number(normalizedHotelId) < 1
+      !Number.isSafeInteger(hotelNumber) ||
+      hotelNumber < 1
     ) {
       throw new HttpError(
         503,
@@ -279,11 +282,13 @@ export const createEpteraClient = ({
   } => {
     const normalizedHotelId = hotelId?.trim();
     const normalizedLoginToken = paymentLoginToken?.trim();
+    const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
     if (
       !normalizedLoginToken ||
       !normalizedHotelId ||
       !/^\d+$/.test(normalizedHotelId) ||
-      Number(normalizedHotelId) < 1
+      !Number.isSafeInteger(hotelNumber) ||
+      hotelNumber < 1
     ) {
       throw new HttpError(
         503,
@@ -292,7 +297,7 @@ export const createEpteraClient = ({
       );
     }
     return {
-      hotelId: Number(normalizedHotelId),
+      hotelId: hotelNumber,
       loginToken: normalizedLoginToken,
     };
   };
@@ -562,6 +567,7 @@ export const createEpteraClient = ({
           {
             id,
             hotelId: number(offer, "hotel-id"),
+            marketId: nullableNumber(offer, "market-id"),
             roomTypeId: number(offer, "room-type-id"),
             roomType: string(offer, "room-type"),
             boardTypeId: number(offer, "board-type-id"),

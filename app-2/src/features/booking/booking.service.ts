@@ -23,6 +23,14 @@ const normalizePhone = (value: string): string => {
 };
 
 const date = (value: string): Date => new Date(`${value}T00:00:00.000Z`);
+const isValidDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = date(value);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+};
 const record = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -42,6 +50,63 @@ const numericEpteraReference = (value: string | null): string | null => {
   if (!/^\d+$/.test(normalized)) return null;
   const parsed = Number(normalized);
   return Number.isSafeInteger(parsed) && parsed > 0 ? normalized : null;
+};
+
+const isPositiveSafeInteger = (value: number): boolean =>
+  Number.isSafeInteger(value) && value > 0;
+
+const selectedOfferPrice = (offer: EpteraOffer): number =>
+  Number.isFinite(offer.discountedPrice) && offer.discountedPrice > 0
+    ? offer.discountedPrice
+    : offer.price;
+
+const validateReservationOffer = (
+  offer: EpteraOffer,
+  input: CreateReservationBody,
+) => {
+  const invalidFields: string[] = [];
+  const identifierFields = [
+    ["hotel-id", offer.hotelId],
+    ["room-type-id", offer.roomTypeId],
+    ["rate-type-id", offer.rateTypeId],
+    ["board-type-id", offer.boardTypeId],
+    ["rate-code-id", offer.rateCodeId],
+    ["price-agency-id", offer.priceAgencyId],
+  ] as const;
+  for (const [field, value] of identifierFields) {
+    if (!isPositiveSafeInteger(value)) invalidFields.push(field);
+  }
+
+  const currency = offer.currency.trim();
+  if (!/^[A-Z]{3}$/.test(currency)) invalidFields.push("currency-code");
+  if (!isValidDate(input.checkIn)) invalidFields.push("check-in");
+  if (!isValidDate(input.checkOut)) invalidFields.push("check-out");
+  if (!isPositiveSafeInteger(input.roomCount)) invalidFields.push("room-count");
+
+  const price = selectedOfferPrice(offer);
+  const totalPrice = price * input.roomCount;
+  if (!Number.isFinite(price) || price <= 0) invalidFields.push("price");
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0)
+    invalidFields.push("total-price");
+
+  if (invalidFields.length > 0) {
+    throw new HttpError(
+      409,
+      "EPTERA_OFFER_INVALID",
+      "Выбранный тариф содержит некорректные данные.",
+      { fields: invalidFields },
+    );
+  }
+
+  return {
+    currency,
+    marketId:
+      offer.marketId !== null && isPositiveSafeInteger(offer.marketId)
+        ? offer.marketId
+        : null,
+    price,
+    totalPrice,
+  };
 };
 
 const withoutEpteraPaymentSyncState = <
@@ -153,7 +218,11 @@ export const createBookingService = (
     return { items };
   },
   createReservation: async (input: CreateReservationBody) => {
-    if (date(input.checkOut) <= date(input.checkIn)) {
+    if (
+      !isValidDate(input.checkIn) ||
+      !isValidDate(input.checkOut) ||
+      date(input.checkOut) <= date(input.checkIn)
+    ) {
       throw new HttpError(
         400,
         "DATES_INVALID",
@@ -188,6 +257,7 @@ export const createBookingService = (
         "Выбранный тариф больше недоступен. Выберите другой вариант.",
       );
     }
+    const reservationOffer = validateReservationOffer(offer, input);
     const phone = normalizePhone(input.contact.phone);
     const guest = await repository.findOrCreateGuest({
       email: input.contact.email.toLowerCase(),
@@ -209,7 +279,7 @@ export const createBookingService = (
       "contact-first-name": input.contact.firstName,
       "contact-last-name": input.contact.lastName,
       "contact-phone": phone,
-      "currency-code": offer.currency,
+      "currency-code": reservationOffer.currency,
       "guest-list": input.guests.map((guestEntry) => ({
         birthday: guestEntry.birthDate,
         country: input.nationality,
@@ -220,6 +290,9 @@ export const createBookingService = (
       })),
       nationality: input.nationality,
       "elder-child-count": elderChildCount,
+      ...(reservationOffer.marketId === null
+        ? {}
+        : { "market-id": reservationOffer.marketId }),
       "payment-type": 2,
       "price-agency-id": offer.priceAgencyId,
       "rate-code-id": offer.rateCodeId,
@@ -227,7 +300,7 @@ export const createBookingService = (
       "res-notes": input.notes,
       "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
-      "total-price": offer.discountedPrice || offer.price,
+      "total-price": reservationOffer.totalPrice,
       "younger-child-count": youngerChildCount,
     });
     const epteraResult = record(epteraResponse);
@@ -243,8 +316,7 @@ export const createBookingService = (
       ? String(epteraResult["voucher-no"] ?? epteraResult.voucherNo ?? "") ||
         null
       : null;
-    const totalAmount =
-      (offer.discountedPrice || offer.price) * input.roomCount;
+    const totalAmount = reservationOffer.totalPrice;
     const booking = await repository.createGuestBooking({
       checkInDate: date(input.checkIn),
       checkOutDate: date(input.checkOut),
@@ -253,7 +325,7 @@ export const createBookingService = (
       contactFirstName: input.contact.firstName,
       contactLastName: input.contact.lastName,
       contactPhone: phone,
-      currency: offer.currency,
+      currency: reservationOffer.currency,
       epteraReservationId: reservationId,
       guestsCount: input.guests.length,
       guestList: JSON.parse(JSON.stringify(input.guests)),
