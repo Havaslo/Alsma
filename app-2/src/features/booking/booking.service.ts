@@ -239,6 +239,27 @@ export const createBookingService = (
         "Количество взрослых гостей не совпадает с параметрами поиска.",
       );
     }
+    if (
+      input.guests.filter((guest) => guest.type !== "adult").length !==
+      input.childAges.length
+    ) {
+      throw new HttpError(
+        400,
+        "GUESTS_INVALID",
+        "Количество детских гостей не совпадает с параметрами поиска.",
+      );
+    }
+    const expectedBabyCount = input.childAges.filter((age) => age < 1).length;
+    if (
+      input.guests.filter((guest) => guest.type === "baby").length !==
+      expectedBabyCount
+    ) {
+      throw new HttpError(
+        400,
+        "GUESTS_INVALID",
+        "Тип детского гостя не совпадает с параметрами поиска.",
+      );
+    }
     const offers = await eptera.getOffers({
       adults: input.adults,
       checkIn: input.checkIn,
@@ -281,7 +302,7 @@ export const createBookingService = (
       "contact-phone": phone,
       "currency-code": reservationOffer.currency,
       "guest-list": input.guests.map((guestEntry) => ({
-        birthday: guestEntry.birthDate,
+        birthday: guestEntry.birthDate ?? null,
         country: input.nationality,
         name: guestEntry.firstName,
         surname: guestEntry.lastName,
@@ -297,7 +318,7 @@ export const createBookingService = (
       "price-agency-id": offer.priceAgencyId,
       "rate-code-id": offer.rateCodeId,
       "rate-type-id": offer.rateTypeId,
-      "res-notes": input.notes,
+      "res-notes": input.notes ?? "",
       "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
       "total-price": reservationOffer.totalPrice,
