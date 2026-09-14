@@ -90,28 +90,6 @@ export const createGuestAuthService = (
   repository: GuestAuthRepository,
   mailRu: { readonly email?: string; readonly password?: string },
 ) => ({
-  emailLogin: async (input: LoginBody) => {
-    const email = input.email.trim().toLowerCase();
-    const technicalPhone = `email:${email}`;
-    let user = await repository.findUserByEmail(email);
-    user ??= await repository.findUserByPhone(technicalPhone);
-    user ??= await repository.createUser({ email, phone: technicalPhone });
-    const token = randomBytes(32).toString("base64url");
-    await repository.createSession({
-      sessionHash: hash(token),
-      sessionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60_000),
-      phone: user.phone,
-      userId: user.id,
-    });
-    const session = await repository.findSession(hash(token));
-    if (!session?.user)
-      throw new HttpError(
-        500,
-        "SESSION_CREATE_FAILED",
-        "Не удалось создать сессию.",
-      );
-    return { authenticated: true, guest: publicUser(session.user), token };
-  },
   completeProfile: async (token: string, input: CompleteProfileBody) => {
     const session = await repository.findSession(hash(token));
     if (!session?.user)
@@ -146,7 +124,7 @@ export const createGuestAuthService = (
         "CODE_RESEND_TOO_SOON",
         "Новый код можно запросить через минуту.",
       );
-    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const code = String(randomInt(0, 10_000)).padStart(4, "0");
     const expiresAt = new Date(Date.now() + 10 * 60_000);
     const verification = recent
       ? await repository.updateVerificationForResend(recent.id, {

@@ -4,7 +4,7 @@ export const loginBodySchema = z.object({
   email: z.string().trim().pipe(z.email()),
 });
 export const verifyCodeBodySchema = loginBodySchema.extend({
-  code: z.string().regex(/^\d{6}$/u),
+  code: z.string().regex(/^\d{4}$/u),
 });
 
 export const completeProfileBodySchema = z.object({

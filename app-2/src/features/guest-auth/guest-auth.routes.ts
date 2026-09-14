@@ -4,7 +4,6 @@ import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createCompleteProfileHandler,
-  createEmailLoginHandler,
   createLogoutHandler,
   createMeHandler,
   createRequestCodeHandler,
@@ -31,11 +30,6 @@ export const createGuestAuthRouter = (
     "/request-code",
     validateRequest({ body: loginBodySchema }),
     createRequestCodeHandler(service),
-  );
-  router.post(
-    "/email-login",
-    validateRequest({ body: loginBodySchema }),
-    createEmailLoginHandler(service),
   );
   router.post(
     "/verify-code",

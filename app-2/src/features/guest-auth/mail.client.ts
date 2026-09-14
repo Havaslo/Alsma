@@ -2,7 +2,9 @@ import { connect } from "node:tls";
 
 type MailConfig = { readonly email: string; readonly password: string };
 
-const readResponse = (socket: ReturnType<typeof connect>): Promise<string> =>
+type SmtpSocket = ReturnType<typeof connect>;
+
+const readResponse = (socket: SmtpSocket): Promise<string> =>
   new Promise((resolve, reject) => {
     let text = "";
     const onData = (chunk: Buffer) => {
@@ -30,11 +32,26 @@ const readResponse = (socket: ReturnType<typeof connect>): Promise<string> =>
     socket.once("close", onClose);
   });
 
-const command = async (socket: ReturnType<typeof connect>, value: string) => {
+const responseCode = (response: string): number | null => {
+  const matches = [...response.matchAll(/(?:^|\r?\n)(\d{3}) /g)];
+  const lastMatch = matches.at(-1);
+  return lastMatch ? Number(lastMatch[1]) : null;
+};
+
+const expectResponse = (response: string, expectedCodes: readonly number[]) => {
+  const code = responseCode(response);
+  if (code === null || !expectedCodes.includes(code))
+    throw new Error("SMTP command failed.");
+};
+
+const command = async (
+  socket: SmtpSocket,
+  value: string,
+  expectedCodes: readonly number[],
+) => {
   socket.write(`${value}\r\n`);
   const response = await readResponse(socket);
-  if (!response.startsWith("2") && !response.startsWith("3"))
-    throw new Error("SMTP command failed.");
+  expectResponse(response, expectedCodes);
 };
 
 export const sendVerificationEmail = async (
@@ -50,14 +67,18 @@ export const sendVerificationEmail = async (
   });
   socket.setTimeout(15_000, () => socket.destroy(new Error("SMTP timeout.")));
   try {
-    await readResponse(socket);
-    await command(socket, "EHLO alsma.ru");
-    await command(socket, `AUTH LOGIN`);
-    await command(socket, Buffer.from(config.email).toString("base64"));
-    await command(socket, Buffer.from(config.password).toString("base64"));
-    await command(socket, `MAIL FROM:<${config.email}>`);
-    await command(socket, `RCPT TO:<${recipient}>`);
-    await command(socket, "DATA");
+    expectResponse(await readResponse(socket), [220]);
+    await command(socket, "EHLO alsma.ru", [250]);
+    await command(socket, "AUTH LOGIN", [334]);
+    await command(socket, Buffer.from(config.email).toString("base64"), [334]);
+    await command(
+      socket,
+      Buffer.from(config.password).toString("base64"),
+      [235],
+    );
+    await command(socket, `MAIL FROM:<${config.email}>`, [250]);
+    await command(socket, `RCPT TO:<${recipient}>`, [250, 251]);
+    await command(socket, "DATA", [354]);
     const subject = "Код подтверждения входа — АЛСМА";
     const body = [
       `From: ${config.email}`,
@@ -72,8 +93,8 @@ export const sendVerificationEmail = async (
       "Код действителен 10 минут. Если вы не запрашивали вход, просто проигнорируйте это письмо.",
       ".",
     ].join("\r\n");
-    await command(socket, body);
-    await command(socket, "QUIT");
+    await command(socket, body, [250]);
+    await command(socket, "QUIT", [221]);
   } finally {
     socket.end();
   }

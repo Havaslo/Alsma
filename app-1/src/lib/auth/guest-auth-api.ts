@@ -71,8 +71,6 @@ const authHeaders = () => {
 
 export const requestGuestCode = (input: { email: string }) =>
   apiClient.post<{ sent: boolean }>("/auth/request-code", input);
-export const loginByEmail = (input: { email: string }) =>
-  apiClient.post<AuthState>("/auth/email-login", input);
 export const verifyGuestCode = (input: { email: string; code: string }) =>
   apiClient.post<AuthState>("/auth/verify-code", input);
 

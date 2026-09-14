@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 
 export type FormProps<TFieldValues extends FieldValues> = Omit<
   ComponentPropsWithoutRef<"form">,
-  "children" | "onSubmit"
+  "children" | "onInvalid" | "onSubmit"
 > & {
   readonly children:
     ReactNode | ((form: UseFormReturn<TFieldValues>) => ReactNode);
