@@ -35,6 +35,32 @@ const nightsBetween = (checkIn: string, checkOut: string) =>
     ),
   );
 const amountText = (value: number) => value.toFixed(2);
+const EPTERA_PAYMENT_SYNC_STALE_AFTER_MS = 60_000;
+
+const numericEpteraReference = (value: string | null): string | null => {
+  const normalized = value?.trim() ?? "";
+  if (!/^\d+$/.test(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? normalized : null;
+};
+
+const withoutEpteraPaymentSyncState = <
+  T extends {
+    epteraPaymentSyncAttemptedAt: Date | null;
+    epteraPaymentSyncStatus: string;
+    epteraPaymentSyncedAt: Date | null;
+  },
+>(
+  booking: T,
+) => {
+  const {
+    epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
+    epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
+    epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
+    ...publicBooking
+  } = booking;
+  return publicBooking;
+};
 
 type CalendarPrice = {
   readonly date: string;
@@ -253,10 +279,11 @@ export const createBookingService = (
       paymentStatus: payment.status,
       status: "awaiting_payment",
     });
+    const publicBooking = withoutEpteraPaymentSyncState(savedBooking);
     return {
       booking: {
-        ...savedBooking,
-        totalAmount: savedBooking.totalAmount?.toString() ?? null,
+        ...publicBooking,
+        totalAmount: publicBooking.totalAmount?.toString() ?? null,
       },
       payment: {
         amount: payment.amount,
@@ -273,13 +300,89 @@ export const createBookingService = (
       : await repository.findBookingByPaymentId(payment.id);
     if (!booking || booking.paymentId !== payment.id) return null;
     const paid = payment.status === "succeeded" && payment.paid;
-    return repository.updatePayment({
+    const paymentAmount = Number(payment.amount.value);
+    if (!paid) {
+      return repository.updatePayment({
+        bookingId: booking.id,
+        paymentAmount,
+        paymentId: payment.id,
+        paymentStatus: payment.status,
+        status: booking.status,
+      });
+    }
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      throw new HttpError(
+        502,
+        "PAYMENT_AMOUNT_INVALID",
+        "Платёжный сервис вернул некорректную сумму.",
+      );
+    }
+    const currency = payment.amount.currency.trim();
+    if (!currency) {
+      throw new HttpError(
+        502,
+        "PAYMENT_CURRENCY_INVALID",
+        "Платёжный сервис вернул некорректную валюту.",
+      );
+    }
+
+    const savedPayment = await repository.markYooKassaPaymentSucceeded({
       bookingId: booking.id,
-      paymentAmount: Number(payment.amount.value),
+      paymentAmount,
       paymentId: payment.id,
-      paymentStatus: paid ? "succeeded" : payment.status,
-      status: paid ? "confirmed" : booking.status,
     });
+    if (savedPayment.epteraPaymentSyncStatus === "succeeded")
+      return savedPayment;
+
+    const attemptedAt = new Date();
+    const claimed = await repository.claimEpteraPaymentSync({
+      attemptedAt,
+      bookingId: booking.id,
+      staleBefore: new Date(
+        attemptedAt.getTime() - EPTERA_PAYMENT_SYNC_STALE_AFTER_MS,
+      ),
+    });
+    if (!claimed) return repository.findBooking(booking.id);
+
+    try {
+      const bookingReference =
+        numericEpteraReference(savedPayment.epteraReservationId) ??
+        numericEpteraReference(savedPayment.voucherNumber);
+      if (!bookingReference) {
+        throw new HttpError(
+          409,
+          "EPTERA_BOOKING_REFERENCE_INVALID",
+          "Не удалось определить номер бронирования для передачи оплаты.",
+        );
+      }
+      await eptera.addPayment({
+        amount: paymentAmount,
+        bookingReference,
+        currency,
+      });
+    } catch (error) {
+      await repository
+        .markEpteraPaymentSyncFailed({
+          attemptedAt,
+          bookingId: booking.id,
+        })
+        .catch(() => undefined);
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(
+        502,
+        "EPTERA_PAYMENT_SYNC_FAILED",
+        "Не удалось передать оплату в Eptera.",
+      );
+    }
+
+    const syncedAt = new Date();
+    const syncResult = await repository.markEpteraPaymentSyncSucceeded({
+      attemptedAt,
+      bookingId: booking.id,
+      syncedAt,
+    });
+    if (syncResult.count === 0) return repository.findBooking(booking.id);
+    return repository.findBooking(booking.id);
   },
 });
 

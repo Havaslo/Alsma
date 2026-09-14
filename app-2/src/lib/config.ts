@@ -25,6 +25,7 @@ const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   EPTERA_API_KEY: z.string().min(1).optional(),
   EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
+  EPTERA_PAYMENT_LOGIN_TOKEN: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
@@ -58,6 +59,7 @@ export type AppConfig = {
   readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
+  readonly epteraPaymentLoginToken?: string;
   readonly managedStorage: {
     readonly apiUrl: string;
     readonly projectToken: string;
@@ -107,6 +109,7 @@ export const readConfig = (
     corsAllowedOrigins: parseCorsOrigins(parsed.CORS_ALLOWED_ORIGINS),
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
+    epteraPaymentLoginToken: parsed.EPTERA_PAYMENT_LOGIN_TOKEN,
     managedStorage: {
       apiUrl: parsed.AMAZI_STORAGE_API_URL,
       projectToken: parsed.AMAZI_STORAGE_PROJECT_TOKEN,

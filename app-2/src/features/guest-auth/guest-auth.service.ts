@@ -28,6 +28,9 @@ const publicUser = (user: {
     contactLastName: string | null;
     contactPhone: string | null;
     epteraReservationId: string | null;
+    epteraPaymentSyncAttemptedAt: Date | null;
+    epteraPaymentSyncStatus: string;
+    epteraPaymentSyncedAt: Date | null;
     guestsCount: number;
     guestList: unknown;
     id: string;
@@ -59,11 +62,19 @@ const publicUser = (user: {
   phone: string;
 }) => ({
   bonusProgram: user.bonusProgram,
-  bookings: user.bookings.map((booking) => ({
-    ...booking,
-    paymentAmount: booking.paymentAmount?.toString() ?? null,
-    totalAmount: booking.totalAmount?.toString() ?? null,
-  })),
+  bookings: user.bookings.map((booking) => {
+    const {
+      epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
+      epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
+      epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
+      ...publicBooking
+    } = booking;
+    return {
+      ...publicBooking,
+      paymentAmount: booking.paymentAmount?.toString() ?? null,
+      totalAmount: booking.totalAmount?.toString() ?? null,
+    };
+  }),
   serviceOrders: user.serviceOrders.map((order) => ({
     id: order.id,
     status: order.status,

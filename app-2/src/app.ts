@@ -14,6 +14,7 @@ type CreateAppOptions = {
   readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
+  readonly epteraPaymentLoginToken?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
   readonly openaiSip: {
@@ -65,6 +66,7 @@ export const createApp = ({
   database,
   epteraApiKey,
   epteraHotelId,
+  epteraPaymentLoginToken,
   logger,
   managedStorage,
   mailRu,
@@ -110,6 +112,7 @@ export const createApp = ({
     database,
     epteraApiKey,
     epteraHotelId,
+    epteraPaymentLoginToken,
     logger,
     managedStorage,
     openaiApiKey,

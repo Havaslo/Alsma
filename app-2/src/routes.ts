@@ -36,6 +36,7 @@ type CreateApiRouterOptions = {
   readonly database: Database;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
+  readonly epteraPaymentLoginToken?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
   readonly openaiSip: {
@@ -76,6 +77,7 @@ export const createApiRouter = ({
   database,
   epteraApiKey,
   epteraHotelId,
+  epteraPaymentLoginToken,
   logger,
   managedStorage,
   openaiApiKey,
@@ -154,7 +156,11 @@ export const createApiRouter = ({
     "/booking",
     createBookingRouter(
       database,
-      createEpteraClient({ apiKey: epteraApiKey, hotelId: epteraHotelId }),
+      createEpteraClient({
+        apiKey: epteraApiKey,
+        hotelId: epteraHotelId,
+        paymentLoginToken: epteraPaymentLoginToken,
+      }),
       createYooKassaClient({
         secretKey: yooKassaSecretKey,
         shopId: yooKassaShopId,

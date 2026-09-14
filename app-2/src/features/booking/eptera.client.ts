@@ -2,6 +2,7 @@ import { HttpError } from "../../lib/http/http-error.js";
 import { type RoomDefinition, readDefinitions } from "./eptera.rooms.js";
 
 const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
+const EPTERA_PAYMENT_URL = "https://api.eptera.ru/Execute/SP_WEB_PAYMENT";
 const REQUEST_TIMEOUT_MS = 15_000;
 const TOKEN_REFRESH_MARGIN_MS = 60_000;
 const MAX_TRANSIENT_RETRIES = 2;
@@ -9,6 +10,7 @@ const MAX_TRANSIENT_RETRIES = 2;
 type EpteraClientOptions = {
   readonly apiKey?: string;
   readonly hotelId?: string;
+  readonly paymentLoginToken?: string;
 };
 
 type Session = {
@@ -69,6 +71,39 @@ const nullableNumber = (
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const isFalseProviderValue = (value: unknown): boolean =>
+  value === false ||
+  value === 0 ||
+  (typeof value === "string" &&
+    ["0", "false", "error", "failed", "failure"].includes(
+      value.trim().toLowerCase(),
+    ));
+
+const hasPaymentProviderFailure = (payload: unknown): boolean => {
+  const response = asRecord(payload);
+  if (!response) return true;
+
+  for (const key of ["success", "Success", "isSuccess", "IsSuccess"]) {
+    if (isFalseProviderValue(response[key])) return true;
+  }
+  for (const key of ["status", "Status", "result", "Result"]) {
+    if (isFalseProviderValue(response[key])) return true;
+  }
+  for (const key of ["error", "Error", "errors", "Errors"]) {
+    const value = response[key];
+    if (
+      (typeof value === "string" && value.trim().length > 0) ||
+      (Array.isArray(value) && value.length > 0) ||
+      (value !== null &&
+        typeof value === "object" &&
+        Object.keys(value as object).length > 0)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const readOfferItems = (payload: unknown): unknown[] => {
   if (Array.isArray(payload)) return payload;
   const response = asRecord(payload);
@@ -123,6 +158,7 @@ const addDays = (value: string, days: number): string => {
 export const createEpteraClient = ({
   apiKey,
   hotelId,
+  paymentLoginToken,
 }: EpteraClientOptions) => {
   let session: Session | undefined;
   let loginPromise: Promise<Session> | undefined;
@@ -145,6 +181,30 @@ export const createEpteraClient = ({
       );
     }
     return { apiKey: normalizedApiKey, hotelId: normalizedHotelId };
+  };
+
+  const requirePaymentConfiguration = (): {
+    hotelId: number;
+    loginToken: string;
+  } => {
+    const normalizedHotelId = hotelId?.trim();
+    const normalizedLoginToken = paymentLoginToken?.trim();
+    if (
+      !normalizedLoginToken ||
+      !normalizedHotelId ||
+      !/^\d+$/.test(normalizedHotelId) ||
+      Number(normalizedHotelId) < 1
+    ) {
+      throw new HttpError(
+        503,
+        "EPTERA_PAYMENT_NOT_CONFIGURED",
+        "Передача оплаты в Eptera временно недоступна.",
+      );
+    }
+    return {
+      hotelId: Number(normalizedHotelId),
+      loginToken: normalizedLoginToken,
+    };
   };
 
   const login = async (): Promise<Session> => {
@@ -456,6 +516,76 @@ export const createEpteraClient = ({
         }),
         method: "POST",
       });
+    },
+    addPayment: async (input: {
+      readonly amount: number;
+      readonly bookingReference: string;
+      readonly currency: string;
+    }) => {
+      const config = requirePaymentConfiguration();
+      const bookingReference = input.bookingReference.trim();
+      const currency = input.currency.trim();
+      if (!/^\d+$/.test(bookingReference) || Number(bookingReference) < 1) {
+        throw new HttpError(
+          409,
+          "EPTERA_BOOKING_REFERENCE_INVALID",
+          "Не удалось определить номер бронирования для передачи оплаты.",
+        );
+      }
+      if (!Number.isFinite(input.amount) || input.amount <= 0) {
+        throw new HttpError(
+          502,
+          "PAYMENT_AMOUNT_INVALID",
+          "Платёжный сервис вернул некорректную сумму.",
+        );
+      }
+      if (!currency) {
+        throw new HttpError(
+          502,
+          "PAYMENT_CURRENCY_INVALID",
+          "Платёжный сервис вернул некорректную валюту.",
+        );
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(EPTERA_PAYMENT_URL, {
+          body: JSON.stringify({
+            Parameters: {
+              HOTELID: config.hotelId,
+              HESAPKODU: "A",
+              DEPKODU: "94",
+              DOVIZKODU: currency,
+              KNO: bookingReference,
+              TLTUTAR: input.amount,
+              DOVIZTUTAR: input.amount,
+            },
+            Action: "Execute",
+            Object: "SP_WEB_PAYMENT",
+            ActionTitle: "Deposit Amount From BookingAPI",
+            LoginToken: config.loginToken,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        throw new HttpError(
+          502,
+          "EPTERA_PAYMENT_UNAVAILABLE",
+          "Не удалось передать оплату в Eptera.",
+        );
+      }
+
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok || hasPaymentProviderFailure(payload)) {
+        throw new HttpError(
+          502,
+          "EPTERA_PAYMENT_SYNC_FAILED",
+          "Eptera не подтвердила передачу оплаты.",
+          response.ok ? undefined : { status: response.status },
+        );
+      }
     },
   };
 };

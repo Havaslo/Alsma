@@ -26,6 +26,7 @@ const start = async (): Promise<void> => {
     logger,
     epteraApiKey: config.epteraApiKey,
     epteraHotelId: config.epteraHotelId,
+    epteraPaymentLoginToken: config.epteraPaymentLoginToken,
     managedStorage,
     openaiApiKey: config.openaiApiKey,
     openaiBaseUrl: config.openaiBaseUrl,

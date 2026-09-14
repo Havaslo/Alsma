@@ -45,6 +45,79 @@ export const createBookingRepository = (database: Database) => ({
       },
       where: { id: input.bookingId },
     }),
+  markYooKassaPaymentSucceeded: (input: {
+    bookingId: string;
+    paymentAmount: number;
+    paymentId: string;
+  }) =>
+    database.client.guestBooking.update({
+      data: {
+        paymentAmount: input.paymentAmount,
+        paymentId: input.paymentId,
+        paymentStatus: "succeeded",
+      },
+      where: { id: input.bookingId },
+    }),
+  claimEpteraPaymentSync: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+    staleBefore: Date;
+  }) =>
+    database.client.guestBooking
+      .updateMany({
+        data: {
+          epteraPaymentSyncAttemptedAt: input.attemptedAt,
+          epteraPaymentSyncStatus: "processing",
+          status: "payment_sync_pending",
+        },
+        where: {
+          id: input.bookingId,
+          paymentStatus: "succeeded",
+          OR: [
+            { epteraPaymentSyncStatus: { in: ["pending", "failed"] } },
+            {
+              epteraPaymentSyncAttemptedAt: { lt: input.staleBefore },
+              epteraPaymentSyncStatus: "processing",
+            },
+          ],
+        },
+      })
+      .then((result) => result.count > 0),
+  markEpteraPaymentSyncSucceeded: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+    syncedAt: Date;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        epteraPaymentSyncedAt: input.syncedAt,
+        epteraPaymentSyncStatus: "succeeded",
+        status: "confirmed",
+      },
+      where: {
+        epteraPaymentSyncAttemptedAt: input.attemptedAt,
+        epteraPaymentSyncStatus: "processing",
+        id: input.bookingId,
+        paymentStatus: "succeeded",
+      },
+    }),
+  markEpteraPaymentSyncFailed: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        epteraPaymentSyncedAt: null,
+        epteraPaymentSyncStatus: "failed",
+        status: "payment_sync_failed",
+      },
+      where: {
+        epteraPaymentSyncAttemptedAt: input.attemptedAt,
+        epteraPaymentSyncStatus: "processing",
+        id: input.bookingId,
+        paymentStatus: "succeeded",
+      },
+    }),
   findBookingByPaymentId: (paymentId: string) =>
     database.client.guestBooking.findUnique({ where: { paymentId } }),
   findBooking: (bookingId: string) =>
