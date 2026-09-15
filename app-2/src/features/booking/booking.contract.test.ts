@@ -5,6 +5,7 @@ import type { BookingRepository } from "./booking.repository.js";
 import {
   type CreateReservationBody,
   createReservationBodySchema,
+  offersQuerySchema,
 } from "./booking.schemas.js";
 import { createBookingService } from "./booking.service.js";
 import {
@@ -66,7 +67,6 @@ const reservationInput = (
   adults: 1,
   checkIn: "2026-08-13",
   checkOut: "2026-08-15",
-  childAges: [],
   contact: {
     email: "guest@example.com",
     firstName: "Test",
@@ -96,6 +96,7 @@ const createHarness = (
 ) => {
   let createPayload: Record<string, unknown> | undefined;
   let getOffersCalled = false;
+  let getOffersInput: unknown;
   let createReservationCalled = false;
   let createGuestBookingCalled = false;
   let findOrCreateGuestCalled = false;
@@ -112,8 +113,9 @@ const createHarness = (
       cancellationIds.push(reservationId);
       if (options.cancellationError) throw options.cancellationError;
     },
-    getOffers: async () => {
+    getOffers: async (input: unknown) => {
       getOffersCalled = true;
+      getOffersInput = input;
       return [selectedOffer];
     },
   } as unknown as EpteraClient;
@@ -161,6 +163,9 @@ const createHarness = (
     get getOffersCalled() {
       return getOffersCalled;
     },
+    get getOffersInput() {
+      return getOffersInput;
+    },
     get createGuestBookingCalled() {
       return createGuestBookingCalled;
     },
@@ -186,6 +191,7 @@ test("builds the adult-only Eptera payload without undefined optional fields", a
   assert.deepEqual(JSON.parse(JSON.stringify(payload)), payload);
   assert.deepEqual(Object.keys(payload).sort(), [
     "adult-count",
+    "baby-count",
     "board-type-id",
     "check-in",
     "check-out",
@@ -209,6 +215,7 @@ test("builds the adult-only Eptera payload without undefined optional fields", a
     },
   ]);
   assert.equal(payload["elder-child-count"], 0);
+  assert.equal(payload["baby-count"], 0);
   assert.equal(payload["younger-child-count"], 0);
   assert.equal(payload["total-price"], 900);
 });
@@ -223,7 +230,6 @@ test("uses the fresh quote total and child buckets for two adults aged 4 and 7",
   await harness.createReservation(
     reservationInput({
       adults: 2,
-      childAges: [4, 7],
       guests: [
         adult("Adult 1"),
         adult("Adult 2"),
@@ -238,7 +244,11 @@ test("uses the fresh quote total and child buckets for two adults aged 4 and 7",
   assert.equal(payload["total-price"], 25_410);
   assert.equal(payload["elder-child-count"], 1);
   assert.equal(payload["younger-child-count"], 1);
-  assert.equal("baby-count" in payload, false);
+  assert.equal(payload["baby-count"], 0);
+  assert.deepEqual(
+    (harness.getOffersInput as { childAges: number[] }).childAges,
+    [4, 7],
+  );
   assert.deepEqual(
     (payload["guest-list"] as Array<Record<string, unknown>>).map(
       (guest) => guest["title-id"],
@@ -253,12 +263,11 @@ test("keeps guest buckets and total price consistent for multiple rooms", async 
   await harness.createReservation(
     reservationInput({
       adults: 2,
-      childAges: [0, 3, 9],
       guests: [
         adult("Adult 1"),
         adult("Adult 2"),
-        child("baby", "Baby", "2025-02-03"),
-        child("child", "Child 1", "2019-07-08"),
+        child("child", "Baby", "2026-08-01"),
+        child("child", "Child 1", "2023-07-08"),
         child("child", "Child 2", "2015-11-09"),
       ],
       roomCount: 2,
@@ -271,13 +280,13 @@ test("keeps guest buckets and total price consistent for multiple rooms", async 
   assert.equal(payload["total-price"], 1_800);
   assert.equal(payload["elder-child-count"], 1);
   assert.equal(payload["younger-child-count"], 1);
-  assert.equal("baby-count" in payload, false);
+  assert.equal(payload["baby-count"], 1);
   assert.equal((payload["guest-list"] as unknown[]).length, 5);
   assert.deepEqual(
     (payload["guest-list"] as Array<Record<string, unknown>>).map(
       (guest) => guest.birthday,
     ),
-    [null, null, "2025-02-03", "2019-07-08", "2015-11-09"],
+    [null, null, "2026-08-01", "2023-07-08", "2015-11-09"],
   );
   assert.deepEqual(
     (payload["guest-list"] as Array<Record<string, unknown>>).map(
@@ -287,14 +296,13 @@ test("keeps guest buckets and total price consistent for multiple rooms", async 
   );
 });
 
-test("rejects guest bucket mismatches before any Eptera request", async () => {
+test("rejects a child birthday after check-in before any Eptera request", async () => {
   const harness = createHarness();
 
   await assert.rejects(
     harness.createReservation(
       reservationInput({
-        childAges: [0],
-        guests: [adult("Test"), child("child", "Child")],
+        guests: [adult("Test"), child("child", "Child", "2027-01-01")],
       }),
     ),
     { code: "GUESTS_INVALID" },
@@ -304,7 +312,7 @@ test("rejects guest bucket mismatches before any Eptera request", async () => {
 });
 
 test("requires real birth dates for child and baby guests", () => {
-  const base = reservationInput({ childAges: [5] });
+  const base = reservationInput();
   assert.throws(() =>
     createReservationBodySchema.parse({
       ...base,
@@ -320,6 +328,33 @@ test("requires real birth dates for child and baby guests", () => {
       ],
     }),
   );
+});
+
+test("keeps count-only searches free of invented child ages", async () => {
+  let offersInput: unknown;
+  const query = offersQuerySchema.parse({
+    adults: "2",
+    checkIn: "2026-08-13",
+    checkOut: "2026-08-15",
+    children: "2",
+    roomCount: "2",
+  });
+  const service = createBookingService(
+    {} as BookingRepository,
+    {
+      getOffers: async (input: unknown) => {
+        offersInput = input;
+        return [];
+      },
+    } as unknown as EpteraClient,
+    {} as YooKassaClient,
+  );
+
+  await service.offers(query);
+
+  assert.deepEqual((offersInput as { childAges: number[] }).childAges, []);
+  assert.equal(query.children, 2);
+  assert.equal(query.roomCount, 2);
 });
 
 test("rejects an offer with fewer rooms to sell than requested", async () => {

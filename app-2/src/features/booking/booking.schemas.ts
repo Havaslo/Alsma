@@ -14,38 +14,48 @@ const isoDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine(isRealIsoDate, "Введите существующую дату.");
 
-export const offersQuerySchema = z.object({
-  adults: z.coerce.number().int().min(1).max(12).default(1),
-  checkIn: isoDate,
-  checkOut: isoDate,
-  childAges: z
-    .string()
-    .optional()
-    .transform((value) =>
-      value ? value.split(",").map((age) => Number(age.trim())) : [],
-    )
-    .pipe(z.array(z.number().int().min(0).max(17)).max(8)),
-  currency: z.string().trim().length(3).default("RUB"),
-  language: z.string().trim().length(2).default("ru"),
-  nationality: z.string().trim().length(2).default("RU"),
-  roomCount: z.coerce.number().int().min(1).max(2).default(1),
-});
+const childAgesQuerySchema = z
+  .string()
+  .optional()
+  .transform((value) =>
+    value ? value.split(",").map((age) => Number(age.trim())) : [],
+  )
+  .pipe(z.array(z.number().int().min(0).max(17)).max(8));
 
-export const calendarPricesQuerySchema = z.object({
-  adults: z.coerce.number().int().min(1).max(12).default(1),
-  childAges: z
-    .string()
-    .optional()
-    .transform((value) =>
-      value ? value.split(",").map((age) => Number(age.trim())) : [],
-    )
-    .pipe(z.array(z.number().int().min(0).max(17)).max(8)),
-  currency: z.string().trim().length(3).default("RUB"),
-  language: z.string().trim().length(2).default("ru"),
-  month: z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/),
-  nationality: z.string().trim().length(2).default("RU"),
-  roomCount: z.coerce.number().int().min(1).max(2).default(1),
-});
+const childCountQuerySchema = z.coerce.number().int().min(0).max(8).optional();
+
+export const offersQuerySchema = z
+  .object({
+    adults: z.coerce.number().int().min(1).max(12).default(1),
+    checkIn: isoDate,
+    checkOut: isoDate,
+    childAges: childAgesQuerySchema,
+    children: childCountQuerySchema,
+    currency: z.string().trim().length(3).default("RUB"),
+    language: z.string().trim().length(2).default("ru"),
+    nationality: z.string().trim().length(2).default("RU"),
+    roomCount: z.coerce.number().int().min(1).max(2).default(1),
+  })
+  .transform((input) => ({
+    ...input,
+    children: input.children ?? input.childAges.length,
+  }));
+
+export const calendarPricesQuerySchema = z
+  .object({
+    adults: z.coerce.number().int().min(1).max(12).default(1),
+    childAges: childAgesQuerySchema,
+    children: childCountQuerySchema,
+    currency: z.string().trim().length(3).default("RUB"),
+    language: z.string().trim().length(2).default("ru"),
+    month: z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/),
+    nationality: z.string().trim().length(2).default("RU"),
+    roomCount: z.coerce.number().int().min(1).max(2).default(1),
+  })
+  .transform((input) => ({
+    ...input,
+    children: input.children ?? input.childAges.length,
+  }));
 
 const adultGuestSchema = z.object({
   birthDate: isoDate.optional(),
@@ -70,7 +80,7 @@ export const createReservationBodySchema = z.object({
   adults: z.number().int().min(1).max(12),
   checkIn: isoDate,
   checkOut: isoDate,
-  childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
+  childAges: z.array(z.number().int().min(0).max(17)).max(8).optional(),
   contact: z.object({
     email: z.string().trim().email().max(320),
     firstName: z.string().trim().min(1).max(80),

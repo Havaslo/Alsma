@@ -23,6 +23,17 @@ const normalizePhone = (value: string): string => {
 };
 
 const date = (value: string): Date => new Date(`${value}T00:00:00.000Z`);
+const ageOnDate = (birthDate: string, onDate: string): number | null => {
+  const birth = date(birthDate);
+  const target = date(onDate);
+  if (birth > target) return null;
+  let age = target.getUTCFullYear() - birth.getUTCFullYear();
+  const birthdayThisYear = new Date(
+    Date.UTC(target.getUTCFullYear(), birth.getUTCMonth(), birth.getUTCDate()),
+  );
+  if (birthdayThisYear > target) age -= 1;
+  return age;
+};
 const isValidDate = (value: string): boolean => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = date(value);
@@ -259,36 +270,22 @@ export const createBookingService = (
         "Количество взрослых гостей не совпадает с параметрами поиска.",
       );
     }
-    if (
-      input.guests.filter((guest) => guest.type !== "adult").length !==
-      input.childAges.length
-    ) {
+    const childGuests = input.guests.filter((guest) => guest.type !== "adult");
+    if (childGuests.some((guest) => !isValidDate(guest.birthDate))) {
       throw new HttpError(
         400,
         "GUESTS_INVALID",
-        "Количество детских гостей не совпадает с параметрами поиска.",
+        "Укажите корректную дату рождения для каждого ребёнка.",
       );
     }
-    const expectedBabyCount = input.childAges.filter((age) => age < 1).length;
-    if (
-      input.guests.filter((guest) => guest.type === "baby").length !==
-      expectedBabyCount
-    ) {
+    const childAges = childGuests.map((guest) =>
+      ageOnDate(guest.birthDate, input.checkIn),
+    );
+    if (childAges.some((age) => age === null || age < 0 || age > 17)) {
       throw new HttpError(
         400,
         "GUESTS_INVALID",
-        "Тип детского гостя не совпадает с параметрами поиска.",
-      );
-    }
-    const expectedChildCount = input.childAges.filter((age) => age >= 1).length;
-    if (
-      input.guests.filter((guest) => guest.type === "child").length !==
-      expectedChildCount
-    ) {
-      throw new HttpError(
-        400,
-        "GUESTS_INVALID",
-        "Тип детского гостя не совпадает с параметрами поиска.",
+        "Дата рождения ребёнка должна соответствовать возрасту до 18 лет на дату заезда.",
       );
     }
     if (
@@ -308,7 +305,7 @@ export const createBookingService = (
       adults: input.adults,
       checkIn: input.checkIn,
       checkOut: input.checkOut,
-      childAges: input.childAges,
+      childAges: childAges as number[],
       currency: input.currency,
       language: "ru",
       nationality: input.nationality,
@@ -327,8 +324,10 @@ export const createBookingService = (
     }
     const reservationOffer = validateReservationOffer(offer, input);
     const phone = normalizePhone(input.contact.phone);
-    const elderChildCount = input.childAges.filter((age) => age >= 7).length;
-    const youngerChildCount = input.childAges.filter(
+    const typedChildAges = childAges as number[];
+    const babyChildCount = typedChildAges.filter((age) => age < 1).length;
+    const elderChildCount = typedChildAges.filter((age) => age >= 7).length;
+    const youngerChildCount = typedChildAges.filter(
       (age) => age >= 1 && age < 7,
     ).length;
     const epteraResponse = await eptera.createReservation({
@@ -344,13 +343,18 @@ export const createBookingService = (
         name: guestEntry.firstName,
         surname: guestEntry.lastName,
         "title-id":
-          guestEntry.type === "adult" ? 0 : guestEntry.type === "child" ? 2 : 3,
+          guestEntry.type === "adult"
+            ? 0
+            : typedChildAges[childGuests.indexOf(guestEntry)]! < 1
+              ? 3
+              : 2,
       })),
       nationality: input.nationality,
       "price-agency-id": offer.priceAgencyId,
       "rate-type-id": offer.rateTypeId,
       "room-type-id": offer.roomTypeId,
       "total-price": reservationOffer.totalPrice,
+      "baby-count": babyChildCount,
       "younger-child-count": youngerChildCount,
     });
     const epteraResult = record(epteraResponse);

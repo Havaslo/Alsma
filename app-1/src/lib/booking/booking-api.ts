@@ -39,6 +39,7 @@ export type BookingSearch = {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly childAges: number[];
+  readonly children: number;
   readonly currency: string;
   readonly language: string;
   readonly nationality: string;
@@ -61,7 +62,10 @@ type ChildBookingGuest = {
 
 export type BookingGuest = AdultBookingGuest | ChildBookingGuest;
 
-export type CreateBookingInput = Omit<BookingSearch, "language"> & {
+export type CreateBookingInput = Omit<
+  BookingSearch,
+  "childAges" | "children" | "language"
+> & {
   readonly contact: {
     readonly email: string;
     readonly firstName: string;
@@ -86,6 +90,7 @@ export const loadBookingCalendarPrices = (
     BookingSearch,
     | "adults"
     | "childAges"
+    | "children"
     | "currency"
     | "language"
     | "nationality"

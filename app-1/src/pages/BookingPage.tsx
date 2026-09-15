@@ -50,16 +50,14 @@ const dateText = (value: string) =>
 
 const steps = ["Номера", "Тарифы", "Контакты"];
 type RoomGuests = {
+  id: string;
   adults: number;
-  childAges: number[];
-  childIds: string[];
+  children: number;
 };
 let childIdSequence = 0;
 const createChildId = () => `booking-child-${childIdSequence++}`;
-const childAgeLabel = (age: number) =>
-  age === 0
-    ? "до 1 года"
-    : `${age} ${age === 1 ? "год" : age < 5 ? "года" : "лет"}`;
+let roomIdSequence = 0;
+const createRoomId = () => `booking-room-${roomIdSequence++}`;
 const getInitialBooking = () => {
   const params = new URLSearchParams(
     typeof window === "undefined" ? "" : window.location.search,
@@ -69,24 +67,40 @@ const getInitialBooking = () => {
     2,
     Math.max(1, Number(params.get("roomCount")) || 1),
   );
-  const childAges = (params.get("childAges") || "")
-    .split(",")
-    .map(Number)
-    .filter((age) => Number.isInteger(age) && age >= 0 && age <= 17);
+  const childAgesParam = params.get("childAges");
+  const childAgesFromUrl = childAgesParam
+    ? childAgesParam
+        .split(",")
+        .map(Number)
+        .filter((age) => Number.isInteger(age) && age >= 0 && age <= 17)
+    : [];
+  const childrenParam = params.get("children");
+  const childrenFromUrl = childrenParam === null ? null : Number(childrenParam);
+  const children =
+    Number.isInteger(childrenFromUrl) && childrenFromUrl !== null
+      ? Math.max(0, Math.min(8, childrenFromUrl))
+      : childAgesFromUrl.length;
   const checkIn = params.get("checkIn") || iso(start);
   const checkOut = params.get("checkOut") || iso(end);
   const rooms = Array.from({ length: roomCount }, (_, index) => ({
+    id: createRoomId(),
     adults: index === 0 ? Math.max(1, adults - (roomCount - 1)) : 1,
-    childAges: index === 0 ? childAges : [],
-    childIds: index === 0 ? childAges.map(() => createChildId()) : [],
+    children: index === 0 ? children : 0,
   }));
   return {
     rooms,
+    childIdsByRoom: Object.fromEntries(
+      rooms.map((room) => [
+        room.id,
+        Array.from({ length: room.children }, () => createChildId()),
+      ]),
+    ) as Record<string, string[]>,
     search: {
-      adults,
+      adults: rooms.reduce((total, room) => total + room.adults, 0),
       checkIn,
       checkOut,
-      childAges,
+      childAges: [],
+      children,
       currency: "RUB",
       language: "ru",
       nationality: "RU",
@@ -100,6 +114,9 @@ export const BookingPage = () => {
   const [roomGuests, setRoomGuests] = useState<RoomGuests[]>(
     initialBooking.rooms,
   );
+  const [childIdsByRoom, setChildIdsByRoom] = useState<
+    Record<string, string[]>
+  >(initialBooking.childIdsByRoom);
   const [search, setSearch] = useState<BookingSearch>(initialBooking.search);
   const [submittedSearch, setSubmittedSearch] = useState(initialBooking.search);
   const [step, setStep] = useState(0);
@@ -156,11 +173,35 @@ export const BookingPage = () => {
     ),
   );
   const childrenForBooking = roomGuests.flatMap((room) =>
-    room.childAges.map((age, childIndex) => ({
-      age,
-      childId: room.childIds[childIndex]!,
-    })),
+    (childIdsByRoom[room.id] ?? []).map((childId) => ({ childId })),
   );
+
+  const updateRoomGuests = (rooms: RoomGuests[]) => {
+    const nextChildIdsByRoom = Object.fromEntries(
+      rooms.map((room) => {
+        const ids = (childIdsByRoom[room.id] ?? []).slice(0, room.children);
+        while (ids.length < room.children) ids.push(createChildId());
+        return [room.id, ids];
+      }),
+    ) as Record<string, string[]>;
+    const activeChildIds = new Set(Object.values(nextChildIdsByRoom).flat());
+    setChildIdsByRoom(nextChildIdsByRoom);
+    setChildBirthDates((dates) =>
+      Object.fromEntries(
+        Object.entries(dates).filter(([childId]) =>
+          activeChildIds.has(childId),
+        ),
+      ),
+    );
+    setRoomGuests(rooms);
+    setSearch((value) => ({
+      ...value,
+      adults: rooms.reduce((total, room) => total + room.adults, 0),
+      childAges: [],
+      children: rooms.reduce((total, room) => total + room.children, 0),
+      roomCount: rooms.length,
+    }));
+  };
 
   const performSearch = () => {
     if (search.checkOut <= search.checkIn)
@@ -168,9 +209,8 @@ export const BookingPage = () => {
     const nextSearch = {
       ...search,
       adults: roomGuests.reduce((total, room) => total + room.adults, 0),
-      childAges: roomGuests.flatMap((room) =>
-        room.childAges.filter((age) => age >= 0),
-      ),
+      childAges: [],
+      children: roomGuests.reduce((total, room) => total + room.children, 0),
       roomCount: roomGuests.length,
     };
     setSearch(nextSearch);
@@ -178,8 +218,8 @@ export const BookingPage = () => {
     setOffer(null);
     setRoomName(null);
     setSelectedRoomIndex(0);
-    setSelectedRooms(Array.from({ length: search.roomCount }, () => null));
-    setSelectedOffers(Array.from({ length: search.roomCount }, () => null));
+    setSelectedRooms(Array.from({ length: nextSearch.roomCount }, () => null));
+    setSelectedOffers(Array.from({ length: nextSearch.roomCount }, () => null));
     setStep(0);
   };
   const selectRoom = (selected: BookingOffer) => {
@@ -219,12 +259,11 @@ export const BookingPage = () => {
     if (!offer || selectedOffers.some((selected) => !selected)) {
       return toast.error("Выберите тариф для каждого номера.");
     }
-    const children = childrenForBooking.map(({ age, childId }) => ({
-      age,
+    const children = childrenForBooking.map(({ childId }) => ({
       birthDate: childBirthDates[childId] ?? "",
     }));
     if (
-      children.length !== submittedSearch.childAges.length ||
+      children.length !== submittedSearch.children ||
       children.some(({ birthDate }) => !birthDate)
     ) {
       return toast.error("Укажите дату рождения каждого ребёнка.");
@@ -239,7 +278,12 @@ export const BookingPage = () => {
     setSubmitting(true);
     try {
       const result = await createBookingReservation({
-        ...submittedSearch,
+        adults: submittedSearch.adults,
+        checkIn: submittedSearch.checkIn,
+        checkOut: submittedSearch.checkOut,
+        currency: submittedSearch.currency,
+        nationality: submittedSearch.nationality,
+        roomCount: submittedSearch.roomCount,
         contact: {
           email: contact.email,
           firstName: contact.firstName,
@@ -252,11 +296,11 @@ export const BookingPage = () => {
             lastName: contact.lastName,
             type: "adult" as const,
           })),
-          ...children.map(({ age, birthDate }, index) => ({
+          ...children.map(({ birthDate }, index) => ({
             birthDate,
             firstName: `Ребёнок ${index + 1}`,
             lastName: contact.lastName,
-            type: age < 1 ? ("baby" as const) : ("child" as const),
+            type: "child" as const,
           })),
         ],
         notes: contact.notes || undefined,
@@ -351,6 +395,7 @@ export const BookingPage = () => {
                     <DateRangePicker
                       adults={search.adults}
                       childAges={search.childAges}
+                      children={search.children}
                       checkIn={search.checkIn}
                       checkOut={search.checkOut}
                       roomCount={search.roomCount}
@@ -366,20 +411,7 @@ export const BookingPage = () => {
                     </span>
                     <RoomsPicker
                       rooms={roomGuests}
-                      onChange={(rooms) => {
-                        setRoomGuests(rooms);
-                        setSearch((value) => ({
-                          ...value,
-                          adults: rooms.reduce(
-                            (total, room) => total + room.adults,
-                            0,
-                          ),
-                          childAges: rooms.flatMap((room) =>
-                            room.childAges.filter((age) => age >= 0),
-                          ),
-                          roomCount: rooms.length,
-                        }));
-                      }}
+                      onChange={updateRoomGuests}
                     />
                   </div>
                   <button
@@ -656,32 +688,27 @@ export const BookingPage = () => {
                         Укажите даты рождения всех детей для оформления брони.
                       </p>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        {childrenForBooking.map(
-                          ({ age, childId }, childIndex) => (
-                            <label
-                              className="grid gap-2 text-sm font-medium"
-                              key={childId}
-                            >
-                              <span>
-                                Ребёнок {childIndex + 1} — возраст{" "}
-                                {childAgeLabel(age)}
-                              </span>
-                              <input
-                                aria-label={`Дата рождения ребёнка ${childIndex + 1}`}
-                                className="field-control"
-                                onChange={(event) =>
-                                  setChildBirthDates((value) => ({
-                                    ...value,
-                                    [childId]: event.target.value,
-                                  }))
-                                }
-                                required
-                                type="date"
-                                value={childBirthDates[childId] ?? ""}
-                              />
-                            </label>
-                          ),
-                        )}
+                        {childrenForBooking.map(({ childId }, childIndex) => (
+                          <label
+                            className="grid gap-2 text-sm font-medium"
+                            key={childId}
+                          >
+                            <span>Ребёнок {childIndex + 1}</span>
+                            <input
+                              aria-label={`Дата рождения ребёнка ${childIndex + 1}`}
+                              className="field-control"
+                              onChange={(event) =>
+                                setChildBirthDates((value) => ({
+                                  ...value,
+                                  [childId]: event.target.value,
+                                }))
+                              }
+                              required
+                              type="date"
+                              value={childBirthDates[childId] ?? ""}
+                            />
+                          </label>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1006,8 +1033,7 @@ const RoomsPicker = ({
         <span>
           {rooms.length} {rooms.length === 1 ? "номер" : "номера"} ·{" "}
           {rooms.reduce((total, room) => total + room.adults, 0)} взрослых ·{" "}
-          {rooms.reduce((total, room) => total + room.childAges.length, 0)}{" "}
-          детей
+          {rooms.reduce((total, room) => total + room.children, 0)} детей
         </span>
         <ChevronDown className="size-4 shrink-0" />
       </button>
@@ -1040,143 +1066,25 @@ const RoomsPicker = ({
                 max={12}
                 onChange={(adults) => updateRoom(index, { ...room, adults })}
               />
-              <div className="mt-3">
-                <div className="flex items-center justify-between">
-                  <span>Дети</span>
-                  <span className="text-xs text-muted-ui-foreground">
-                    в этом номере
-                  </span>
-                </div>
-                {(room.childAges.length ? room.childAges : [-1]).map(
-                  (age, childIndex) => {
-                    const childCount = room.childAges.length;
-                    return (
-                      <div
-                        className="mt-2 flex flex-wrap items-end gap-2"
-                        key={`${childIndex}-${age}`}
-                      >
-                        <label className="grid min-w-0 flex-1 gap-1">
-                          <span className="text-xs text-muted-ui-foreground">
-                            Возраст
-                          </span>
-                          <select
-                            className="field-control min-h-9 bg-white py-1"
-                            aria-label={`Возраст ребёнка ${childIndex + 1} в номере ${index + 1}`}
-                            value={age}
-                            onChange={(event) => {
-                              const nextAge = Number(event.target.value);
-                              if (nextAge < 0) {
-                                updateRoom(index, {
-                                  ...room,
-                                  childAges: [],
-                                  childIds: [],
-                                });
-                                return;
-                              }
-                              updateRoom(index, {
-                                ...room,
-                                childAges: childCount
-                                  ? room.childAges.map((current, item) =>
-                                      item === childIndex ? nextAge : current,
-                                    )
-                                  : [nextAge],
-                                childIds: childCount
-                                  ? room.childIds
-                                  : [createChildId()],
-                              });
-                            }}
-                          >
-                            <option value={-1}>Нет</option>
-                            {Array.from({ length: 18 }, (_, value) => (
-                              <option key={value} value={value}>
-                                {value === 0
-                                  ? "до 1 года"
-                                  : childAgeLabel(value)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        {childIndex === 0 && (
-                          <input
-                            aria-label={`Количество детей в номере ${index + 1}`}
-                            className="field-control min-h-9 w-16 bg-white px-2 py-1 text-center"
-                            disabled={age < 0}
-                            min={age < 0 ? 0 : 1}
-                            max={8}
-                            onChange={(event) => {
-                              const count = Math.max(
-                                0,
-                                Math.min(8, Number(event.target.value) || 0),
-                              );
-                              updateRoom(index, {
-                                ...room,
-                                childAges:
-                                  age < 0 || count === 0
-                                    ? []
-                                    : Array.from({ length: count }, () => age),
-                                childIds:
-                                  age < 0 || count === 0
-                                    ? []
-                                    : Array.from(
-                                        { length: count },
-                                        (_, item) =>
-                                          room.childIds[item] ??
-                                          createChildId(),
-                                      ),
-                              });
-                            }}
-                            type="number"
-                            value={age < 0 ? 0 : childCount}
-                          />
-                        )}
-                        {age >= 0 && (
-                          <button
-                            aria-label={`Удалить ребёнка из номера ${index + 1}`}
-                            className="text-muted-ui-foreground"
-                            onClick={() =>
-                              updateRoom(index, {
-                                ...room,
-                                childAges: room.childAges.filter(
-                                  (_, item) => item !== childIndex,
-                                ),
-                                childIds: room.childIds.filter(
-                                  (_, item) => item !== childIndex,
-                                ),
-                              })
-                            }
-                            type="button"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    );
-                  },
-                )}
-                {room.childAges.length < 8 && (
-                  <button
-                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand"
-                    onClick={() =>
-                      updateRoom(index, {
-                        ...room,
-                        childAges: [...room.childAges, 5],
-                        childIds: [...room.childIds, createChildId()],
-                      })
-                    }
-                    type="button"
-                  >
-                    <Plus className="size-4" />
-                    Добавить ребёнка
-                  </button>
-                )}
-              </div>
+              <GuestCounter
+                label="Дети"
+                value={room.children}
+                min={0}
+                max={8}
+                onChange={(children) =>
+                  updateRoom(index, { ...room, children })
+                }
+              />
             </div>
           ))}
           {rooms.length < 2 && (
             <button
               className="mt-4 w-full rounded-xl border border-brand px-4 py-2 text-sm font-semibold text-brand"
               onClick={() =>
-                onChange([...rooms, { adults: 1, childAges: [], childIds: [] }])
+                onChange([
+                  ...rooms,
+                  { id: createRoomId(), adults: 1, children: 0 },
+                ])
               }
               type="button"
             >
@@ -1323,8 +1231,7 @@ const BookingSummary = ({
             )}
           </button>
           <p className="mt-1 text-muted-ui-foreground">
-            {room.adults} взрослых ·{" "}
-            {room.childAges.filter((age) => age >= 0).length} детей
+            {room.adults} взрослых · {room.children} детей
           </p>
           <p className="mt-2 font-medium text-brand">
             {selectedRooms[index]?.roomType ?? "Номер ещё не выбран"}

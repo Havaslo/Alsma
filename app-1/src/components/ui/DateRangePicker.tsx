@@ -32,12 +32,14 @@ export const DateRangePicker = ({
   triggerClassName,
   adults,
   childAges,
+  children,
   roomCount,
 }: {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly adults: number;
   readonly childAges: readonly number[];
+  readonly children: number;
   readonly roomCount: number;
   readonly onChange: (range: { checkIn: string; checkOut: string }) => void;
   readonly panelClassName?: string;
@@ -61,6 +63,7 @@ export const DateRangePicker = ({
       {
         adults,
         childAges: [...childAges],
+        children,
         currency: "RUB",
         language: "ru",
         month: monthKey,
@@ -83,7 +86,7 @@ export const DateRangePicker = ({
         if (!controller.signal.aborted) setPrices({});
       });
     return () => controller.abort();
-  }, [adults, childAges, month, roomCount]);
+  }, [adults, childAges, children, month, roomCount]);
 
   useEffect(() => {
     if (!open) return;
