@@ -52,8 +52,14 @@ const steps = ["Номера", "Тарифы", "Контакты"];
 type RoomGuests = {
   adults: number;
   childAges: number[];
-  childBirthDates: string[];
+  childIds: string[];
 };
+let childIdSequence = 0;
+const createChildId = () => `booking-child-${childIdSequence++}`;
+const childAgeLabel = (age: number) =>
+  age === 0
+    ? "до 1 года"
+    : `${age} ${age === 1 ? "год" : age < 5 ? "года" : "лет"}`;
 const getInitialBooking = () => {
   const params = new URLSearchParams(
     typeof window === "undefined" ? "" : window.location.search,
@@ -72,7 +78,7 @@ const getInitialBooking = () => {
   const rooms = Array.from({ length: roomCount }, (_, index) => ({
     adults: index === 0 ? Math.max(1, adults - (roomCount - 1)) : 1,
     childAges: index === 0 ? childAges : [],
-    childBirthDates: index === 0 ? childAges.map(() => "") : [],
+    childIds: index === 0 ? childAges.map(() => createChildId()) : [],
   }));
   return {
     rooms,
@@ -114,6 +120,9 @@ export const BookingPage = () => {
     notes: "",
     phone: "",
   });
+  const [childBirthDates, setChildBirthDates] = useState<
+    Record<string, string>
+  >({});
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"full" | "first_night">(
     "full",
@@ -145,6 +154,12 @@ export const BookingPage = () => {
         new Date(`${search.checkIn}T12:00:00`).getTime()) /
         86_400_000,
     ),
+  );
+  const childrenForBooking = roomGuests.flatMap((room) =>
+    room.childAges.map((age, childIndex) => ({
+      age,
+      childId: room.childIds[childIndex]!,
+    })),
   );
 
   const performSearch = () => {
@@ -204,12 +219,10 @@ export const BookingPage = () => {
     if (!offer || selectedOffers.some((selected) => !selected)) {
       return toast.error("Выберите тариф для каждого номера.");
     }
-    const children = roomGuests.flatMap((room) =>
-      room.childAges.map((age, index) => ({
-        age,
-        birthDate: room.childBirthDates[index] ?? "",
-      })),
-    );
+    const children = childrenForBooking.map(({ age, childId }) => ({
+      age,
+      birthDate: childBirthDates[childId] ?? "",
+    }));
     if (
       children.length !== submittedSearch.childAges.length ||
       children.some(({ birthDate }) => !birthDate)
@@ -636,6 +649,42 @@ export const BookingPage = () => {
                       </label>
                     ))}
                   </div>
+                  {childrenForBooking.length > 0 && (
+                    <div className="mt-6 rounded-2xl border border-line bg-page p-4">
+                      <h3 className="font-semibold">Даты рождения детей</h3>
+                      <p className="mt-1 text-sm text-muted-ui-foreground">
+                        Укажите даты рождения всех детей для оформления брони.
+                      </p>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        {childrenForBooking.map(
+                          ({ age, childId }, childIndex) => (
+                            <label
+                              className="grid gap-2 text-sm font-medium"
+                              key={childId}
+                            >
+                              <span>
+                                Ребёнок {childIndex + 1} — возраст{" "}
+                                {childAgeLabel(age)}
+                              </span>
+                              <input
+                                aria-label={`Дата рождения ребёнка ${childIndex + 1}`}
+                                className="field-control"
+                                onChange={(event) =>
+                                  setChildBirthDates((value) => ({
+                                    ...value,
+                                    [childId]: event.target.value,
+                                  }))
+                                }
+                                required
+                                type="date"
+                                value={childBirthDates[childId] ?? ""}
+                              />
+                            </label>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <label className="mt-4 grid gap-2 text-sm font-medium">
                     Комментарий
                     <textarea
@@ -1001,8 +1050,6 @@ const RoomsPicker = ({
                 {(room.childAges.length ? room.childAges : [-1]).map(
                   (age, childIndex) => {
                     const childCount = room.childAges.length;
-                    const childBirthDate =
-                      room.childBirthDates[childIndex] ?? "";
                     return (
                       <div
                         className="mt-2 flex flex-wrap items-end gap-2"
@@ -1022,7 +1069,7 @@ const RoomsPicker = ({
                                 updateRoom(index, {
                                   ...room,
                                   childAges: [],
-                                  childBirthDates: [],
+                                  childIds: [],
                                 });
                                 return;
                               }
@@ -1033,9 +1080,9 @@ const RoomsPicker = ({
                                       item === childIndex ? nextAge : current,
                                     )
                                   : [nextAge],
-                                childBirthDates: childCount
-                                  ? room.childBirthDates
-                                  : [""],
+                                childIds: childCount
+                                  ? room.childIds
+                                  : [createChildId()],
                               });
                             }}
                           >
@@ -1044,36 +1091,11 @@ const RoomsPicker = ({
                               <option key={value} value={value}>
                                 {value === 0
                                   ? "до 1 года"
-                                  : `${value} ${value === 1 ? "год" : value < 5 ? "года" : "лет"}`}
+                                  : childAgeLabel(value)}
                               </option>
                             ))}
                           </select>
                         </label>
-                        {age >= 0 && (
-                          <label className="grid min-w-0 flex-1 gap-1">
-                            <span className="text-xs text-muted-ui-foreground">
-                              Дата рождения
-                            </span>
-                            <input
-                              aria-label={`Дата рождения ребёнка ${childIndex + 1} в номере ${index + 1}`}
-                              className="field-control min-h-9 bg-white py-1"
-                              onChange={(event) =>
-                                updateRoom(index, {
-                                  ...room,
-                                  childBirthDates: room.childBirthDates.map(
-                                    (current, item) =>
-                                      item === childIndex
-                                        ? event.target.value
-                                        : current,
-                                  ),
-                                })
-                              }
-                              required
-                              type="date"
-                              value={childBirthDate}
-                            />
-                          </label>
-                        )}
                         {childIndex === 0 && (
                           <input
                             aria-label={`Количество детей в номере ${index + 1}`}
@@ -1092,13 +1114,14 @@ const RoomsPicker = ({
                                   age < 0 || count === 0
                                     ? []
                                     : Array.from({ length: count }, () => age),
-                                childBirthDates:
+                                childIds:
                                   age < 0 || count === 0
                                     ? []
                                     : Array.from(
                                         { length: count },
                                         (_, item) =>
-                                          room.childBirthDates[item] ?? "",
+                                          room.childIds[item] ??
+                                          createChildId(),
                                       ),
                               });
                             }}
@@ -1116,7 +1139,7 @@ const RoomsPicker = ({
                                 childAges: room.childAges.filter(
                                   (_, item) => item !== childIndex,
                                 ),
-                                childBirthDates: room.childBirthDates.filter(
+                                childIds: room.childIds.filter(
                                   (_, item) => item !== childIndex,
                                 ),
                               })
@@ -1137,7 +1160,7 @@ const RoomsPicker = ({
                       updateRoom(index, {
                         ...room,
                         childAges: [...room.childAges, 5],
-                        childBirthDates: [...room.childBirthDates, ""],
+                        childIds: [...room.childIds, createChildId()],
                       })
                     }
                     type="button"
@@ -1153,10 +1176,7 @@ const RoomsPicker = ({
             <button
               className="mt-4 w-full rounded-xl border border-brand px-4 py-2 text-sm font-semibold text-brand"
               onClick={() =>
-                onChange([
-                  ...rooms,
-                  { adults: 1, childAges: [], childBirthDates: [] },
-                ])
+                onChange([...rooms, { adults: 1, childAges: [], childIds: [] }])
               }
               type="button"
             >
