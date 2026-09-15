@@ -22,4 +22,17 @@ export const voiceAgentTools = [
       required: ["reason"],
     },
   },
+  {
+    type: "function",
+    name: "create_booking_request",
+    description: "Сохранить заявку гостя на бронирование.",
+    parameters: {
+      type: "object",
+      properties: {
+        extracted: { type: "object" },
+        comment: { type: "string" },
+      },
+      required: ["extracted"],
+    },
+  },
 ] as const;

@@ -128,7 +128,7 @@ export const toolBodySchema = z.discriminatedUnion("name", [
   z.object({
     name: z.literal("create_booking_request"),
     callId: z.string().uuid(),
-    extracted: z.record(z.string(), z.unknown()),
+    extracted: z.record(z.string(), z.unknown()).default({}),
     comment: z.string().trim().max(4_000).optional(),
   }),
   z.object({

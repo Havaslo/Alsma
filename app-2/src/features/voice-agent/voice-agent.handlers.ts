@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
+import { hasValidAmaziBearer, parseAmaziWebhook } from "./voice-agent.amazi.js";
 import type { VoiceAgentService } from "./voice-agent.service.js";
 
 export const createHandler =
@@ -119,6 +120,54 @@ export const mangoWebhookHandler =
         received: true,
       });
     } catch (error) {
+      next(error);
+    }
+  };
+
+export const createAmaziWebhookHandler =
+  ({
+    closeRelay,
+    secret,
+    service,
+  }: {
+    readonly closeRelay: (sessionId: string) => void;
+    readonly secret?: string;
+    readonly service: VoiceAgentService;
+  }): RequestHandler =>
+  async (request, response, next) => {
+    let claimedEventKey: string | undefined;
+    try {
+      if (
+        secret &&
+        !hasValidAmaziBearer(request.header("authorization"), secret)
+      ) {
+        response.status(401).json({
+          error: { code: "invalid_amazi_webhook_authorization" },
+        });
+        return;
+      }
+      const event = parseAmaziWebhook({
+        body: request.body,
+        headerSessionId: request.header("x-amazi-session-id"),
+      });
+      const claimed = await service.claimAmaziWebhook(event);
+      if (!claimed) {
+        response.status(202).json({ duplicate: true, received: true });
+        return;
+      }
+      claimedEventKey = event.eventKey;
+      await service.handleAmaziWebhook(event);
+      if (
+        event.eventType === "voice.call.completed" ||
+        event.eventType === "voice.call.failed"
+      )
+        closeRelay(event.sessionId);
+      response.status(202).json({ received: true });
+    } catch (error) {
+      if (claimedEventKey)
+        await service
+          .releaseAmaziWebhook(claimedEventKey)
+          .catch(() => undefined);
       next(error);
     }
   };

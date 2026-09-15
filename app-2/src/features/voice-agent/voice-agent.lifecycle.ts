@@ -76,6 +76,7 @@ export const createMangoEventHandler = ({
     callerPhone?: string;
     entryId?: string;
     sipCallId?: string;
+    timestamp?: number;
   }) => {
     const existing =
       (event.sipCallId
@@ -86,8 +87,17 @@ export const createMangoEventHandler = ({
         ? await repository.findByProviderEntryId(event.entryId)
         : null) ??
       (await repository.findByProviderCallId(event.callId));
+    if (existing) return existing;
+    const amaziMatch =
+      event.callerPhone &&
+      typeof repository.findActiveAmaziCallByCallerPhone === "function"
+        ? await repository.findActiveAmaziCallByCallerPhone(
+            event.callerPhone,
+            event.timestamp ? new Date(event.timestamp * 1_000) : new Date(),
+          )
+        : null;
     return (
-      existing ??
+      amaziMatch ??
       (await repository.ensureCall({
         callerPhone: event.callerPhone,
         provider: "mango",
@@ -109,6 +119,7 @@ export const createMangoEventHandler = ({
         callerPhone: event.from?.number,
         entryId: event.entry_id,
         sipCallId: event.sip_call_id,
+        timestamp: event.timestamp,
       }));
     if (
       event.seq !== undefined &&
@@ -150,8 +161,18 @@ export const createMangoEventHandler = ({
       (event.sip_call_id
         ? await repository.findBySipCallId(event.sip_call_id)
         : null) ?? (await repository.findByProviderEntryId(event.entry_id));
+    const amaziMatch =
+      !call &&
+      event.from?.number &&
+      typeof repository.findActiveAmaziCallByCallerPhone === "function"
+        ? await repository.findActiveAmaziCallByCallerPhone(
+            event.from.number,
+            new Date(event.create_time * 1_000),
+          )
+        : null;
     const target =
       call ??
+      amaziMatch ??
       (await repository.ensureCall({
         callerPhone: event.from?.number,
         provider: "mango",

@@ -2,6 +2,11 @@ import type { RequestHandler } from "express";
 import { timingSafeEqual } from "node:crypto";
 
 import type { Database } from "../../lib/database/database.js";
+import { HttpError } from "../../lib/http/http-error.js";
+import {
+  amaziProviderCallId,
+  parseAmaziRelayUrl,
+} from "./voice-agent.amazi.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
@@ -43,7 +48,15 @@ const getConfiguration = async (database: Database) => {
 };
 
 export const createVoiceConfigurationHandler =
-  (database: Database, secret?: string): RequestHandler =>
+  (
+    database: Database,
+    secret?: string,
+    onAmaziSession?: (input: {
+      readonly eventRelayUrl?: string;
+      readonly providerCallId: string;
+      readonly sessionId: string;
+    }) => Promise<void>,
+  ): RequestHandler =>
   async (request, response, next) => {
     try {
       if (secret && !hasValidBearer(request.header("authorization"), secret)) {
@@ -51,6 +64,27 @@ export const createVoiceConfigurationHandler =
           .status(401)
           .json({ error: { code: "invalid_configuration_authorization" } });
         return;
+      }
+      const sessionId = request.header("x-amazi-session-id")?.trim();
+      const eventRelayHeader = request.header("x-amazi-event-relay-url");
+      if (eventRelayHeader && !sessionId)
+        throw new HttpError(
+          400,
+          "INVALID_AMAZI_CONFIGURATION_HEADERS",
+          "Amazi session id is required with an event relay URL.",
+        );
+      if (sessionId) {
+        if (sessionId.length > 200)
+          throw new HttpError(
+            400,
+            "INVALID_AMAZI_CONFIGURATION_HEADERS",
+            "Amazi session id is too long.",
+          );
+        await onAmaziSession?.({
+          eventRelayUrl: parseAmaziRelayUrl(eventRelayHeader),
+          providerCallId: amaziProviderCallId(sessionId),
+          sessionId,
+        });
       }
       response
         .type("application/json")

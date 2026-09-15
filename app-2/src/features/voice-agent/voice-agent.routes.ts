@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
+import { createAmaziEventRelay } from "./voice-agent.amazi.relay.js";
 import {
   createVoiceConfigurationHandler,
   voiceTestCompletedHandler,
@@ -10,6 +11,7 @@ import {
 import {
   answerHandler,
   completeHandler,
+  createAmaziWebhookHandler,
   createHandler,
   mangoWebhookHandler,
   providerCompleteHandler,
@@ -65,6 +67,7 @@ export const createVoiceAgentRouter = (
       openaiSipBaseUrl: openaiSip?.baseUrl,
     },
   );
+  const amaziRelay = createAmaziEventRelay({ service });
   const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);
   router.get("/sip/status", (_request, response) =>
     response.json({
@@ -77,7 +80,19 @@ export const createVoiceAgentRouter = (
   );
   router.get(
     "/configuration",
-    createVoiceConfigurationHandler(database, voiceConfigurationSecret),
+    createVoiceConfigurationHandler(
+      database,
+      voiceConfigurationSecret,
+      async ({ eventRelayUrl, providerCallId, sessionId }) => {
+        await service.ensureAmaziCall({ sessionId });
+        if (eventRelayUrl)
+          amaziRelay.connect({
+            eventRelayUrl,
+            providerCallId,
+            sessionId,
+          });
+      },
+    ),
   );
   router.post("/configuration", voiceTestCompletedHandler);
   router.post(
@@ -135,6 +150,14 @@ export const createVoiceAgentRouter = (
       }
     },
     mangoWebhookHandler(service),
+  );
+  router.post(
+    "/amazi/webhook",
+    createAmaziWebhookHandler({
+      closeRelay: amaziRelay.close,
+      secret: voiceConfigurationSecret,
+      service,
+    }),
   );
   router.post(
     "/tools",

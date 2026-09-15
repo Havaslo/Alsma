@@ -257,6 +257,31 @@ export const createVoiceAgentRepository = (database: Database) => ({
       orderBy: { startedAt: "desc" },
       where: { providerEntryId },
     }),
+  findActiveAmaziCallByCallerPhone: async (
+    callerPhone: string,
+    at = new Date(),
+  ) => {
+    const windowStart = new Date(at.getTime() - 15 * 60 * 1_000);
+    const windowEnd = new Date(at.getTime() + 15 * 60 * 1_000);
+    const normalizePhone = (value: string) => value.replace(/\D/gu, "");
+    const calls = await database.client.voiceCall.findMany({
+      orderBy: { startedAt: "desc" },
+      take: 20,
+      where: {
+        callerPhone: { not: null },
+        mangoCallId: null,
+        provider: "amazi",
+        startedAt: { gte: windowStart, lte: windowEnd },
+        status: { in: ["active", "on_hold", "transferring"] },
+      },
+    });
+    const normalized = normalizePhone(callerPhone);
+    return calls.find(
+      (call) =>
+        Boolean(call.callerPhone) &&
+        normalizePhone(call.callerPhone as string) === normalized,
+    );
+  },
   updateCall: (id: string, data: Prisma.VoiceCallUpdateInput) =>
     database.client.voiceCall.update({ data, where: { id } }),
   claimWebhookEvent: async (input: {

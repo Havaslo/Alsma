@@ -4,6 +4,8 @@ import type { Database } from "../../lib/database/database.js";
 import { createLogger } from "../../lib/logger.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
+import { createAmaziLifecycle } from "./voice-agent.amazi.lifecycle.js";
+import { createVoiceTestAudioTurn } from "./voice-agent.audio.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
@@ -334,70 +336,16 @@ export const createVoiceAgentService = (
     }
     return transferToManager(input.callId, input.reason);
   };
+  const amaziLifecycle = createAmaziLifecycle(repository);
+  const testAudioTurn = createVoiceTestAudioTurn({
+    apiKey,
+    baseUrl: openaiBaseUrl,
+    complete: completeWithOpenAI,
+    getKnowledgeContext: repository.getKnowledgeContext,
+  });
 
   return {
-    testAudioTurn: async (audioBase64: string, mimeType: string) => {
-      if (!apiKey || !openaiBaseUrl)
-        throw new Error("OpenAI AI Gateway is not configured");
-      const audio = Buffer.from(audioBase64, "base64");
-      const form = new FormData();
-      form.append("file", new Blob([audio], { type: mimeType }), "turn.webm");
-      form.append("model", "gpt-4o-mini-transcribe");
-      const transcriptionResponse = await fetch(
-        `${openaiBaseUrl.replace(/\/$/u, "")}/audio/transcriptions`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}` },
-          body: form,
-          signal: AbortSignal.timeout(30_000),
-        },
-      );
-      if (!transcriptionResponse.ok)
-        throw new Error(
-          `Audio transcription failed with status ${transcriptionResponse.status}`,
-        );
-      const transcription = (await transcriptionResponse.json()) as {
-        text?: string;
-      };
-      const text = transcription.text?.trim();
-      if (!text)
-        throw new Error("The audio did not contain recognizable speech");
-      const answer = await (async () => {
-        const knowledge = await repository.getKnowledgeContext();
-        return completeWithOpenAI(
-          `Вопрос гостя: ${text}\n\nБаза знаний и правила:\n${knowledge}`,
-        );
-      })();
-      const speechResponse = await fetch(
-        `${openaiBaseUrl.replace(/\/$/u, "")}/audio/speech`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: answer,
-            model: "gpt-4o-mini-tts",
-            response_format: "mp3",
-            voice: "marin",
-          }),
-          signal: AbortSignal.timeout(30_000),
-        },
-      );
-      if (!speechResponse.ok)
-        throw new Error(
-          `Audio speech failed with status ${speechResponse.status}`,
-        );
-      return {
-        answer,
-        audioBase64: Buffer.from(await speechResponse.arrayBuffer()).toString(
-          "base64",
-        ),
-        audioMimeType: "audio/mpeg",
-        transcript: text,
-      };
-    },
+    testAudioTurn,
     createCall: async (input: CreateCallBody) => ({
       ...(await repository.createCall(input)),
     }),
@@ -416,6 +364,7 @@ export const createVoiceAgentService = (
       return { answer, callId };
     },
     completeCall: completeCallForId,
+    ...amaziLifecycle,
     handleMangoWebhook: async (providerEvent: MangoProviderEvent) => {
       const claimed = await repository.claimWebhookEvent({
         callId:
