@@ -233,6 +233,7 @@ export const createApiRouter = ({
       },
       openaiSip,
       voiceConfigurationSecret,
+      logger,
     ),
   );
   return router;

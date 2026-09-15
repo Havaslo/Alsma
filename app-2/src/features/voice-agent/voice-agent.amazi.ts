@@ -39,88 +39,114 @@ const firstString = (...values: unknown[]): string | undefined => {
   return undefined;
 };
 
-const nested = (record: Record<string, unknown> | undefined, key: string) =>
-  record?.[key];
+const envelopeRecords = (
+  body: Record<string, unknown>,
+): readonly Record<string, unknown>[] => {
+  const records: Record<string, unknown>[] = [body];
+  const queue: Record<string, unknown>[] = [body];
+  const envelopeKeys = [
+    "data",
+    "event",
+    "event_data",
+    "eventData",
+    "metadata",
+    "payload",
+  ];
+  while (queue.length > 0) {
+    const record = queue.shift();
+    if (!record) continue;
+    for (const key of envelopeKeys) {
+      const child = asRecord(record[key]);
+      if (!child || records.includes(child)) continue;
+      records.push(child);
+      queue.push(child);
+    }
+  }
+  return records;
+};
 
 const eventType = (
   body: Record<string, unknown>,
 ): AmaziEventType | undefined => {
-  const value = firstString(
-    body.type,
-    body.event,
-    body.event_type,
-    body.eventType,
-    nested(asRecord(body.data), "type"),
-    nested(asRecord(body.data), "event"),
-  );
-  return amaziEventTypes.includes(value as AmaziEventType)
-    ? (value as AmaziEventType)
-    : undefined;
+  for (const record of envelopeRecords(body)) {
+    const value = firstString(
+      record.type,
+      record.event,
+      record.event_type,
+      record.eventType,
+    );
+    if (amaziEventTypes.includes(value as AmaziEventType))
+      return value as AmaziEventType;
+  }
+  return undefined;
 };
 
 const sessionId = (body: Record<string, unknown>): string | undefined => {
-  const data = asRecord(body.data);
-  const call = asRecord(body.call) ?? asRecord(data?.call);
-  return firstString(
-    body.session_id,
-    body.sessionId,
-    body.session,
-    data?.session_id,
-    data?.sessionId,
-    call?.session_id,
-    call?.sessionId,
-  );
+  const records = envelopeRecords(body);
+  for (const record of records) {
+    const direct = firstString(
+      record.session_id,
+      record.sessionId,
+      typeof record.session === "string" ? record.session : undefined,
+    );
+    if (direct) return direct;
+    const call = asRecord(record.call);
+    const callSessionId = firstString(call?.session_id, call?.sessionId);
+    if (callSessionId) return callSessionId;
+    for (const key of ["session", "conversation"]) {
+      const container = asRecord(record[key]);
+      const nestedId = firstString(
+        container?.session_id,
+        container?.sessionId,
+        container?.id,
+      );
+      if (nestedId) return nestedId;
+    }
+  }
+  return undefined;
 };
 
 const callerPhone = (body: Record<string, unknown>): string | undefined => {
-  const data = asRecord(body.data);
-  const call = asRecord(body.call) ?? asRecord(data?.call);
-  const caller =
-    asRecord(body.caller) ?? asRecord(data?.caller) ?? asRecord(call?.caller);
-  const from =
-    asRecord(body.from) ??
-    asRecord(data?.from) ??
-    asRecord(call?.from) ??
-    caller;
-  return firstString(
-    body.caller_phone,
-    body.callerPhone,
-    data?.caller_phone,
-    data?.callerPhone,
-    data?.phone_number,
-    data?.phoneNumber,
-    call?.caller_phone,
-    call?.callerPhone,
-    call?.phone_number,
-    call?.phoneNumber,
-    caller?.phone,
-    from?.number,
-    from?.phone,
-  );
+  for (const record of envelopeRecords(body)) {
+    const call = asRecord(record.call);
+    const caller = asRecord(record.caller) ?? asRecord(call?.caller);
+    const from = asRecord(record.from) ?? asRecord(call?.from) ?? caller;
+    const value = firstString(
+      record.caller_phone,
+      record.callerPhone,
+      record.phone_number,
+      record.phoneNumber,
+      call?.caller_phone,
+      call?.callerPhone,
+      call?.phone_number,
+      call?.phoneNumber,
+      caller?.phone,
+      from?.number,
+      from?.phone,
+    );
+    if (value) return value;
+  }
+  return undefined;
 };
 
 const eventId = (body: Record<string, unknown>): string | undefined => {
-  const data = asRecord(body.data);
-  return firstString(
-    body.id,
-    body.event_id,
-    body.eventId,
-    data?.id,
-    data?.event_id,
-    data?.eventId,
-  );
+  for (const record of envelopeRecords(body)) {
+    const value = firstString(record.event_id, record.eventId, record.id);
+    if (value) return value;
+  }
+  return undefined;
 };
 
 const occurredAt = (body: Record<string, unknown>): Date | undefined => {
-  const data = asRecord(body.data);
-  const value =
-    body.timestamp ?? body.occurred_at ?? body.occurredAt ?? data?.timestamp;
-  if (typeof value === "number" || typeof value === "string") {
-    const numeric = typeof value === "number" ? value : Number(value);
-    const date = Number.isFinite(numeric)
-      ? new Date(numeric < 10_000_000_000 ? numeric * 1_000 : numeric)
-      : new Date(value);
-    if (!Number.isNaN(date.getTime())) return date;
+  for (const record of envelopeRecords(body)) {
+    const value = record.timestamp ?? record.occurred_at ?? record.occurredAt;
+    if (typeof value === "number" || typeof value === "string") {
+      const numeric = typeof value === "number" ? value : Number(value);
+      const date = Number.isFinite(numeric)
+        ? new Date(numeric < 10_000_000_000 ? numeric * 1_000 : numeric)
+        : new Date(value);
+      if (!Number.isNaN(date.getTime())) return date;
+    }
   }
   return undefined;
 };

@@ -1,5 +1,7 @@
 import type { RequestHandler } from "express";
+import type { Logger } from "pino";
 
+import { createLogger } from "../../lib/logger.js";
 import { hasValidAmaziBearer, parseAmaziWebhook } from "./voice-agent.amazi.js";
 import type { VoiceAgentService } from "./voice-agent.service.js";
 
@@ -127,15 +129,32 @@ export const mangoWebhookHandler =
 export const createAmaziWebhookHandler =
   ({
     closeRelay,
+    logger = createLogger(),
     secret,
     service,
   }: {
     readonly closeRelay: (sessionId: string) => void;
+    readonly logger?: Logger;
     readonly secret?: string;
     readonly service: VoiceAgentService;
   }): RequestHandler =>
   async (request, response, next) => {
     let claimedEventKey: string | undefined;
+    let stage = "authorization";
+    const logFailure = (failureStage: string, error: unknown) => {
+      const errorCode =
+        error && typeof error === "object" && "code" in error
+          ? typeof error.code === "string"
+            ? error.code
+            : "unknown"
+          : error instanceof Error
+            ? error.name
+            : "unknown";
+      logger.error(
+        { errorCode, stage: failureStage },
+        "Amazi webhook processing failed",
+      );
+    };
     try {
       if (
         secret &&
@@ -146,28 +165,40 @@ export const createAmaziWebhookHandler =
         });
         return;
       }
+      stage = "parse";
       const event = parseAmaziWebhook({
         body: request.body,
         headerSessionId: request.header("x-amazi-session-id"),
       });
+      stage = "claim";
       const claimed = await service.claimAmaziWebhook(event);
       if (!claimed) {
         response.status(202).json({ duplicate: true, received: true });
         return;
       }
       claimedEventKey = event.eventKey;
-      await service.handleAmaziWebhook(event);
-      if (
-        event.eventType === "voice.call.completed" ||
-        event.eventType === "voice.call.failed"
-      )
-        closeRelay(event.sessionId);
+      void (async () => {
+        try {
+          await service.handleAmaziWebhook(event);
+          if (
+            event.eventType === "voice.call.completed" ||
+            event.eventType === "voice.call.failed"
+          )
+            closeRelay(event.sessionId);
+        } catch (error) {
+          logFailure("lifecycle", error);
+          await service
+            .releaseAmaziWebhook(event.eventKey)
+            .catch((releaseError) => logFailure("release_claim", releaseError));
+        }
+      })();
       response.status(202).json({ received: true });
     } catch (error) {
       if (claimedEventKey)
         await service
           .releaseAmaziWebhook(claimedEventKey)
-          .catch(() => undefined);
+          .catch((releaseError) => logFailure("release_claim", releaseError));
+      logFailure(stage, error);
       next(error);
     }
   };

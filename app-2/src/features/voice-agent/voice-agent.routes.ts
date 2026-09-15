@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -53,6 +54,7 @@ export const createVoiceAgentRouter = (
     readonly webhookSecret?: string;
   },
   voiceConfigurationSecret?: string,
+  logger?: Logger,
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -67,7 +69,11 @@ export const createVoiceAgentRouter = (
       openaiSipBaseUrl: openaiSip?.baseUrl,
     },
   );
-  const amaziRelay = createAmaziEventRelay({ service });
+  const amaziRelay = createAmaziEventRelay({
+    authorizationToken: apiKey,
+    logger,
+    service,
+  });
   const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);
   router.get("/sip/status", (_request, response) =>
     response.json({
@@ -155,6 +161,7 @@ export const createVoiceAgentRouter = (
     "/amazi/webhook",
     createAmaziWebhookHandler({
       closeRelay: amaziRelay.close,
+      logger,
       secret: voiceConfigurationSecret,
       service,
     }),

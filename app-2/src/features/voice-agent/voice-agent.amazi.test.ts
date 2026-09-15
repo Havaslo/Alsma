@@ -25,6 +25,15 @@ test("parses an Amazi lifecycle event from the header and ignores extra fields",
   assert.equal(first.sessionId, "session-1");
   assert.equal(first.callerPhone, "+7 (900) 000-00-01");
   assert.equal(first.eventKey, duplicate.eventKey);
+  const nestedEnvelope = parseAmaziWebhook({
+    body: {
+      event: {
+        type: "voice.call.connected",
+        payload: { conversation: { id: "session-2" } },
+      },
+    },
+  });
+  assert.equal(nestedEnvelope.sessionId, "session-2");
   assert.throws(() =>
     parseAmaziWebhook({
       body: { type: "voice.call.started", session_id: "other" },
@@ -118,7 +127,10 @@ class FakeRelaySocket extends EventEmitter {
   readonly sent: string[] = [];
   readyState = 1;
 
-  constructor(readonly url: string) {
+  constructor(
+    readonly url: string,
+    readonly options?: { readonly headers?: Record<string, string> },
+  ) {
     super();
     FakeRelaySocket.instances.push(this);
   }
@@ -132,6 +144,112 @@ class FakeRelaySocket extends EventEmitter {
     this.emit("close");
   }
 }
+
+const silentLogger = {
+  error: () => undefined,
+  warn: () => undefined,
+} as never;
+
+const wait = async (milliseconds: number) => {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+};
+
+test("passes the Gateway bearer to every relay connection without sending it as an event", () => {
+  FakeRelaySocket.instances.length = 0;
+  const relay = createAmaziEventRelay({
+    authorizationToken: "gateway-secret",
+    logger: silentLogger,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: false,
+        reason: "test",
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-auth",
+    sessionId: "session-auth",
+  });
+
+  const socket = FakeRelaySocket.instances[0];
+  assert.ok(socket);
+  assert.equal(socket.options?.headers?.Authorization, "Bearer gateway-secret");
+  assert.deepEqual(socket.sent, []);
+  assert.doesNotMatch(JSON.stringify(socket.sent), /gateway-secret/u);
+  relay.close("session-auth");
+});
+
+test("retries a not-yet-registered relay session after a 404", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const relay = createAmaziEventRelay({
+    authorizationToken: "gateway-secret",
+    logger: silentLogger,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: false,
+        reason: "test",
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-404",
+    sessionId: "session-404",
+  });
+
+  const first = FakeRelaySocket.instances[0];
+  assert.ok(first);
+  first.emit("unexpected-response", {}, { statusCode: 404 });
+  await wait(300);
+
+  assert.equal(FakeRelaySocket.instances.length, 2);
+  assert.equal(
+    FakeRelaySocket.instances[1]?.options?.headers?.Authorization,
+    "Bearer gateway-secret",
+  );
+  assert.equal(relay.size(), 1);
+  relay.close("session-404");
+});
+
+test("stops relay retries after an authentication response", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const logs: unknown[] = [];
+  const relay = createAmaziEventRelay({
+    authorizationToken: "gateway-secret",
+    logger: {
+      error: (...args: unknown[]) => logs.push(args),
+      warn: (...args: unknown[]) => logs.push(args),
+    } as never,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: false,
+        reason: "test",
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-401",
+    sessionId: "session-401",
+  });
+
+  const socket = FakeRelaySocket.instances[0];
+  assert.ok(socket);
+  socket.emit("unexpected-response", {}, { statusCode: 401 });
+  await wait(300);
+
+  assert.equal(FakeRelaySocket.instances.length, 1);
+  assert.doesNotMatch(JSON.stringify(logs), /gateway-secret/u);
+  relay.close("session-401");
+});
 
 test("executes an Amazi relay tool once and returns function output on the same relay", async () => {
   FakeRelaySocket.instances.length = 0;
@@ -180,4 +298,130 @@ test("executes an Amazi relay tool once and returns function output on the same 
   assert.match(socket.sent[0] ?? "", /function_call_output/u);
   assert.match(socket.sent[1] ?? "", /response\.create/u);
   relay.close("session-1");
+});
+
+const createWebhookResponse = () => {
+  const state = { body: undefined as unknown, status: 0 };
+  const response = {
+    json(body: unknown) {
+      state.body = body;
+      return this;
+    },
+    status(status: number) {
+      state.status = status;
+      return this;
+    },
+  };
+  return { response, state };
+};
+
+test("returns 202 for valid Amazi lifecycle events after claiming each event", async () => {
+  const handled: string[] = [];
+  const service = {
+    claimAmaziWebhook: async () => true,
+    handleAmaziWebhook: async (event: { eventType: string }) => {
+      handled.push(event.eventType);
+    },
+    releaseAmaziWebhook: async () => undefined,
+  };
+  for (const eventType of [
+    "voice.call.started",
+    "voice.call.connected",
+    "voice.call.completed",
+  ]) {
+    const { response, state } = createWebhookResponse();
+    let nextError: unknown;
+    const handler = createAmaziWebhookHandler({
+      closeRelay: () => undefined,
+      logger: silentLogger,
+      service: service as never,
+    });
+    await handler(
+      {
+        body: { type: eventType, data: { sessionId: "lifecycle-session" } },
+        header: () => undefined,
+      } as never,
+      response as never,
+      (error: unknown) => {
+        nextError = error;
+      },
+    );
+    assert.equal(nextError, undefined);
+    assert.equal(state.status, 202);
+    assert.deepEqual(state.body, { received: true });
+  }
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(handled, [
+    "voice.call.started",
+    "voice.call.connected",
+    "voice.call.completed",
+  ]);
+});
+
+test("releases a durable Amazi claim when lifecycle handling fails", async () => {
+  const released: string[] = [];
+  const service = {
+    claimAmaziWebhook: async () => true,
+    handleAmaziWebhook: async () => {
+      throw new Error("lifecycle failed");
+    },
+    releaseAmaziWebhook: async (eventKey: string) => {
+      released.push(eventKey);
+    },
+  };
+  const { response, state } = createWebhookResponse();
+  let nextError: unknown;
+  const handler = createAmaziWebhookHandler({
+    closeRelay: () => undefined,
+    logger: silentLogger,
+    service: service as never,
+  });
+  await handler(
+    {
+      body: { type: "voice.call.connected", session_id: "failed-session" },
+      header: () => undefined,
+    } as never,
+    response as never,
+    (error: unknown) => {
+      nextError = error;
+    },
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(nextError, undefined);
+  assert.equal(state.status, 202);
+  assert.deepEqual(released, ["amazi:failed-session:voice.call.connected:"]);
+});
+
+test("rejects an Amazi webhook without session metadata instead of claiming it", async () => {
+  let claimCount = 0;
+  const service = {
+    claimAmaziWebhook: async () => {
+      claimCount += 1;
+      return true;
+    },
+    handleAmaziWebhook: async () => undefined,
+    releaseAmaziWebhook: async () => undefined,
+  };
+  const { response, state } = createWebhookResponse();
+  let nextError: unknown;
+  const handler = createAmaziWebhookHandler({
+    closeRelay: () => undefined,
+    logger: silentLogger,
+    service: service as never,
+  });
+  await handler(
+    {
+      body: { type: "voice.call.started", data: { callerPhone: "+7000" } },
+      header: () => undefined,
+    } as never,
+    response as never,
+    (error: unknown) => {
+      nextError = error;
+    },
+  );
+
+  assert.equal(claimCount, 0);
+  assert.equal(state.status, 0);
+  assert.equal((nextError as { status?: number })?.status, 400);
 });

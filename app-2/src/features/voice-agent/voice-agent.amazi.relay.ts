@@ -15,7 +15,10 @@ type RelayEvent = {
 };
 
 type RelaySocket = WebSocket;
-type RelaySocketConstructor = new (url: string) => RelaySocket;
+type RelaySocketConstructor = new (
+  url: string,
+  options?: WebSocket.ClientOptions,
+) => RelaySocket;
 
 type AmaziRelayOptions = {
   readonly logger?: Logger;
@@ -23,6 +26,7 @@ type AmaziRelayOptions = {
     VoiceAgentService,
     "appendTranscriptByProvider" | "toolForProviderCall"
   >;
+  readonly authorizationToken?: string;
   readonly WebSocketClass?: RelaySocketConstructor;
 };
 
@@ -35,7 +39,10 @@ type RelaySession = {
   reconnectAttempts: number;
   reconnectTimer?: NodeJS.Timeout;
   closing: boolean;
+  retryDisabled: boolean;
 };
+
+const relayRetryDelays = [250, 500, 1_000, 2_000] as const;
 
 const transcriptEventTypes = new Set([
   "conversation.item.input_audio_transcription.completed",
@@ -60,6 +67,7 @@ const transcriptRole = (type: string): "guest" | "assistant" =>
 export const createAmaziEventRelay = ({
   logger = createLogger(),
   service,
+  authorizationToken,
   WebSocketClass = WebSocket,
 }: AmaziRelayOptions) => {
   const sessions = new Map<string, RelaySession>();
@@ -69,7 +77,12 @@ export const createAmaziEventRelay = ({
     callId: string,
     result: unknown,
   ) => {
-    if (session.socket.readyState !== WebSocket.OPEN) return;
+    if (
+      session.retryDisabled ||
+      session.socket.readyState !== WebSocket.OPEN ||
+      sessions.get(session.sessionId) !== session
+    )
+      return;
     session.socket.send(
       JSON.stringify({
         type: "conversation.item.create",
@@ -104,8 +117,44 @@ export const createAmaziEventRelay = ({
     sendToolOutput(session, event.call_id, result);
   };
 
-  const wire = (session: RelaySession) => {
-    session.socket.on("message", (data, isBinary) => {
+  const scheduleReconnect = (
+    session: RelaySession,
+    stage: "unexpected_response" | "socket_close",
+    statusCode?: number,
+  ) => {
+    if (
+      session.closing ||
+      session.retryDisabled ||
+      session.reconnectTimer ||
+      session.reconnectAttempts >= relayRetryDelays.length
+    )
+      return;
+    const delay = relayRetryDelays[session.reconnectAttempts];
+    session.reconnectAttempts += 1;
+    logger.warn(
+      {
+        ...(statusCode === undefined ? {} : { statusCode }),
+        attempt: session.reconnectAttempts,
+        stage,
+      },
+      "Amazi event relay reconnect scheduled",
+    );
+    session.reconnectTimer = setTimeout(() => {
+      session.reconnectTimer = undefined;
+      if (sessions.get(session.sessionId) !== session || session.closing)
+        return;
+      openSocket(session);
+    }, delay);
+  };
+
+  const wire = (session: RelaySession, socket: RelaySocket) => {
+    socket.on("message", (data, isBinary) => {
+      if (
+        sessions.get(session.sessionId) !== session ||
+        session.socket !== socket ||
+        session.retryDisabled
+      )
+        return;
       if (isBinary) return;
       const event = parseRelayEvent(data);
       if (!event?.type) return;
@@ -146,51 +195,107 @@ export const createAmaziEventRelay = ({
             });
         });
     });
-    session.socket.on("error", (error) => {
+    socket.on("error", (error) => {
       logger.warn(
         {
           error: error.name,
-          sessionId: session.sessionId,
           stage: "amazi_relay_socket",
         },
         "Amazi event relay socket failed",
       );
     });
-    session.socket.on("close", () => {
-      if (sessions.get(session.sessionId) !== session) return;
-      sessions.delete(session.sessionId);
-      if (session.closing || session.reconnectAttempts >= 1) return;
-      session.reconnectAttempts += 1;
-      session.reconnectTimer = setTimeout(() => {
-        if (!sessions.has(session.sessionId))
-          connect(
-            session.sessionId,
-            session.providerCallId,
-            session.eventRelayUrl,
-            session.reconnectAttempts,
-          );
-      }, 250);
+    socket.on("unexpected-response", (request, response) => {
+      if (
+        sessions.get(session.sessionId) !== session ||
+        session.socket !== socket
+      )
+        return;
+      const statusCode = response.statusCode;
+      if (statusCode === 401) {
+        session.retryDisabled = true;
+        logger.error(
+          { stage: "amazi_relay_authentication", statusCode },
+          "Amazi event relay authentication failed",
+        );
+        response.resume?.();
+        request.destroy?.();
+        return;
+      }
+      if (statusCode === 404) {
+        scheduleReconnect(session, "unexpected_response", statusCode);
+        response.resume?.();
+        request.destroy?.();
+        return;
+      }
+      scheduleReconnect(session, "unexpected_response", statusCode);
+      response.resume?.();
+      request.destroy?.();
     });
+    socket.on("close", () => {
+      if (
+        sessions.get(session.sessionId) !== session ||
+        session.socket !== socket
+      )
+        return;
+      if (session.closing || session.retryDisabled) {
+        sessions.delete(session.sessionId);
+        return;
+      }
+      scheduleReconnect(session, "socket_close");
+      if (
+        !session.reconnectTimer &&
+        session.reconnectAttempts >= relayRetryDelays.length
+      ) {
+        sessions.delete(session.sessionId);
+        logger.error(
+          { stage: "amazi_relay_reconnect_exhausted" },
+          "Amazi event relay reconnect attempts exhausted",
+        );
+      }
+    });
+  };
+
+  const openSocket = (session: RelaySession): void => {
+    if (session.closing || session.retryDisabled) return;
+    try {
+      const socket = new WebSocketClass(
+        session.eventRelayUrl,
+        authorizationToken
+          ? { headers: { Authorization: `Bearer ${authorizationToken}` } }
+          : undefined,
+      );
+      session.socket = socket;
+      wire(session, socket);
+    } catch (error) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.name : "unknown",
+          stage: "amazi_relay_socket_create",
+        },
+        "Amazi event relay socket creation failed",
+      );
+      scheduleReconnect(session, "socket_close");
+    }
   };
 
   const connect = (
     sessionId: string,
     providerCallId: string,
     eventRelayUrl: string,
-    reconnectAttempts = 0,
   ): void => {
     if (sessions.has(sessionId)) return;
     const session = {
       eventRelayUrl,
       providerCallId,
-      reconnectAttempts,
+      reconnectAttempts: 0,
       sessionId,
-      socket: new WebSocketClass(eventRelayUrl),
+      socket: undefined as unknown as RelaySocket,
       toolCallIds: new Set<string>(),
       closing: false,
+      retryDisabled: false,
     } satisfies RelaySession;
     sessions.set(sessionId, session);
-    wire(session);
+    openSocket(session);
   };
 
   return {
@@ -201,8 +306,8 @@ export const createAmaziEventRelay = ({
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
       sessions.delete(sessionId);
       if (
-        session.socket.readyState === WebSocket.OPEN ||
-        session.socket.readyState === WebSocket.CONNECTING
+        session.socket?.readyState === WebSocket.OPEN ||
+        session.socket?.readyState === WebSocket.CONNECTING
       )
         session.socket.close(1000, "call_finished");
     },
