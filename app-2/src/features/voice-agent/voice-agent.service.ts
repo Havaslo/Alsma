@@ -19,6 +19,38 @@ import { transcribeMangoRecording } from "./voice-agent.transcription.js";
 
 const logger = createLogger();
 
+export class MangoTransferError extends Error {
+  readonly diagnostic: string;
+
+  constructor(diagnostic: string) {
+    super(diagnostic);
+    this.name = "MangoTransferError";
+    this.diagnostic = diagnostic;
+  }
+}
+
+const defaultTransferSleep = (delay: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, delay));
+
+const mangoResultCode = (value: unknown): string | undefined => {
+  if (typeof value === "number" && Number.isInteger(value))
+    return String(value);
+  if (typeof value === "string" && /^\d{1,6}$/u.test(value.trim()))
+    return value.trim();
+  return undefined;
+};
+
+const mangoHttpStatus = (status: number): string =>
+  Number.isInteger(status) && status >= 100 && status <= 599
+    ? String(status)
+    : "unknown";
+
+const isTimeoutError = (error: unknown) =>
+  error instanceof Error &&
+  (error.name === "AbortError" ||
+    error.name === "TimeoutError" ||
+    /timed?\s*out|timeout/iu.test(error.message));
+
 export const selectMangoTransferInitiator = (call: {
   readonly mangoTransferInitiator?: string | null;
 }) => {
@@ -46,13 +78,14 @@ export const buildMangoTransferPayload = ({
   initiator,
 });
 
-const transferMangoCall = async ({
+export const transferMangoCall = async ({
   apiKey,
   callId,
   destination,
   initiator,
   salt,
   commandId,
+  sleep = defaultTransferSleep,
 }: {
   readonly apiKey: string;
   readonly callId: string;
@@ -60,6 +93,7 @@ const transferMangoCall = async ({
   readonly initiator: string;
   readonly salt: string;
   readonly commandId: string;
+  readonly sleep?: (delay: number) => Promise<void>;
 }) => {
   const payload = buildMangoTransferPayload({
     callId,
@@ -71,46 +105,81 @@ const transferMangoCall = async ({
   const sign = createHash("sha256")
     .update(`${apiKey}${json}${salt}`)
     .digest("hex");
-  const response = await fetch(
-    "https://app.mango-office.ru/vpbx/commands/transfer",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ vpbx_api_key: apiKey, sign, json }),
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  if (!response.ok) throw new Error(`Mango API failed with ${response.status}`);
-  const accepted = (await response.json()) as { result?: number | string };
+  let response: Response;
+  try {
+    response = await fetch(
+      "https://app.mango-office.ru/vpbx/commands/transfer",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ vpbx_api_key: apiKey, sign, json }),
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+  } catch (error) {
+    if (isTimeoutError(error))
+      throw new MangoTransferError("mango_transfer_timeout");
+    throw new MangoTransferError("mango_transfer_command_error");
+  }
+  if (!response.ok)
+    throw new MangoTransferError(
+      `mango_transfer_command_http_${mangoHttpStatus(response.status)}`,
+    );
+  let accepted: { result?: number | string };
+  try {
+    accepted = (await response.json()) as { result?: number | string };
+  } catch {
+    throw new MangoTransferError("mango_transfer_command_result_unknown");
+  }
+  const commandResult = mangoResultCode(accepted.result);
+  if (commandResult !== "0")
+    throw new MangoTransferError(
+      commandResult
+        ? `mango_transfer_command_result_${commandResult}`
+        : "mango_transfer_command_result_unknown",
+    );
   for (const delay of [500, 1_000, 2_000]) {
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await sleep(delay);
     const resultJson = JSON.stringify({ command_id: commandId });
     const resultSign = createHash("sha256")
       .update(`${apiKey}${resultJson}${salt}`)
       .digest("hex");
-    const resultResponse = await fetch(
-      "https://app.mango-office.ru/vpbx/result/transfer",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          vpbx_api_key: apiKey,
-          sign: resultSign,
-          json: resultJson,
-        }),
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
+    let resultResponse: Response;
+    try {
+      resultResponse = await fetch(
+        "https://app.mango-office.ru/vpbx/result/transfer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            vpbx_api_key: apiKey,
+            sign: resultSign,
+            json: resultJson,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+    } catch (error) {
+      if (isTimeoutError(error))
+        throw new MangoTransferError("mango_transfer_timeout");
+      throw new MangoTransferError("mango_transfer_result_error");
+    }
     if (!resultResponse.ok)
-      throw new Error(`Mango result API failed with ${resultResponse.status}`);
-    const result = (await resultResponse.json()) as {
-      result?: number | string;
-    };
-    if (String(result.result ?? "") === "1000") return { ...result, commandId };
-    if (result.result && String(result.result) !== "0")
-      throw new Error(`Mango transfer rejected with ${String(result.result)}`);
+      throw new MangoTransferError(
+        `mango_transfer_result_http_${mangoHttpStatus(resultResponse.status)}`,
+      );
+    let result: { result?: number | string };
+    try {
+      result = (await resultResponse.json()) as { result?: number | string };
+    } catch {
+      throw new MangoTransferError("mango_transfer_result_unknown");
+    }
+    const resultCode = mangoResultCode(result.result);
+    if (resultCode === "1000") return { commandId };
+    if (resultCode && resultCode !== "0")
+      throw new MangoTransferError(`mango_transfer_result_${resultCode}`);
   }
-  throw new Error("Mango transfer result timed out");
+  throw new MangoTransferError("mango_transfer_timeout");
 };
 
 const parseJson = (value: string) => {
@@ -285,20 +354,21 @@ export const createVoiceAgentService = (
       );
       return { accepted: true, state: "accepted" };
     } catch (error) {
+      const diagnostic =
+        error instanceof MangoTransferError
+          ? error.diagnostic
+          : isTimeoutError(error)
+            ? "mango_transfer_timeout"
+            : "mango_transfer_error";
       logger.warn(
         {
           stage: "mango_transfer",
           outcome: "failed",
-          errorCode:
-            error instanceof Error && error.message.includes("timed out")
-              ? "mango_transfer_timeout"
-              : "mango_transfer_rejected",
+          errorCode: diagnostic,
         },
         "Voice transfer failed",
       );
-      await repository
-        .failTransfer(callId, "transfer_failed")
-        .catch(() => undefined);
+      await repository.failTransfer(callId, diagnostic).catch(() => undefined);
       return transferFailure("transfer_failed");
     }
   };

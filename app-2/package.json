@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
     "start": "node dist/server.js",
-    "test:voice": "tsx --test src/features/voice-agent/voice-agent.mango.test.ts src/features/voice-agent/voice-agent.sip.test.ts src/features/voice-agent/voice-agent.transfer.test.ts src/features/voice-agent/voice-agent.recording.test.ts src/features/voice-agent/voice-agent.transcription.test.ts",
+    "test:voice": "tsx --test src/features/voice-agent/voice-agent.mango.test.ts src/features/voice-agent/voice-agent.sip.test.ts src/features/voice-agent/voice-agent.transfer.test.ts src/features/voice-agent/voice-agent.prompt.test.ts src/features/voice-agent/voice-agent.recording.test.ts src/features/voice-agent/voice-agent.transcription.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -5,9 +5,11 @@ import type { Database } from "../../lib/database/database.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import {
+  MangoTransferError,
   buildMangoTransferPayload,
   createVoiceAgentService,
   selectMangoTransferInitiator,
+  transferMangoCall,
 } from "./voice-agent.service.js";
 
 test("selects only a factual transfer initiator", () => {
@@ -42,6 +44,103 @@ test("builds a Mango blind-transfer payload without an OpenAI refer target", () 
   assert.equal(payload.initiator, "10");
   assert.equal(payload.to_number, "masked-destination");
   assert.match(payload.command_id, /^alsma-transfer-/u);
+});
+
+const mangoTransferInput = {
+  apiKey: "masked-api-key",
+  callId: "mango-call",
+  commandId: "alsma-transfer-command",
+  destination: "masked-destination",
+  initiator: "10",
+  salt: "masked-api-salt",
+  sleep: async () => undefined,
+} as const;
+
+const mangoResponse = (body: unknown, status = 200) =>
+  ({
+    json: async () => body,
+    ok: status >= 200 && status < 300,
+    status,
+  }) as Response;
+
+const assertMangoDiagnostic = async ({
+  diagnostic,
+  responses,
+}: {
+  readonly diagnostic: string;
+  readonly responses: Response[];
+}) => {
+  const originalFetch = globalThis.fetch;
+  let responseIndex = 0;
+  globalThis.fetch = async () => {
+    const response = responses[responseIndex];
+    responseIndex += 1;
+    assert.ok(response);
+    return response;
+  };
+
+  try {
+    await assert.rejects(
+      transferMangoCall(mangoTransferInput),
+      (error: unknown) =>
+        error instanceof MangoTransferError && error.diagnostic === diagnostic,
+    );
+    assert.equal(responseIndex, responses.length);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+};
+
+test("diagnoses a Mango command HTTP failure without retaining the response body", async () => {
+  await assertMangoDiagnostic({
+    diagnostic: "mango_transfer_command_http_503",
+    responses: [mangoResponse({ secret: "must-not-be-persisted" }, 503)],
+  });
+});
+
+test("diagnoses a rejected Mango command result", async () => {
+  await assertMangoDiagnostic({
+    diagnostic: "mango_transfer_command_result_1001",
+    responses: [mangoResponse({ result: 1001 })],
+  });
+});
+
+test("diagnoses a Mango result HTTP failure separately from command success", async () => {
+  await assertMangoDiagnostic({
+    diagnostic: "mango_transfer_result_http_502",
+    responses: [mangoResponse({ result: 0 }), mangoResponse({}, 502)],
+  });
+});
+
+test("diagnoses an expired Mango result wait when every result is pending", async () => {
+  await assertMangoDiagnostic({
+    diagnostic: "mango_transfer_timeout",
+    responses: [
+      mangoResponse({ result: 0 }),
+      mangoResponse({ result: 0 }),
+      mangoResponse({ result: 0 }),
+      mangoResponse({ result: 0 }),
+    ],
+  });
+});
+
+test("accepts a Mango transfer only after result 1000", async () => {
+  const originalFetch = globalThis.fetch;
+  const responses = [
+    mangoResponse({ result: 0 }),
+    mangoResponse({ result: 1000 }),
+  ];
+  let responseIndex = 0;
+  globalThis.fetch = async () => responses[responseIndex++] as Response;
+
+  try {
+    assert.deepEqual(await transferMangoCall(mangoTransferInput), {
+      commandId: "alsma-transfer-command",
+    });
+    assert.equal(responseIndex, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 const call = {
@@ -166,6 +265,7 @@ test("reports a missing employee-side initiator before calling Mango", async () 
 test("transfers a linked Amazi call with the preserved Mango identifiers", async () => {
   const fetchCalls: Array<{ body: string; url: string }> = [];
   const originalFetch = globalThis.fetch;
+  let transferState: string | undefined;
   globalThis.fetch = async (input, init) => {
     fetchCalls.push({
       body: String(init?.body ?? ""),
@@ -193,7 +293,13 @@ test("transfers a linked Amazi call with the preserved Mango identifiers", async
         providerCallId: "amazi:session-1",
         status: "active",
       }),
-      setTransferCommand: async () => undefined,
+      setTransferCommand: async (
+        _callId: string,
+        _commandId: string,
+        state: "requested" | "accepted",
+      ) => {
+        transferState = state;
+      },
     } as unknown as VoiceAgentRepository;
     const service = createVoiceAgentService(
       repository,
@@ -215,6 +321,7 @@ test("transfers a linked Amazi call with the preserved Mango identifiers", async
     });
 
     assert.equal((result as { readonly accepted?: boolean }).accepted, true);
+    assert.equal(transferState, "accepted");
     assert.equal(fetchCalls.length, 2);
     const transferPayload = JSON.parse(
       new URLSearchParams(fetchCalls[0]?.body).get("json") ?? "{}",
@@ -225,6 +332,60 @@ test("transfers a linked Amazi call with the preserved Mango identifiers", async
       "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
     );
     assert.equal(transferPayload.to_number, "masked-destination");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("persists a safe Mango diagnostic while keeping the public failure state", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => mangoResponse({ result: 1001 });
+  let failedOutcome: string | undefined;
+  let transferState: string | undefined;
+
+  try {
+    const repository = {
+      claimTransfer: async () => true,
+      failTransfer: async (_callId: string, outcome: string) => {
+        failedOutcome = outcome;
+        transferState = "failed";
+      },
+      findCall: async () => ({
+        id: "mango-row",
+        mangoCallId: "mango-call-1",
+        mangoTransferInitiator: "10",
+        provider: "mango",
+        providerCallId: "mango-call-1",
+        status: "active",
+      }),
+      setTransferCommand: async () => undefined,
+    } as unknown as VoiceAgentRepository;
+    const service = createVoiceAgentService(
+      repository,
+      {} as Database,
+      undefined,
+      undefined,
+      undefined,
+      {
+        destination: "masked-destination",
+        mangoApiKey: "masked-api-key",
+        mangoApiSalt: "masked-api-salt",
+      },
+    );
+
+    const result = await service.tool({
+      callId: "mango-row",
+      name: "transfer_to_manager",
+      reason: "guest-request",
+    });
+
+    assert.equal((result as { readonly accepted?: boolean }).accepted, false);
+    assert.equal(
+      (result as { readonly reason?: string }).reason,
+      "transfer_failed",
+    );
+    assert.equal(failedOutcome, "mango_transfer_command_result_1001");
+    assert.equal(transferState, "failed");
   } finally {
     globalThis.fetch = originalFetch;
   }
