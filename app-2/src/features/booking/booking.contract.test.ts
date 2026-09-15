@@ -7,7 +7,11 @@ import {
   createReservationBodySchema,
 } from "./booking.schemas.js";
 import { createBookingService } from "./booking.service.js";
-import type { EpteraClient, EpteraOffer } from "./eptera.client.js";
+import {
+  type EpteraClient,
+  type EpteraOffer,
+  createEpteraClient,
+} from "./eptera.client.js";
 import type { YooKassaClient } from "./yookassa.client.js";
 
 const offer: EpteraOffer = {
@@ -180,9 +184,21 @@ test("builds the adult-only Eptera payload without undefined optional fields", a
   const payload = harness.createPayload;
   assert.ok(payload);
   assert.deepEqual(JSON.parse(JSON.stringify(payload)), payload);
-  assert.equal(payload["res-notes"], "");
-  assert.equal(payload["market-id"], 17);
-  assert.equal(payload["room-id"], 77);
+  assert.deepEqual(Object.keys(payload).sort(), [
+    "adult-count",
+    "board-type-id",
+    "check-in",
+    "check-out",
+    "currency-code",
+    "elder-child-count",
+    "guest-list",
+    "nationality",
+    "price-agency-id",
+    "rate-type-id",
+    "room-type-id",
+    "total-price",
+    "younger-child-count",
+  ]);
   assert.deepEqual(payload["guest-list"], [
     {
       birthday: null,
@@ -194,8 +210,41 @@ test("builds the adult-only Eptera payload without undefined optional fields", a
   ]);
   assert.equal(payload["elder-child-count"], 0);
   assert.equal(payload["younger-child-count"], 0);
-  assert.equal(payload["baby-count"], 0);
   assert.equal(payload["total-price"], 900);
+});
+
+test("uses the fresh quote total and child buckets for two adults aged 4 and 7", async () => {
+  const harness = createHarness({
+    ...offer,
+    discountedPrice: 0,
+    price: 25_410,
+  });
+
+  await harness.createReservation(
+    reservationInput({
+      adults: 2,
+      childAges: [4, 7],
+      guests: [
+        adult("Adult 1"),
+        adult("Adult 2"),
+        child("child", "Child 4", "2022-04-12"),
+        child("child", "Child 7", "2019-04-12"),
+      ],
+    }),
+  );
+
+  const payload = harness.createPayload;
+  assert.ok(payload);
+  assert.equal(payload["total-price"], 25_410);
+  assert.equal(payload["elder-child-count"], 1);
+  assert.equal(payload["younger-child-count"], 1);
+  assert.equal("baby-count" in payload, false);
+  assert.deepEqual(
+    (payload["guest-list"] as Array<Record<string, unknown>>).map(
+      (guest) => guest["title-id"],
+    ),
+    [0, 0, 2, 2],
+  );
 });
 
 test("keeps guest buckets and total price consistent for multiple rooms", async () => {
@@ -222,13 +271,19 @@ test("keeps guest buckets and total price consistent for multiple rooms", async 
   assert.equal(payload["total-price"], 1_800);
   assert.equal(payload["elder-child-count"], 1);
   assert.equal(payload["younger-child-count"], 1);
-  assert.equal(payload["baby-count"], 1);
+  assert.equal("baby-count" in payload, false);
   assert.equal((payload["guest-list"] as unknown[]).length, 5);
   assert.deepEqual(
     (payload["guest-list"] as Array<Record<string, unknown>>).map(
       (guest) => guest.birthday,
     ),
     [null, null, "2025-02-03", "2019-07-08", "2015-11-09"],
+  );
+  assert.deepEqual(
+    (payload["guest-list"] as Array<Record<string, unknown>>).map(
+      (guest) => guest["title-id"],
+    ),
+    [0, 0, 3, 2, 2],
   );
 });
 
@@ -311,4 +366,80 @@ test("keeps the payment error when best-effort cancellation also fails", async (
     (error) => error === paymentError,
   );
   assert.deepEqual(harness.cancellationIds, [123456]);
+});
+
+test("always uses the configured hotel id for createReservation", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ body: string; url: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    requests.push({
+      body: typeof init?.body === "string" ? init.body : "",
+      url: String(input),
+    });
+    if (String(input).endsWith("/login")) {
+      return new Response(
+        JSON.stringify({
+          "allowed-hotel-ids": [901016],
+          jwt: "test-session-token",
+          success: true,
+        }),
+        { headers: { "Content-Type": "application/json" }, status: 200 },
+      );
+    }
+    return new Response(JSON.stringify({ "reservation-id": 125853 }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
+  }) as typeof fetch;
+
+  try {
+    const reservationPayload = {
+      "adult-count": 2,
+      "board-type-id": 22,
+      "check-in": "2026-08-13",
+      "check-out": "2026-08-15",
+      "currency-code": "RUB",
+      "elder-child-count": 1,
+      "guest-list": [
+        {
+          birthday: null,
+          country: "RU",
+          name: "Adult 1",
+          surname: "Testov",
+          "title-id": 0,
+        },
+        {
+          birthday: "2022-04-12",
+          country: "RU",
+          name: "Child 4",
+          surname: "Testov",
+          "title-id": 2,
+        },
+      ],
+      nationality: "RU",
+      "price-agency-id": 55,
+      "rate-type-id": 33,
+      "room-type-id": 11,
+      "total-price": 25_410,
+      "younger-child-count": 1,
+    };
+    await createEpteraClient({
+      apiKey: "test-key",
+      hotelId: "901016",
+    }).createReservation({
+      ...reservationPayload,
+      "hotel-id": 7,
+    });
+
+    assert.equal(
+      requests[1]?.url,
+      "https://bookingapi.eptera.ru/hotel/901016/createReservation",
+    );
+    assert.deepEqual(JSON.parse(requests[1]?.body ?? "{}"), {
+      ...reservationPayload,
+      "hotel-id": 901016,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

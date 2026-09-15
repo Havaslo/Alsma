@@ -609,8 +609,8 @@ export const createEpteraClient = ({
       const { hotelId: configuredHotelId } = requireConfiguration();
       return request<unknown>(`/hotel/${configuredHotelId}/createReservation`, {
         body: JSON.stringify({
-          "hotel-id": Number(configuredHotelId),
           ...body,
+          "hotel-id": Number(configuredHotelId),
         }),
         method: "POST",
       });

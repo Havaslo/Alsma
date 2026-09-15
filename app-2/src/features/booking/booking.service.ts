@@ -82,7 +82,6 @@ const validateReservationOffer = (
     ["room-type-id", offer.roomTypeId],
     ["rate-type-id", offer.rateTypeId],
     ["board-type-id", offer.boardTypeId],
-    ["rate-code-id", offer.rateCodeId],
     ["price-agency-id", offer.priceAgencyId],
   ] as const;
   for (const [field, value] of identifierFields) {
@@ -112,10 +111,6 @@ const validateReservationOffer = (
 
   return {
     currency,
-    marketId:
-      offer.marketId !== null && isPositiveSafeInteger(offer.marketId)
-        ? offer.marketId
-        : null,
     price,
     totalPrice,
   };
@@ -336,18 +331,13 @@ export const createBookingService = (
     const youngerChildCount = input.childAges.filter(
       (age) => age >= 1 && age < 7,
     ).length;
-    const babyCount = input.childAges.filter((age) => age < 1).length;
     const epteraResponse = await eptera.createReservation({
       "adult-count": input.adults,
-      "baby-count": babyCount,
       "board-type-id": offer.boardTypeId,
       "check-in": input.checkIn,
       "check-out": input.checkOut,
-      "contact-email": input.contact.email,
-      "contact-first-name": input.contact.firstName,
-      "contact-last-name": input.contact.lastName,
-      "contact-phone": phone,
       "currency-code": reservationOffer.currency,
+      "elder-child-count": elderChildCount,
       "guest-list": input.guests.map((guestEntry) => ({
         birthday: guestEntry.birthDate ?? null,
         country: input.nationality,
@@ -357,22 +347,11 @@ export const createBookingService = (
           guestEntry.type === "adult" ? 0 : guestEntry.type === "child" ? 2 : 3,
       })),
       nationality: input.nationality,
-      "elder-child-count": elderChildCount,
-      ...(reservationOffer.marketId === null
-        ? {}
-        : { "market-id": reservationOffer.marketId }),
-      "payment-type": 2,
       "price-agency-id": offer.priceAgencyId,
-      "rate-code-id": offer.rateCodeId,
       "rate-type-id": offer.rateTypeId,
-      "res-notes": input.notes ?? "",
-      "room-count": input.roomCount,
       "room-type-id": offer.roomTypeId,
       "total-price": reservationOffer.totalPrice,
       "younger-child-count": youngerChildCount,
-      ...(offer.roomId !== null && isPositiveSafeInteger(offer.roomId)
-        ? { "room-id": offer.roomId }
-        : {}),
     });
     const epteraResult = record(epteraResponse);
     const reservationId = readReservationIdentifier(epteraResponse);
