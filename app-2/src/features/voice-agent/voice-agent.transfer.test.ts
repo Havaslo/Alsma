@@ -171,3 +171,167 @@ test("does not send legacy initiator literals", async () => {
   assert.equal(payload.mangoTransferInitiator, "to.number");
   assert.equal(selectMangoTransferInitiator(payload), undefined);
 });
+
+test("links an Amazi call without caller phone to the nearby Mango call", async () => {
+  const amaziCall = {
+    id: "amazi-call",
+    provider: "amazi",
+    providerCallId: "amazi:session-1",
+    providerSequence: null,
+    status: "active",
+  };
+  let updatedId: string | undefined;
+  let update: Record<string, unknown> | undefined;
+  const mangoTimestamp = Math.floor(
+    Date.parse("2026-09-15T10:12:41.000Z") / 1_000,
+  );
+  const repository = {
+    findByProviderCallId: async () => null,
+    findByMangoCallId: async () => null,
+    findByProviderEntryId: async () => null,
+    findBySipCallId: async () => null,
+    findActiveAmaziCallByCallerPhone: async () => null,
+    findUniqueActiveAmaziCallNear: async (at: Date) => {
+      assert.ok(Math.abs(at.getTime() - mangoTimestamp * 1_000) <= 1_000);
+      return amaziCall;
+    },
+    ensureCall: async () => {
+      throw new Error("A linked Amazi call should be reused");
+    },
+    updateCall: async (id: string, data: Record<string, unknown>) => {
+      updatedId = id;
+      update = data;
+      return { ...amaziCall, ...data };
+    },
+  } as unknown as VoiceAgentRepository;
+  const handler = createMangoEventHandler({
+    completeCall: async () => undefined,
+    repository,
+  });
+
+  await handler.handle({
+    kind: "call",
+    eventKey: "mango:call:entry-1:mango-call:1",
+    event: {
+      call_id: "mango-call",
+      call_state: "Connected",
+      entry_id: "entry-1",
+      from: { number: "79525012159" },
+      timestamp: mangoTimestamp,
+      seq: 1,
+      to: {
+        number: "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+      },
+    },
+  });
+
+  assert.equal(updatedId, "amazi-call");
+  assert.equal(update?.mangoCallId, "mango-call");
+  assert.equal(
+    update?.mangoTransferInitiator,
+    "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+  );
+  assert.equal(update?.providerEntryId, "entry-1");
+  assert.equal(update?.providerSequence, 1);
+});
+
+test("uses the same time-safe Amazi fallback for a Mango summary", async () => {
+  const amaziCall = {
+    id: "amazi-call",
+    provider: "amazi",
+    providerCallId: "amazi:session-1",
+    providerSequence: null,
+    status: "active",
+  };
+  let updatedId: string | undefined;
+  let completedId: string | undefined;
+  const repository = {
+    findByProviderCallId: async () => null,
+    findByProviderEntryId: async () => null,
+    findBySipCallId: async () => null,
+    findActiveAmaziCallByCallerPhone: async () => null,
+    findUniqueActiveAmaziCallNear: async () => amaziCall,
+    ensureCall: async () => {
+      throw new Error("A linked Amazi call should be reused");
+    },
+    updateCall: async (id: string) => {
+      updatedId = id;
+      return amaziCall;
+    },
+  } as unknown as VoiceAgentRepository;
+  const handler = createMangoEventHandler({
+    completeCall: async (id) => {
+      completedId = id;
+    },
+    repository,
+  });
+
+  await handler.handle({
+    kind: "summary",
+    eventKey: "mango:summary:entry-1:1705313561",
+    event: {
+      call_direction: 1,
+      create_time: 1_700_000_000,
+      end_time: 1_700_000_020,
+      entry_id: "entry-1",
+      entry_result: 1,
+    },
+  });
+
+  assert.equal(updatedId, "amazi-call");
+  assert.equal(completedId, "amazi-call");
+});
+
+test("does not merge an Amazi call when the time candidate is ambiguous or absent", async () => {
+  const amaziCall = {
+    id: "amazi-call",
+    provider: "amazi",
+    providerCallId: "amazi:session-1",
+    providerSequence: null,
+    status: "active",
+  };
+  for (const timeMatch of [null, undefined]) {
+    let ensured = false;
+    let updatedId: string | undefined;
+    const repository = {
+      findByProviderCallId: async () => null,
+      findByMangoCallId: async () => null,
+      findByProviderEntryId: async () => null,
+      findBySipCallId: async () => null,
+      findActiveAmaziCallByCallerPhone: async () => null,
+      findUniqueActiveAmaziCallNear: async () => timeMatch,
+      ensureCall: async () => {
+        ensured = true;
+        return {
+          id: "mango-call",
+          provider: "mango",
+          providerCallId: "mango-call",
+          providerSequence: null,
+          status: "active",
+        };
+      },
+      updateCall: async (id: string) => {
+        updatedId = id;
+        return amaziCall;
+      },
+    } as unknown as VoiceAgentRepository;
+    const handler = createMangoEventHandler({
+      completeCall: async () => undefined,
+      repository,
+    });
+
+    await handler.handle({
+      kind: "call",
+      eventKey: `mango:no-match:${String(timeMatch)}`,
+      event: {
+        call_id: "mango-call",
+        call_state: "Connected",
+        entry_id: "entry-1",
+        timestamp: 1_700_000_000,
+      },
+    });
+
+    assert.equal(ensured, true);
+    assert.equal(updatedId, "mango-call");
+  }
+});

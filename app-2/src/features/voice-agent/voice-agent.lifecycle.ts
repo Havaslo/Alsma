@@ -96,8 +96,17 @@ export const createMangoEventHandler = ({
             event.timestamp ? new Date(event.timestamp * 1_000) : new Date(),
           )
         : null;
+    const timeMatch =
+      !amaziMatch &&
+      event.timestamp &&
+      typeof repository.findUniqueActiveAmaziCallNear === "function"
+        ? await repository.findUniqueActiveAmaziCallNear(
+            new Date(event.timestamp * 1_000),
+          )
+        : null;
     return (
       amaziMatch ??
+      timeMatch ??
       (await repository.ensureCall({
         callerPhone: event.callerPhone,
         provider: "mango",
@@ -170,9 +179,18 @@ export const createMangoEventHandler = ({
             new Date(event.create_time * 1_000),
           )
         : null;
+    const timeMatch =
+      !call &&
+      !amaziMatch &&
+      typeof repository.findUniqueActiveAmaziCallNear === "function"
+        ? await repository.findUniqueActiveAmaziCallNear(
+            new Date(event.create_time * 1_000),
+          )
+        : null;
     const target =
       call ??
       amaziMatch ??
+      timeMatch ??
       (await repository.ensureCall({
         callerPhone: event.from?.number,
         provider: "mango",

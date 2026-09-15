@@ -282,6 +282,24 @@ export const createVoiceAgentRepository = (database: Database) => ({
         normalizePhone(call.callerPhone as string) === normalized,
     );
   },
+  findUniqueActiveAmaziCallNear: async (
+    at: Date,
+    maxDistanceMilliseconds = 30_000,
+  ) => {
+    const windowStart = new Date(at.getTime() - maxDistanceMilliseconds);
+    const windowEnd = new Date(at.getTime() + maxDistanceMilliseconds);
+    const calls = await database.client.voiceCall.findMany({
+      orderBy: { startedAt: "desc" },
+      take: 2,
+      where: {
+        mangoCallId: null,
+        provider: "amazi",
+        startedAt: { gte: windowStart, lte: windowEnd },
+        status: { in: ["active", "on_hold", "transferring"] },
+      },
+    });
+    return calls.length === 1 ? calls[0] : null;
+  },
   updateCall: (id: string, data: Prisma.VoiceCallUpdateInput) =>
     database.client.voiceCall.update({ data, where: { id } }),
   claimWebhookEvent: async (input: {
