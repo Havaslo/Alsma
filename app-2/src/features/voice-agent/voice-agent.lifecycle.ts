@@ -123,11 +123,13 @@ export const createMangoEventHandler = ({
       callerPhone: event.from?.number,
       sipCallId: event.sip_call_id,
       mangoCallId: event.call_id,
-      mangoTransferInitiator: event.to?.number
-        ? "to.number"
-        : event.from?.number
-          ? "from.number"
-          : undefined,
+      mangoTransferInitiator:
+        event.to?.extension !== undefined
+          ? String(event.to.extension)
+          : (event.to?.number ??
+            (event.from?.extension !== undefined
+              ? String(event.from.extension)
+              : undefined)),
       endedAt: disconnected ? new Date(event.timestamp * 1_000) : undefined,
       providerEntryId: event.entry_id,
       providerSequence: event.seq,

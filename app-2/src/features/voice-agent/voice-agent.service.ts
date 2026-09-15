@@ -19,15 +19,11 @@ const logger = createLogger();
 
 export const selectMangoTransferInitiator = (call: {
   readonly mangoTransferInitiator?: string | null;
-  readonly callerPhone?: string | null;
 }) => {
-  if (
-    call.mangoTransferInitiator === "from.number" ||
-    call.mangoTransferInitiator === "to.number"
-  )
-    return call.mangoTransferInitiator;
-  if (call.callerPhone) return "from.number";
-  return undefined;
+  const initiator = call.mangoTransferInitiator;
+  if (!initiator || initiator === "from.number" || initiator === "to.number")
+    return undefined;
+  return initiator;
 };
 
 export const buildMangoTransferPayload = ({
@@ -38,7 +34,7 @@ export const buildMangoTransferPayload = ({
 }: {
   readonly callId: string;
   readonly destination: string;
-  readonly initiator: "from.number" | "to.number";
+  readonly initiator: string;
   readonly commandId?: string;
 }) => ({
   command_id: commandId,
@@ -59,7 +55,7 @@ const transferMangoCall = async ({
   readonly apiKey: string;
   readonly callId: string;
   readonly destination: string;
-  readonly initiator: "from.number" | "to.number";
+  readonly initiator: string;
   readonly salt: string;
   readonly commandId: string;
 }) => {
