@@ -163,6 +163,73 @@ test("reports a missing employee-side initiator before calling Mango", async () 
   );
 });
 
+test("transfers a linked Amazi call with the preserved Mango identifiers", async () => {
+  const fetchCalls: Array<{ body: string; url: string }> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    fetchCalls.push({
+      body: String(init?.body ?? ""),
+      url: String(input),
+    });
+    return {
+      ok: true,
+      json: async () =>
+        String(input).includes("/commands/transfer")
+          ? { result: 0 }
+          : { result: 1000 },
+    } as Response;
+  };
+
+  try {
+    const repository = {
+      claimTransfer: async () => true,
+      failTransfer: async () => undefined,
+      findCall: async () => ({
+        id: "amazi-row",
+        mangoCallId: "mango-call-1",
+        mangoTransferInitiator:
+          "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+        provider: "amazi",
+        providerCallId: "amazi:session-1",
+        status: "active",
+      }),
+      setTransferCommand: async () => undefined,
+    } as unknown as VoiceAgentRepository;
+    const service = createVoiceAgentService(
+      repository,
+      {} as Database,
+      undefined,
+      undefined,
+      undefined,
+      {
+        destination: "masked-destination",
+        mangoApiKey: "masked-api-key",
+        mangoApiSalt: "masked-api-salt",
+      },
+    );
+
+    const result = await service.tool({
+      callId: "amazi-row",
+      name: "transfer_to_manager",
+      reason: "guest-request",
+    });
+
+    assert.equal((result as { readonly accepted?: boolean }).accepted, true);
+    assert.equal(fetchCalls.length, 2);
+    const transferPayload = JSON.parse(
+      new URLSearchParams(fetchCalls[0]?.body).get("json") ?? "{}",
+    ) as { call_id?: string; initiator?: string; to_number?: string };
+    assert.equal(transferPayload.call_id, "mango-call-1");
+    assert.equal(
+      transferPayload.initiator,
+      "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+    );
+    assert.equal(transferPayload.to_number, "masked-destination");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("does not send legacy initiator literals", async () => {
   const payload = await runCallEvent({
     from: { number: "masked-caller" },

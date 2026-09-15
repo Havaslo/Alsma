@@ -122,6 +122,111 @@ test("creates an Amazi provider context with a stable call identity", async () =
   assert.equal(updates[0]?.provider, "amazi");
 });
 
+test("links a late Amazi lifecycle event to the unique nearby Mango call", async () => {
+  const occurredAt = new Date("2026-09-15T10:45:39.475Z");
+  const mangoCall = {
+    id: "mango-row",
+    mangoCallId: "mango-call-1",
+    mangoTransferInitiator: "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+    provider: "mango",
+    providerCallId: "mango-call-1",
+    status: "active",
+  };
+  const updates: Array<{ id: string; data: Record<string, unknown> }> = [];
+  let currentCall = mangoCall;
+  let ensureCount = 0;
+  const repository = {
+    findByProviderCallId: async () => null,
+    findActiveAmaziCallByCallerPhone: async () => null,
+    findUniqueMangoCallNear: async (at: Date) => {
+      assert.equal(at.getTime(), occurredAt.getTime());
+      return mangoCall;
+    },
+    ensureCall: async () => {
+      ensureCount += 1;
+      throw new Error("The Mango row should be reused");
+    },
+    updateCall: async (id: string, data: Record<string, unknown>) => {
+      updates.push({ data, id });
+      currentCall = { ...currentCall, ...data };
+      return currentCall;
+    },
+  } as unknown as VoiceAgentRepository;
+  const service = createVoiceAgentService(
+    repository,
+    {} as Database,
+    undefined,
+    undefined,
+  );
+
+  const result = await service.handleAmaziWebhook({
+    callerPhone: "+79000000001",
+    eventKey: "amazi:session-1:started",
+    eventType: "voice.call.started",
+    occurredAt,
+    sessionId: "session-1",
+  });
+
+  assert.equal(ensureCount, 0);
+  assert.equal(result?.id, "mango-row");
+  assert.equal(result?.providerCallId, "amazi:session-1");
+  assert.equal(result?.mangoCallId, "mango-call-1");
+  assert.equal(
+    result?.mangoTransferInitiator,
+    "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+  );
+  assert.equal(
+    updates.some(
+      ({ data, id }) =>
+        id === "mango-row" &&
+        data.providerCallId === "amazi:session-1" &&
+        data.mangoCallId === "mango-call-1",
+    ),
+    true,
+  );
+});
+
+test("does not link Amazi to an ambiguous nearby Mango match", async () => {
+  const amaziCall = {
+    id: "amazi-row",
+    provider: "amazi",
+    providerCallId: "amazi:session-ambiguous",
+    status: "active",
+  };
+  let ensureCount = 0;
+  const repository = {
+    findByProviderCallId: async () => null,
+    findActiveAmaziCallByCallerPhone: async () => null,
+    // The repository returns null for both zero and multiple candidates.
+    findUniqueMangoCallNear: async () => null,
+    ensureCall: async () => {
+      ensureCount += 1;
+      return amaziCall;
+    },
+    updateCall: async (_id: string, data: Record<string, unknown>) => ({
+      ...amaziCall,
+      ...data,
+    }),
+  } as unknown as VoiceAgentRepository;
+  const service = createVoiceAgentService(
+    repository,
+    {} as Database,
+    undefined,
+    undefined,
+  );
+
+  const result = await service.handleAmaziWebhook({
+    eventKey: "amazi:session-ambiguous:started",
+    eventType: "voice.call.started",
+    occurredAt: new Date("2026-09-15T10:45:39.475Z"),
+    sessionId: "session-ambiguous",
+  });
+
+  assert.equal(ensureCount, 1);
+  assert.equal(result?.id, "amazi-row");
+  assert.equal(result?.providerCallId, "amazi:session-ambiguous");
+});
+
 class FakeRelaySocket extends EventEmitter {
   static readonly instances: FakeRelaySocket[] = [];
   readonly sent: string[] = [];
