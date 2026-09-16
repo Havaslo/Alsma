@@ -186,6 +186,61 @@ test("links a late Amazi lifecycle event to the unique nearby Mango call", async
   );
 });
 
+test("links an existing Amazi call to a nearby completed Mango call", async () => {
+  const amaziCall = {
+    id: "amazi-row",
+    mangoCallId: null,
+    provider: "amazi",
+    providerCallId: "amazi:session-terminal",
+    status: "active",
+  };
+  const mangoCall = {
+    id: "mango-row",
+    mangoCallId: "mango-call-terminal",
+    mangoTransferInitiator: "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+    provider: "mango",
+    providerCallId: "mango-call-terminal",
+    status: "completed",
+  };
+  let updatedId: string | undefined;
+  let update: Record<string, unknown> | undefined;
+  const repository = {
+    findByProviderCallId: async () => amaziCall,
+    findActiveAmaziCallByCallerPhone: async () => null,
+    findUniqueMangoCallNear: async () => mangoCall,
+    ensureCall: async (input: Record<string, unknown>) => ({
+      ...amaziCall,
+      ...input,
+    }),
+    updateCall: async (id: string, data: Record<string, unknown>) => {
+      updatedId = id;
+      update = { ...(update ?? amaziCall), ...data };
+      return update;
+    },
+  } as unknown as VoiceAgentRepository;
+  const service = createVoiceAgentService(
+    repository,
+    {} as Database,
+    undefined,
+    undefined,
+  );
+
+  await service.handleAmaziWebhook({
+    eventKey: "amazi:session-terminal:completed",
+    eventType: "voice.call.completed",
+    occurredAt: new Date("2026-09-16T10:17:53.343Z"),
+    sessionId: "session-terminal",
+  });
+
+  assert.equal(updatedId, "amazi-row");
+  assert.equal(update?.mangoCallId, "mango-call-terminal");
+  assert.equal(
+    update?.mangoTransferInitiator,
+    "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+  );
+  assert.equal(update?.providerCallId, "amazi:session-terminal");
+});
+
 test("does not link Amazi to an ambiguous nearby Mango match", async () => {
   const amaziCall = {
     id: "amazi-row",

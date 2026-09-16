@@ -316,8 +316,16 @@ export const createVoiceAgentRepository = (database: Database) => ({
           notIn: ["", "from.number", "to.number"],
         },
         provider: "mango",
-        startedAt: { gte: windowStart, lte: windowEnd },
-        status: { in: ["active", "on_hold", "transferring"] },
+        OR: [
+          {
+            startedAt: { gte: windowStart, lte: windowEnd },
+            status: { in: ["active", "on_hold", "transferring"] },
+          },
+          {
+            endedAt: { gte: windowStart, lte: windowEnd },
+            status: "completed",
+          },
+        ],
       },
     });
     return calls.length === 1 ? calls[0] : null;

@@ -18,7 +18,7 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
     const existing = await repository.findByProviderCallId(
       input.providerCallId,
     );
-    if (existing) return existing;
+    if (existing?.mangoCallId) return existing;
 
     const byPhone = input.callerPhone
       ? await repository.findActiveAmaziCallByCallerPhone(
@@ -28,9 +28,20 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
       : null;
     if (byPhone) return byPhone;
 
-    return input.allowMangoTimeFallback && input.occurredAt
-      ? repository.findUniqueMangoCallNear(input.occurredAt)
-      : null;
+    const byTime =
+      input.allowMangoTimeFallback && input.occurredAt
+        ? await repository.findUniqueMangoCallNear(input.occurredAt)
+        : null;
+    if (existing && byTime)
+      return repository.ensureCall({
+        callerPhone: input.callerPhone,
+        mangoCallId: byTime.mangoCallId ?? undefined,
+        mangoTransferInitiator: byTime.mangoTransferInitiator ?? undefined,
+        provider: "amazi",
+        providerCallId: input.providerCallId,
+        providerEntryId: byTime.providerEntryId ?? undefined,
+      });
+    return byTime ?? existing;
   };
 
   const updateAmaziIdentity = async (
@@ -98,9 +109,7 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
 
   const handleAmaziWebhook = async (event: AmaziWebhookEvent) => {
     const providerCallId = amaziProviderCallId(event.sessionId);
-    const allowMangoTimeFallback =
-      event.eventType === "voice.call.started" ||
-      event.eventType === "voice.call.connected";
+    const allowMangoTimeFallback = Boolean(event.occurredAt);
     const correlated = await findAmaziCorrelation({
       allowMangoTimeFallback,
       callerPhone: event.callerPhone,
