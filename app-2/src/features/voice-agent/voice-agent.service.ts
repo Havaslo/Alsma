@@ -54,7 +54,7 @@ const isTimeoutError = (error: unknown) =>
 export const selectMangoTransferInitiator = (call: {
   readonly mangoTransferInitiator?: string | null;
 }) => {
-  const initiator = call.mangoTransferInitiator;
+  const initiator = call.mangoTransferInitiator?.trim();
   if (!initiator || initiator === "from.number" || initiator === "to.number")
     return undefined;
   return initiator;
@@ -311,8 +311,6 @@ export const createVoiceAgentService = (
 
   const transferToManager = async (callId: string, reason: string) => {
     const call = await repository.findCall(callId);
-    if (call?.status === "transferring" || call?.status === "completed")
-      return { accepted: true, duplicate: true };
     const transferFailure = (reason: string) => ({
       accepted: false as const,
       message:
@@ -323,12 +321,17 @@ export const createVoiceAgentService = (
       return transferFailure("transfer_not_configured");
     if (!transfer.mangoApiKey || !transfer.mangoApiSalt)
       return transferFailure("transfer_not_configured");
+    if (call.mangoCallState !== "Connected")
+      return transferFailure("mango_call_not_connected");
     const mangoCallId =
       call.mangoCallId ??
       (call.provider === "mango" ? call.providerCallId : undefined);
     const initiator = selectMangoTransferInitiator(call);
+    if (!call.providerEntryId) return transferFailure("mango_entry_id_missing");
     if (!mangoCallId) return transferFailure("mango_call_id_missing");
     if (!initiator) return transferFailure("mango_transfer_initiator_missing");
+    if (call.status === "transferring" || call.status === "completed")
+      return { accepted: true, duplicate: true };
 
     const claimed = await repository.claimTransfer(
       callId,

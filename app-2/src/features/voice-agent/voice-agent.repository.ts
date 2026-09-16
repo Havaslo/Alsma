@@ -52,6 +52,7 @@ export const createVoiceAgentRepository = (database: Database) => ({
     providerCallId: string;
     providerEntryId?: string;
     mangoCallId?: string;
+    mangoCallState?: string;
     mangoTransferInitiator?: string;
     sipCallId?: string;
   }) => ensureCall(database, input),
@@ -460,6 +461,7 @@ const ensureCall = async (
     providerEntryId,
     recordingUrl,
     mangoCallId,
+    mangoCallState,
     mangoTransferInitiator,
     sipCallId,
   }: {
@@ -469,6 +471,7 @@ const ensureCall = async (
     readonly providerEntryId?: string;
     readonly recordingUrl?: string;
     readonly mangoCallId?: string;
+    readonly mangoCallState?: string;
     readonly mangoTransferInitiator?: string;
     readonly sipCallId?: string;
   },
@@ -506,6 +509,7 @@ const ensureCall = async (
           ...(recordingUrl ? { recordingUrl } : {}),
           ...(sipCallId ? { sipCallId } : {}),
           ...(mangoCallId ? { mangoCallId } : {}),
+          ...(mangoCallState ? { mangoCallState } : {}),
           ...(mangoTransferInitiator ? { mangoTransferInitiator } : {}),
         },
         where: { id: existing.id },
@@ -529,6 +533,7 @@ const ensureCall = async (
           ...(providerCallId ? { providerCallId } : {}),
           ...(sipCallId ? { sipCallId } : {}),
           ...(mangoCallId ? { mangoCallId } : {}),
+          ...(mangoCallState ? { mangoCallState } : {}),
           ...(providerEntryId ? { providerEntryId } : {}),
           ...(callerPhone ? { callerPhone } : {}),
         },
@@ -540,6 +545,7 @@ const ensureCall = async (
         providerCallId,
         providerEntryId,
         mangoCallId,
+        mangoCallState,
         mangoTransferInitiator,
         sipCallId,
         recordingUrl,

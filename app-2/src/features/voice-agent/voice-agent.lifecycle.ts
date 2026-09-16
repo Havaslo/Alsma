@@ -137,6 +137,12 @@ export const createMangoEventHandler = ({
       event.seq < call.providerSequence
     )
       return call;
+    if (
+      event.seq === undefined &&
+      call.providerSequence !== null &&
+      call.providerSequence !== undefined
+    )
+      return call;
     const state = event.call_state.toLowerCase();
     const disconnected = state === "disconnected";
     return repository.updateCall(call.id, {
@@ -151,6 +157,7 @@ export const createMangoEventHandler = ({
               ? String(event.from.extension)
               : undefined)),
       endedAt: disconnected ? new Date(event.timestamp * 1_000) : undefined,
+      mangoCallState: event.call_state,
       providerEntryId: event.entry_id,
       providerSequence: event.seq,
       startedAt: new Date(event.timestamp * 1_000),

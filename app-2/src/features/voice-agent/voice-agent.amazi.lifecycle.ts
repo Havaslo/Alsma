@@ -36,6 +36,7 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
       return repository.ensureCall({
         callerPhone: input.callerPhone,
         mangoCallId: byTime.mangoCallId ?? undefined,
+        mangoCallState: byTime.mangoCallState ?? undefined,
         mangoTransferInitiator: byTime.mangoTransferInitiator ?? undefined,
         provider: "amazi",
         providerCallId: input.providerCallId,
@@ -56,6 +57,7 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
       ...(input.callerPhone ? { callerPhone: input.callerPhone } : {}),
       ...(input.occurredAt ? { startedAt: input.occurredAt } : {}),
       ...(call.mangoCallId ? { mangoCallId: call.mangoCallId } : {}),
+      ...(call.mangoCallState ? { mangoCallState: call.mangoCallState } : {}),
       ...(call.mangoTransferInitiator
         ? { mangoTransferInitiator: call.mangoTransferInitiator }
         : {}),

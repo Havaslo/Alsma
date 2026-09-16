@@ -232,7 +232,9 @@ test("reports a missing employee-side initiator before calling Mango", async () 
     findCall: async () => ({
       id: "call-id",
       mangoCallId: "mango-call",
+      mangoCallState: "Connected",
       mangoTransferInitiator: null,
+      providerEntryId: "entry",
       provider: "mango",
       providerCallId: "mango-call",
       status: "active",
@@ -262,6 +264,82 @@ test("reports a missing employee-side initiator before calling Mango", async () 
   );
 });
 
+const runTransferValidation = async (call: Record<string, unknown>) => {
+  const originalFetch = globalThis.fetch;
+  let mangoRequestCount = 0;
+  globalThis.fetch = async () => {
+    mangoRequestCount += 1;
+    return mangoResponse({ result: 0 });
+  };
+  try {
+    const repository = {
+      findCall: async () => call,
+    } as unknown as VoiceAgentRepository;
+    const service = createVoiceAgentService(
+      repository,
+      {} as Database,
+      undefined,
+      undefined,
+      undefined,
+      {
+        destination: "masked-destination",
+        mangoApiKey: "masked-api-key",
+        mangoApiSalt: "masked-api-salt",
+      },
+    );
+    const result = await service.tool({
+      callId: String(call.id),
+      name: "transfer_to_manager",
+      reason: "guest-request",
+    });
+    return { mangoRequestCount, result };
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+};
+
+const completeTransferCall = {
+  id: "call-id",
+  mangoCallId: "mango-call",
+  mangoCallState: "Connected",
+  mangoTransferInitiator: "10",
+  provider: "amazi",
+  providerCallId: "amazi:session-1",
+  providerEntryId: "entry-1",
+  status: "active",
+};
+
+test("rejects transfer before Mango when the call is not Connected", async () => {
+  const { mangoRequestCount, result } = await runTransferValidation({
+    ...completeTransferCall,
+    mangoCallState: "Appeared",
+  });
+  assert.equal(mangoRequestCount, 0);
+  assert.equal(
+    (result as { readonly reason?: string }).reason,
+    "mango_call_not_connected",
+  );
+});
+
+test("rejects transfer before Mango when a required Mango identifier is missing", async () => {
+  const cases = [
+    ["entry_id", { ...completeTransferCall, providerEntryId: undefined }],
+    ["call_id", { ...completeTransferCall, mangoCallId: undefined }],
+    [
+      "initiator",
+      { ...completeTransferCall, mangoTransferInitiator: undefined },
+    ],
+  ] as const;
+  for (const [missing, call] of cases) {
+    const { mangoRequestCount, result } = await runTransferValidation(call);
+    assert.equal(mangoRequestCount, 0, `${missing} must not call Mango`);
+    assert.equal(
+      (result as { readonly reason?: string }).reason,
+      `mango_${missing === "initiator" ? "transfer_initiator" : missing}_missing`,
+    );
+  }
+});
+
 test("transfers a linked Amazi call with the preserved Mango identifiers", async () => {
   const fetchCalls: Array<{ body: string; url: string }> = [];
   const originalFetch = globalThis.fetch;
@@ -287,8 +365,10 @@ test("transfers a linked Amazi call with the preserved Mango identifiers", async
       findCall: async () => ({
         id: "amazi-row",
         mangoCallId: "mango-call-1",
+        mangoCallState: "Connected",
         mangoTransferInitiator:
           "sip:amz-QGAXutRFNlNhpI8bCputsoAq@api.amazi.pro",
+        providerEntryId: "entry-1",
         provider: "amazi",
         providerCallId: "amazi:session-1",
         status: "active",
@@ -353,7 +433,9 @@ test("persists a safe Mango diagnostic while keeping the public failure state", 
       findCall: async () => ({
         id: "mango-row",
         mangoCallId: "mango-call-1",
+        mangoCallState: "Connected",
         mangoTransferInitiator: "10",
+        providerEntryId: "entry-1",
         provider: "mango",
         providerCallId: "mango-call-1",
         status: "active",
@@ -398,6 +480,54 @@ test("does not send legacy initiator literals", async () => {
   });
   assert.equal(payload.mangoTransferInitiator, "to.number");
   assert.equal(selectMangoTransferInitiator(payload), undefined);
+});
+
+test("does not let an older Mango sequence regress Connected state", async () => {
+  let current: Record<string, unknown> = { ...call };
+  let updateCount = 0;
+  const repository = {
+    findByProviderCallId: async () => current,
+    findByMangoCallId: async () => null,
+    findByProviderEntryId: async () => null,
+    findBySipCallId: async () => null,
+    ensureCall: async () => current,
+    updateCall: async (_id: string, data: Record<string, unknown>) => {
+      updateCount += 1;
+      current = { ...current, ...data };
+      return current;
+    },
+  } as unknown as VoiceAgentRepository;
+  const handler = createMangoEventHandler({
+    completeCall: async () => undefined,
+    repository,
+  });
+
+  await handler.handle({
+    kind: "call",
+    eventKey: "mango:call:entry:mango-call:2",
+    event: {
+      call_id: "mango-call",
+      call_state: "Connected",
+      entry_id: "entry",
+      seq: 2,
+      timestamp: 1_700_000_002,
+    },
+  });
+  await handler.handle({
+    kind: "call",
+    eventKey: "mango:call:entry:mango-call:1",
+    event: {
+      call_id: "mango-call",
+      call_state: "Appeared",
+      entry_id: "entry",
+      seq: 1,
+      timestamp: 1_700_000_001,
+    },
+  });
+
+  assert.equal(current.mangoCallState, "Connected");
+  assert.equal(current.providerSequence, 2);
+  assert.equal(updateCount, 1);
 });
 
 test("links an Amazi call without caller phone to the nearby Mango call", async () => {

@@ -556,6 +556,7 @@ model VoiceCall {
   sipCallId              String?       @unique @map("sip_call_id")
   mangoCallId            String?       @map("mango_call_id")
   mangoTransferInitiator String?       @map("mango_transfer_initiator")
+  mangoCallState         String?       @map("mango_call_state")
   providerEntryId        String?       @map("provider_entry_id")
   providerSequence       Int?          @map("provider_sequence")
   callerPhone            String?       @map("caller_phone")
