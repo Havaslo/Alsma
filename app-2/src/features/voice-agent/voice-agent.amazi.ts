@@ -114,6 +114,7 @@ const callerPhone = (body: Record<string, unknown>): string | undefined => {
     const value = firstString(
       record.caller_phone,
       record.callerPhone,
+      record.callerIdentity,
       record.phone_number,
       record.phoneNumber,
       call?.caller_phone,

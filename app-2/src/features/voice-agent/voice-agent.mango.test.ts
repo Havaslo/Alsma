@@ -18,6 +18,34 @@ const signedBody = (json: string) => ({
   vpbx_api_key: apiKey,
 });
 
+test("accepts a transfer result only inside a valid signed envelope", () => {
+  const json = JSON.stringify({
+    command_id: "alsma-transfer-1",
+    result: "1000",
+  });
+  assert.deepEqual(
+    parseMangoWebhook({ apiKey, salt, body: signedBody(json) }),
+    {
+      kind: "transfer_result",
+      event: { command_id: "alsma-transfer-1", result: 1000 },
+      eventKey: "mango:transfer:alsma-transfer-1:1000",
+    },
+  );
+  assert.throws(
+    () => parseMangoWebhook({ apiKey, salt, body: JSON.parse(json) }),
+    HttpError,
+  );
+  assert.throws(
+    () =>
+      parseMangoWebhook({
+        apiKey,
+        salt,
+        body: { ...signedBody(json), json: json.replace("1000", "4100") },
+      }),
+    HttpError,
+  );
+});
+
 test("maps every Mango external-system event path to the secured webhook", () => {
   assert.deepEqual(mangoExternalEventPaths, [
     "/",
@@ -26,6 +54,8 @@ test("maps every Mango external-system event path to the secured webhook", () =>
     "/events/summary",
     "/events/recording",
     "/events/record/added",
+    "/result/transfer",
+    "/vpbx/result/transfer",
   ]);
 });
 

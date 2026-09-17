@@ -20,14 +20,6 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
     );
     if (existing?.mangoCallId) return existing;
 
-    const byPhone = input.callerPhone
-      ? await repository.findActiveAmaziCallByCallerPhone(
-          input.callerPhone,
-          input.occurredAt,
-        )
-      : null;
-    if (byPhone) return byPhone;
-
     const byTime =
       input.allowMangoTimeFallback && input.occurredAt
         ? await repository.findUniqueMangoCallNear(input.occurredAt)
@@ -53,7 +45,19 @@ export const createAmaziLifecycle = (repository: VoiceAgentRepository) => {
       readonly providerCallId: string;
     },
   ) => {
-    return repository.updateCall(call.id, {
+    const identified =
+      call.providerCallId === input.providerCallId
+        ? call
+        : await repository.ensureCall({
+            callerPhone: input.callerPhone,
+            provider: "amazi",
+            providerCallId: input.providerCallId,
+            providerEntryId: call.providerEntryId ?? undefined,
+            mangoCallId: call.mangoCallId ?? undefined,
+            mangoCallState: call.mangoCallState ?? undefined,
+            mangoTransferInitiator: call.mangoTransferInitiator ?? undefined,
+          });
+    return repository.updateCall(identified.id, {
       ...(input.callerPhone ? { callerPhone: input.callerPhone } : {}),
       ...(input.occurredAt ? { startedAt: input.occurredAt } : {}),
       ...(call.mangoCallId ? { mangoCallId: call.mangoCallId } : {}),

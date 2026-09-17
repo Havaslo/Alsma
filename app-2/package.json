@@ -1,6 +1,6 @@
 {
   "name": "amazi-project-backend",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
     "start": "node dist/server.js",
-    "test:voice": "tsx --test src/features/voice-agent/voice-agent.mango.test.ts src/features/voice-agent/voice-agent.sip.test.ts src/features/voice-agent/voice-agent.transfer.test.ts src/features/voice-agent/voice-agent.prompt.test.ts src/features/voice-agent/voice-agent.recording.test.ts src/features/voice-agent/voice-agent.transcription.test.ts",
+    "test:voice": "tsx --test src/features/voice-agent/voice-agent.*test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

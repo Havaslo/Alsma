@@ -59,6 +59,8 @@ export const mangoExternalEventPaths = [
   "/events/summary",
   "/events/recording",
   "/events/record/added",
+  "/result/transfer",
+  "/vpbx/result/transfer",
 ];
 
 export const createApp = ({

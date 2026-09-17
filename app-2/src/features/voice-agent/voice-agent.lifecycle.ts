@@ -277,7 +277,9 @@ export const createMangoEventHandler = ({
     return updated;
   };
 
-  const handle = async (providerEvent: MangoProviderEvent) => {
+  const handle = async (
+    providerEvent: Exclude<MangoProviderEvent, { kind: "transfer_result" }>,
+  ) => {
     if (providerEvent.kind === "normalized")
       return handleNormalized(providerEvent.event);
     if (providerEvent.kind === "call") return handleCall(providerEvent.event);

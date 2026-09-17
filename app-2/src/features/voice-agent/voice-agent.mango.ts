@@ -8,6 +8,7 @@ import {
   mangoRecordingAddedEventSchema,
   mangoRecordingEventSchema,
   mangoSummaryEventSchema,
+  mangoTransferResultSchema,
   mangoWebhookBodySchema,
 } from "./voice-agent.schemas.js";
 
@@ -18,6 +19,11 @@ const mangoEnvelopeSchema = z.object({
 });
 
 export type MangoProviderEvent =
+  | {
+      readonly kind: "transfer_result";
+      readonly event: z.infer<typeof mangoTransferResultSchema>;
+      readonly eventKey: string;
+    }
   | {
       readonly kind: "call";
       readonly event: z.infer<typeof mangoCallEventSchema>;
@@ -85,6 +91,13 @@ const parseProviderJson = (json: string): MangoProviderEvent => {
     throw invalidWebhook("MANGO json field must contain valid JSON.");
   }
 
+  const transfer = mangoTransferResultSchema.safeParse(value);
+  if (transfer.success)
+    return {
+      kind: "transfer_result",
+      event: transfer.data,
+      eventKey: `mango:transfer:${transfer.data.command_id}:${transfer.data.result}`,
+    };
   const call = mangoCallEventSchema.safeParse(value);
   if (call.success)
     return {

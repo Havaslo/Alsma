@@ -50,6 +50,18 @@ export const mangoWebhookBodySchema = z.object({
 
 const mangoIdentifier = z.string().trim().min(1).max(128);
 const mangoTimestamp = z.coerce.number().int().nonnegative();
+export const mangoTransferResultSchema = z.object({
+  command_id: mangoIdentifier,
+  result: z
+    .union([
+      z.number().int(),
+      z
+        .string()
+        .regex(/^\d{1,6}$/u)
+        .transform(Number),
+    ])
+    .pipe(z.number().int().min(0).max(999_999)),
+});
 const mangoPartySchema = z
   .object({
     number: z.string().trim().min(3).max(80).optional(),

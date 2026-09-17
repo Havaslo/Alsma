@@ -3,8 +3,10 @@ import { createHash } from "node:crypto";
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { Database } from "../../lib/database/database.js";
 import { ensureDefaultAgentPlaybook } from "../agent/agent-playbook.js";
+import { ensureCall } from "./voice-agent.identity.js";
 import type { CreateCallBody, TranscriptBody } from "./voice-agent.schemas.js";
 import { canReplaceName, trustedName } from "./voice-agent.transcript.js";
+import { createTransferRepository } from "./voice-agent.transfer-repository.js";
 
 const asObject = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -258,14 +260,13 @@ export const createVoiceAgentRepository = (database: Database) => ({
       orderBy: { startedAt: "desc" },
       where: { providerEntryId },
     }),
-  findConnectedMangoCallByProviderEntryId: (providerEntryId: string) =>
-    database.client.voiceCall.findFirst({
-      orderBy: [{ providerSequence: "desc" }, { updatedAt: "desc" }],
-      where: {
-        mangoCallState: "Connected",
-        providerEntryId,
-      },
-    }),
+  findConnectedMangoCallByProviderEntryId: async (providerEntryId: string) => {
+    const call = await database.client.voiceCall.findFirst({
+      orderBy: [{ updatedAt: "desc" }, { providerSequence: "desc" }],
+      where: { providerEntryId, mangoCallId: { not: null } },
+    });
+    return call?.mangoCallState === "Connected" ? call : null;
+  },
   findActiveAmaziCallByCallerPhone: async (
     callerPhone: string,
     at = new Date(),
@@ -432,151 +433,8 @@ export const createVoiceAgentRepository = (database: Database) => ({
         });
       return request;
     }),
-  markTransfer: (id: string, outcome: string) =>
-    database.client.voiceCall.update({
-      where: { id },
-      data: { status: "transferring", outcome },
-    }),
-  claimTransfer: async (id: string, outcome: string) => {
-    const result = await database.client.voiceCall.updateMany({
-      where: { id, status: { notIn: ["transferring", "completed"] } },
-      data: { status: "transferring", transferState: "requested", outcome },
-    });
-    return result.count === 1;
-  },
-  failTransfer: (id: string, outcome: string) =>
-    database.client.voiceCall.update({
-      where: { id },
-      data: { status: "active", transferState: "failed", outcome },
-    }),
-  setTransferCommand: (
-    id: string,
-    commandId: string,
-    transferState: "requested" | "accepted" = "accepted",
-  ) =>
-    database.client.voiceCall.update({
-      where: { id },
-      data: { transferCommandId: commandId, transferState },
-    }),
+  ...createTransferRepository(database),
 });
-
-const ensureCall = async (
-  database: Database,
-  {
-    callerPhone,
-    provider,
-    providerCallId,
-    providerEntryId,
-    recordingUrl,
-    mangoCallId,
-    mangoCallState,
-    mangoTransferInitiator,
-    sipCallId,
-  }: {
-    readonly callerPhone?: string;
-    readonly provider: string;
-    readonly providerCallId?: string;
-    readonly providerEntryId?: string;
-    readonly recordingUrl?: string;
-    readonly mangoCallId?: string;
-    readonly mangoCallState?: string;
-    readonly mangoTransferInitiator?: string;
-    readonly sipCallId?: string;
-  },
-) => {
-  const identifiers = [
-    providerCallId,
-    sipCallId,
-    mangoCallId,
-    providerEntryId,
-  ].filter((value): value is string => Boolean(value));
-  const candidateWhere = identifiers.length
-    ? {
-        OR: [
-          ...(providerCallId ? [{ providerCallId }] : []),
-          ...(sipCallId ? [{ sipCallId }] : []),
-          ...(mangoCallId ? [{ mangoCallId }] : []),
-          ...(providerEntryId ? [{ providerEntryId }] : []),
-        ],
-      }
-    : undefined;
-  const candidates = candidateWhere
-    ? await database.client.voiceCall.findMany({
-        orderBy: { createdAt: "asc" },
-        where: candidateWhere,
-      })
-    : [];
-  const existing = candidates[0];
-  if (existing)
-    return database.client.$transaction(async (transaction) => {
-      const updated = await transaction.voiceCall.update({
-        data: {
-          ...(callerPhone ? { callerPhone } : {}),
-          ...(providerCallId ? { providerCallId } : {}),
-          ...(providerEntryId ? { providerEntryId } : {}),
-          ...(recordingUrl ? { recordingUrl } : {}),
-          ...(sipCallId ? { sipCallId } : {}),
-          ...(mangoCallId ? { mangoCallId } : {}),
-          ...(mangoCallState ? { mangoCallState } : {}),
-          ...(mangoTransferInitiator ? { mangoTransferInitiator } : {}),
-        },
-        where: { id: existing.id },
-      });
-      for (const duplicate of candidates.slice(1))
-        await transaction.voiceCall.delete({ where: { id: duplicate.id } });
-      return updated;
-    });
-
-  return database.client.$transaction(async (transaction) => {
-    const concurrent = candidateWhere
-      ? await transaction.voiceCall.findMany({
-          orderBy: { createdAt: "asc" },
-          where: candidateWhere,
-        })
-      : [];
-    if (concurrent[0])
-      return transaction.voiceCall.update({
-        where: { id: concurrent[0].id },
-        data: {
-          ...(providerCallId ? { providerCallId } : {}),
-          ...(sipCallId ? { sipCallId } : {}),
-          ...(mangoCallId ? { mangoCallId } : {}),
-          ...(mangoCallState ? { mangoCallState } : {}),
-          ...(providerEntryId ? { providerEntryId } : {}),
-          ...(callerPhone ? { callerPhone } : {}),
-        },
-      });
-    const call = await transaction.voiceCall.create({
-      data: {
-        callerPhone,
-        provider,
-        providerCallId,
-        providerEntryId,
-        mangoCallId,
-        mangoCallState,
-        mangoTransferInitiator,
-        sipCallId,
-        recordingUrl,
-      },
-    });
-    const request = await transaction.adminRequest.create({
-      data: {
-        title: "Входящий звонок",
-        description: "Входящий звонок из телефонии.",
-        category: "voice-call",
-        details: {
-          source: "Звонки",
-          channelType: "call",
-          voiceCallId: call.id,
-        } as Prisma.InputJsonValue,
-      },
-    });
-    return transaction.voiceCall.update({
-      where: { id: call.id },
-      data: { adminRequestId: request.id },
-    });
-  });
-};
 
 export type VoiceAgentRepository = ReturnType<
   typeof createVoiceAgentRepository
