@@ -129,11 +129,13 @@ export const mangoWebhookHandler =
 export const createAmaziWebhookHandler =
   ({
     closeRelay,
+    greetRelay,
     logger = createLogger(),
     secret,
     service,
   }: {
     readonly closeRelay: (sessionId: string) => void;
+    readonly greetRelay?: (sessionId: string) => void;
     readonly logger?: Logger;
     readonly secret?: string;
     readonly service: VoiceAgentService;
@@ -179,6 +181,9 @@ export const createAmaziWebhookHandler =
       claimedEventKey = event.eventKey;
       void (async () => {
         try {
+          // Media is ready at connected; configuration alone is too early.
+          if (event.eventType === "voice.call.connected")
+            greetRelay?.(event.sessionId);
           await service.handleAmaziWebhook(event);
           if (
             event.eventType === "voice.call.completed" ||

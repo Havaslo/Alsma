@@ -1,6 +1,6 @@
 {
   "name": "amazi-project-backend",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",

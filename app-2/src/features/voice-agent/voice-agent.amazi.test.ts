@@ -301,6 +301,7 @@ const createWebhookResponse = () => {
 
 test("returns 202 for valid Amazi lifecycle events after claiming each event", async () => {
   const handled: string[] = [];
+  const greeted: string[] = [];
   const service = {
     claimAmaziWebhook: async () => true,
     handleAmaziWebhook: async (event: { eventType: string }) => {
@@ -317,6 +318,7 @@ test("returns 202 for valid Amazi lifecycle events after claiming each event", a
     let nextError: unknown;
     const handler = createAmaziWebhookHandler({
       closeRelay: () => undefined,
+      greetRelay: (sessionId) => greeted.push(sessionId),
       logger: silentLogger,
       service: service as never,
     });
@@ -340,6 +342,7 @@ test("returns 202 for valid Amazi lifecycle events after claiming each event", a
     "voice.call.connected",
     "voice.call.completed",
   ]);
+  assert.deepEqual(greeted, ["lifecycle-session"]);
 });
 
 test("releases a durable Amazi claim when lifecycle handling fails", async () => {

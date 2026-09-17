@@ -161,6 +161,7 @@ export const createVoiceAgentRouter = (
     "/amazi/webhook",
     createAmaziWebhookHandler({
       closeRelay: amaziRelay.close,
+      greetRelay: amaziRelay.greet,
       logger,
       secret: voiceConfigurationSecret,
       service,

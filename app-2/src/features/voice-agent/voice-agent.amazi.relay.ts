@@ -40,6 +40,8 @@ type RelaySession = {
   reconnectTimer?: NodeJS.Timeout;
   closing: boolean;
   retryDisabled: boolean;
+  greetingPending: boolean;
+  greetingSent: boolean;
 };
 
 const relayRetryDelays = [250, 500, 1_000, 2_000] as const;
@@ -71,6 +73,29 @@ export const createAmaziEventRelay = ({
   WebSocketClass = WebSocket,
 }: AmaziRelayOptions) => {
   const sessions = new Map<string, RelaySession>();
+
+  const sendGreeting = (session: RelaySession) => {
+    if (
+      !session.greetingPending ||
+      session.greetingSent ||
+      session.closing ||
+      session.retryDisabled ||
+      session.socket?.readyState !== WebSocket.OPEN
+    )
+      return;
+    session.socket.send(
+      JSON.stringify({
+        type: "response.create",
+        response: {
+          output_modalities: ["audio"],
+          tool_choice: "none",
+          instructions:
+            "Скажи только: «Здравствуйте! Я голосовой помощник Алсмы. Чем могу помочь?» Затем дождись ответа гостя.",
+        },
+      }),
+    );
+    session.greetingSent = true;
+  };
 
   const sendToolOutput = (
     session: RelaySession,
@@ -148,6 +173,13 @@ export const createAmaziEventRelay = ({
   };
 
   const wire = (session: RelaySession, socket: RelaySocket) => {
+    socket.on("open", () => {
+      if (
+        sessions.get(session.sessionId) === session &&
+        session.socket === socket
+      )
+        sendGreeting(session);
+    });
     socket.on("message", (data, isBinary) => {
       if (
         sessions.get(session.sessionId) !== session ||
@@ -158,6 +190,12 @@ export const createAmaziEventRelay = ({
       if (isBinary) return;
       const event = parseRelayEvent(data);
       if (!event?.type) return;
+      // Never interrupt an already-started conversation with a late greeting.
+      if (
+        event.type === "input_audio_buffer.speech_started" ||
+        event.type === "response.created"
+      )
+        session.greetingSent = true;
       if (transcriptEventTypes.has(event.type) && event.transcript?.trim()) {
         const providerEventId =
           event.event_id ??
@@ -293,12 +331,20 @@ export const createAmaziEventRelay = ({
       toolCallIds: new Set<string>(),
       closing: false,
       retryDisabled: false,
+      greetingPending: false,
+      greetingSent: false,
     } satisfies RelaySession;
     sessions.set(sessionId, session);
     openSocket(session);
   };
 
   return {
+    greet: (sessionId: string) => {
+      const session = sessions.get(sessionId);
+      if (!session) return;
+      session.greetingPending = true;
+      sendGreeting(session);
+    },
     close: (sessionId: string) => {
       const session = sessions.get(sessionId);
       if (!session) return;
