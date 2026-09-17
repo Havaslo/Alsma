@@ -258,6 +258,14 @@ export const createVoiceAgentRepository = (database: Database) => ({
       orderBy: { startedAt: "desc" },
       where: { providerEntryId },
     }),
+  findConnectedMangoCallByProviderEntryId: (providerEntryId: string) =>
+    database.client.voiceCall.findFirst({
+      orderBy: [{ providerSequence: "desc" }, { updatedAt: "desc" }],
+      where: {
+        mangoCallState: "Connected",
+        providerEntryId,
+      },
+    }),
   findActiveAmaziCallByCallerPhone: async (
     callerPhone: string,
     at = new Date(),

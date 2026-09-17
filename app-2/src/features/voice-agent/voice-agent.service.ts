@@ -321,13 +321,26 @@ export const createVoiceAgentService = (
       return transferFailure("transfer_not_configured");
     if (!transfer.mangoApiKey || !transfer.mangoApiSalt)
       return transferFailure("transfer_not_configured");
-    if (call.mangoCallState !== "Connected")
-      return transferFailure("mango_call_not_connected");
+    const entryId = call.providerEntryId?.trim();
+    if (!entryId) return transferFailure("mango_entry_id_missing");
+
+    // The Amazi row can retain a stale or unrelated Mango snapshot. Resolve
+    // the current Mango leg again by the entry_id that belongs to this call
+    // chain, then validate the state and transfer identifiers on that row.
+    const mangoCall =
+      typeof repository.findConnectedMangoCallByProviderEntryId === "function"
+        ? await repository.findConnectedMangoCallByProviderEntryId(entryId)
+        : call.providerEntryId === entryId &&
+            call.mangoCallState === "Connected"
+          ? call
+          : null;
+    if (!mangoCall) return transferFailure("mango_call_not_connected");
     const mangoCallId =
-      call.mangoCallId ??
-      (call.provider === "mango" ? call.providerCallId : undefined);
-    const initiator = selectMangoTransferInitiator(call);
-    if (!call.providerEntryId) return transferFailure("mango_entry_id_missing");
+      mangoCall.mangoCallId?.trim() ||
+      (mangoCall.provider === "mango"
+        ? mangoCall.providerCallId?.trim()
+        : undefined);
+    const initiator = selectMangoTransferInitiator(mangoCall);
     if (!mangoCallId) return transferFailure("mango_call_id_missing");
     if (!initiator) return transferFailure("mango_transfer_initiator_missing");
     if (call.status === "transferring" || call.status === "completed")

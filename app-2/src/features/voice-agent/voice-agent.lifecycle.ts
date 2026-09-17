@@ -82,10 +82,10 @@ export const createMangoEventHandler = ({
       (event.sipCallId
         ? await repository.findBySipCallId(event.sipCallId)
         : null) ??
-      (await repository.findByMangoCallId(event.callId)) ??
       (event.entryId
         ? await repository.findByProviderEntryId(event.entryId)
         : null) ??
+      (await repository.findByMangoCallId(event.callId)) ??
       (await repository.findByProviderCallId(event.callId));
     if (existing) return existing;
     const amaziMatch =
