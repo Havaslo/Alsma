@@ -367,8 +367,8 @@ export const BookingPage = () => {
               Бронирование создано
             </h2>
             <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
-              Бронь создана в Eptera. Если оплата ещё не завершена, её можно
-              продолжить по ссылке ЮKassa.
+              Бронь создана в системе бронирования. Если оплата ещё не
+              завершена, её можно продолжить по ссылке для оплаты.
             </p>
             <p className="mt-6 text-sm text-muted-ui-foreground">
               Номер брони:{" "}
@@ -769,7 +769,7 @@ export const BookingPage = () => {
                     </div>
                     <p className="mt-3 text-sm text-muted-ui-foreground">
                       После создания брони вы перейдёте на защищённую страницу
-                      ЮKassa.
+                      для оплаты.
                     </p>
                     <div className="mt-4 rounded-2xl border border-accent-ui/30 bg-accent-ui/10 p-4 text-sm leading-6">
                       <p className="font-semibold text-page-foreground">
@@ -777,7 +777,7 @@ export const BookingPage = () => {
                       </p>
                       <p className="mt-1 text-muted-ui-foreground">
                         Если оплата не будет завершена за это время, бронь
-                        автоматически отменится в Eptera.
+                        автоматически отменится.
                       </p>
                     </div>
                   </div>
