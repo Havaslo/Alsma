@@ -332,15 +332,22 @@ export const ChatWidget = () => {
                 className="flex gap-2 border-t border-line bg-brand-foreground p-3"
                 onSubmit={send}
               >
-                <input
+                <textarea
                   aria-label="Сообщение"
-                  className="min-w-0 flex-1 rounded-xl border border-line bg-page px-3 py-2 text-sm outline-none focus:border-focus"
+                  className="min-h-10 min-w-0 flex-1 resize-none rounded-xl border border-line bg-page px-3 py-2 text-sm outline-none focus:border-focus"
                   onChange={(event) => setText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      event.currentTarget.form?.requestSubmit();
+                    }
+                  }}
                   placeholder={
                     chatMode === "manager"
                       ? "Сообщение менеджеру"
                       : "Ваш вопрос"
                   }
+                  rows={1}
                   value={text}
                 />
                 <button
