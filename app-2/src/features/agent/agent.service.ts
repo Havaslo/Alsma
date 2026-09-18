@@ -222,15 +222,43 @@ const phoneFromText = (text: string) =>
     ?.replace(/[^\d+]/gu, "");
 const emailFromText = (text: string) =>
   text.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu)?.[0]?.toLowerCase();
-const nameFromText = (text: string) => {
+const contactNamePartsFromText = (text: string): BookingContact => {
+  const firstName = text.match(
+    /(?:^|[\s;,/])имя\s*[:—-]\s*([А-ЯЁ][а-яё-]{2,39})/iu,
+  )?.[1];
+  const lastName = text.match(
+    /(?:^|[\s;,/])фамили(?:я|ю)\s*[:—-]\s*([А-ЯЁ][а-яё-]{2,39})/iu,
+  )?.[1];
+  if (firstName || lastName) {
+    return {
+      ...(firstName ? { firstName } : {}),
+      ...(lastName ? { lastName } : {}),
+    };
+  }
   const labeled = text.match(
-    /(?:меня\s+зовут|имя\s*[:—-]?|это)\s+([А-ЯЁ][а-яё-]{2,39}(?:\s+[А-ЯЁ][а-яё-]{2,39})?)/u,
+    /(?:меня\s+зовут|это)\s+([А-ЯЁ][а-яё-]{2,39})(?:\s+([А-ЯЁ][а-яё-]{2,39}))?/iu,
   );
-  if (labeled?.[1]) return labeled[1].trim();
+  if (labeled?.[1]) {
+    return {
+      firstName: labeled[1],
+      ...(labeled[2] ? { lastName: labeled[2] } : {}),
+    };
+  }
   const contactLine = text.match(
-    /^\s*([А-ЯЁ][а-яё-]{2,39}(?:\s+[А-ЯЁ][а-яё-]{2,39})?)\s*(?=,|;|\bтел(?:ефон|\.)?\b|\bemail\b|\bпочт)/iu,
+    /^\s*([А-ЯЁ][а-яё-]{2,39})(?:\s+([А-ЯЁ][а-яё-]{2,39}))?\s*(?=,|;|$|\bтел(?:ефон|\.)?\b|\bemail\b|\bпочт)/u,
   );
-  return contactLine?.[1]?.trim();
+  return contactLine?.[1]
+    ? {
+        firstName: contactLine[1],
+        ...(contactLine[2] ? { lastName: contactLine[2] } : {}),
+      }
+    : {};
+};
+const nameFromText = (text: string) => {
+  const parts = contactNamePartsFromText(text);
+  return (
+    [parts.firstName, parts.lastName].filter(Boolean).join(" ") || undefined
+  );
 };
 const splitName = (value?: string) => {
   const parts = value?.trim().split(/\s+/u).filter(Boolean) ?? [];
@@ -449,15 +477,31 @@ export const createAiAgentService = (options: AgentOptions) => {
     const detectedPhone = currentPhone ?? previousContactRequest.phone;
     const detectedName = currentName ?? previousContactRequest.name;
     const detectedEmail = currentEmail ?? previousContactRequest.email;
-    const detectedNameParts = splitName(detectedName);
+    const historicalBookingContact = conversationMessages
+      .filter((item) => item.author === "guest")
+      .map((item) => ({
+        name: contactNamePartsFromText(item.text),
+        phone: phoneFromText(item.text),
+        email: emailFromText(item.text),
+      }))
+      .reduce<BookingContact>(
+        (contact, item) => ({
+          ...contact,
+          ...item.name,
+          ...(item.phone ? { phone: item.phone } : {}),
+          ...(item.email ? { email: item.email } : {}),
+        }),
+        {},
+      );
+    const legacyContactName = contactNamePartsFromText(
+      previousContactRequest.name ?? "",
+    );
+    const currentNameParts = contactNamePartsFromText(message);
     const nextBookingContact: BookingContact = {
       ...previousBookingContact,
-      ...(detectedNameParts.firstName
-        ? { firstName: detectedNameParts.firstName }
-        : {}),
-      ...(detectedNameParts.lastName
-        ? { lastName: detectedNameParts.lastName }
-        : {}),
+      ...historicalBookingContact,
+      ...legacyContactName,
+      ...currentNameParts,
       ...(currentPhone ? { phone: currentPhone } : {}),
       ...(currentEmail ? { email: currentEmail } : {}),
     };
@@ -706,9 +750,12 @@ export const createAiAgentService = (options: AgentOptions) => {
         availabilityOffers = [];
       }
     }
+    const bookingConfirmationMessage = isExplicitBookingConfirmation(message);
     const isBookingContactMessage = Boolean(
-      bookingFromContext(nextBooking) &&
-      (currentName || currentPhone || currentEmail),
+      currentName ||
+      currentPhone ||
+      currentEmail ||
+      (bookingConfirmationMessage && isBookingRequest(message, nextBooking)),
     );
     const knowledgeResult = isBookingContactMessage
       ? { sources: [] as Array<{ content: string }> }
@@ -902,7 +949,7 @@ export const createAiAgentService = (options: AgentOptions) => {
         },
       });
     }
-    const confirmationReceived = isExplicitBookingConfirmation(message);
+    const confirmationReceived = bookingConfirmationMessage;
     const missingContactFields =
       missingBookingContactFields(nextBookingContact);
     const canCompleteBooking = Boolean(
@@ -931,19 +978,23 @@ export const createAiAgentService = (options: AgentOptions) => {
           bookingCandidate.checkOutDate ?? bookingState.checkOutDate,
         childAges: bookingCandidate.childAges ?? bookingState.childAges ?? [],
         email:
-          bookingCandidate.email ?? result.email ?? nextBookingContact.email,
+          nextBookingContact.email ??
+          (bookingCandidate.email as string | undefined) ??
+          result.email,
         firstName:
-          bookingCandidate.firstName ??
-          bookingNames.firstName ??
-          nextBookingContact.firstName,
+          nextBookingContact.firstName ??
+          (bookingCandidate.firstName as string | undefined) ??
+          bookingNames.firstName,
         lastName:
-          bookingCandidate.lastName ??
-          bookingNames.lastName ??
-          nextBookingContact.lastName,
+          nextBookingContact.lastName ??
+          (bookingCandidate.lastName as string | undefined) ??
+          bookingNames.lastName,
         offerId:
           bookingCandidate.offerId ?? result.offerId ?? bookingState.offerId,
         phone:
-          bookingCandidate.phone ?? result.phone ?? nextBookingContact.phone,
+          nextBookingContact.phone ??
+          (bookingCandidate.phone as string | undefined) ??
+          result.phone,
         roomCount: bookingCandidate.roomCount ?? bookingState.roomCount,
       });
       const selectedOfferId = bookingData.success

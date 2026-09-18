@@ -115,7 +115,7 @@ const createHarness = () => {
     const prompt = body.messages?.[0]?.content ?? "";
     prompts.push(prompt);
     const guestMessage = prompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
-    const content = /Да, бронируйте|создавай/iu.test(guestMessage)
+    const content = /Да, бронируйте|создавай|подтверждаю/iu.test(guestMessage)
       ? {
           action: "create_booking",
           answer: "Оформляю выбранный вариант.",
@@ -346,6 +346,62 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
       (harness.published.at(-1) as { bookingUrl?: string }).bookingUrl,
       "https://yookassa.test/payment-1",
     );
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("extracts names from natural and labeled messages in the booking flow", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-screenshot-flow",
+      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+    );
+    await harness.service.reply(
+      "conversation-screenshot-flow",
+      "Беру вариант 1",
+    );
+    await harness.service.reply(
+      "conversation-screenshot-flow",
+      "Дима Наумов, телефон 89525012159",
+    );
+    assert.match(harness.published.at(-1)?.text ?? "", /ещё нужны: email/u);
+    assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
+
+    await harness.service.reply(
+      "conversation-screenshot-flow",
+      "Имя: Дима / Фамилия: Наумов / email: d.naymow13@gmail.com",
+    );
+    const knowledgeQueriesBeforeConfirmation = harness.knowledgeQueries.length;
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Подтверждаете создание брони/u,
+    );
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /Точной информации|ещё нужны/u,
+    );
+    await harness.service.reply("conversation-screenshot-flow", "подтверждаю");
+    assert.equal(
+      harness.knowledgeQueries.length,
+      knowledgeQueriesBeforeConfirmation,
+    );
+    assert.equal(harness.reservations.length, 1);
+    const reservation = harness.reservations[0] as {
+      contact?: {
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+      };
+    };
+    assert.deepEqual(reservation.contact, {
+      email: "d.naymow13@gmail.com",
+      firstName: "Дима",
+      lastName: "Наумов",
+      phone: "89525012159",
+    });
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
