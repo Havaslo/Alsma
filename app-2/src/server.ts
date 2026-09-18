@@ -45,6 +45,10 @@ const start = async (): Promise<void> => {
   attachVoiceAgentRealtime(server, {
     apiKey: config.openaiApiKey,
     database,
+    eptera: {
+      apiKey: config.epteraApiKey,
+      hotelId: config.epteraHotelId,
+    },
     logger,
     openaiBaseUrl: config.openaiBaseUrl,
   });

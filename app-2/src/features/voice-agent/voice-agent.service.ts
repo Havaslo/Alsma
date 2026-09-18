@@ -236,6 +236,53 @@ export const createVoiceAgentService = (
   };
 
   const executeTool = async (input: ToolBody) => {
+    if (input.name === "check_availability" || input.name === "compare_rooms") {
+      if (!eptera)
+        return {
+          available: false,
+          reason: "eptera_not_configured",
+          readOnly: true,
+        };
+      try {
+        const offers = await eptera.getOffers({
+          adults: input.adults,
+          checkIn: input.checkIn,
+          checkOut: input.checkOut,
+          childAges: input.childAges,
+          currency: "RUB",
+          language: "ru",
+          nationality: "RU",
+          roomCount: input.roomCount,
+        });
+        return {
+          available: offers.length > 0,
+          offers: offers.slice(0, 8).map((offer) => ({
+            benefits: offer.benefits,
+            boardType: offer.boardType,
+            currency: offer.currency,
+            discountedPrice: offer.discountedPrice,
+            id: offer.id,
+            rateDescription: offer.rateDescription,
+            rateType: offer.rateType,
+            roomArea: offer.roomArea,
+            roomCapacity: offer.roomCapacity,
+            roomDescription: offer.roomDescription,
+            roomType: offer.roomType,
+            roomToSell: offer.roomToSell,
+            price: offer.price,
+          })),
+          readOnly: true,
+          purpose:
+            input.name === "compare_rooms" ? "comparison" : "availability",
+        };
+      } catch {
+        return {
+          available: false,
+          reason: "eptera_temporarily_unavailable",
+          readOnly: true,
+        };
+      }
+    }
     if (input.name === "get_events") {
       try {
         const events = await listPublishedEvents(database, input.date);

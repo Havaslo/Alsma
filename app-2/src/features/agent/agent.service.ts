@@ -2,11 +2,18 @@ import type { Logger } from "pino";
 import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
-import type { EpteraClient } from "../booking/eptera.client.js";
+import type { BookingService } from "../booking/booking.service.js";
 import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
 import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
+import {
+  agentBookingSchema,
+  formatEpteraOffers,
+  isExplicitBookingConfirmation,
+  summarizeEpteraOffers,
+  toReservationBody,
+} from "./agent-booking.js";
 import { ensureDefaultAgentPlaybook } from "./agent-playbook.js";
 import { loadPublishedOffersContext } from "./offers-context.js";
 
@@ -19,7 +26,14 @@ const bookingSchema = z.object({
   roomCount: z.number().int().min(1).max(2),
 });
 const actionSchema = z.object({
-  action: z.enum(["answer", "open_page", "create_request", "transfer"]),
+  action: z.enum([
+    "answer",
+    "open_page",
+    "create_booking",
+    "create_request",
+    "transfer",
+  ]),
+  confirmed: z.boolean().optional(),
   page: z.enum(["spa", "hardware-procedures", "offers"]).optional(),
   name: z.string().trim().max(160).optional(),
   phone: z.string().trim().max(40).optional(),
@@ -33,6 +47,7 @@ const actionSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
   guestsCount: z.number().int().min(1).max(20).optional(),
+  offerId: z.string().trim().min(1).max(300).optional(),
   answer: z.string().trim().min(1).max(4_000),
   booking: z.unknown().optional(),
 });
@@ -40,9 +55,10 @@ type AgentOptions = {
   readonly apiKey?: string;
   readonly baseUrl?: string;
   readonly bookingUrl: string;
+  readonly bookingReturnUrl?: string;
+  readonly booking: BookingService;
   readonly chat: ChatService;
   readonly database: Database;
-  readonly eptera: EpteraClient;
   readonly logger: Logger;
 };
 const asSettings = (value: unknown) => ({
@@ -54,13 +70,13 @@ const asSettings = (value: unknown) => ({
   tone: "доброжелательный, спокойный и полезный",
   language: "русский",
   bookingUrl: "",
-  canCheckAvailability: false,
+  canCheckAvailability: true,
   canCreateRequest: true,
   canTransferToEmployee: true,
   showAiDisclosure: true,
   disclosureText: "Я AI-ассистент отеля «Алсма». ",
   ...(value && typeof value === "object" ? value : {}),
-  canCreateBooking: false,
+  canCreateBooking: true,
 });
 const normalizeBaseUrl = (value?: string) => (value ?? "").replace(/\/$/u, "");
 
@@ -112,10 +128,12 @@ type BookingContext = Partial<z.infer<typeof bookingSchema>> & {
 };
 type ConversationState = {
   booking?: BookingContext;
+  availabilityOffers?: ReturnType<typeof summarizeEpteraOffers>;
   serviceContext?: "spa" | "hardware-procedures" | "offers";
   contactRequest?: {
     awaitingChoice?: boolean;
     awaitingContacts?: boolean;
+    email?: string;
     name?: string;
     phone?: string;
     created?: boolean;
@@ -132,6 +150,12 @@ const asConversationState = (value: unknown): ConversationState => {
       !Array.isArray(bookingValue)
         ? (bookingValue as BookingContext)
         : undefined,
+    availabilityOffers: Array.isArray(details.availabilityOffers)
+      ? details.availabilityOffers.filter(
+          (item): item is ReturnType<typeof summarizeEpteraOffers>[number] =>
+            Boolean(item && typeof item === "object" && "id" in item),
+        )
+      : undefined,
     serviceContext:
       details.serviceContext === "spa" ||
       details.serviceContext === "hardware-procedures" ||
@@ -178,6 +202,8 @@ const phoneFromText = (text: string) =>
   text
     .match(/(?:\+?7|8)[\s(\-]*\d[\d\s()\-]{8,}\d/iu)?.[0]
     ?.replace(/[^\d+]/gu, "");
+const emailFromText = (text: string) =>
+  text.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu)?.[0]?.toLowerCase();
 const nameFromText = (text: string) => {
   const match = text.match(
     /(?:меня\s+зовут|имя\s*[:—-]?|это)\s+([а-яё-]{2,40})/iu,
@@ -185,6 +211,13 @@ const nameFromText = (text: string) => {
   if (match?.[1]) return match[1];
   const words = text.match(/\b[А-ЯЁ][а-яё-]{2,39}\b/gu) ?? [];
   return words.find((word) => !/менеджер|телефон|номер/iu.test(word));
+};
+const splitName = (value?: string) => {
+  const parts = value?.trim().split(/\s+/u).filter(Boolean) ?? [];
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" ") || undefined,
+  };
 };
 const extractEntities = (text: string) => {
   const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
@@ -196,12 +229,15 @@ const extractEntities = (text: string) => {
     ),
   ].at(-1);
   const inferredYear = String(new Date().getFullYear());
-  const dates = russianRange
-    ? [
-        `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[1]!)).padStart(2, "0")}`,
-        `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
-      ]
-    : isoDates.slice(-2);
+  const dates =
+    isoDates.length >= 2
+      ? isoDates.slice(-2)
+      : russianRange
+        ? [
+            `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[1]!)).padStart(2, "0")}`,
+            `${russianRange[4] ?? inferredYear}-${monthNumbers[russianRange[3]!.toLocaleLowerCase("ru-RU")] ?? "00"}-${String(Number(russianRange[2]!)).padStart(2, "0")}`,
+          ]
+        : isoDates.slice(-2);
   const adultsMatch = text.match(
     /(?:нас\s+)?(\d{1,2})\s*(?:взросл\w*|человек\w*|гост\w*)/iu,
   );
@@ -214,6 +250,13 @@ const extractEntities = (text: string) => {
       ? { один: 1, одна: 1, двое: 2, трое: 3, четверо: 4 }[wordAdults]
       : undefined;
   const roomsMatch = text.match(/(\d{1,2})\s*номер\w*/iu);
+  const childMention = /реб[её]н|дет(?:и|ей|ям|ьми)|малыш/iu.test(text);
+  const childAges = childMention
+    ? [...text.matchAll(/\b(\d{1,2})\s*(?:лет|года?|годик\w*)\b/giu)]
+        .map((match) => Number(match[1]))
+        .filter((age) => age >= 0 && age <= 17)
+        .slice(0, 8)
+    : undefined;
   const result: BookingContext = {};
   if (dates.length >= 2 && dates.every(Boolean)) {
     result.checkInDate = dates[0];
@@ -223,15 +266,13 @@ const extractEntities = (text: string) => {
   if (adults) result.adults = adults;
   if (roomsMatch) result.roomCount = Number(roomsMatch[1]);
   if (adults && !roomsMatch) result.roomCount = 1;
+  if (childAges) result.childAges = childAges;
   return result;
 };
 const bookingFromContext = (context?: BookingContext) => {
   const parsed = bookingSchema.safeParse(context);
   return parsed.success ? parsed.data : null;
 };
-const bookingLink = (settingsUrl: string, fallbackUrl: string) =>
-  settingsUrl.trim() || fallbackUrl || "/booking";
-
 export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
@@ -372,6 +413,8 @@ export const createAiAgentService = (options: AgentOptions) => {
     const detectedPhone =
       phoneFromText(message) ?? previousContactRequest.phone;
     const detectedName = nameFromText(message) ?? previousContactRequest.name;
+    const detectedEmail =
+      emailFromText(message) ?? previousContactRequest.email;
     const hasContactData = Boolean(detectedName && detectedPhone);
     const contactIntent = Boolean(
       contactScenario && scenarioMatches(contactScenario.trigger, message),
@@ -391,6 +434,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       ...(awaitingContacts ? { awaitingContacts: true } : {}),
       ...(detectedName ? { name: detectedName } : {}),
       ...(detectedPhone ? { phone: detectedPhone } : {}),
+      ...(detectedEmail ? { email: detectedEmail } : {}),
     };
     if (explicitCreateRequest) {
       if (!hasContactData) {
@@ -480,13 +524,6 @@ export const createAiAgentService = (options: AgentOptions) => {
         answer: "Передаю диалог менеджеру — он подключится к вам.",
       };
     }
-    if (isBookingRequest(message, previousState.booking)) {
-      const url = bookingLink(settings.bookingUrl, options.bookingUrl);
-      const answer =
-        "Для бронирования можно перейти на страницу бронирования по ссылке ниже или я могу передать вас менеджеру. Какой вариант удобнее?";
-      await options.chat.publish(conversationId, "agent", answer, url);
-      return { action: "answer" as const, answer };
-    }
     if (awaitingContacts && !hasContactData) {
       const missing = detectedName
         ? "номер телефона"
@@ -542,6 +579,9 @@ export const createAiAgentService = (options: AgentOptions) => {
         : { ...previousState.booking, ...entities };
     const nextServiceContext =
       serviceMention(message) ?? previousState.serviceContext;
+    const nextAvailabilityOffers = requestedOtherDates
+      ? undefined
+      : previousState.availabilityOffers;
     await options.database.client.adminRequest.update({
       where: { id: conversationId },
       data: {
@@ -550,11 +590,64 @@ export const createAiAgentService = (options: AgentOptions) => {
             ? requestState.details
             : {}),
           bookingContext: nextBooking,
+          ...(nextAvailabilityOffers
+            ? { availabilityOffers: nextAvailabilityOffers }
+            : {}),
           serviceContext: nextServiceContext,
         },
       },
     });
     const extractedBooking = bookingFromContext(nextBooking);
+    let availabilityOffers = nextAvailabilityOffers ?? [];
+    const bookingCriteriaChanged = Boolean(
+      entities.adults !== undefined ||
+      entities.childAges !== undefined ||
+      entities.roomCount !== undefined,
+    );
+    const shouldRefreshAvailability = Boolean(
+      settings.canCheckAvailability &&
+      extractedBooking &&
+      (currentMessageHasDate ||
+        bookingCriteriaChanged ||
+        availabilityOffers.length === 0),
+    );
+    if (shouldRefreshAvailability && extractedBooking) {
+      options.chat.publishStatus(
+        conversationId,
+        "checking_availability",
+        "Проверяю доступные варианты",
+      );
+      try {
+        const result = await options.booking.offers({
+          adults: extractedBooking.adults,
+          checkIn: extractedBooking.checkInDate,
+          checkOut: extractedBooking.checkOutDate,
+          childAges: extractedBooking.childAges,
+          children: extractedBooking.childAges.length,
+          currency: "RUB",
+          language: "ru",
+          nationality: "RU",
+          roomCount: extractedBooking.roomCount,
+        });
+        availabilityOffers = summarizeEpteraOffers(result.offers);
+        await options.database.client.adminRequest.update({
+          where: { id: conversationId },
+          data: {
+            details: {
+              ...(requestState?.details &&
+              typeof requestState.details === "object"
+                ? requestState.details
+                : {}),
+              availabilityOffers,
+              bookingContext: nextBooking,
+              serviceContext: nextServiceContext,
+            },
+          },
+        });
+      } catch {
+        availabilityOffers = [];
+      }
+    }
     const [
       knowledgeResult,
       scenarios,
@@ -613,23 +706,24 @@ export const createAiAgentService = (options: AgentOptions) => {
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
       "Отвечай только по контексту базы знаний и данным наличия. Не выдумывай цены, наличие или условия. Не вставляй статьи базы знаний целиком и не перечисляй внутренний контекст.",
       "Каждый ответ должен продвигать диалог: либо задай один конкретный вопрос, либо предложи одно понятное действие. Не повторяй описание SPA, если оно уже было дано. Если гость выражает общий интерес, сначала предложи выбор из двух-трёх форматов (проживание, SPA на день, процедуры), а не новый список услуг.",
-      "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для любого запроса о бронировании, проживании, датах заезда или номерах не ищи наличие и не оформляй бронь: предложи перейти по настроенной ссылке бронирования или передать диалог менеджеру.",
+      "Разделяй контексты: проживание хранится отдельно от SPA, процедур и акций. Если тема меняется, не сбрасывай разговор и не повторяй стартовый выбор. Если сервисный контекст уже выбран, сразу отвечай по нему. Если гость спрашивает об акциях, скидках или специальных предложениях, отвечай по базе знаний и используй action open_page с page offers, чтобы показать страницу акций. Для SPA и процедур используй соответствующие страницы. Для запроса о проживании сначала собери даты, состав гостей и число номеров, затем используй переданные актуальные варианты Eptera. По этим вариантам отвечай на вопросы о наличии, подборе и сравнении.",
       "Для вопросов о мероприятиях используй только опубликованный календарь ниже. Не выдумывай названия, даты или условия; если подходящего события нет или календарь недоступен, честно скажи, что у тебя нет подтверждённой информации, и предложи уточнить у менеджера.",
       "Не задавай больше одного вопроса за ответ и не возвращайся к уже решённому вопросу. Используй transfer только если гость прямо попросил менеджера/сотрудника или выполнено конкретное правило передачи; фраза «попробуйте ещё раз» сама по себе НЕ является передачей. После двух повторов или отсутствия прогресса используй transfer. Если гость просит другие даты без новых дат, это команда начать новый поиск: не повторяй старый результат, не называй старые даты и спроси только новые даты или предложи ближайшие свободные варианты.",
-      `Проверка наличия и оформление бронирования через API недоступны и запрещены. Агент может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Для бронирования используй настроенную ссылку отдельной кнопкой и предложи также передачу менеджеру. Не придумывай номера, цены или наличие.`,
-      "Если данных для заявки не хватает, задай короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers. Запрос бронирования обрабатывай предложением ссылки бронирования или менеджера.",
+      `Eptera доступна для поиска и сравнения: ${settings.canCheckAvailability}. Создание бронирования через booking-сервис разрешено только текстовым каналам после явного подтверждения клиента: ${settings.canCreateBooking}. Агент может создать заявку: ${settings.canCreateRequest}. Может передать сотруднику: ${settings.canTransferToEmployee}. Не придумывай номера, цены или наличие; используй только переданные варианты.`,
+      "Если данных для поиска или бронирования не хватает, задай один короткий уточняющий вопрос. Для передачи сотруднику используй action transfer. Для перехода на страницу используй action open_page с page spa, hardware-procedures или offers. Для создания бронирования верни action create_booking только после явного подтверждения в текущем сообщении, confirmed: true, offerId выбранного варианта и полные данные гостя (имя, фамилия, телефон, email). До подтверждения только покажи сравнение и попроси подтвердить выбранный вариант.",
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
-      "Не собирай параметры проживания для поиска и не заполняй booking ради проверки: U-Hotels API недоступен. При запросе бронирования сразу предложи ссылку бронирования или менеджера.",
-      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_request'|'transfer', page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount}, answer:string}. Для open_page page обязателен. Если выбранный сценарий задаёт action или page, следуй ему.",
+      "Если варианты Eptera переданы ниже, сравни их по типу номера, тарифу, питанию, цене, вместимости и преимуществам. Не создавай бронирование и не обещай его до явного подтверждения клиента. Для нескольких номеров учитывай roomCount и выбранные варианты.",
+      "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page page обязателен. Для create_booking обязательно confirmed:true и явное подтверждение гостя в текущем сообщении. Если выбранный сценарий задаёт action или page, следуй ему, кроме запрета на создание брони без подтверждения.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
       `Опубликованные актуальные мероприятия с публичного календаря${calendarDateInMessage(message) ? ` на дату ${calendarDateInMessage(message)}` : ""} (не выдумывай события):\n${eventsContext || "Опубликованных мероприятий на запрошенную дату сейчас нет или календарь недоступен."}`,
+      `Актуальные варианты Eptera для проживания (это подтверждённые данные поиска; можно сравнивать, но нельзя придумывать дополнительные варианты):\n${formatEpteraOffers(availabilityOffers) || "Варианты ещё не найдены. Сначала уточни даты, гостей и количество номеров."}`,
       `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
       `Активные правила базы знаний:\n${knowledgeRuleContext || "Нет дополнительных правил."}`,
-      `Сохранённое состояние диалога:\n${JSON.stringify({ booking: nextBooking, serviceContext: nextServiceContext })}`,
+      `Сохранённое состояние диалога:\n${JSON.stringify({ availabilityOffers, booking: nextBooking, serviceContext: nextServiceContext })}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
     ]
@@ -706,9 +800,93 @@ export const createAiAgentService = (options: AgentOptions) => {
       scenarioAction === "open_page"
         ? (selectedScenario?.page ?? result.page)
         : result.page;
+    const bookingCandidate =
+      result.booking &&
+      typeof result.booking === "object" &&
+      !Array.isArray(result.booking)
+        ? (result.booking as Record<string, unknown>)
+        : {};
+    let finalAction = effectiveAction;
+    let generatedAnswer: string | undefined;
+    let bookingUrl: string | undefined;
+    if (effectiveAction === "create_booking") {
+      const bookingNames = splitName(
+        typeof bookingCandidate.firstName === "string" &&
+          typeof bookingCandidate.lastName === "string"
+          ? `${bookingCandidate.firstName} ${bookingCandidate.lastName}`
+          : (result.name ?? detectedName),
+      );
+      const bookingData = agentBookingSchema.safeParse({
+        ...bookingCandidate,
+        adults: bookingCandidate.adults ?? nextBooking.adults,
+        checkInDate: bookingCandidate.checkInDate ?? nextBooking.checkInDate,
+        checkOutDate: bookingCandidate.checkOutDate ?? nextBooking.checkOutDate,
+        childAges: bookingCandidate.childAges ?? nextBooking.childAges ?? [],
+        email: bookingCandidate.email ?? result.email ?? detectedEmail,
+        firstName: bookingCandidate.firstName ?? bookingNames.firstName,
+        lastName: bookingCandidate.lastName ?? bookingNames.lastName,
+        offerId: bookingCandidate.offerId ?? result.offerId,
+        phone: bookingCandidate.phone ?? result.phone ?? detectedPhone,
+        roomCount: bookingCandidate.roomCount ?? nextBooking.roomCount,
+      });
+      const selectedOfferId = bookingData.success
+        ? bookingData.data.offerId
+        : typeof bookingCandidate.offerId === "string"
+          ? bookingCandidate.offerId
+          : result.offerId;
+      const selectedOffer = availabilityOffers.find(
+        (offer) => offer.id === selectedOfferId,
+      );
+      const returnUrl =
+        options.bookingReturnUrl ??
+        (/^https?:\/\//iu.test(settings.bookingUrl)
+          ? new URL("/booking/return", settings.bookingUrl).toString()
+          : undefined);
+      if (
+        !settings.canCreateBooking ||
+        result.confirmed !== true ||
+        !isExplicitBookingConfirmation(message) ||
+        !selectedOffer ||
+        !bookingData.success ||
+        !returnUrl
+      ) {
+        finalAction = "answer";
+        generatedAnswer =
+          "Перед созданием брони подтвердите выбранный вариант и укажите имя, фамилию, телефон и email для оформления.";
+      } else {
+        try {
+          const reservation = await options.booking.createReservation(
+            toReservationBody(bookingData.data, returnUrl),
+          );
+          const paymentLink = reservation.payment.confirmationUrl;
+          if (!paymentLink) throw new Error("Payment link is missing");
+          bookingUrl = paymentLink;
+          generatedAnswer =
+            "Бронь создана. Перейдите по ссылке оплаты и завершите оплату в течение 30 минут, иначе бронь будет автоматически отменена.";
+          await options.database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: {
+                ...(requestState?.details &&
+                typeof requestState.details === "object"
+                  ? requestState.details
+                  : {}),
+                bookingContext: nextBooking,
+                bookingCreatedByAgent: true,
+                paymentLinkSent: true,
+              },
+            },
+          });
+        } catch {
+          finalAction = "answer";
+          generatedAnswer =
+            "Не удалось создать бронь по выбранному варианту. Попробуйте ещё раз или я передам диалог менеджеру.";
+        }
+      }
+    }
     if (
       settings.canCreateRequest &&
-      (effectiveAction === "create_request" || effectiveAction === "transfer")
+      (finalAction === "create_request" || finalAction === "transfer")
     ) {
       await saveAgentRequest({
         conversationId,
@@ -722,8 +900,7 @@ export const createAiAgentService = (options: AgentOptions) => {
         email: result.email,
       });
     }
-    let bookingUrl: string | undefined;
-    if (effectiveAction === "open_page") {
+    if (finalAction === "open_page") {
       bookingUrl =
         effectivePage === "hardware-procedures"
           ? "/hardware-procedures"
@@ -734,11 +911,11 @@ export const createAiAgentService = (options: AgentOptions) => {
     const transferNotice =
       "Я передал диалог сотруднику — он подключится к вам.";
     const answerWithTransfer =
-      effectiveAction === "transfer" &&
+      finalAction === "transfer" &&
       settings.canTransferToEmployee &&
       !result.answer.includes(transferNotice)
-        ? `${result.answer} ${transferNotice}`
-        : result.answer;
+        ? `${generatedAnswer ?? result.answer} ${transferNotice}`
+        : (generatedAnswer ?? result.answer);
     const withoutDisclosure = answerWithTransfer
       .replace(
         /В этом чате отвечает AI-ассистент\.\s*При необходимости подключим сотрудника\.\s*/iu,
@@ -753,7 +930,6 @@ export const createAiAgentService = (options: AgentOptions) => {
       .trim();
     let answer =
       guestSafeAnswer || "Подскажите, пожалуйста, чем я могу помочь?";
-    const finalAction = effectiveAction;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
   };

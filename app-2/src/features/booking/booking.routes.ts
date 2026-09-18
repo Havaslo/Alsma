@@ -1,35 +1,26 @@
 import { Router } from "express";
 import type { Logger } from "pino";
 
-import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createOffersHandler,
   createReservationHandler,
   paymentWebhookHandler,
 } from "./booking.handlers.js";
-import { createBookingRepository } from "./booking.repository.js";
 import {
   calendarPricesQuerySchema,
   createReservationBodySchema,
   offersQuerySchema,
 } from "./booking.schemas.js";
-import { createBookingService } from "./booking.service.js";
-import type { EpteraClient } from "./eptera.client.js";
+import type { BookingService } from "./booking.service.js";
 import type { YooKassaClient } from "./yookassa.client.js";
 
 export const createBookingRouter = (
-  database: Database,
-  eptera: EpteraClient,
+  service: BookingService,
   yookassa: YooKassaClient,
   logger: Logger,
 ): Router => {
   const router = Router();
-  const service = createBookingService(
-    createBookingRepository(database),
-    eptera,
-    yookassa,
-  );
   const cancelExpiredBookings = async (): Promise<void> => {
     try {
       const result = await service.cancelExpiredBookings();

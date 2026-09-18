@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import WebSocket, { WebSocketServer } from "ws";
 
 import type { Database } from "../../lib/database/database.js";
+import { createEpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
@@ -45,8 +46,10 @@ export const attachVoiceAgentRealtime = (
     readonly database: Database;
     readonly logger: Logger;
     readonly openaiBaseUrl?: string;
+    readonly eptera?: { readonly apiKey?: string; readonly hotelId?: string };
   },
 ): void => {
+  const eptera = createEpteraClient(options.eptera ?? {});
   const websocketServer = new WebSocketServer({
     maxPayload: 8 * 1024 * 1024,
     noServer: true,
@@ -164,10 +167,7 @@ export const attachVoiceAgentRealtime = (
                   name?: string;
                   arguments?: string;
                 };
-                if (
-                  functionEvent.call_id &&
-                  functionEvent.name === "get_events"
-                ) {
+                if (functionEvent.call_id) {
                   let output: unknown = {
                     available: false,
                     reason: "temporary_error",
@@ -175,15 +175,40 @@ export const attachVoiceAgentRealtime = (
                   try {
                     const args = JSON.parse(
                       functionEvent.arguments ?? "{}",
-                    ) as { date?: string };
-                    const found = await listPublishedEvents(
-                      options.database,
-                      args.date,
-                    );
-                    output = {
-                      events: found,
-                      context: formatEventsContext(found),
-                    };
+                    ) as Record<string, unknown>;
+                    if (functionEvent.name === "get_events") {
+                      const found = await listPublishedEvents(
+                        options.database,
+                        typeof args.date === "string" ? args.date : undefined,
+                      );
+                      output = {
+                        events: found,
+                        context: formatEventsContext(found),
+                      };
+                    } else if (
+                      functionEvent.name === "check_availability" ||
+                      functionEvent.name === "compare_rooms"
+                    ) {
+                      const result = await eptera.getOffers({
+                        adults: Number(args.adults),
+                        checkIn: String(args.checkIn ?? ""),
+                        checkOut: String(args.checkOut ?? ""),
+                        childAges: Array.isArray(args.childAges)
+                          ? args.childAges.filter(
+                              (age): age is number => typeof age === "number",
+                            )
+                          : [],
+                        currency: "RUB",
+                        language: "ru",
+                        nationality: "RU",
+                        roomCount: Number(args.roomCount ?? 1),
+                      });
+                      output = {
+                        available: result.length > 0,
+                        offers: result.slice(0, 8),
+                        readOnly: true,
+                      };
+                    }
                   } catch {
                     // Return a safe tool result; the model will explain the failure and offer a transfer.
                   }

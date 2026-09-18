@@ -10,7 +10,9 @@ import {
 } from "./features/admin-settings/admin-settings.routes.js";
 import { createAgentScenariosRouter } from "./features/agent-scenarios/agent-scenarios.routes.js";
 import { createAiAgentService } from "./features/agent/agent.service.js";
+import { createBookingRepository } from "./features/booking/booking.repository.js";
 import { createBookingRouter } from "./features/booking/booking.routes.js";
+import { createBookingService } from "./features/booking/booking.service.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
 import { createYooKassaClient } from "./features/booking/yookassa.client.js";
 import { createChatRouter } from "./features/chat/chat.routes.js";
@@ -93,16 +95,30 @@ export const createApiRouter = ({
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService(database);
+  const eptera = createEpteraClient({
+    apiKey: epteraApiKey,
+    hotelId: epteraHotelId,
+    paymentLoginToken: epteraPaymentLoginToken,
+  });
+  const yookassa = createYooKassaClient({
+    secretKey: yooKassaSecretKey,
+    shopId: yooKassaShopId,
+  });
+  const booking = createBookingService(
+    createBookingRepository(database),
+    eptera,
+    yookassa,
+  );
   const agent = createAiAgentService({
     apiKey: openaiApiKey,
     baseUrl: openaiBaseUrl,
     bookingUrl: "",
     chat,
     database,
-    eptera: createEpteraClient({
-      apiKey: epteraApiKey,
-      hotelId: epteraHotelId,
-    }),
+    booking,
+    bookingReturnUrl: maxBot.siteUrl
+      ? new URL("/booking/return", maxBot.siteUrl).toString()
+      : "https://alsma.ru/booking/return",
     logger,
   });
   router.use(createSystemRouter({ database }));
@@ -152,22 +168,7 @@ export const createApiRouter = ({
   );
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
   router.use("/auth", createGuestAuthRouter(database, mailRu));
-  router.use(
-    "/booking",
-    createBookingRouter(
-      database,
-      createEpteraClient({
-        apiKey: epteraApiKey,
-        hotelId: epteraHotelId,
-        paymentLoginToken: epteraPaymentLoginToken,
-      }),
-      createYooKassaClient({
-        secretKey: yooKassaSecretKey,
-        shopId: yooKassaShopId,
-      }),
-      logger,
-    ),
-  );
+  router.use("/booking", createBookingRouter(booking, yookassa, logger));
   router.use("/chat", createChatRouter(database, chat, agent));
   router.use(
     "/max",

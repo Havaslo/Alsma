@@ -125,6 +125,24 @@ export const mangoRecordingAddedEventSchema = z
 
 export const toolBodySchema = z.discriminatedUnion("name", [
   z.object({
+    name: z.literal("check_availability"),
+    callId: z.string().uuid().optional(),
+    checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    adults: z.number().int().min(1).max(12),
+    childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
+    roomCount: z.number().int().min(1).max(2).default(1),
+  }),
+  z.object({
+    name: z.literal("compare_rooms"),
+    callId: z.string().uuid().optional(),
+    checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    adults: z.number().int().min(1).max(12),
+    childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
+    roomCount: z.number().int().min(1).max(2).default(1),
+  }),
+  z.object({
     name: z.literal("knowledge_answer"),
     callId: z.string().uuid().optional(),
     question: z.string().trim().min(1).max(4_000),

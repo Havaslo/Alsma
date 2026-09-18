@@ -40,7 +40,7 @@ export const agentSettingsSchema = z
     canCheckAvailability: z.boolean(),
     canCreateRequest: z.boolean(),
     canTransferToEmployee: z.boolean(),
-    canCreateBooking: z.literal(false),
+    canCreateBooking: z.boolean(),
     collectName: z.boolean(),
     collectPhone: z.boolean(),
     collectGuestsCount: z.boolean(),
