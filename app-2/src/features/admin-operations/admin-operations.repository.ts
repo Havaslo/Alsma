@@ -267,6 +267,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
           orderBy: { createdAt: "desc" },
           include: { items: { include: { service: true, variant: true } } },
         },
+        bookings: { orderBy: { checkInDate: "desc" } },
         _count: { select: { serviceOrders: true } },
       },
       where: { id: recordId },

@@ -1,7 +1,10 @@
+import { useState } from "react";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
+import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
 import { AccountServicesSection } from "@/components/account/AccountServicesSection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
@@ -14,6 +17,9 @@ export const AccountPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const auth = useGuestAuth();
+  const [activeTab, setActiveTab] = useState<"services" | "bookings">(
+    "bookings",
+  );
   const guest = auth.data?.guest;
   if (auth.isLoading)
     return (
@@ -67,7 +73,40 @@ export const AccountPage = () => {
             Выйти
           </button>
         </section>
-        <AccountServicesSection serviceOrders={guest.serviceOrders} />
+        <section className="mt-10">
+          <div
+            aria-label="Разделы личного кабинета"
+            className="flex flex-wrap gap-2 border-b border-line pb-4"
+            role="tablist"
+          >
+            {(
+              [
+                ["services", "Услуги"],
+                ["bookings", "Брони"],
+              ] as const
+            ).map(([tab, label]) => (
+              <button
+                aria-selected={activeTab === tab}
+                className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? "bg-brand text-brand-foreground"
+                    : "border border-line text-brand hover:bg-panel"
+                }`}
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                role="tab"
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTab === "services" ? (
+            <AccountServicesSection serviceOrders={guest.serviceOrders} />
+          ) : (
+            <AccountBookingsSection bookings={guest.bookings} profile={guest} />
+          )}
+        </section>
       </div>
     </main>
   );

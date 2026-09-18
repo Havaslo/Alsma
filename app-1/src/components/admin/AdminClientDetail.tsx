@@ -25,6 +25,21 @@ const levelLabel = (level?: string) =>
   ({ gold: "Gold", silver: "Silver", standard: "Standard" })[
     level ?? "standard"
   ] ?? level;
+const bookingStatusLabel = (status: string) =>
+  ({
+    awaiting_payment: "Ожидает оплаты",
+    cancellation_failed: "Ошибка отмены",
+    cancelled: "Отменена",
+    confirmed: "Подтверждена",
+    payment_sync_failed: "Ошибка подтверждения оплаты",
+    payment_sync_pending: "Подтверждение оплаты",
+  })[status] ?? status;
+const paymentStatusLabel = (status: string) =>
+  ({
+    creation_failed: "Ошибка создания",
+    payment_pending: "Ожидает оплаты",
+    succeeded: "Оплачено",
+  })[status] ?? status;
 
 export const AdminClientDetail = ({
   clientId,
@@ -37,6 +52,9 @@ export const AdminClientDetail = ({
   const [editOpen, setEditOpen] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"services" | "bookings">(
+    "services",
+  );
   const client = clientQuery.data?.client;
 
   if (clientQuery.isLoading)
@@ -69,7 +87,7 @@ export const AdminClientDetail = ({
               {client.fullName || "Без имени"}
             </h1>
             <p className="mt-2 text-sm text-muted-ui-foreground">
-              Контакт, бонусная программа и история покупок услуг клиента.
+              Контакт, бонусная программа, услуги и брони клиента.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -110,6 +128,10 @@ export const AdminClientDetail = ({
               <dd className="mt-1 font-semibold">
                 {client._count.serviceOrders}
               </dd>
+            </div>
+            <div>
+              <dt className="text-muted-ui-foreground">Броней номеров</dt>
+              <dd className="mt-1 font-semibold">{client.bookings.length}</dd>
             </div>
           </dl>
         </section>
@@ -162,38 +184,131 @@ export const AdminClientDetail = ({
       </div>
 
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
-        <h2 className="text-xl font-semibold">Купленные услуги</h2>
-        <p className="mt-1 text-sm text-muted-ui-foreground">
-          Оплаченные покупки из личного кабинета клиента.
-        </p>
-        <div className="mt-5 space-y-3">
-          {client.serviceOrders.map((order) => (
-            <article
-              className="rounded-2xl border border-line bg-page p-4"
-              key={order.id}
+        <div
+          aria-label="Разделы клиента"
+          className="flex flex-wrap gap-2 border-b border-line pb-4"
+          role="tablist"
+        >
+          {(
+            [
+              ["services", "Услуги"],
+              ["bookings", "Брони"],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              aria-selected={activeTab === tab}
+              className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                activeTab === tab
+                  ? "bg-brand text-brand-foreground"
+                  : "text-muted-ui-foreground hover:bg-page"
+              }`}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              role="tab"
+              type="button"
             >
-              <div className="flex flex-wrap justify-between gap-2">
-                <strong>{formatDate(order.createdAt)}</strong>
-                <span className="font-semibold text-brand">
-                  {formatMoney(order.total)}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted-ui-foreground">
-                {order.items
-                  .map(
-                    ({ service, variant, quantity }) =>
-                      `${service.name} · ${variant.name} × ${quantity}`,
-                  )
-                  .join(", ")}
-              </p>
-            </article>
+              {label}
+            </button>
           ))}
-          {!client.serviceOrders.length && (
-            <p className="rounded-2xl border border-line bg-page p-5 text-sm text-muted-ui-foreground">
-              Оплаченных услуг пока нет.
-            </p>
-          )}
         </div>
+
+        {activeTab === "services" ? (
+          <div className="pt-5">
+            <h2 className="text-xl font-semibold">Купленные услуги</h2>
+            <p className="mt-1 text-sm text-muted-ui-foreground">
+              Оплаченные покупки из личного кабинета клиента.
+            </p>
+            <div className="mt-5 space-y-3">
+              {client.serviceOrders.map((order) => (
+                <article
+                  className="rounded-2xl border border-line bg-page p-4"
+                  key={order.id}
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <strong>{formatDate(order.createdAt)}</strong>
+                    <span className="font-semibold text-brand">
+                      {formatMoney(order.total)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-ui-foreground">
+                    {order.items
+                      .map(
+                        ({ service, variant, quantity }) =>
+                          `${service.name} · ${variant.name} × ${quantity}`,
+                      )
+                      .join(", ")}
+                  </p>
+                </article>
+              ))}
+              {!client.serviceOrders.length && (
+                <p className="rounded-2xl border border-line bg-page p-5 text-sm text-muted-ui-foreground">
+                  Оплаченных услуг пока нет.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="pt-5">
+            <h2 className="text-xl font-semibold">Брони номеров</h2>
+            <p className="mt-1 text-sm text-muted-ui-foreground">
+              История бронирований клиента и их текущие статусы.
+            </p>
+            <div className="mt-5 space-y-3">
+              {client.bookings.map((booking) => (
+                <article
+                  className="rounded-2xl border border-line bg-page p-4"
+                  key={booking.id}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-brand">
+                        {booking.roomName}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-ui-foreground">
+                        {formatDate(booking.checkInDate)} —{" "}
+                        {formatDate(booking.checkOutDate)}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold">
+                      {bookingStatusLabel(booking.status)}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                    <div>
+                      <span className="text-muted-ui-foreground">
+                        Номер брони
+                      </span>
+                      <p className="mt-1 font-semibold">
+                        {booking.voucherNumber ??
+                          `ALS-${booking.id.slice(0, 8).toUpperCase()}`}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-ui-foreground">Гости</span>
+                      <p className="mt-1 font-semibold">
+                        {booking.guestsCount}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-ui-foreground">Оплата</span>
+                      <p className="mt-1 font-semibold">
+                        {paymentStatusLabel(booking.paymentStatus)}
+                        {booking.totalAmount
+                          ? ` · ${formatMoney(booking.totalAmount)}`
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+              {!client.bookings.length && (
+                <p className="rounded-2xl border border-line bg-page p-5 text-sm text-muted-ui-foreground">
+                  Броней номеров пока нет.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {editOpen && (

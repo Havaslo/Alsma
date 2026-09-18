@@ -68,6 +68,19 @@ export type AdminClient = {
   readonly updatedAt: string;
 };
 export type AdminClientDetail = AdminClient & {
+  readonly bookings: Array<{
+    readonly checkInDate: string;
+    readonly checkOutDate: string;
+    readonly guestsCount: number;
+    readonly id: string;
+    readonly paymentAmount: string | null;
+    readonly paymentMethod: string;
+    readonly paymentStatus: string;
+    readonly roomName: string;
+    readonly status: string;
+    readonly totalAmount: string | null;
+    readonly voucherNumber: string | null;
+  }>;
   readonly serviceOrders: Array<{
     readonly id: string;
     readonly createdAt: string;
