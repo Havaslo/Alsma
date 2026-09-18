@@ -28,7 +28,15 @@ const publicUser = (user: {
     contactLastName: string | null;
     contactPhone: string | null;
     epteraReservationId: string | null;
+    epteraReservationPayload: unknown;
+    epteraReservationSyncAttemptedAt: Date | null;
+    epteraReservationSyncErrorCode: string | null;
+    epteraReservationSyncErrorMessage: string | null;
+    epteraReservationSyncStatus: string;
+    epteraReservationSyncedAt: Date | null;
     epteraPaymentSyncAttemptedAt: Date | null;
+    epteraPaymentSyncErrorCode: string | null;
+    epteraPaymentSyncErrorMessage: string | null;
     epteraPaymentSyncStatus: string;
     epteraPaymentSyncedAt: Date | null;
     guestsCount: number;
@@ -64,9 +72,17 @@ const publicUser = (user: {
   bonusProgram: user.bonusProgram,
   bookings: user.bookings.map((booking) => {
     const {
+      epteraPaymentSyncErrorCode: _epteraPaymentSyncErrorCode,
+      epteraPaymentSyncErrorMessage: _epteraPaymentSyncErrorMessage,
       epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
       epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
       epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
+      epteraReservationPayload: _epteraReservationPayload,
+      epteraReservationSyncAttemptedAt: _epteraReservationSyncAttemptedAt,
+      epteraReservationSyncErrorCode: _epteraReservationSyncErrorCode,
+      epteraReservationSyncErrorMessage: _epteraReservationSyncErrorMessage,
+      epteraReservationSyncStatus: _epteraReservationSyncStatus,
+      epteraReservationSyncedAt: _epteraReservationSyncedAt,
       ...publicBooking
     } = booking;
     return {
