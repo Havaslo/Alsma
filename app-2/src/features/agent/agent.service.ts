@@ -10,6 +10,7 @@ import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import {
   agentBookingSchema,
   formatEpteraOffers,
+  formatEpteraOffersForGuest,
   isExplicitBookingConfirmation,
   summarizeEpteraOffers,
   toReservationBody,
@@ -644,7 +645,13 @@ export const createAiAgentService = (options: AgentOptions) => {
             },
           },
         });
-      } catch {
+      } catch (error) {
+        options.logger.warn(
+          {
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          "Eptera availability lookup for chat agent failed",
+        );
         availabilityOffers = [];
       }
     }
@@ -928,8 +935,28 @@ export const createAiAgentService = (options: AgentOptions) => {
       .replace(/\bEptera(?:\s+Booking\s+API)?\b/giu, "система бронирования")
       .replace(/\bЭптера\b/giu, "система бронирования")
       .trim();
+    const availabilityWasFound =
+      shouldRefreshAvailability && availabilityOffers.length > 0;
+    const availabilityWasDenied =
+      /(?:нет|не\s+(?:наш(?:ёл|ли)|вижу|смог(?:у)?|получил(?:ось)?|подтвержд)|не\s+доступн|не\s+нашл)/iu.test(
+        guestSafeAnswer,
+      );
+    const hasRoomName = availabilityOffers.some(
+      (offer) =>
+        offer.roomType.trim() &&
+        guestSafeAnswer
+          .toLocaleLowerCase("ru-RU")
+          .includes(offer.roomType.toLocaleLowerCase("ru-RU")),
+    );
+    const answerWithAvailability = availabilityWasFound
+      ? availabilityWasDenied
+        ? `По этим датам доступны подтверждённые варианты:\n${formatEpteraOffersForGuest(availabilityOffers)}`
+        : hasRoomName
+          ? guestSafeAnswer
+          : `${guestSafeAnswer}\n\nАктуальные варианты по этим датам:\n${formatEpteraOffersForGuest(availabilityOffers)}`
+      : guestSafeAnswer;
     let answer =
-      guestSafeAnswer || "Подскажите, пожалуйста, чем я могу помочь?";
+      answerWithAvailability || "Подскажите, пожалуйста, чем я могу помочь?";
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
   };

@@ -124,7 +124,7 @@ const createHarness = () => {
         }
       : {
           action: "answer",
-          answer: "Нашёл вариант и могу сравнить его с другими.",
+          answer: "Сейчас подтверждённых вариантов по этим датам нет.",
         };
     return {
       ok: true,
@@ -164,6 +164,9 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       "conversation-1",
       "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
     );
+    assert.match(harness.published.at(-1)?.text ?? "", /Стандарт/u);
+    assert.match(harness.published.at(-1)?.text ?? "", /9000/u);
+    assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /offerId=/u);
     await harness.service.reply("conversation-1", "Сравните варианты по цене");
     assert.equal(harness.bookingSearches.length, 1);
     assert.deepEqual(harness.bookingSearches[0], {

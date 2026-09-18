@@ -81,11 +81,12 @@ export const ChatWidget = () => {
     incoming: ChatMessage | { type: "status"; status: string; label: string },
   ) => {
     if (incoming.type === "status") {
-      setAgentStatus(incoming.label);
+      setAgentStatus(incoming.status === "idle" ? "" : incoming.label);
       return;
     }
     if (!incoming.id || knownIds.current.has(incoming.id)) return;
     knownIds.current.add(incoming.id);
+    if (incoming.author !== "guest") setAgentStatus("");
     setMessages((current) =>
       current.some((item) => item.id === incoming.id)
         ? current

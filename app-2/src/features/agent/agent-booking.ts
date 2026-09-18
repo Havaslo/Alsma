@@ -102,6 +102,10 @@ export const formatEpteraOffers = (offers: readonly AgentOfferSummary[]) =>
     })
     .join("\n");
 
+export const formatEpteraOffersForGuest = (
+  offers: readonly AgentOfferSummary[],
+) => formatEpteraOffers(offers).replace(/\s*\[offerId=[^\]]+\]/gu, "");
+
 export const isExplicitBookingConfirmation = (message: string) =>
   /(?:подтверждаю|подтвердить|брониру(?:йте|й)|оформля(?:йте|й)|оформите|бер[её]м|соглас(?:ен|на)|да[,.!\s]+(?:брониру|оформ|бер[её]м))/iu.test(
     message,
