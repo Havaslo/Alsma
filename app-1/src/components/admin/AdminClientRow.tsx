@@ -7,6 +7,12 @@ import { ROUTES } from "@/route-constants";
 
 const getClientRoute = (clientId: string) =>
   buildRoute(ROUTES.adminClient, { clientId });
+const formatBookingDate = (value: string) =>
+  new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
 
 export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
   const navigate = useNavigate();
@@ -36,6 +42,23 @@ export const AdminClientRow = ({ item }: { readonly item: AdminClient }) => {
         </span>
       </td>
       <td className="px-5 py-4">{item._count.serviceOrders}</td>
+      <td className="px-5 py-4">
+        {item.bookings.length ? (
+          <div className="space-y-1.5">
+            {item.bookings.map((booking, index) => (
+              <div className="min-w-48" key={`${booking.roomName}-${index}`}>
+                <p className="font-semibold text-brand">{booking.roomName}</p>
+                <p className="text-xs text-muted-ui-foreground">
+                  {formatBookingDate(booking.checkInDate)} —{" "}
+                  {formatBookingDate(booking.checkOutDate)}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-ui-foreground">—</span>
+        )}
+      </td>
       <td className="px-5 py-4 text-right">
         <ChevronRight className="ml-auto size-4 text-muted-ui-foreground" />
       </td>

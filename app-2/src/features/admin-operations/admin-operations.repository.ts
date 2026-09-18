@@ -242,6 +242,15 @@ export const createAdminOperationsRepository = (database: Database) => ({
       database.client.guestUser.findMany({
         include: {
           bonusProgram: true,
+          bookings: {
+            orderBy: { checkInDate: "desc" },
+            select: {
+              checkInDate: true,
+              checkOutDate: true,
+              roomName: true,
+              status: true,
+            },
+          },
           _count: { select: { serviceOrders: true } },
         },
         orderBy: { createdAt: "desc" },
