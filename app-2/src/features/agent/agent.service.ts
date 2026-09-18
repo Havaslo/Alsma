@@ -9,9 +9,10 @@ import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.ser
 import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import {
   agentBookingSchema,
-  formatEpteraOffers,
+  formatEpteraOffersForAgent,
   formatEpteraOffersForGuest,
   isExplicitBookingConfirmation,
+  normalizeAgentOfferSummaries,
   summarizeEpteraOffers,
   toReservationBody,
 } from "./agent-booking.js";
@@ -152,9 +153,11 @@ const asConversationState = (value: unknown): ConversationState => {
         ? (bookingValue as BookingContext)
         : undefined,
     availabilityOffers: Array.isArray(details.availabilityOffers)
-      ? details.availabilityOffers.filter(
-          (item): item is ReturnType<typeof summarizeEpteraOffers>[number] =>
-            Boolean(item && typeof item === "object" && "id" in item),
+      ? normalizeAgentOfferSummaries(
+          details.availabilityOffers.filter(
+            (item): item is ReturnType<typeof summarizeEpteraOffers>[number] =>
+              Boolean(item && typeof item === "object" && "id" in item),
+          ),
         )
       : undefined,
     serviceContext:
@@ -708,6 +711,10 @@ export const createAiAgentService = (options: AgentOptions) => {
     const selectedScenario = scenarioTrigger
       ? scenarios.find((item) => item.trigger === scenarioTrigger)
       : undefined;
+    const asksOfferDetails =
+      /сравн|тариф|питан|услов|отмен|включен|услуг|подроб|отлич(?:а|ие)|комфорт|балкон|кроват/iu.test(
+        message,
+      );
     const prompt = [
       `Ты AI-ассистент SPA-отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
       "Приветствие уже показано отдельным сообщением интерфейса. Не упоминай, что ты AI-ассистент, не начинай ответ со слова «Здравствуйте» и не добавляй служебное раскрытие в ответ.",
@@ -721,11 +728,12 @@ export const createAiAgentService = (options: AgentOptions) => {
       `Если гость назвал день и месяц без года, подразумевай текущий год ${new Date().getFullYear()}. Перед проверкой обязательно назови гостю полные даты в формате «12 сентября ${new Date().getFullYear()} — 15 сентября ${new Date().getFullYear()}». Преобразуй русские даты вроде «20–22 августа» или «20–22 августа 2026» в ISO YYYY-MM-DD и только так заполняй booking.`,
       "Извлекай из одного сообщения все сущности сразу: даты заезда/выезда, взрослых, детей и количество номеров. Любые новые даты полностью заменяют прежние даты в сохранённом booking-контексте; не спрашивай год, если указан день и месяц — используй текущий год. Если гость явно указал «1 взрослый» и «1 номер» — используй adults: 1 и roomCount: 1, дополнительных вопросов об этих значениях не задавай. Если дети не упомянуты или гость явно сказал, что детей нет, используй childAges: [] и не спрашивай возраст детей. Спрашивай возраст только если дети упомянуты, но их возраст нужен для проверки.",
       "Если варианты Eptera переданы ниже, сравни их по типу номера, тарифу, питанию, цене, вместимости и преимуществам. Не создавай бронирование и не обещай его до явного подтверждения клиента. Для нескольких номеров учитывай roomCount и выбранные варианты.",
+      "В первом ответе после поиска не перечисляй тарифы, питание, услуги, условия отмены, описание номера, внутренние идентификаторы или другие дополнительные детали. Покажи только краткие карточки доступных типов номеров: название отдельной строкой жирным Markdown, затем вместимость, площадь и цену за ночь. Каждый тип номера — отдельный блок. Подробности, сравнение тарифов и дополнительные услуги показывай только если гость попросил об этом отдельным сообщением.",
       "Верни только JSON без markdown в формате: {action:'answer'|'open_page'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'spa'|'hardware-procedures'|'offers', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page page обязателен. Для create_booking обязательно confirmed:true и явное подтверждение гостя в текущем сообщении. Если выбранный сценарий задаёт action или page, следуй ему, кроме запрета на создание брони без подтверждения.",
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
       `Опубликованные актуальные мероприятия с публичного календаря${calendarDateInMessage(message) ? ` на дату ${calendarDateInMessage(message)}` : ""} (не выдумывай события):\n${eventsContext || "Опубликованных мероприятий на запрошенную дату сейчас нет или календарь недоступен."}`,
-      `Актуальные варианты Eptera для проживания (это подтверждённые данные поиска; можно сравнивать, но нельзя придумывать дополнительные варианты):\n${formatEpteraOffers(availabilityOffers) || "Варианты ещё не найдены. Сначала уточни даты, гостей и количество номеров."}`,
+      `Актуальные варианты Eptera для проживания (это подтверждённые данные поиска; можно сравнивать, но нельзя придумывать дополнительные варианты):\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Варианты ещё не найдены. Сначала уточни даты, гостей и количество номеров."}`,
       `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
@@ -935,26 +943,15 @@ export const createAiAgentService = (options: AgentOptions) => {
       .replace(/\bEptera(?:\s+Booking\s+API)?\b/giu, "система бронирования")
       .replace(/\bЭптера\b/giu, "система бронирования")
       .trim();
-    const availabilityWasFound =
-      shouldRefreshAvailability && availabilityOffers.length > 0;
-    const availabilityWasDenied =
-      /(?:нет|не\s+(?:наш(?:ёл|ли)|вижу|смог(?:у)?|получил(?:ось)?|подтвержд)|не\s+доступн|не\s+нашл)/iu.test(
-        guestSafeAnswer,
-      );
-    const hasRoomName = availabilityOffers.some(
-      (offer) =>
-        offer.roomType.trim() &&
-        guestSafeAnswer
-          .toLocaleLowerCase("ru-RU")
-          .includes(offer.roomType.toLocaleLowerCase("ru-RU")),
-    );
-    const answerWithAvailability = availabilityWasFound
-      ? availabilityWasDenied
-        ? `По этим датам доступны подтверждённые варианты:\n${formatEpteraOffersForGuest(availabilityOffers)}`
-        : hasRoomName
-          ? guestSafeAnswer
-          : `${guestSafeAnswer}\n\nАктуальные варианты по этим датам:\n${formatEpteraOffersForGuest(availabilityOffers)}`
-      : guestSafeAnswer;
+    const availabilityWasFound = availabilityOffers.length > 0;
+    const availabilityIsNew =
+      currentMessageHasDate ||
+      bookingCriteriaChanged ||
+      !previousState.availabilityOffers?.length;
+    const answerWithAvailability =
+      availabilityWasFound && availabilityIsNew && finalAction === "answer"
+        ? `На указанные даты доступны следующие номера:\n\n${formatEpteraOffersForGuest(availabilityOffers, nextBooking.checkInDate, nextBooking.checkOutDate)}\n\nКакой вариант хотите рассмотреть подробнее?`
+        : guestSafeAnswer;
     let answer =
       answerWithAvailability || "Подскажите, пожалуйста, чем я могу помочь?";
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);

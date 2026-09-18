@@ -59,31 +59,54 @@ export type AgentOfferSummary = Pick<
   | "price"
 >;
 
+const isExcludedRoom = (
+  offer: Pick<AgentOfferSummary, "roomType" | "roomDescription">,
+) =>
+  /(?:для\s+групп|группов(?:ой|ого|ые)|^\s*корпус\s*2\b|^\s*тест(?:овый|овая|овое)?\b)/iu.test(
+    `${offer.roomType} ${offer.roomDescription ?? ""}`,
+  );
+
+const offerPrice = (
+  offer: Pick<AgentOfferSummary, "discountedPrice" | "price">,
+) => (offer.discountedPrice > 0 ? offer.discountedPrice : offer.price);
+
 export const summarizeEpteraOffers = (
   offers: readonly EpteraOffer[],
 ): AgentOfferSummary[] =>
-  offers.map((offer) => ({
-    benefits: offer.benefits,
-    boardType: offer.boardType,
-    currency: offer.currency,
-    discountedPrice: offer.discountedPrice,
-    id: offer.id,
-    rateDescription: offer.rateDescription,
-    rateType: offer.rateType,
-    roomArea: offer.roomArea,
-    roomCapacity: offer.roomCapacity,
-    roomDescription: offer.roomDescription,
-    roomImageUrl: offer.roomImageUrl,
-    roomToSell: offer.roomToSell,
-    roomType: offer.roomType,
-    price: offer.price,
-  }));
+  normalizeAgentOfferSummaries(
+    offers.map((offer) => ({
+      benefits: offer.benefits,
+      boardType: offer.boardType,
+      currency: offer.currency,
+      discountedPrice: offer.discountedPrice,
+      id: offer.id,
+      rateDescription: offer.rateDescription,
+      rateType: offer.rateType,
+      roomArea: offer.roomArea,
+      roomCapacity: offer.roomCapacity,
+      roomDescription: offer.roomDescription,
+      roomImageUrl: offer.roomImageUrl,
+      roomToSell: offer.roomToSell,
+      roomType: offer.roomType,
+      price: offer.price,
+    })),
+  );
+
+export const normalizeAgentOfferSummaries = (
+  offers: readonly AgentOfferSummary[],
+): AgentOfferSummary[] =>
+  offers.filter(
+    (offer) =>
+      Boolean(offer.id.trim() && offer.roomType.trim()) &&
+      Number.isFinite(offerPrice(offer)) &&
+      offerPrice(offer) > 0 &&
+      !isExcludedRoom(offer),
+  );
 
 export const formatEpteraOffers = (offers: readonly AgentOfferSummary[]) =>
   offers
     .map((offer, index) => {
-      const finalPrice =
-        offer.discountedPrice > 0 ? offer.discountedPrice : offer.price;
+      const finalPrice = offerPrice(offer);
       const details = [
         `${index + 1}. ${offer.roomType}`,
         `тариф: ${offer.rateType}`,
@@ -102,9 +125,84 @@ export const formatEpteraOffers = (offers: readonly AgentOfferSummary[]) =>
     })
     .join("\n");
 
+const nightsBetween = (checkIn?: string, checkOut?: string) => {
+  if (!checkIn || !checkOut) return 1;
+  const start = new Date(`${checkIn}T00:00:00.000Z`).getTime();
+  const end = new Date(`${checkOut}T00:00:00.000Z`).getTime();
+  const nights = Math.round((end - start) / 86_400_000);
+  return Number.isFinite(nights) && nights > 0 ? nights : 1;
+};
+
+const formatPrice = (value: number, currency: string) => {
+  const amount = new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(value);
+  return `${amount} ${currency === "RUB" ? "₽" : currency}`;
+};
+
+export const selectPrimaryEpteraOffers = (
+  offers: readonly AgentOfferSummary[],
+) => {
+  const source = normalizeAgentOfferSummaries(offers);
+  const unique = new Map<string, AgentOfferSummary>();
+  for (const offer of source) {
+    const key = offer.roomType.trim().toLocaleLowerCase("ru-RU");
+    const current = unique.get(key);
+    const currentPrice = current
+      ? offerPrice(current)
+      : Number.POSITIVE_INFINITY;
+    if (!current || offerPrice(offer) < currentPrice) unique.set(key, offer);
+  }
+  return [...unique.values()];
+};
+
+export const formatEpteraOffersForAgent = (
+  offers: readonly AgentOfferSummary[],
+  detailed: boolean,
+) => {
+  const source = detailed
+    ? normalizeAgentOfferSummaries(offers)
+    : selectPrimaryEpteraOffers(offers);
+  return source
+    .map((offer) => {
+      const details = [
+        `Название: ${offer.roomType}`,
+        `Вместимость: до ${offer.roomCapacity ?? "не указана"} гостей`,
+        `Площадь: ${offer.roomArea ? `${offer.roomArea} м²` : "не указана"}`,
+        `Цена за период: ${formatPrice(offerPrice(offer), offer.currency)}`,
+        ...(detailed
+          ? [
+              `Тариф: ${offer.rateType}`,
+              `Питание: ${offer.boardType}`,
+              `offerId: ${offer.id}`,
+            ]
+          : [`offerId: ${offer.id}`]),
+      ];
+      return details.join("; ");
+    })
+    .join("\n");
+};
+
 export const formatEpteraOffersForGuest = (
   offers: readonly AgentOfferSummary[],
-) => formatEpteraOffers(offers).replace(/\s*\[offerId=[^\]]+\]/gu, "");
+  checkIn?: string,
+  checkOut?: string,
+) => {
+  const nights = nightsBetween(checkIn, checkOut);
+  return selectPrimaryEpteraOffers(offers)
+    .map((offer) => {
+      const totalPrice = offerPrice(offer);
+      const pricePerNight = totalPrice / nights;
+      return [
+        `**${offer.roomType.trim()}**`,
+        `Вместимость: до ${offer.roomCapacity ?? "не указана"} гостей`,
+        `Площадь: ${offer.roomArea ? `${offer.roomArea} м²` : "не указана"}`,
+        `Цена за ночь: ${formatPrice(pricePerNight, offer.currency)}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+};
 
 export const isExplicitBookingConfirmation = (message: string) =>
   /(?:подтверждаю|подтвердить|брониру(?:йте|й)|оформля(?:йте|й)|оформите|бер[её]м|соглас(?:ен|на)|да[,.!\s]+(?:брониру|оформ|бер[её]м))/iu.test(

@@ -37,6 +37,17 @@ const getIdentity = (): Identity | null => {
   }
 };
 
+const renderChatText = (text: string) =>
+  text
+    .split(/(\*\*[^*]+\*\*)/gu)
+    .map((part, index) =>
+      /^\*\*[^*]+\*\*$/u.test(part) ? (
+        <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
+      ) : (
+        part
+      ),
+    );
+
 export const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -282,7 +293,9 @@ export const ChatWidget = () => {
                           : "Менеджер"}
                       </p>
                     )}
-                    <p>{message.text}</p>
+                    <p className="whitespace-pre-line">
+                      {renderChatText(message.text)}
+                    </p>
                     {message.bookingUrl && (
                       <a
                         className="mt-3 inline-flex rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground no-underline"

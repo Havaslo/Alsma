@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { Database } from "../../lib/database/database.js";
+import {
+  formatEpteraOffersForGuest,
+  normalizeAgentOfferSummaries,
+  selectPrimaryEpteraOffers,
+} from "./agent-booking.js";
 import { createAiAgentService } from "./agent.service.js";
 
 const offer = {
@@ -165,7 +170,15 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
     );
     assert.match(harness.published.at(-1)?.text ?? "", /Стандарт/u);
-    assert.match(harness.published.at(-1)?.text ?? "", /9000/u);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Цена за ночь: 4[\s\u00a0]?500 ₽/u,
+    );
+    assert.match(harness.published.at(-1)?.text ?? "", /\*\*Стандарт\*\*/u);
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /Завтрак|тариф|питание/u,
+    );
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /offerId=/u);
     await harness.service.reply("conversation-1", "Сравните варианты по цене");
     assert.equal(harness.bookingSearches.length, 1);
@@ -180,11 +193,80 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       nationality: "RU",
       roomCount: 1,
     });
-    assert.match(harness.prompts[1] ?? "", /offerId=offer-1/u);
+    assert.match(harness.prompts[1] ?? "", /offerId: offer-1/u);
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
+});
+
+test("formats one compact block per room type without booking details", () => {
+  const formatted = formatEpteraOffersForGuest(
+    [
+      offer,
+      { ...offer, discountedPrice: 11_000, id: "offer-2" },
+      { ...offer, roomType: "Супериор", roomArea: null, roomCapacity: 3 },
+    ],
+    "2026-08-13",
+    "2026-08-15",
+  );
+  assert.equal((formatted.match(/\*\*/gu) ?? []).length, 4);
+  assert.match(formatted, /\*\*Стандарт\*\*/u);
+  assert.match(formatted, /\*\*Супериор\*\*/u);
+  assert.match(formatted, /Вместимость: до 2 гостей/u);
+  assert.match(formatted, /Площадь: 28 м²/u);
+  assert.match(formatted, /Площадь: не указана/u);
+  assert.match(formatted, /Цена за ночь: 4[\s\u00a0]?500 ₽/u);
+  assert.doesNotMatch(formatted, /Завтрак|тариф|питание|offerId|включено/u);
+});
+
+test("normalizes the 117-offer Eptera payload before it reaches the chat", () => {
+  const roomTypes = [
+    "Стандарт трехместный",
+    "Супериор",
+    "Супериор трехместный",
+    "Полулюкс",
+    "Полулюкс +",
+    "Полулюкс без балкона",
+    "Двухуровневый полулюкс",
+    "Двухуровневый полулюкс с 2 спальнями",
+    "Люкс",
+    'Коттедж "русская баня"',
+  ];
+  const payload = Array.from({ length: 117 }, (_, index) => ({
+    ...offer,
+    id: `payload-${index}`,
+    roomType:
+      index < 90
+        ? roomTypes[index % roomTypes.length]!
+        : index < 99
+          ? "Гостевой Дом (ДЛЯ ГРУПП)№7"
+          : index < 108
+            ? "Корпус 2"
+            : "Тест",
+    roomDescription:
+      index >= 90
+        ? "объект для групповых заездов или тестовый номер"
+        : offer.roomDescription,
+    discountedPrice: 9_000 + index,
+  }));
+  const normalized = normalizeAgentOfferSummaries(payload);
+  const primary = selectPrimaryEpteraOffers(normalized);
+  const formatted = formatEpteraOffersForGuest(
+    normalized,
+    "2026-09-19",
+    "2026-09-20",
+  );
+
+  assert.equal(payload.length, 117);
+  assert.equal(normalized.length, 90);
+  assert.equal(primary.length, roomTypes.length);
+  assert.equal((formatted.match(/\*\*/gu) ?? []).length, roomTypes.length * 2);
+  assert.doesNotMatch(
+    formatted,
+    /Гостевой Дом|Корпус 2|Тест|тариф|питание|offerId/u,
+  );
+  assert.doesNotMatch(formatted, /Комфортный номер|группов|техническ/u);
 });
 
 test("creates a confirmed booking and sends the YooKassa link to chat", async () => {
