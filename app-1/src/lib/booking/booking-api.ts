@@ -84,6 +84,16 @@ export type CreateBookingInput = Omit<
   }>;
 };
 
+export type BookingPaymentLink = {
+  readonly amount: { readonly currency: string; readonly value: string };
+  readonly bookingId: string;
+  readonly confirmationUrl: string | null;
+  readonly id: string;
+  readonly roomName: string;
+  readonly status: string;
+  readonly voucherNumber: string | null;
+};
+
 export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
   apiClient.get<{ offers: BookingOffer[]; search: BookingSearch }>(
     "/booking/offers",
@@ -113,5 +123,6 @@ export const createBookingReservation = (input: CreateBookingInput) =>
     booking: { id: string; voucherNumber: string | null };
     bookings?: Array<{ id: string; voucherNumber: string | null }>;
     group?: { id: string; roomsCount: number; totalAmount: string | null };
+    payments?: BookingPaymentLink[];
     payment: { confirmationUrl: string | null; status: string };
   }>("/booking/reservations", input);

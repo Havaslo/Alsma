@@ -581,31 +581,16 @@ export const createBookingService = (
           fullName: `${input.contact.firstName} ${input.contact.lastName}`,
           phone,
         });
-        const totalAmount = roomData.reduce(
-          (sum, room) => sum + room.reservationOffer.totalPrice,
-          0,
-        );
-        const group = await repository.createGuestBookingGroup({
-          checkInDate: date(input.checkIn),
-          checkOutDate: date(input.checkOut),
-          contactComment: input.notes ?? null,
-          contactEmail: input.contact.email.toLowerCase(),
-          contactFirstName: input.contact.firstName,
-          contactLastName: input.contact.lastName,
-          contactPhone: phone,
-          currency: groupCurrency ?? input.currency,
-          roomsCount: roomData.length,
-          totalAmount,
-          userId: guest.id,
-        });
-        const reservationIds: string[] = [];
-        let localBookingsCreated = false;
+        type CreatedBooking = {
+          booking: Awaited<ReturnType<BookingRepository["createGuestBooking"]>>;
+          paymentId?: string;
+          payment?: YooPayment;
+          paymentStatus: string;
+          reservationId: string;
+        };
+        const createdBookings: CreatedBooking[] = [];
+        let paymentCreated = false;
         try {
-          const reservations = [] as Array<{
-            readonly reservationId: string;
-            readonly room: (typeof roomData)[number];
-            readonly voucherNumber: string | null;
-          }>;
           for (const room of roomData) {
             const response = await eptera.createReservation(
               reservationPayload(
@@ -626,148 +611,170 @@ export const createBookingService = (
                 "Система бронирования вернула неполный ответ.",
               );
             }
-            reservationIds.push(reservationId);
-            reservations.push({
-              reservationId,
-              room,
-              voucherNumber: responseRecord
-                ? String(
-                    responseRecord["voucher-no"] ??
-                      responseRecord.voucherNo ??
-                      "",
-                  ) || null
-                : null,
+            const paymentDeadlineAt = new Date(
+              Date.now() + BOOKING_PAYMENT_DEADLINE_MS,
+            );
+            const voucherNumber = responseRecord
+              ? String(
+                  responseRecord["voucher-no"] ??
+                    responseRecord.voucherNo ??
+                    "",
+                ) || null
+              : null;
+            const booking = await repository.createGuestBooking({
+              checkInDate: date(input.checkIn),
+              checkOutDate: date(input.checkOut),
+              contactComment: input.notes ?? null,
+              contactEmail: input.contact.email.toLowerCase(),
+              contactFirstName: input.contact.firstName,
+              contactLastName: input.contact.lastName,
+              contactPhone: phone,
+              currency: room.reservationOffer.currency,
+              epteraReservationId: reservationId,
+              guestsCount: room.room.guests.length,
+              guestList: JSON.parse(JSON.stringify(room.room.guests)),
+              paymentDeadlineAt,
+              roomName: room.offer.roomType,
+              selectedOffer: JSON.parse(JSON.stringify(room.offer)),
+              paymentMethod: input.paymentMethod,
+              totalAmount: room.reservationOffer.totalPrice,
+              userId: guest.id,
+              voucherNumber,
             });
+            const createdBooking: CreatedBooking = {
+              booking,
+              paymentStatus: "payment_pending",
+              reservationId,
+            };
+            createdBookings.push(createdBooking);
+            const paymentAmount =
+              input.paymentMethod === "first_night"
+                ? Number(
+                    amountText(
+                      room.reservationOffer.totalPrice /
+                        nightsBetween(input.checkIn, input.checkOut),
+                    ),
+                  )
+                : Number(amountText(room.reservationOffer.totalPrice));
+            const payment = await yookassa.createPayment({
+              amount: amountText(paymentAmount),
+              bookingId: booking.id,
+              currency: room.reservationOffer.currency,
+              description: `Бронирование ${voucherNumber ?? booking.id}`,
+              customer: { email: input.contact.email.toLowerCase(), phone },
+              returnUrl: input.returnUrl,
+            });
+            paymentCreated = true;
+            createdBooking.paymentId = payment.id;
+            createdBooking.paymentStatus = payment.status;
+            createdBooking.booking = await repository.updatePayment({
+              bookingId: booking.id,
+              paymentAmount,
+              paymentId: payment.id,
+              paymentStatus: payment.status,
+              status: "awaiting_payment",
+            });
+            createdBooking.payment = payment;
           }
-          const deadline = new Date(Date.now() + BOOKING_PAYMENT_DEADLINE_MS);
-          await repository.createGroupBookings({
-            bookings: reservations.map(
-              ({ reservationId, room, voucherNumber }) => ({
-                checkInDate: date(input.checkIn),
-                checkOutDate: date(input.checkOut),
-                contactComment: input.notes ?? null,
-                contactEmail: input.contact.email.toLowerCase(),
-                contactFirstName: input.contact.firstName,
-                contactLastName: input.contact.lastName,
-                contactPhone: phone,
-                currency: room.reservationOffer.currency,
-                epteraReservationId: reservationId,
-                guestsCount: room.room.guests.length,
-                guestList: JSON.parse(JSON.stringify(room.room.guests)),
-                roomName: room.offer.roomType,
-                selectedOffer: JSON.parse(JSON.stringify(room.offer)),
-                totalAmount: room.reservationOffer.totalPrice,
-                voucherNumber,
-              }),
-            ),
-            deadline,
-            groupId: group.id,
-            reservationIds: JSON.parse(JSON.stringify(reservationIds)),
-            totalAmount,
+
+          const publicBookings = createdBookings.map(({ booking }) => {
+            const publicBooking = withoutEpteraPaymentSyncState(
+              booking as unknown as Record<string, unknown>,
+            );
+            return {
+              ...publicBooking,
+              totalAmount: publicBooking.totalAmount?.toString() ?? null,
+            };
           });
-          localBookingsCreated = true;
-          const nightlyAmounts = reservations.map(({ room }) =>
-            input.paymentMethod === "first_night"
-              ? Number(
-                  amountText(
-                    room.reservationOffer.totalPrice /
-                      nightsBetween(input.checkIn, input.checkOut),
-                  ),
-                )
-              : Number(amountText(room.reservationOffer.totalPrice)),
-          );
-          const paymentAmount = nightlyAmounts.reduce(
-            (sum, amount) => sum + amount,
-            0,
-          );
-          const payment = await yookassa.createPayment({
-            amount: amountText(paymentAmount),
-            bookingId: group.id,
-            currency: groupCurrency ?? input.currency,
-            description: `Бронирование нескольких номеров ${group.id}`,
-            customer: { email: input.contact.email.toLowerCase(), phone },
-            returnUrl: input.returnUrl,
-          });
-          await repository.updateGroupPayment({
-            groupId: group.id,
-            paymentAmount,
-            paymentId: payment.id,
-            paymentStatus: payment.status,
-            status: "awaiting_payment",
-          });
-          const savedGroup = await repository.findGroup(group.id);
-          const bookings = savedGroup?.bookings ?? [];
-          return {
-            booking: {
-              ...withoutEpteraPaymentSyncState(
-                bookings[0] as unknown as Record<string, unknown>,
-              ),
-              totalAmount: bookings[0]?.totalAmount?.toString() ?? null,
-            },
-            bookings: bookings.map((booking) => ({
-              ...withoutEpteraPaymentSyncState(
-                booking as unknown as Record<string, unknown>,
-              ),
-              totalAmount: booking.totalAmount?.toString() ?? null,
-            })),
-            group: {
-              id: group.id,
-              roomsCount: group.roomsCount,
-              totalAmount: group.totalAmount?.toString() ?? null,
-            },
-            payment: {
+          const payments = createdBookings.map(({ booking, payment }) => {
+            if (!payment)
+              throw new HttpError(
+                502,
+                "PAYMENT_CREATION_FAILED",
+                "Не удалось создать платёж.",
+              );
+            return {
               amount: payment.amount,
+              bookingId: booking.id,
               confirmationUrl: payment.confirmation?.confirmation_url ?? null,
               id: payment.id,
+              roomName: booking.roomName,
               status: payment.status,
-            },
+              voucherNumber: booking.voucherNumber,
+            };
+          });
+          const firstPayment = payments[0];
+          if (!firstPayment)
+            throw new HttpError(
+              502,
+              "PAYMENT_CREATION_FAILED",
+              "Не удалось создать платёж.",
+            );
+          return {
+            booking: publicBookings[0],
+            bookings: publicBookings,
+            payments,
+            payment: firstPayment,
           };
         } catch (error) {
+          const cancellableBookings: CreatedBooking[] = [];
+          const preflightFailures: Array<{
+            bookingId: string;
+            cancellationSucceeded: boolean;
+            errorCode?: string;
+            errorMessage?: string;
+          }> = [];
+          for (const createdBooking of createdBookings) {
+            if (createdBooking.paymentStatus === "succeeded") continue;
+            if (createdBooking.paymentId) {
+              try {
+                const latestPayment = await yookassa.getPayment(
+                  createdBooking.paymentId,
+                );
+                if (isPaidPayment(latestPayment)) continue;
+              } catch {
+                preflightFailures.push({
+                  bookingId: createdBooking.booking.id,
+                  cancellationSucceeded: false,
+                  errorCode: "YOOKASSA_STATUS_UNAVAILABLE",
+                  errorMessage:
+                    "Не удалось проверить статус платежа перед отменой брони.",
+                });
+                continue;
+              }
+            }
+            cancellableBookings.push(createdBooking);
+          }
           const cancellationResults = await Promise.all(
-            reservationIds.map((reservationId) =>
-              cancelReservationBestEffort(eptera, reservationId),
-            ),
+            cancellableBookings.map(async ({ booking, reservationId }) => ({
+              bookingId: booking.id,
+              cancellationSucceeded: await cancelReservationBestEffort(
+                eptera,
+                reservationId,
+              ),
+            })),
           );
-          const cancellationDidFail = cancellationResults.some(
-            (cancelled) => !cancelled,
-          );
-          const cancellationFailureState = cancellationDidFail
-            ? cancellationFailure(
-                new HttpError(
-                  502,
-                  "EPTERA_CANCELLATION_FAILED",
-                  "Не удалось автоматически отменить все созданные брони.",
-                ),
-              )
-            : null;
-          const failure =
-            error instanceof HttpError
-              ? { code: error.code, message: error.message.slice(0, 500) }
-              : {
-                  code: localBookingsCreated
-                    ? "PAYMENT_CREATION_FAILED"
-                    : "RESERVATION_CREATION_FAILED",
-                  message: localBookingsCreated
-                    ? "Не удалось создать платёж. Брони отменяются автоматически."
-                    : "Не удалось создать все выбранные брони.",
-                };
-          if (localBookingsCreated)
-            await repository.markGroupPaymentCreationFailed({
-              cancellationErrorCode: cancellationFailureState?.code,
-              cancellationErrorMessage: cancellationFailureState?.message,
-              errorCode: failure.code,
-              errorMessage: failure.message,
-              groupId: group.id,
+          const allCancellationResults = [
+            ...preflightFailures,
+            ...cancellationResults,
+          ];
+          if (allCancellationResults.length > 0) {
+            const failure = cancellationFailure(
+              new HttpError(
+                502,
+                "EPTERA_CANCELLATION_FAILED",
+                "Не удалось автоматически отменить все созданные брони.",
+              ),
+            );
+            await repository.markBookingsCancelledAfterPartialFailure({
+              attemptedAt: new Date(),
+              bookings: allCancellationResults.map((result) =>
+                result.cancellationSucceeded
+                  ? result
+                  : { ...failure, ...result },
+              ),
             });
-          else
-            await repository.markGroupReservationCreationFailed({
-              cancellationErrorCode: cancellationFailureState?.code,
-              cancellationErrorMessage: cancellationFailureState?.message,
-              errorCode: failure.code,
-              errorMessage: failure.message,
-              groupId: group.id,
-              reservationIds: JSON.parse(JSON.stringify(reservationIds)),
-            });
+          }
           if (
             error instanceof HttpError &&
             /^(EPTERA|YOOKASSA)_/.test(error.code)
@@ -775,6 +782,13 @@ export const createBookingService = (
             throw new HttpError(
               error.status,
               error.code,
+              "Не удалось оформить выбранные номера. Попробуйте ещё раз.",
+            );
+          }
+          if (!paymentCreated && !(error instanceof HttpError)) {
+            throw new HttpError(
+              502,
+              "RESERVATION_CREATION_FAILED",
               "Не удалось оформить выбранные номера. Попробуйте ещё раз.",
             );
           }

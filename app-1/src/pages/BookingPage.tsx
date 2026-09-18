@@ -23,6 +23,7 @@ import { Modal } from "@/components/ui/Modal";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import {
   type BookingOffer,
+  type BookingPaymentLink,
   type BookingSearch,
   createBookingReservation,
   loadBookingOffers,
@@ -148,6 +149,7 @@ export const BookingPage = () => {
     id: string;
     voucherNumber: string | null;
   } | null>(null);
+  const [paymentLinks, setPaymentLinks] = useState<BookingPaymentLink[]>([]);
   const offersQuery = useApiQuery(
     ["booking-offers", submittedSearch],
     (signal) => loadBookingOffers(submittedSearch, signal),
@@ -318,6 +320,13 @@ export const BookingPage = () => {
         returnUrl: `${window.location.origin}${ROUTES.booking}?payment=return`,
         rooms: rooms.length > 1 ? rooms : undefined,
       });
+      const separatePaymentLinks = result.data.payments ?? [];
+      if (separatePaymentLinks.length > 1) {
+        setPaymentLinks(separatePaymentLinks);
+        setCompleted(result.data.booking);
+        setStep(3);
+        return;
+      }
       if (result.data.payment.confirmationUrl) {
         window.location.assign(result.data.payment.confirmationUrl);
         return;
@@ -386,6 +395,47 @@ export const BookingPage = () => {
                 {completed.voucherNumber ?? completed.id}
               </strong>
             </p>
+            {paymentLinks.length > 0 && (
+              <div className="mt-8 text-left">
+                <h3 className="text-lg font-semibold">
+                  Отдельные ссылки на оплату
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
+                  Для каждого выбранного номера нужна отдельная оплата. Откройте
+                  ссылки ниже — их можно использовать в любом порядке.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {paymentLinks.map((paymentLink, index) => (
+                    <div
+                      className="flex flex-col gap-3 rounded-2xl border border-line bg-page p-4 sm:flex-row sm:items-center sm:justify-between"
+                      key={paymentLink.bookingId}
+                    >
+                      <div>
+                        <p className="font-semibold">
+                          {paymentLink.roomName || `Номер ${index + 1}`}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-ui-foreground">
+                          Бронь №{" "}
+                          {paymentLink.voucherNumber ?? paymentLink.bookingId}
+                        </p>
+                      </div>
+                      {paymentLink.confirmationUrl ? (
+                        <a
+                          className="inline-flex shrink-0 justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground"
+                          href={paymentLink.confirmationUrl}
+                        >
+                          Перейти к оплате
+                        </a>
+                      ) : (
+                        <span className="text-sm text-muted-ui-foreground">
+                          Ссылка пока недоступна
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <Link
               className="mt-8 inline-flex rounded-xl bg-brand px-6 py-3 font-semibold text-brand-foreground"
               to={ROUTES.account}
@@ -783,8 +833,8 @@ export const BookingPage = () => {
                       {roomGuests.length > 1 && (
                         <>
                           {" "}
-                          Все выбранные номера будут объединены в один платёж и
-                          одну ссылку.
+                          Для каждого выбранного номера будет своя бронь и
+                          отдельная ссылка оплаты.
                         </>
                       )}
                     </p>

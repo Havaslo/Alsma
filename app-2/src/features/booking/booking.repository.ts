@@ -31,6 +31,48 @@ export const createBookingRepository = (database: Database) => ({
         status: "awaiting_payment",
       },
     }),
+  markBookingsCancelledAfterPartialFailure: (input: {
+    attemptedAt: Date;
+    bookings: Array<{
+      bookingId: string;
+      cancellationSucceeded: boolean;
+      errorCode?: string;
+      errorMessage?: string;
+    }>;
+  }) =>
+    database.client.$transaction(async (transaction) => {
+      let count = 0;
+      for (const booking of input.bookings) {
+        const result = await transaction.guestBooking.updateMany({
+          data: booking.cancellationSucceeded
+            ? {
+                cancelledAt: new Date(),
+                cancellationAttemptedAt: input.attemptedAt,
+                cancellationErrorCode: null,
+                cancellationErrorMessage: null,
+                cancellationStatus: "succeeded",
+                status: "cancelled",
+              }
+            : {
+                cancellationAttemptedAt: input.attemptedAt,
+                cancellationErrorCode:
+                  booking.errorCode ?? "EPTERA_CANCELLATION_FAILED",
+                cancellationErrorMessage:
+                  booking.errorMessage ??
+                  "Не удалось автоматически отменить бронь.",
+                cancellationStatus: "failed",
+                status: "cancellation_failed",
+              },
+          where: {
+            cancellationStatus: { not: "succeeded" },
+            id: booking.bookingId,
+            paymentStatus: { not: "succeeded" },
+          },
+        });
+        count += result.count;
+      }
+      return { count };
+    }),
   createGuestBookingGroup: (input: {
     checkInDate: Date;
     checkOutDate: Date;
