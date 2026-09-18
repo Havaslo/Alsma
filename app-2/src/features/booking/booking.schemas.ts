@@ -76,6 +76,12 @@ const guestSchema = z.discriminatedUnion("type", [
   childGuestSchema,
 ]);
 
+const reservationRoomSchema = z.object({
+  adults: z.number().int().min(1).max(12),
+  guests: z.array(guestSchema).min(1).max(20),
+  offerId: z.string().trim().min(1).max(300),
+});
+
 export const createReservationBodySchema = z.object({
   adults: z.number().int().min(1).max(12),
   checkIn: isoDate,
@@ -95,6 +101,7 @@ export const createReservationBodySchema = z.object({
   paymentMethod: z.enum(["full", "first_night"]).default("full"),
   returnUrl: z.string().url().max(2000),
   roomCount: z.number().int().min(1).max(2).default(1),
+  rooms: z.array(reservationRoomSchema).min(2).max(2).optional(),
 });
 
 export type CalendarPricesQuery = z.infer<typeof calendarPricesQuerySchema>;

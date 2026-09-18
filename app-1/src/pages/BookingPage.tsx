@@ -275,6 +275,27 @@ export const BookingPage = () => {
       !contact.phone
     )
       return toast.error("Заполните контактные данные.");
+    let childNumber = 0;
+    const rooms = roomGuests.map((room, roomIndex) => ({
+      adults: room.adults,
+      guests: [
+        ...Array.from({ length: room.adults }, (_, adultIndex) => ({
+          firstName:
+            roomIndex === 0 && adultIndex === 0
+              ? contact.firstName
+              : `Гость ${roomIndex + adultIndex + 2}`,
+          lastName: contact.lastName,
+          type: "adult" as const,
+        })),
+        ...(childIdsByRoom[room.id] ?? []).map((childId) => ({
+          birthDate: childBirthDates[childId] ?? "",
+          firstName: `Ребёнок ${++childNumber}`,
+          lastName: contact.lastName,
+          type: "child" as const,
+        })),
+      ],
+      offerId: selectedOffers[roomIndex]!.id,
+    }));
     setSubmitting(true);
     try {
       const result = await createBookingReservation({
@@ -290,23 +311,12 @@ export const BookingPage = () => {
           lastName: contact.lastName,
           phone: contact.phone,
         },
-        guests: [
-          ...Array.from({ length: submittedSearch.adults }, (_, index) => ({
-            firstName: index === 0 ? contact.firstName : `Гость ${index + 1}`,
-            lastName: contact.lastName,
-            type: "adult" as const,
-          })),
-          ...children.map(({ birthDate }, index) => ({
-            birthDate,
-            firstName: `Ребёнок ${index + 1}`,
-            lastName: contact.lastName,
-            type: "child" as const,
-          })),
-        ],
+        guests: rooms.flatMap((room) => room.guests),
         notes: contact.notes || undefined,
         offerId: (selectedOffers.find(Boolean) ?? offer).id,
         paymentMethod,
         returnUrl: `${window.location.origin}${ROUTES.booking}?payment=return`,
+        rooms: rooms.length > 1 ? rooms : undefined,
       });
       if (result.data.payment.confirmationUrl) {
         window.location.assign(result.data.payment.confirmationUrl);
@@ -770,6 +780,13 @@ export const BookingPage = () => {
                     <p className="mt-3 text-sm text-muted-ui-foreground">
                       После создания брони вы перейдёте на защищённую страницу
                       для оплаты.
+                      {roomGuests.length > 1 && (
+                        <>
+                          {" "}
+                          Все выбранные номера будут объединены в один платёж и
+                          одну ссылку.
+                        </>
+                      )}
                     </p>
                     <div className="mt-4 rounded-2xl border border-accent-ui/30 bg-accent-ui/10 p-4 text-sm leading-6">
                       <p className="font-semibold text-page-foreground">

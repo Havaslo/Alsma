@@ -77,6 +77,11 @@ export type CreateBookingInput = Omit<
   readonly offerId: string;
   readonly paymentMethod: "full" | "first_night";
   readonly returnUrl: string;
+  readonly rooms?: Array<{
+    readonly adults: number;
+    readonly guests: BookingGuest[];
+    readonly offerId: string;
+  }>;
 };
 
 export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
@@ -106,5 +111,7 @@ export const loadBookingCalendarPrices = (
 export const createBookingReservation = (input: CreateBookingInput) =>
   apiClient.post<{
     booking: { id: string; voucherNumber: string | null };
+    bookings?: Array<{ id: string; voucherNumber: string | null }>;
+    group?: { id: string; roomsCount: number; totalAmount: string | null };
     payment: { confirmationUrl: string | null; status: string };
   }>("/booking/reservations", input);

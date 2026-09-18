@@ -184,6 +184,227 @@ const createHarness = (
   };
 };
 
+const createGroupedHarness = (failSecondPayment = false) => {
+  const reservationIds: string[] = [];
+  const paymentAmounts: number[] = [];
+  let group: Record<string, unknown> | null = null;
+  let bookings: Array<Record<string, unknown>> = [];
+  let paymentCalls = 0;
+  const repository = {
+    createGuestBookingGroup: async (input: Record<string, unknown>) => {
+      group = {
+        ...input,
+        cancellationStatus: "not_started",
+        id: "group-1",
+        paymentMethod: "full",
+        paymentStatus: "payment_pending",
+        status: "creating_reservations",
+      };
+      return group;
+    },
+    createGroupBookings: async (input: {
+      bookings: Array<Record<string, unknown>>;
+      deadline: Date;
+      groupId: string;
+      reservationIds: unknown;
+      totalAmount: number;
+    }) => {
+      bookings = input.bookings.map((booking, index) => ({
+        ...booking,
+        cancellationStatus: "not_started",
+        epteraPaymentSyncStatus: "pending",
+        id: `booking-${index + 1}`,
+        paymentStatus: "payment_pending",
+        status: "awaiting_payment",
+        totalAmount: booking.totalAmount,
+      }));
+      group = {
+        ...group,
+        paymentDeadlineAt: input.deadline,
+        reservationIds: input.reservationIds,
+        status: "awaiting_payment",
+        totalAmount: input.totalAmount,
+      };
+      return group;
+    },
+    updateGroupPayment: async (input: Record<string, unknown>) => {
+      group = { ...group, ...input };
+      bookings = bookings.map((booking) => ({
+        ...booking,
+        paymentStatus: input.paymentStatus,
+        status: input.status,
+      }));
+      return group;
+    },
+    findGroup: async () => (group ? { ...group, bookings } : null),
+    findGroupByPaymentId: async () => (group ? { ...group, bookings } : null),
+    markGroupPaymentSucceeded: async (input: {
+      bookings: Array<{ id: string; paymentAmount: number }>;
+      groupId: string;
+      paymentAmount: number;
+      paymentId: string;
+    }) => {
+      if (group?.paymentStatus !== "succeeded") {
+        group = {
+          ...group,
+          paymentAmount: input.paymentAmount,
+          paymentId: input.paymentId,
+          paymentStatus: "succeeded",
+          status: "payment_sync_pending",
+        };
+        bookings = bookings.map((booking) => ({
+          ...booking,
+          paymentAmount: input.bookings.find((item) => item.id === booking.id)
+            ?.paymentAmount,
+          paymentStatus: "succeeded",
+          status: "payment_sync_pending",
+        }));
+      }
+      return group ? { ...group, bookings } : null;
+    },
+    claimEpteraPaymentSync: async (input: { bookingId: string }) => {
+      const booking = bookings.find((item) => item.id === input.bookingId);
+      if (!booking || booking.epteraPaymentSyncStatus === "succeeded")
+        return false;
+      booking.epteraPaymentSyncStatus = "processing";
+      return true;
+    },
+    markEpteraPaymentSyncSucceeded: async (input: { bookingId: string }) => {
+      const booking = bookings.find((item) => item.id === input.bookingId);
+      if (booking) {
+        booking.epteraPaymentSyncStatus = "succeeded";
+        booking.status = "confirmed";
+      }
+      return { count: booking ? 1 : 0 };
+    },
+    markEpteraPaymentSyncFailed: async (input: { bookingId: string }) => {
+      const booking = bookings.find((item) => item.id === input.bookingId);
+      if (booking) {
+        booking.epteraPaymentSyncStatus = "failed";
+        booking.status = "payment_sync_failed";
+      }
+      return { count: booking ? 1 : 0 };
+    },
+    markGroupConfirmedIfAllSynced: async () => {
+      if (
+        bookings.every(
+          (booking) => booking.epteraPaymentSyncStatus === "succeeded",
+        )
+      )
+        group = { ...group, status: "confirmed" };
+      return group ? { ...group, bookings } : null;
+    },
+    findOrCreateGuest: async () => ({ id: "guest-1" }),
+  } as unknown as BookingRepository;
+  const eptera = {
+    addPayment: async (input: { amount: number }) => {
+      paymentAmounts.push(input.amount);
+      paymentCalls += 1;
+      if (failSecondPayment && paymentCalls === 2)
+        throw new Error("temporary payment sync failure");
+    },
+    createReservation: async () => {
+      const id = String(123450 + reservationIds.length + 1);
+      reservationIds.push(id);
+      return { "reservation-id": id };
+    },
+    getOffers: async () => [
+      offer,
+      { ...offer, discountedPrice: 1_100, id: "offer-2" },
+    ],
+  } as unknown as EpteraClient;
+  const yookassa = {
+    createPayment: async (input: { amount: string }) => ({
+      amount: { currency: "RUB", value: input.amount },
+      confirmation: { confirmation_url: "https://example.com/pay" },
+      id: "group-payment-1",
+      paid: false,
+      status: "pending",
+    }),
+  } as unknown as YooKassaClient;
+  return {
+    paymentAmounts,
+    reservationIds,
+    service: createBookingService(repository, eptera, yookassa),
+    payment: {
+      amount: { currency: "RUB", value: "2000.00" },
+      id: "group-payment-1",
+      metadata: { bookingId: "group-1" },
+      paid: true,
+      status: "succeeded",
+    },
+    setFailSecondPayment: (value: boolean) => {
+      failSecondPayment = value;
+    },
+  };
+};
+
+test("creates one payment for separate reservations and retries only failed group syncs", async () => {
+  const harness = createGroupedHarness(true);
+  const result = await harness.service.createReservation(
+    reservationInput({
+      adults: 2,
+      guests: [adult("Adult 1"), adult("Adult 2")],
+      roomCount: 2,
+      rooms: [
+        { adults: 1, guests: [adult("Adult 1")], offerId: "offer-1" },
+        { adults: 1, guests: [adult("Adult 2")], offerId: "offer-2" },
+      ],
+    }),
+  );
+
+  assert.equal(harness.reservationIds.length, 2);
+  assert.equal(result.payment.id, "group-payment-1");
+  await assert.rejects(harness.service.reconcilePayment(harness.payment), {
+    code: "EPTERA_PAYMENT_SYNC_FAILED",
+  });
+  assert.deepEqual(harness.paymentAmounts, [900, 1_100]);
+
+  harness.setFailSecondPayment(false);
+  const confirmed = await harness.service.reconcilePayment(harness.payment);
+  assert.equal((confirmed as { status: string }).status, "confirmed");
+  assert.deepEqual(harness.paymentAmounts, [900, 1_100, 1_100]);
+});
+
+test("cancels every reservation kept in an incomplete group", async () => {
+  const cancelledIds: number[] = [];
+  let groupStatus = "cancellation_pending";
+  const repository = {
+    findExpiredUnpaidGroups: async () => [
+      { id: "group-incomplete", paymentId: null },
+    ],
+    findExpiredUnpaidBookings: async () => [],
+    claimGroupCancellation: async () => true,
+    findGroup: async () => ({
+      bookings: [],
+      cancellationStatus: "processing",
+      id: "group-incomplete",
+      reservationIds: ["123", "456"],
+    }),
+    markGroupCancelled: async () => {
+      groupStatus = "cancelled";
+      return { count: 1 };
+    },
+    markGroupCancellationFailed: async () => ({ count: 1 }),
+  } as unknown as BookingRepository;
+  const eptera = {
+    cancelReservation: async (reservationId: number) => {
+      cancelledIds.push(reservationId);
+    },
+  } as unknown as EpteraClient;
+  const service = createBookingService(
+    repository,
+    eptera,
+    {} as YooKassaClient,
+  );
+
+  const result = await service.cancelExpiredBookings();
+
+  assert.deepEqual(result, { cancelled: 1, failed: 0, skipped: 0 });
+  assert.deepEqual(cancelledIds, [123, 456]);
+  assert.equal(groupStatus, "cancelled");
+});
+
 test("builds the adult-only Eptera payload without undefined optional fields", async () => {
   assert.equal(BOOKING_PAYMENT_DEADLINE_MS, 30 * 60_000);
   const harness = createHarness();

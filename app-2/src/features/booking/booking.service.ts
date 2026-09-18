@@ -152,13 +152,20 @@ const cancelReservationBestEffort = async (
   reservationId: string,
 ) => {
   const numericReservationId = numericEpteraReference(reservationId);
-  if (!numericReservationId) return;
+  if (!numericReservationId) return false;
   try {
     await eptera.cancelReservation(Number(numericReservationId));
+    return true;
   } catch {
     // Keep the original persistence or payment error as the public failure.
+    return false;
   }
 };
+
+const reservationIdsFromJson = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 
 const cancellationFailure = (error: unknown) => {
   if (error instanceof HttpError)
@@ -171,6 +178,225 @@ const cancellationFailure = (error: unknown) => {
 
 const isPaidPayment = (payment: YooPayment): boolean =>
   payment.status === "succeeded" && payment.paid;
+
+type ReservationRoom = NonNullable<CreateReservationBody["rooms"]>[number];
+
+const validateGuestDetails = (
+  guests: ReservationRoom["guests"],
+  adults: number,
+  checkIn: string,
+) => {
+  if (guests.filter((guest) => guest.type === "adult").length !== adults) {
+    throw new HttpError(
+      400,
+      "GUESTS_INVALID",
+      "Количество взрослых гостей не совпадает с параметрами поиска.",
+    );
+  }
+  const childGuests = guests.filter((guest) => guest.type !== "adult");
+  if (childGuests.some((guest) => !isValidDate(guest.birthDate))) {
+    throw new HttpError(
+      400,
+      "GUESTS_INVALID",
+      "Укажите корректную дату рождения для каждого ребёнка.",
+    );
+  }
+  const childAges = childGuests.map((guest) =>
+    ageOnDate(guest.birthDate, checkIn),
+  );
+  if (childAges.some((age) => age === null || age < 0 || age > 17)) {
+    throw new HttpError(
+      400,
+      "GUESTS_INVALID",
+      "Дата рождения ребёнка должна соответствовать возрасту до 18 лет на дату заезда.",
+    );
+  }
+  if (
+    guests.some((guest) =>
+      guest.type === "adult"
+        ? guest.birthDate !== undefined && !isValidDate(guest.birthDate)
+        : !isValidDate(guest.birthDate),
+    )
+  ) {
+    throw new HttpError(
+      400,
+      "GUESTS_INVALID",
+      "Укажите корректную дату рождения каждого гостя.",
+    );
+  }
+  return { childAges: childAges as number[], childGuests };
+};
+
+const reservationPayload = (
+  input: CreateReservationBody,
+  room: ReservationRoom,
+  offer: EpteraOffer,
+  reservationOffer: ReturnType<typeof validateReservationOffer>,
+  childAges: number[],
+  childGuests: ReservationRoom["guests"],
+): Parameters<EpteraClient["createReservation"]>[0] => {
+  let childIndex = 0;
+  const babyChildCount = childAges.filter((age) => age < 1).length;
+  const elderChildCount = childAges.filter((age) => age >= 7).length;
+  const youngerChildCount = childAges.filter(
+    (age) => age >= 1 && age < 7,
+  ).length;
+  return {
+    "adult-count": room.adults,
+    "board-type-id": offer.boardTypeId,
+    "check-in": input.checkIn,
+    "check-out": input.checkOut,
+    "currency-code": reservationOffer.currency,
+    "elder-child-count": elderChildCount,
+    "guest-list": room.guests.map((guestEntry) => {
+      const childPosition = guestEntry.type === "adult" ? null : childIndex++;
+      return {
+        birthday: guestEntry.birthDate ?? null,
+        country: input.nationality,
+        name: guestEntry.firstName,
+        surname: guestEntry.lastName,
+        "title-id":
+          guestEntry.type === "adult"
+            ? 0
+            : childAges[childPosition ?? 0]! < 1
+              ? 3
+              : 2,
+      };
+    }),
+    nationality: input.nationality,
+    "price-agency-id": offer.priceAgencyId,
+    "rate-type-id": offer.rateTypeId,
+    "room-type-id": offer.roomTypeId,
+    "total-price": reservationOffer.totalPrice,
+    "baby-count": babyChildCount,
+    "younger-child-count": youngerChildCount,
+  };
+};
+
+const reconcileGroupPayment = async (
+  repository: BookingRepository,
+  eptera: EpteraClient,
+  group: NonNullable<Awaited<ReturnType<BookingRepository["findGroup"]>>>,
+  payment: YooPayment,
+) => {
+  const paid = isPaidPayment(payment);
+  const paymentAmount = Number(payment.amount.value);
+  if (!paid) {
+    return repository.updateGroupPayment({
+      groupId: group.id,
+      paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      status: group.status,
+    });
+  }
+  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+    throw new HttpError(
+      502,
+      "PAYMENT_AMOUNT_INVALID",
+      "Платёжный сервис вернул некорректную сумму.",
+    );
+  }
+  if (
+    payment.amount.currency.trim().toUpperCase() !==
+    group.currency.trim().toUpperCase()
+  ) {
+    throw new HttpError(
+      502,
+      "PAYMENT_CURRENCY_INVALID",
+      "Платёжный сервис вернул другую валюту.",
+    );
+  }
+  const nights = Math.max(
+    1,
+    Math.round(
+      (group.checkOutDate.getTime() - group.checkInDate.getTime()) / 86_400_000,
+    ),
+  );
+  const amounts = group.bookings.map((booking) =>
+    group.paymentMethod === "first_night"
+      ? Number((Number(booking.totalAmount ?? 0) / nights).toFixed(2))
+      : Number(Number(booking.totalAmount ?? 0).toFixed(2)),
+  );
+  const expectedAmount = Number(
+    amounts.reduce((sum, amount) => sum + amount, 0).toFixed(2),
+  );
+  if (Math.abs(expectedAmount - paymentAmount) > 0.01) {
+    throw new HttpError(
+      409,
+      "PAYMENT_AMOUNT_MISMATCH",
+      "Сумма платежа не совпадает с суммой выбранных номеров.",
+    );
+  }
+  if (group.cancellationStatus === "processing") return group;
+  const savedGroup = await repository.markGroupPaymentSucceeded({
+    bookings: group.bookings.map((booking, index) => ({
+      id: booking.id,
+      paymentAmount: amounts[index] ?? 0,
+    })),
+    groupId: group.id,
+    paymentAmount,
+    paymentId: payment.id,
+  });
+  if (!savedGroup || savedGroup.paymentStatus !== "succeeded")
+    return savedGroup;
+
+  let syncError: unknown = null;
+  for (const booking of savedGroup.bookings) {
+    if (booking.epteraPaymentSyncStatus === "succeeded") continue;
+    const attemptedAt = new Date();
+    const claimed = await repository.claimEpteraPaymentSync({
+      attemptedAt,
+      bookingId: booking.id,
+      staleBefore: new Date(
+        attemptedAt.getTime() - EPTERA_PAYMENT_SYNC_STALE_AFTER_MS,
+      ),
+    });
+    if (!claimed) continue;
+    try {
+      const bookingReference =
+        numericEpteraReference(booking.epteraReservationId) ??
+        numericEpteraReference(booking.voucherNumber);
+      if (!bookingReference) {
+        throw new HttpError(
+          409,
+          "EPTERA_BOOKING_REFERENCE_INVALID",
+          "Не удалось определить номер бронирования для передачи оплаты.",
+        );
+      }
+      await eptera.addPayment({
+        amount: Number(booking.paymentAmount ?? 0),
+        bookingReference,
+        currency: payment.amount.currency,
+      });
+      await repository.markEpteraPaymentSyncSucceeded({
+        attemptedAt,
+        bookingId: booking.id,
+        syncedAt: new Date(),
+      });
+    } catch (error) {
+      await repository
+        .markEpteraPaymentSyncFailed({
+          attemptedAt,
+          bookingId: booking.id,
+        })
+        .catch(() => undefined);
+      syncError =
+        error instanceof HttpError
+          ? error
+          : new HttpError(
+              502,
+              "EPTERA_PAYMENT_SYNC_FAILED",
+              "Не удалось передать оплату в систему бронирования.",
+            );
+    }
+  }
+  const confirmedGroup = await repository.markGroupConfirmedIfAllSynced(
+    group.id,
+  );
+  if (syncError) throw syncError;
+  return confirmedGroup;
+};
 
 type CalendarPrice = {
   readonly date: string;
@@ -279,6 +505,281 @@ export const createBookingService = (
           "DATES_INVALID",
           "Дата выезда должна быть позже даты заезда.",
         );
+      }
+      if (input.rooms?.length) {
+        if (input.rooms.length !== input.roomCount) {
+          throw new HttpError(
+            400,
+            "ROOMS_INVALID",
+            "Количество выбранных номеров не совпадает с параметрами поиска.",
+          );
+        }
+        const phone = normalizePhone(input.contact.phone);
+        const roomData: Array<{
+          readonly childAges: number[];
+          readonly childGuests: ReservationRoom["guests"];
+          readonly offer: EpteraOffer;
+          readonly reservationOffer: ReturnType<
+            typeof validateReservationOffer
+          >;
+          readonly room: ReservationRoom;
+        }> = [];
+        let groupCurrency: string | null = null;
+        for (const room of input.rooms) {
+          const { childAges, childGuests } = validateGuestDetails(
+            room.guests,
+            room.adults,
+            input.checkIn,
+          );
+          const offers = await eptera.getOffers({
+            adults: room.adults,
+            checkIn: input.checkIn,
+            checkOut: input.checkOut,
+            childAges,
+            currency: input.currency,
+            language: "ru",
+            nationality: input.nationality,
+            roomCount: 1,
+          });
+          const offer = offers.find(
+            (candidate) => candidate.id === room.offerId,
+          );
+          if (!offer || (offer.roomToSell !== null && offer.roomToSell < 1)) {
+            throw new HttpError(
+              409,
+              "OFFER_UNAVAILABLE",
+              "Один из выбранных тарифов больше недоступен. Выберите другой вариант.",
+            );
+          }
+          const roomInput = {
+            ...input,
+            adults: room.adults,
+            guests: room.guests,
+            offerId: room.offerId,
+            roomCount: 1,
+          } satisfies CreateReservationBody;
+          const reservationOffer = validateReservationOffer(offer, roomInput);
+          if (groupCurrency && groupCurrency !== reservationOffer.currency) {
+            throw new HttpError(
+              409,
+              "GROUP_CURRENCY_MISMATCH",
+              "Выбранные тарифы должны быть в одной валюте.",
+            );
+          }
+          groupCurrency = reservationOffer.currency;
+          roomData.push({
+            childAges,
+            childGuests,
+            offer,
+            reservationOffer,
+            room,
+          });
+        }
+
+        const guest = await repository.findOrCreateGuest({
+          email: input.contact.email.toLowerCase(),
+          fullName: `${input.contact.firstName} ${input.contact.lastName}`,
+          phone,
+        });
+        const totalAmount = roomData.reduce(
+          (sum, room) => sum + room.reservationOffer.totalPrice,
+          0,
+        );
+        const group = await repository.createGuestBookingGroup({
+          checkInDate: date(input.checkIn),
+          checkOutDate: date(input.checkOut),
+          contactComment: input.notes ?? null,
+          contactEmail: input.contact.email.toLowerCase(),
+          contactFirstName: input.contact.firstName,
+          contactLastName: input.contact.lastName,
+          contactPhone: phone,
+          currency: groupCurrency ?? input.currency,
+          roomsCount: roomData.length,
+          totalAmount,
+          userId: guest.id,
+        });
+        const reservationIds: string[] = [];
+        let localBookingsCreated = false;
+        try {
+          const reservations = [] as Array<{
+            readonly reservationId: string;
+            readonly room: (typeof roomData)[number];
+            readonly voucherNumber: string | null;
+          }>;
+          for (const room of roomData) {
+            const response = await eptera.createReservation(
+              reservationPayload(
+                input,
+                room.room,
+                room.offer,
+                room.reservationOffer,
+                room.childAges,
+                room.childGuests,
+              ),
+            );
+            const responseRecord = record(response);
+            const reservationId = readReservationIdentifier(response);
+            if (!reservationId) {
+              throw new HttpError(
+                502,
+                "EPTERA_RESPONSE_INVALID",
+                "Система бронирования вернула неполный ответ.",
+              );
+            }
+            reservationIds.push(reservationId);
+            reservations.push({
+              reservationId,
+              room,
+              voucherNumber: responseRecord
+                ? String(
+                    responseRecord["voucher-no"] ??
+                      responseRecord.voucherNo ??
+                      "",
+                  ) || null
+                : null,
+            });
+          }
+          const deadline = new Date(Date.now() + BOOKING_PAYMENT_DEADLINE_MS);
+          await repository.createGroupBookings({
+            bookings: reservations.map(
+              ({ reservationId, room, voucherNumber }) => ({
+                checkInDate: date(input.checkIn),
+                checkOutDate: date(input.checkOut),
+                contactComment: input.notes ?? null,
+                contactEmail: input.contact.email.toLowerCase(),
+                contactFirstName: input.contact.firstName,
+                contactLastName: input.contact.lastName,
+                contactPhone: phone,
+                currency: room.reservationOffer.currency,
+                epteraReservationId: reservationId,
+                guestsCount: room.room.guests.length,
+                guestList: JSON.parse(JSON.stringify(room.room.guests)),
+                roomName: room.offer.roomType,
+                selectedOffer: JSON.parse(JSON.stringify(room.offer)),
+                totalAmount: room.reservationOffer.totalPrice,
+                voucherNumber,
+              }),
+            ),
+            deadline,
+            groupId: group.id,
+            reservationIds: JSON.parse(JSON.stringify(reservationIds)),
+            totalAmount,
+          });
+          localBookingsCreated = true;
+          const nightlyAmounts = reservations.map(({ room }) =>
+            input.paymentMethod === "first_night"
+              ? Number(
+                  amountText(
+                    room.reservationOffer.totalPrice /
+                      nightsBetween(input.checkIn, input.checkOut),
+                  ),
+                )
+              : Number(amountText(room.reservationOffer.totalPrice)),
+          );
+          const paymentAmount = nightlyAmounts.reduce(
+            (sum, amount) => sum + amount,
+            0,
+          );
+          const payment = await yookassa.createPayment({
+            amount: amountText(paymentAmount),
+            bookingId: group.id,
+            currency: groupCurrency ?? input.currency,
+            description: `Бронирование нескольких номеров ${group.id}`,
+            customer: { email: input.contact.email.toLowerCase(), phone },
+            returnUrl: input.returnUrl,
+          });
+          await repository.updateGroupPayment({
+            groupId: group.id,
+            paymentAmount,
+            paymentId: payment.id,
+            paymentStatus: payment.status,
+            status: "awaiting_payment",
+          });
+          const savedGroup = await repository.findGroup(group.id);
+          const bookings = savedGroup?.bookings ?? [];
+          return {
+            booking: {
+              ...withoutEpteraPaymentSyncState(
+                bookings[0] as unknown as Record<string, unknown>,
+              ),
+              totalAmount: bookings[0]?.totalAmount?.toString() ?? null,
+            },
+            bookings: bookings.map((booking) => ({
+              ...withoutEpteraPaymentSyncState(
+                booking as unknown as Record<string, unknown>,
+              ),
+              totalAmount: booking.totalAmount?.toString() ?? null,
+            })),
+            group: {
+              id: group.id,
+              roomsCount: group.roomsCount,
+              totalAmount: group.totalAmount?.toString() ?? null,
+            },
+            payment: {
+              amount: payment.amount,
+              confirmationUrl: payment.confirmation?.confirmation_url ?? null,
+              id: payment.id,
+              status: payment.status,
+            },
+          };
+        } catch (error) {
+          const cancellationResults = await Promise.all(
+            reservationIds.map((reservationId) =>
+              cancelReservationBestEffort(eptera, reservationId),
+            ),
+          );
+          const cancellationDidFail = cancellationResults.some(
+            (cancelled) => !cancelled,
+          );
+          const cancellationFailureState = cancellationDidFail
+            ? cancellationFailure(
+                new HttpError(
+                  502,
+                  "EPTERA_CANCELLATION_FAILED",
+                  "Не удалось автоматически отменить все созданные брони.",
+                ),
+              )
+            : null;
+          const failure =
+            error instanceof HttpError
+              ? { code: error.code, message: error.message.slice(0, 500) }
+              : {
+                  code: localBookingsCreated
+                    ? "PAYMENT_CREATION_FAILED"
+                    : "RESERVATION_CREATION_FAILED",
+                  message: localBookingsCreated
+                    ? "Не удалось создать платёж. Брони отменяются автоматически."
+                    : "Не удалось создать все выбранные брони.",
+                };
+          if (localBookingsCreated)
+            await repository.markGroupPaymentCreationFailed({
+              cancellationErrorCode: cancellationFailureState?.code,
+              cancellationErrorMessage: cancellationFailureState?.message,
+              errorCode: failure.code,
+              errorMessage: failure.message,
+              groupId: group.id,
+            });
+          else
+            await repository.markGroupReservationCreationFailed({
+              cancellationErrorCode: cancellationFailureState?.code,
+              cancellationErrorMessage: cancellationFailureState?.message,
+              errorCode: failure.code,
+              errorMessage: failure.message,
+              groupId: group.id,
+              reservationIds: JSON.parse(JSON.stringify(reservationIds)),
+            });
+          if (
+            error instanceof HttpError &&
+            /^(EPTERA|YOOKASSA)_/.test(error.code)
+          ) {
+            throw new HttpError(
+              error.status,
+              error.code,
+              "Не удалось оформить выбранные номера. Попробуйте ещё раз.",
+            );
+          }
+          throw error;
+        }
       }
       if (
         input.guests.filter((guest) => guest.type === "adult").length !==
@@ -466,6 +967,13 @@ export const createBookingService = (
       } = {},
     ) => {
       const now = input.now ?? new Date();
+      const groupCandidates =
+        typeof repository.findExpiredUnpaidGroups === "function"
+          ? await repository.findExpiredUnpaidGroups({
+              limit: input.limit ?? EXPIRED_BOOKING_BATCH_SIZE,
+              now,
+            })
+          : [];
       const candidates = await repository.findExpiredUnpaidBookings({
         limit: input.limit ?? EXPIRED_BOOKING_BATCH_SIZE,
         now,
@@ -473,6 +981,141 @@ export const createBookingService = (
       let cancelled = 0;
       let failed = 0;
       let skipped = 0;
+
+      for (const candidate of groupCandidates) {
+        let payment: YooPayment | undefined;
+        if (candidate.paymentId) {
+          try {
+            payment = await yookassa.getPayment(candidate.paymentId);
+          } catch {
+            skipped += 1;
+            continue;
+          }
+          if (isPaidPayment(payment)) {
+            await service.reconcilePayment(payment);
+            skipped += 1;
+            continue;
+          }
+        }
+        const attemptedAt = new Date();
+        const claimed = await repository.claimGroupCancellation({
+          attemptedAt,
+          groupId: candidate.id,
+          now,
+        });
+        if (!claimed) {
+          skipped += 1;
+          continue;
+        }
+        if (candidate.paymentId) {
+          try {
+            payment = await yookassa.getPayment(candidate.paymentId);
+          } catch (error) {
+            const failure = cancellationFailure(error);
+            await repository.markGroupCancellationFailed({
+              attemptedAt,
+              errorCode: failure.code,
+              errorMessage: failure.message,
+              groupId: candidate.id,
+            });
+            failed += 1;
+            continue;
+          }
+          if (isPaidPayment(payment)) {
+            await repository.releaseGroupCancellationForPayment({
+              attemptedAt,
+              groupId: candidate.id,
+            });
+            await service.reconcilePayment(payment);
+            skipped += 1;
+            continue;
+          }
+        }
+        const group = await repository.findGroup(candidate.id);
+        if (!group) {
+          skipped += 1;
+          continue;
+        }
+        let groupFailure: { code: string; message: string } | null = null;
+        if (group.bookings.length === 0) {
+          for (const reservationId of reservationIdsFromJson(
+            group.reservationIds,
+          )) {
+            try {
+              const cancelled = await cancelReservationBestEffort(
+                eptera,
+                reservationId,
+              );
+              if (!cancelled)
+                throw new HttpError(
+                  502,
+                  "EPTERA_CANCELLATION_FAILED",
+                  "Не удалось автоматически отменить все созданные брони.",
+                );
+            } catch (error) {
+              groupFailure = cancellationFailure(error);
+              break;
+            }
+          }
+        }
+        for (const booking of group.bookings) {
+          if (groupFailure) break;
+          if (booking.cancellationStatus === "succeeded") continue;
+          const bookingReference =
+            numericEpteraReference(booking.epteraReservationId) ??
+            numericEpteraReference(booking.voucherNumber);
+          if (!bookingReference) {
+            groupFailure = cancellationFailure(
+              new HttpError(
+                409,
+                "EPTERA_BOOKING_REFERENCE_INVALID",
+                "Не удалось определить номер бронирования для отмены.",
+              ),
+            );
+            await repository.markBookingCancellationFailed({
+              attemptedAt,
+              bookingId: booking.id,
+              errorCode: groupFailure.code,
+              errorMessage: groupFailure.message,
+            });
+            break;
+          }
+          try {
+            await eptera.cancelReservation(Number(bookingReference));
+            await repository.markBookingCancelled({
+              attemptedAt,
+              bookingId: booking.id,
+              cancelledAt: new Date(),
+            });
+          } catch (error) {
+            groupFailure = cancellationFailure(error);
+            await repository.markBookingCancellationFailed({
+              attemptedAt,
+              bookingId: booking.id,
+              errorCode: groupFailure.code,
+              errorMessage: groupFailure.message,
+            });
+            break;
+          }
+        }
+        if (groupFailure) {
+          await repository.markGroupCancellationFailed({
+            attemptedAt,
+            errorCode: groupFailure.code,
+            errorMessage: groupFailure.message,
+            groupId: candidate.id,
+          });
+          failed += 1;
+          continue;
+        }
+        const result = await repository.markGroupCancelled({
+          attemptedAt,
+          cancelledAt: new Date(),
+          groupId: candidate.id,
+        });
+        if (result.count === 1) cancelled += 1;
+        else skipped += 1;
+      }
 
       for (const candidate of candidates) {
         let payment: YooPayment | undefined;
@@ -569,6 +1212,19 @@ export const createBookingService = (
     },
     reconcilePayment: async (payment: YooPayment) => {
       const bookingId = payment.metadata?.bookingId;
+      const groupByMetadata =
+        bookingId && typeof repository.findGroup === "function"
+          ? await repository.findGroup(bookingId)
+          : null;
+      const group =
+        groupByMetadata &&
+        (!groupByMetadata.paymentId || groupByMetadata.paymentId === payment.id)
+          ? groupByMetadata
+          : typeof repository.findGroupByPaymentId === "function"
+            ? await repository.findGroupByPaymentId(payment.id)
+            : null;
+      if (group && (!group.paymentId || group.paymentId === payment.id))
+        return reconcileGroupPayment(repository, eptera, group, payment);
       const booking = bookingId
         ? await repository.findBooking(bookingId)
         : await repository.findBookingByPaymentId(payment.id);

@@ -85,9 +85,47 @@ model GuestUser {
   emailVerifications GuestEmailVerification[]
   bonusProgram       GuestBonusProgram?
   bookings           GuestBooking[]
+  bookingGroups      GuestBookingGroup[]
   serviceOrders      ServiceOrder[]
 
   @@map("guest_users")
+}
+
+model GuestBookingGroup {
+  id                            String    @id @default(uuid()) @db.Uuid
+  userId                        String    @map("user_id") @db.Uuid
+  user                          GuestUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkInDate                   DateTime  @map("check_in_date") @db.Date
+  checkOutDate                  DateTime  @map("check_out_date") @db.Date
+  roomsCount                    Int       @map("rooms_count")
+  status                        String    @default("creating_reservations")
+  reservationCreationStatus     String    @default("processing") @map("reservation_creation_status")
+  reservationCreationErrorCode  String?   @map("reservation_creation_error_code")
+  reservationCreationErrorMessage String?  @map("reservation_creation_error_message")
+  reservationIds                Json?     @map("reservation_ids")
+  totalAmount                   Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  currency                      String    @default("RUB")
+  paymentStatus                 String    @default("payment_pending") @map("payment_status")
+  paymentMethod                 String    @default("full") @map("payment_method")
+  paymentAmount                 Decimal?  @map("payment_amount") @db.Decimal(12, 2)
+  paymentId                     String?   @unique @map("payment_id")
+  paymentDeadlineAt             DateTime? @map("payment_deadline_at") @db.Timestamptz(3)
+  cancellationStatus            String    @default("not_started") @map("cancellation_status")
+  cancellationAttemptedAt       DateTime? @map("cancellation_attempted_at") @db.Timestamptz(3)
+  cancellationErrorCode         String?   @map("cancellation_error_code")
+  cancellationErrorMessage      String?   @map("cancellation_error_message")
+  cancelledAt                   DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  contactFirstName              String?   @map("contact_first_name")
+  contactLastName               String?   @map("contact_last_name")
+  contactPhone                  String?   @map("contact_phone")
+  contactEmail                  String?   @map("contact_email")
+  contactComment                String?   @map("contact_comment")
+  bookings                      GuestBooking[]
+  createdAt                     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@index([paymentStatus, paymentDeadlineAt, cancellationStatus])
+  @@map("guest_booking_groups")
 }
 
 model Service {
@@ -317,6 +355,8 @@ model GuestBooking {
   id                  String    @id @default(uuid()) @db.Uuid
   userId              String    @map("user_id") @db.Uuid
   user                GuestUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId             String?   @map("group_id") @db.Uuid
+  group               GuestBookingGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   roomName            String    @map("room_name")
   checkInDate         DateTime  @map("check_in_date") @db.Date
   checkOutDate        DateTime  @map("check_out_date") @db.Date
@@ -349,6 +389,7 @@ model GuestBooking {
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([userId, checkInDate])
+  @@index([groupId])
   @@index([paymentStatus, paymentDeadlineAt, cancellationStatus])
   @@map("guest_bookings")
 }
