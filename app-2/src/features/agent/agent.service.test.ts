@@ -30,6 +30,7 @@ const createHarness = () => {
   let details: Record<string, unknown> = {};
   const published: Array<{ text: string; bookingUrl?: string }> = [];
   const bookingSearches: unknown[] = [];
+  const knowledgeQueries: string[] = [];
   const reservations: unknown[] = [];
   const prompts: string[] = [];
   const settings = {
@@ -70,7 +71,12 @@ const createHarness = () => {
         where.key === "agent.settings" ? { value: settings } : null,
     },
     knowledgeChunk: { findMany: async () => [] },
-    knowledgeQueryLog: { create: async () => ({}) },
+    knowledgeQueryLog: {
+      create: async ({ data }: { data: { query: string } }) => {
+        knowledgeQueries.push(data.query);
+        return {};
+      },
+    },
     siteContent: {
       findFirst: async () => null,
       findMany: async () => [],
@@ -108,7 +114,8 @@ const createHarness = () => {
     };
     const prompt = body.messages?.[0]?.content ?? "";
     prompts.push(prompt);
-    const content = prompt.includes("Да, бронируйте")
+    const guestMessage = prompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
+    const content = /Да, бронируйте|создавай/iu.test(guestMessage)
       ? {
           action: "create_booking",
           answer: "Оформляю выбранный вариант.",
@@ -127,10 +134,22 @@ const createHarness = () => {
           confirmed: true,
           offerId: "offer-1",
         }
-      : {
-          action: "answer",
-          answer: "Сейчас подтверждённых вариантов по этим датам нет.",
-        };
+      : guestMessage.includes("Беру вариант 1")
+        ? {
+            action: "answer",
+            answer: "Хорошо, для оформления нужны контакты.",
+            offerId: "offer-1",
+          }
+        : /погода на Марсе/iu.test(guestMessage)
+          ? {
+              action: "answer",
+              answer:
+                "Точной информации по этому вопросу в базе знаний сейчас нет. Передайте вопрос менеджеру, чтобы получить подтверждённый ответ.",
+            }
+          : {
+              action: "answer",
+              answer: "Сейчас подтверждённых вариантов по этим датам нет.",
+            };
     return {
       ok: true,
       status: 200,
@@ -154,6 +173,7 @@ const createHarness = () => {
   return {
     bookingSearches,
     details: () => details,
+    knowledgeQueries,
     originalFetch,
     prompts,
     published,
@@ -283,6 +303,65 @@ test("creates a confirmed booking and sends the YooKassa link to chat", async ()
       "https://yookassa.test/payment-1",
     );
     assert.match(harness.published.at(-1)?.text ?? "", /30 минут/u);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("keeps booking contacts, asks for confirmation, and accepts natural confirmation", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-contacts",
+      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+    );
+    await harness.service.reply("conversation-contacts", "Беру вариант 1");
+    const knowledgeQueriesBeforeContacts = harness.knowledgeQueries.length;
+    const contactMessage = "Дима Наумов, телефон 89525012159";
+    await harness.service.reply("conversation-contacts", contactMessage);
+    assert.equal(
+      harness.knowledgeQueries.length,
+      knowledgeQueriesBeforeContacts,
+    );
+    assert.match(harness.published.at(-1)?.text ?? "", /ещё нужны: email/u);
+    assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
+
+    await harness.service.reply(
+      "conversation-contacts",
+      "email d.naymow13@gmail.com",
+    );
+    assert.equal(
+      harness.knowledgeQueries.length,
+      knowledgeQueriesBeforeContacts,
+    );
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Подтверждаете создание брони/u,
+    );
+    assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /укажите имя/u);
+
+    await harness.service.reply("conversation-contacts", "создавай");
+    assert.equal(harness.reservations.length, 1);
+    assert.equal(
+      (harness.published.at(-1) as { bookingUrl?: string }).bookingUrl,
+      "https://yookassa.test/payment-1",
+    );
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("keeps the knowledge-base fallback for an unrelated unknown question", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-unknown",
+      "Какая погода на Марсе?",
+    );
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Точной информации по этому вопросу в базе знаний/u,
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }

@@ -125,8 +125,15 @@ const serviceMention = (
 };
 
 type BookingContext = Partial<z.infer<typeof bookingSchema>> & {
+  offerId?: string;
   lastCheckedDates?: string;
   awaitingNewDates?: boolean;
+};
+type BookingContact = {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 };
 type ConversationState = {
   booking?: BookingContext;
@@ -140,6 +147,7 @@ type ConversationState = {
     phone?: string;
     created?: boolean;
   };
+  bookingContact?: BookingContact;
 };
 const asConversationState = (value: unknown): ConversationState => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -171,6 +179,12 @@ const asConversationState = (value: unknown): ConversationState => {
       typeof details.contactRequest === "object" &&
       !Array.isArray(details.contactRequest)
         ? (details.contactRequest as ConversationState["contactRequest"])
+        : undefined,
+    bookingContact:
+      details.bookingContact &&
+      typeof details.bookingContact === "object" &&
+      !Array.isArray(details.bookingContact)
+        ? (details.bookingContact as BookingContact)
         : undefined,
   };
 };
@@ -209,12 +223,14 @@ const phoneFromText = (text: string) =>
 const emailFromText = (text: string) =>
   text.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu)?.[0]?.toLowerCase();
 const nameFromText = (text: string) => {
-  const match = text.match(
-    /(?:меня\s+зовут|имя\s*[:—-]?|это)\s+([а-яё-]{2,40})/iu,
+  const labeled = text.match(
+    /(?:меня\s+зовут|имя\s*[:—-]?|это)\s+([А-ЯЁ][а-яё-]{2,39}(?:\s+[А-ЯЁ][а-яё-]{2,39})?)/u,
   );
-  if (match?.[1]) return match[1];
-  const words = text.match(/\b[А-ЯЁ][а-яё-]{2,39}\b/gu) ?? [];
-  return words.find((word) => !/менеджер|телефон|номер/iu.test(word));
+  if (labeled?.[1]) return labeled[1].trim();
+  const contactLine = text.match(
+    /^\s*([А-ЯЁ][а-яё-]{2,39}(?:\s+[А-ЯЁ][а-яё-]{2,39})?)\s*(?=,|;|\bтел(?:ефон|\.)?\b|\bemail\b|\bпочт)/iu,
+  );
+  return contactLine?.[1]?.trim();
 };
 const splitName = (value?: string) => {
   const parts = value?.trim().split(/\s+/u).filter(Boolean) ?? [];
@@ -223,6 +239,18 @@ const splitName = (value?: string) => {
     lastName: parts.slice(1).join(" ") || undefined,
   };
 };
+const missingBookingContactFields = (contact: BookingContact) => {
+  const missing: string[] = [];
+  if (!contact.firstName) missing.push("имя");
+  if (!contact.lastName) missing.push("фамилию");
+  if (!contact.phone) missing.push("номер телефона");
+  if (!contact.email) missing.push("email");
+  return missing;
+};
+const hasBookingContactData = (contact: BookingContact) =>
+  Boolean(
+    contact.firstName || contact.lastName || contact.phone || contact.email,
+  );
 const extractEntities = (text: string) => {
   const isoDates = [...text.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/gu)].map(
     (match) => match[1]!,
@@ -409,16 +437,30 @@ export const createAiAgentService = (options: AgentOptions) => {
     });
     const previousState = asConversationState(requestState?.details);
     const previousContactRequest = previousState.contactRequest ?? {};
+    const previousBookingContact = previousState.bookingContact ?? {};
     const contactScenario =
       await options.database.client.agentScenario.findFirst({
         where: { title: "Перезвон и нестандартные мероприятия", enabled: true },
         select: { response: true, trigger: true },
       });
-    const detectedPhone =
-      phoneFromText(message) ?? previousContactRequest.phone;
-    const detectedName = nameFromText(message) ?? previousContactRequest.name;
-    const detectedEmail =
-      emailFromText(message) ?? previousContactRequest.email;
+    const currentPhone = phoneFromText(message);
+    const currentEmail = emailFromText(message);
+    const currentName = nameFromText(message);
+    const detectedPhone = currentPhone ?? previousContactRequest.phone;
+    const detectedName = currentName ?? previousContactRequest.name;
+    const detectedEmail = currentEmail ?? previousContactRequest.email;
+    const detectedNameParts = splitName(detectedName);
+    const nextBookingContact: BookingContact = {
+      ...previousBookingContact,
+      ...(detectedNameParts.firstName
+        ? { firstName: detectedNameParts.firstName }
+        : {}),
+      ...(detectedNameParts.lastName
+        ? { lastName: detectedNameParts.lastName }
+        : {}),
+      ...(currentPhone ? { phone: currentPhone } : {}),
+      ...(currentEmail ? { email: currentEmail } : {}),
+    };
     const hasContactData = Boolean(detectedName && detectedPhone);
     const contactIntent = Boolean(
       contactScenario && scenarioMatches(contactScenario.trigger, message),
@@ -598,6 +640,9 @@ export const createAiAgentService = (options: AgentOptions) => {
             ? { availabilityOffers: nextAvailabilityOffers }
             : {}),
           serviceContext: nextServiceContext,
+          ...(hasBookingContactData(nextBookingContact)
+            ? { bookingContact: nextBookingContact }
+            : {}),
         },
       },
     });
@@ -645,6 +690,9 @@ export const createAiAgentService = (options: AgentOptions) => {
               availabilityOffers,
               bookingContext: nextBooking,
               serviceContext: nextServiceContext,
+              ...(hasBookingContactData(nextBookingContact)
+                ? { bookingContact: nextBookingContact }
+                : {}),
             },
           },
         });
@@ -658,15 +706,20 @@ export const createAiAgentService = (options: AgentOptions) => {
         availabilityOffers = [];
       }
     }
+    const isBookingContactMessage = Boolean(
+      bookingFromContext(nextBooking) &&
+      (currentName || currentPhone || currentEmail),
+    );
+    const knowledgeResult = isBookingContactMessage
+      ? { sources: [] as Array<{ content: string }> }
+      : await knowledge.answer({ channel: "text", question: message });
     const [
-      knowledgeResult,
       scenarios,
       transferRules,
       knowledgeRules,
       offersContext,
       eventsContext,
     ] = await Promise.all([
-      knowledge.answer({ channel: "text", question: message }),
       options.database.client.agentScenario.findMany({
         where: { enabled: true, channels: { has: "text" } },
         orderBy: { updatedAt: "desc" },
@@ -734,6 +787,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
       `Опубликованные актуальные мероприятия с публичного календаря${calendarDateInMessage(message) ? ` на дату ${calendarDateInMessage(message)}` : ""} (не выдумывай события):\n${eventsContext || "Опубликованных мероприятий на запрошенную дату сейчас нет или календарь недоступен."}`,
       `Актуальные варианты Eptera для проживания (это подтверждённые данные поиска; можно сравнивать, но нельзя придумывать дополнительные варианты):\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Варианты ещё не найдены. Сначала уточни даты, гостей и количество номеров."}`,
+      `Сохранённые контакты для оформления брони (не запрашивай уже указанные поля повторно): ${JSON.stringify(nextBookingContact)}. Если часть данных отсутствует, попроси только недостающие поля. Email и телефон — это данные бронирования, а не вопрос к базе знаний. После выбора номера и получения всех контактов покажи итог и спроси: «Подтверждаете создание брони?»`,
       `Сценарии из админки (активные записи имеют приоритет; их action/page управляют переходом):\n${scenarioContext || "Нет дополнительных сценариев."}`,
       `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
       `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
@@ -821,10 +875,48 @@ export const createAiAgentService = (options: AgentOptions) => {
       !Array.isArray(result.booking)
         ? (result.booking as Record<string, unknown>)
         : {};
+    const requestedOfferId =
+      typeof bookingCandidate.offerId === "string"
+        ? bookingCandidate.offerId
+        : (result.offerId ?? nextBooking.offerId);
+    const selectedOffer = availabilityOffers.find(
+      (offer) => offer.id === requestedOfferId,
+    );
+    const bookingState = requestedOfferId
+      ? { ...nextBooking, offerId: requestedOfferId }
+      : nextBooking;
+    if (hasBookingContactData(nextBookingContact) || requestedOfferId) {
+      await options.database.client.adminRequest.update({
+        where: { id: conversationId },
+        data: {
+          details: {
+            ...(requestState?.details &&
+            typeof requestState.details === "object"
+              ? requestState.details
+              : {}),
+            ...(availabilityOffers.length ? { availabilityOffers } : {}),
+            bookingContext: bookingState,
+            bookingContact: nextBookingContact,
+            serviceContext: nextServiceContext,
+          },
+        },
+      });
+    }
+    const confirmationReceived = isExplicitBookingConfirmation(message);
+    const missingContactFields =
+      missingBookingContactFields(nextBookingContact);
+    const canCompleteBooking = Boolean(
+      settings.canCreateBooking &&
+      confirmationReceived &&
+      bookingFromContext(bookingState) &&
+      selectedOffer &&
+      missingContactFields.length === 0,
+    );
     let finalAction = effectiveAction;
+    if (canCompleteBooking) finalAction = "create_booking";
     let generatedAnswer: string | undefined;
     let bookingUrl: string | undefined;
-    if (effectiveAction === "create_booking") {
+    if (finalAction === "create_booking") {
       const bookingNames = splitName(
         typeof bookingCandidate.firstName === "string" &&
           typeof bookingCandidate.lastName === "string"
@@ -833,25 +925,32 @@ export const createAiAgentService = (options: AgentOptions) => {
       );
       const bookingData = agentBookingSchema.safeParse({
         ...bookingCandidate,
-        adults: bookingCandidate.adults ?? nextBooking.adults,
-        checkInDate: bookingCandidate.checkInDate ?? nextBooking.checkInDate,
-        checkOutDate: bookingCandidate.checkOutDate ?? nextBooking.checkOutDate,
-        childAges: bookingCandidate.childAges ?? nextBooking.childAges ?? [],
-        email: bookingCandidate.email ?? result.email ?? detectedEmail,
-        firstName: bookingCandidate.firstName ?? bookingNames.firstName,
-        lastName: bookingCandidate.lastName ?? bookingNames.lastName,
-        offerId: bookingCandidate.offerId ?? result.offerId,
-        phone: bookingCandidate.phone ?? result.phone ?? detectedPhone,
-        roomCount: bookingCandidate.roomCount ?? nextBooking.roomCount,
+        adults: bookingCandidate.adults ?? bookingState.adults,
+        checkInDate: bookingCandidate.checkInDate ?? bookingState.checkInDate,
+        checkOutDate:
+          bookingCandidate.checkOutDate ?? bookingState.checkOutDate,
+        childAges: bookingCandidate.childAges ?? bookingState.childAges ?? [],
+        email:
+          bookingCandidate.email ?? result.email ?? nextBookingContact.email,
+        firstName:
+          bookingCandidate.firstName ??
+          bookingNames.firstName ??
+          nextBookingContact.firstName,
+        lastName:
+          bookingCandidate.lastName ??
+          bookingNames.lastName ??
+          nextBookingContact.lastName,
+        offerId:
+          bookingCandidate.offerId ?? result.offerId ?? bookingState.offerId,
+        phone:
+          bookingCandidate.phone ?? result.phone ?? nextBookingContact.phone,
+        roomCount: bookingCandidate.roomCount ?? bookingState.roomCount,
       });
       const selectedOfferId = bookingData.success
         ? bookingData.data.offerId
         : typeof bookingCandidate.offerId === "string"
           ? bookingCandidate.offerId
-          : result.offerId;
-      const selectedOffer = availabilityOffers.find(
-        (offer) => offer.id === selectedOfferId,
-      );
+          : (result.offerId ?? bookingState.offerId);
       const returnUrl =
         options.bookingReturnUrl ??
         (/^https?:\/\//iu.test(settings.bookingUrl)
@@ -859,15 +958,19 @@ export const createAiAgentService = (options: AgentOptions) => {
           : undefined);
       if (
         !settings.canCreateBooking ||
-        result.confirmed !== true ||
-        !isExplicitBookingConfirmation(message) ||
+        (!confirmationReceived && result.confirmed !== true) ||
         !selectedOffer ||
         !bookingData.success ||
         !returnUrl
       ) {
         finalAction = "answer";
-        generatedAnswer =
-          "Перед созданием брони подтвердите выбранный вариант и укажите имя, фамилию, телефон и email для оформления.";
+        generatedAnswer = missingContactFields.length
+          ? `Перед созданием брони ещё нужны: ${missingContactFields.join(", ")}.`
+          : !confirmationReceived
+            ? "Данные для бронирования получил. Подтверждаете создание брони?"
+            : !selectedOffer
+              ? "Сначала выберите один из доступных вариантов номера."
+              : "Не удалось проверить данные бронирования. Проверьте выбранный номер и контакты.";
       } else {
         try {
           const reservation = await options.booking.createReservation(
@@ -886,7 +989,10 @@ export const createAiAgentService = (options: AgentOptions) => {
                 typeof requestState.details === "object"
                   ? requestState.details
                   : {}),
-                bookingContext: nextBooking,
+                ...(availabilityOffers.length ? { availabilityOffers } : {}),
+                bookingContext: bookingState,
+                bookingContact: nextBookingContact,
+                serviceContext: nextServiceContext,
                 bookingCreatedByAgent: true,
                 paymentLinkSent: true,
               },
@@ -897,6 +1003,25 @@ export const createAiAgentService = (options: AgentOptions) => {
           generatedAnswer =
             "Не удалось создать бронь по выбранному варианту. Попробуйте ещё раз или я передам диалог менеджеру.";
         }
+      }
+    }
+    const suppliedBookingContact = Boolean(
+      nameFromText(message) || phoneFromText(message) || emailFromText(message),
+    );
+    if (
+      finalAction !== "create_booking" &&
+      suppliedBookingContact &&
+      bookingFromContext(bookingState) &&
+      !confirmationReceived
+    ) {
+      finalAction = "answer";
+      if (missingContactFields.length > 0) {
+        generatedAnswer = `Спасибо, данные получил. Для оформления брони ещё нужны: ${missingContactFields.join(", ")}.`;
+      } else if (selectedOffer) {
+        generatedAnswer = `Данные получил. Вы выбрали номер «${selectedOffer.roomType}» на даты ${bookingState.checkInDate} — ${bookingState.checkOutDate}. Подтверждаете создание брони?`;
+      } else {
+        generatedAnswer =
+          "Контакты получил и сохранил. Какой из доступных номеров оформить?";
       }
     }
     if (
