@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { requestGuestCode, verifyGuestCode } from "@/lib/auth/guest-auth-api";
+import { writeGuestSession } from "@/lib/auth/session";
 import { ROUTES } from "@/route-constants";
 
 export const LoginPage = () => {
@@ -32,7 +33,8 @@ export const LoginPage = () => {
     mutationFn: verifyGuestCode,
     onError: (error) =>
       toast.error(getApiErrorMessage(error, "Не удалось подтвердить почту.")),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      writeGuestSession(result.data.token);
       navigate({ to: ROUTES.account });
     },
   });

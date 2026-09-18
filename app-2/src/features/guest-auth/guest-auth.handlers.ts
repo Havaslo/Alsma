@@ -52,6 +52,8 @@ export const createVerifyCodeHandler =
       "Set-Cookie",
       sessionCookie(result.token, 30 * 24 * 60 * 60),
     );
-    const { token: _token, ...safeResult } = result;
-    response.json(safeResult);
+    // Keep the cookie as the primary session transport. The token in the
+    // response is a fallback for browsers that block cross-site cookies when
+    // the frontend and API are served from different public origins.
+    response.json(result);
   };

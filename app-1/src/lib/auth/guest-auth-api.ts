@@ -64,6 +64,10 @@ export type AuthState = {
   readonly guest: GuestProfile | null;
 };
 
+export type VerifyGuestAuthState = AuthState & {
+  readonly token: string;
+};
+
 const authHeaders = () => {
   const token = readGuestSession();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -72,7 +76,7 @@ const authHeaders = () => {
 export const requestGuestCode = (input: { email: string }) =>
   apiClient.post<{ sent: boolean }>("/auth/request-code", input);
 export const verifyGuestCode = (input: { email: string; code: string }) =>
-  apiClient.post<AuthState>("/auth/verify-code", input);
+  apiClient.post<VerifyGuestAuthState>("/auth/verify-code", input);
 
 export const loadGuestProfile = (signal?: AbortSignal) =>
   apiClient.get<AuthState>("/auth/me", { headers: authHeaders(), signal });
