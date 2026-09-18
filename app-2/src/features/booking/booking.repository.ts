@@ -11,6 +11,7 @@ export const createBookingRepository = (database: Database) => ({
     contactLastName: string | null;
     contactPhone: string;
     currency: string;
+    paymentDeadlineAt: Date;
     epteraReservationId: string | null;
     guestsCount: number;
     guestList: Prisma.InputJsonValue;
@@ -25,6 +26,7 @@ export const createBookingRepository = (database: Database) => ({
       data: {
         ...input,
         paymentStatus: "payment_pending",
+        paymentDeadlineAt: input.paymentDeadlineAt,
         paymentMethod: input.paymentMethod,
         status: "awaiting_payment",
       },
@@ -50,13 +52,107 @@ export const createBookingRepository = (database: Database) => ({
     paymentAmount: number;
     paymentId: string;
   }) =>
-    database.client.guestBooking.update({
-      data: {
-        paymentAmount: input.paymentAmount,
-        paymentId: input.paymentId,
-        paymentStatus: "succeeded",
+    database.client.guestBooking
+      .updateMany({
+        data: {
+          cancellationErrorCode: null,
+          cancellationErrorMessage: null,
+          cancellationStatus: "skipped",
+          paymentAmount: input.paymentAmount,
+          paymentId: input.paymentId,
+          paymentStatus: "succeeded",
+          status: "payment_sync_pending",
+        },
+        where: {
+          cancellationStatus: { not: "succeeded" },
+          id: input.bookingId,
+          paymentStatus: { not: "succeeded" },
+        },
+      })
+      .then(() =>
+        database.client.guestBooking.findUnique({
+          where: { id: input.bookingId },
+        }),
+      ),
+  findExpiredUnpaidBookings: (input: { now: Date; limit: number }) =>
+    database.client.guestBooking.findMany({
+      where: {
+        cancellationStatus: { in: ["not_started", "failed"] },
+        paymentDeadlineAt: { lte: input.now },
+        paymentStatus: { not: "succeeded" },
+        status: { in: ["awaiting_payment", "cancellation_failed"] },
       },
-      where: { id: input.bookingId },
+      orderBy: { paymentDeadlineAt: "asc" },
+      select: {
+        epteraReservationId: true,
+        id: true,
+        paymentId: true,
+        voucherNumber: true,
+      },
+      take: input.limit,
+    }),
+  claimBookingCancellation: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+    now: Date;
+  }) =>
+    database.client.guestBooking
+      .updateMany({
+        data: {
+          cancellationAttemptedAt: input.attemptedAt,
+          cancellationErrorCode: null,
+          cancellationErrorMessage: null,
+          cancellationStatus: "processing",
+          status: "cancellation_pending",
+        },
+        where: {
+          cancellationStatus: { in: ["not_started", "failed"] },
+          id: input.bookingId,
+          paymentDeadlineAt: { lte: input.now },
+          paymentStatus: { not: "succeeded" },
+          status: { in: ["awaiting_payment", "cancellation_failed"] },
+        },
+      })
+      .then((result) => result.count > 0),
+  markBookingCancelled: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+    cancelledAt: Date;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        cancelledAt: input.cancelledAt,
+        cancellationErrorCode: null,
+        cancellationErrorMessage: null,
+        cancellationStatus: "succeeded",
+        status: "cancelled",
+      },
+      where: {
+        cancellationAttemptedAt: input.attemptedAt,
+        cancellationStatus: "processing",
+        id: input.bookingId,
+        paymentStatus: { not: "succeeded" },
+      },
+    }),
+  markBookingCancellationFailed: (input: {
+    bookingId: string;
+    attemptedAt: Date;
+    errorCode: string;
+    errorMessage: string;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        cancellationErrorCode: input.errorCode,
+        cancellationErrorMessage: input.errorMessage,
+        cancellationStatus: "failed",
+        status: "cancellation_failed",
+      },
+      where: {
+        cancellationAttemptedAt: input.attemptedAt,
+        cancellationStatus: "processing",
+        id: input.bookingId,
+        paymentStatus: { not: "succeeded" },
+      },
     }),
   claimEpteraPaymentSync: (input: {
     bookingId: string;

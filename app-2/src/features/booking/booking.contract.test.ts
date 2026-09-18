@@ -7,7 +7,10 @@ import {
   createReservationBodySchema,
   offersQuerySchema,
 } from "./booking.schemas.js";
-import { createBookingService } from "./booking.service.js";
+import {
+  BOOKING_PAYMENT_DEADLINE_MS,
+  createBookingService,
+} from "./booking.service.js";
 import {
   type EpteraClient,
   type EpteraOffer,
@@ -182,6 +185,7 @@ const createHarness = (
 };
 
 test("builds the adult-only Eptera payload without undefined optional fields", async () => {
+  assert.equal(BOOKING_PAYMENT_DEADLINE_MS, 30 * 60_000);
   const harness = createHarness();
 
   await harness.createReservation(reservationInput({ notes: undefined }));
@@ -477,4 +481,175 @@ test("always uses the configured hotel id for createReservation", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("cancels an expired unpaid Eptera reservation exactly once", async () => {
+  const cancelledIds: number[] = [];
+  let markCancelledCalls = 0;
+  const repository = {
+    findExpiredUnpaidBookings: async () => [
+      {
+        epteraReservationId: "123456",
+        id: "booking-expired",
+        paymentId: null,
+        voucherNumber: null,
+      },
+    ],
+    claimBookingCancellation: async () => true,
+    markBookingCancelled: async () => {
+      markCancelledCalls += 1;
+      return { count: 1 };
+    },
+    markBookingCancellationFailed: async () => ({ count: 1 }),
+  } as unknown as BookingRepository;
+  const eptera = {
+    cancelReservation: async (reservationId: number) => {
+      cancelledIds.push(reservationId);
+    },
+  } as unknown as EpteraClient;
+  const service = createBookingService(
+    repository,
+    eptera,
+    {} as YooKassaClient,
+  );
+
+  const result = await service.cancelExpiredBookings({
+    limit: 1,
+    now: new Date("2026-08-13T12:30:00.000Z"),
+  });
+
+  assert.deepEqual(result, { cancelled: 1, failed: 0, skipped: 0 });
+  assert.deepEqual(cancelledIds, [123456]);
+  assert.equal(markCancelledCalls, 1);
+});
+
+test("does not cancel when a payment succeeds during the cancellation claim", async () => {
+  let paymentReads = 0;
+  let cancelCalled = false;
+  let state = {
+    cancellationStatus: "processing",
+    currency: "RUB",
+    epteraPaymentSyncAttemptedAt: null as Date | null,
+    epteraPaymentSyncStatus: "pending",
+    epteraPaymentSyncedAt: null as Date | null,
+    epteraReservationId: "123456",
+    id: "booking-race",
+    paymentAmount: 900,
+    paymentId: "payment-race",
+    paymentStatus: "pending",
+    status: "cancellation_pending",
+    voucherNumber: null,
+  };
+  const repository = {
+    findExpiredUnpaidBookings: async () => [
+      {
+        epteraReservationId: "123456",
+        id: "booking-race",
+        paymentId: "payment-race",
+        voucherNumber: null,
+      },
+    ],
+    claimBookingCancellation: async () => true,
+    findBooking: async () => state,
+    findBookingByPaymentId: async () => state,
+    markYooKassaPaymentSucceeded: async () => {
+      state = {
+        ...state,
+        cancellationStatus: "skipped",
+        paymentStatus: "succeeded",
+        status: "payment_sync_pending",
+      };
+      return state;
+    },
+    claimEpteraPaymentSync: async () => {
+      state = { ...state, epteraPaymentSyncStatus: "processing" };
+      return true;
+    },
+    markEpteraPaymentSyncSucceeded: async () => {
+      state = {
+        ...state,
+        epteraPaymentSyncStatus: "succeeded",
+        epteraPaymentSyncedAt: new Date(),
+        status: "confirmed",
+      };
+      return { count: 1 };
+    },
+    markEpteraPaymentSyncFailed: async () => ({ count: 1 }),
+    markBookingCancelled: async () => ({ count: 0 }),
+    markBookingCancellationFailed: async () => ({ count: 0 }),
+  } as unknown as BookingRepository;
+  const eptera = {
+    addPayment: async () => undefined,
+    cancelReservation: async () => {
+      cancelCalled = true;
+    },
+  } as unknown as EpteraClient;
+  const yookassa = {
+    getPayment: async () => {
+      paymentReads += 1;
+      return paymentReads === 1
+        ? {
+            amount: { currency: "RUB", value: "900.00" },
+            id: "payment-race",
+            metadata: { bookingId: "booking-race" },
+            paid: false,
+            status: "pending",
+          }
+        : {
+            amount: { currency: "RUB", value: "900.00" },
+            id: "payment-race",
+            metadata: { bookingId: "booking-race" },
+            paid: true,
+            status: "succeeded",
+          };
+    },
+  } as unknown as YooKassaClient;
+  const service = createBookingService(repository, eptera, yookassa);
+
+  const result = await service.cancelExpiredBookings();
+
+  assert.equal(cancelCalled, false);
+  assert.equal(paymentReads, 2);
+  assert.equal(state.status, "confirmed");
+  assert.equal(state.epteraPaymentSyncStatus, "succeeded");
+  assert.deepEqual(result, { cancelled: 0, failed: 0, skipped: 1 });
+});
+
+test("keeps a retryable state when Eptera cancellation fails", async () => {
+  let failure: { errorCode: string; errorMessage: string } | undefined;
+  const repository = {
+    findExpiredUnpaidBookings: async () => [
+      {
+        epteraReservationId: "123456",
+        id: "booking-failure",
+        paymentId: null,
+        voucherNumber: null,
+      },
+    ],
+    claimBookingCancellation: async () => true,
+    markBookingCancelled: async () => ({ count: 0 }),
+    markBookingCancellationFailed: async (input: typeof failure) => {
+      failure = input;
+      return { count: 1 };
+    },
+  } as unknown as BookingRepository;
+  const eptera = {
+    cancelReservation: async () => {
+      throw new Error("Eptera unavailable");
+    },
+  } as unknown as EpteraClient;
+  const service = createBookingService(
+    repository,
+    eptera,
+    {} as YooKassaClient,
+  );
+
+  const result = await service.cancelExpiredBookings();
+
+  assert.deepEqual(result, { cancelled: 0, failed: 1, skipped: 0 });
+  assert.equal(failure?.errorCode, "EPTERA_CANCELLATION_FAILED");
+  assert.equal(
+    failure?.errorMessage,
+    "Не удалось автоматически отменить бронь в Eptera.",
+  );
 });

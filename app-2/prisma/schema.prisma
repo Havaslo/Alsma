@@ -331,6 +331,12 @@ model GuestBooking {
   paymentMethod       String    @default("full") @map("payment_method")
   paymentAmount       Decimal?  @map("payment_amount") @db.Decimal(12, 2)
   paymentId           String?   @unique @map("payment_id")
+  paymentDeadlineAt   DateTime? @map("payment_deadline_at") @db.Timestamptz(3)
+  cancellationStatus  String    @default("not_started") @map("cancellation_status")
+  cancellationAttemptedAt DateTime? @map("cancellation_attempted_at") @db.Timestamptz(3)
+  cancellationErrorCode String? @map("cancellation_error_code")
+  cancellationErrorMessage String? @map("cancellation_error_message")
+  cancelledAt         DateTime? @map("cancelled_at") @db.Timestamptz(3)
   epteraReservationId String?   @unique @map("eptera_reservation_id")
   voucherNumber       String?   @map("voucher_number")
   contactFirstName    String?   @map("contact_first_name")
@@ -343,6 +349,7 @@ model GuestBooking {
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([userId, checkInDate])
+  @@index([paymentStatus, paymentDeadlineAt, cancellationStatus])
   @@map("guest_bookings")
 }
 

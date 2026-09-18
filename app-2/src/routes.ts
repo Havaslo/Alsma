@@ -165,6 +165,7 @@ export const createApiRouter = ({
         secretKey: yooKassaSecretKey,
         shopId: yooKassaShopId,
       }),
+      logger,
     ),
   );
   router.use("/chat", createChatRouter(database, chat, agent));

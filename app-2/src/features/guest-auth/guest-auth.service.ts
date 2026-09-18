@@ -20,6 +20,11 @@ const hash = (value: string): string =>
 const publicUser = (user: {
   bonusProgram: { balance: number; level: string } | null;
   bookings: Array<{
+    cancellationAttemptedAt: Date | null;
+    cancellationErrorCode: string | null;
+    cancellationErrorMessage: string | null;
+    cancellationStatus: string;
+    cancelledAt: Date | null;
     checkInDate: Date;
     checkOutDate: Date;
     contactComment: string | null;
@@ -37,6 +42,7 @@ const publicUser = (user: {
     paymentStatus: string;
     paymentMethod: string;
     paymentAmount: { toString(): string } | null;
+    paymentDeadlineAt: Date | null;
     roomName: string;
     selectedOffer: unknown;
     status: string;
@@ -64,9 +70,15 @@ const publicUser = (user: {
   bonusProgram: user.bonusProgram,
   bookings: user.bookings.map((booking) => {
     const {
+      cancellationAttemptedAt: _cancellationAttemptedAt,
+      cancellationErrorCode: _cancellationErrorCode,
+      cancellationErrorMessage: _cancellationErrorMessage,
+      cancellationStatus: _cancellationStatus,
+      cancelledAt: _cancelledAt,
       epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
       epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
       epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
+      paymentDeadlineAt: _paymentDeadlineAt,
       ...publicBooking
     } = booking;
     return {

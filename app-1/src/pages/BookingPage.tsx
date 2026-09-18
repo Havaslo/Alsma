@@ -771,6 +771,15 @@ export const BookingPage = () => {
                       После создания брони вы перейдёте на защищённую страницу
                       ЮKassa.
                     </p>
+                    <div className="mt-4 rounded-2xl border border-accent-ui/30 bg-accent-ui/10 p-4 text-sm leading-6">
+                      <p className="font-semibold text-page-foreground">
+                        Важно: оплатить бронь нужно в течение 30 минут.
+                      </p>
+                      <p className="mt-1 text-muted-ui-foreground">
+                        Если оплата не будет завершена за это время, бронь
+                        автоматически отменится в Eptera.
+                      </p>
+                    </div>
                   </div>
                   <button
                     className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 font-semibold text-brand-foreground disabled:opacity-60"
