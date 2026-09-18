@@ -11,7 +11,6 @@ export const createBookingRepository = (database: Database) => ({
     contactLastName: string | null;
     contactPhone: string;
     currency: string;
-    epteraReservationPayload: Prisma.InputJsonValue;
     epteraReservationId: string | null;
     guestsCount: number;
     guestList: Prisma.InputJsonValue;
@@ -46,14 +45,6 @@ export const createBookingRepository = (database: Database) => ({
       },
       where: { id: input.bookingId },
     }),
-  markPaymentCreationFailed: (input: { bookingId: string }) =>
-    database.client.guestBooking.update({
-      data: {
-        paymentStatus: "creation_failed",
-        status: "payment_creation_failed",
-      },
-      where: { id: input.bookingId },
-    }),
   markYooKassaPaymentSucceeded: (input: {
     bookingId: string;
     paymentAmount: number;
@@ -64,89 +55,31 @@ export const createBookingRepository = (database: Database) => ({
         paymentAmount: input.paymentAmount,
         paymentId: input.paymentId,
         paymentStatus: "succeeded",
-        status: "eptera_reservation_pending",
       },
       where: { id: input.bookingId },
     }),
-  claimEpteraReservationCreation: (input: {
+  claimEpteraPaymentSync: (input: {
     bookingId: string;
     attemptedAt: Date;
+    staleBefore: Date;
   }) =>
-    database.client.guestBooking
-      .updateMany({
-        data: {
-          epteraReservationSyncAttemptedAt: input.attemptedAt,
-          epteraReservationSyncStatus: "processing",
-          status: "eptera_reservation_pending",
-        },
-        where: {
-          epteraReservationId: null,
-          epteraReservationSyncStatus: "pending",
-          id: input.bookingId,
-          paymentStatus: "succeeded",
-        },
-      })
-      .then((result) => result.count > 0),
-  markEpteraReservationCreated: (input: {
-    bookingId: string;
-    attemptedAt: Date;
-    reservationId: string;
-    syncedAt: Date;
-    voucherNumber: string | null;
-  }) =>
-    database.client.guestBooking.updateMany({
-      data: {
-        epteraReservationId: input.reservationId,
-        epteraReservationSyncErrorCode: null,
-        epteraReservationSyncErrorMessage: null,
-        epteraReservationSyncStatus: "succeeded",
-        epteraReservationSyncedAt: input.syncedAt,
-        status: "eptera_payment_pending",
-        voucherNumber: input.voucherNumber,
-      },
-      where: {
-        epteraReservationId: null,
-        epteraReservationSyncAttemptedAt: input.attemptedAt,
-        epteraReservationSyncStatus: "processing",
-        id: input.bookingId,
-        paymentStatus: "succeeded",
-      },
-    }),
-  markEpteraReservationSyncFailed: (input: {
-    bookingId: string;
-    attemptedAt: Date;
-    errorCode: string;
-    errorMessage: string;
-  }) =>
-    database.client.guestBooking.updateMany({
-      data: {
-        epteraReservationSyncErrorCode: input.errorCode,
-        epteraReservationSyncErrorMessage: input.errorMessage,
-        epteraReservationSyncStatus: "failed",
-        status: "eptera_reservation_failed",
-      },
-      where: {
-        epteraReservationSyncAttemptedAt: input.attemptedAt,
-        epteraReservationSyncStatus: "processing",
-        id: input.bookingId,
-        paymentStatus: "succeeded",
-      },
-    }),
-  claimEpteraPaymentSync: (input: { bookingId: string; attemptedAt: Date }) =>
     database.client.guestBooking
       .updateMany({
         data: {
           epteraPaymentSyncAttemptedAt: input.attemptedAt,
           epteraPaymentSyncStatus: "processing",
-          epteraPaymentSyncErrorCode: null,
-          epteraPaymentSyncErrorMessage: null,
           status: "payment_sync_pending",
         },
         where: {
           id: input.bookingId,
           paymentStatus: "succeeded",
-          epteraPaymentSyncStatus: "pending",
-          epteraReservationId: { not: null },
+          OR: [
+            { epteraPaymentSyncStatus: { in: ["pending", "failed"] } },
+            {
+              epteraPaymentSyncAttemptedAt: { lt: input.staleBefore },
+              epteraPaymentSyncStatus: "processing",
+            },
+          ],
         },
       })
       .then((result) => result.count > 0),
@@ -157,8 +90,6 @@ export const createBookingRepository = (database: Database) => ({
   }) =>
     database.client.guestBooking.updateMany({
       data: {
-        epteraPaymentSyncErrorCode: null,
-        epteraPaymentSyncErrorMessage: null,
         epteraPaymentSyncedAt: input.syncedAt,
         epteraPaymentSyncStatus: "succeeded",
         status: "confirmed",
@@ -173,13 +104,9 @@ export const createBookingRepository = (database: Database) => ({
   markEpteraPaymentSyncFailed: (input: {
     bookingId: string;
     attemptedAt: Date;
-    errorCode: string;
-    errorMessage: string;
   }) =>
     database.client.guestBooking.updateMany({
       data: {
-        epteraPaymentSyncErrorCode: input.errorCode,
-        epteraPaymentSyncErrorMessage: input.errorMessage,
         epteraPaymentSyncedAt: null,
         epteraPaymentSyncStatus: "failed",
         status: "payment_sync_failed",

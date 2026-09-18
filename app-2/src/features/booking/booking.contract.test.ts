@@ -13,7 +13,7 @@ import {
   type EpteraOffer,
   createEpteraClient,
 } from "./eptera.client.js";
-import type { YooKassaClient, YooPayment } from "./yookassa.client.js";
+import type { YooKassaClient } from "./yookassa.client.js";
 
 const offer: EpteraOffer = {
   id: "offer-1",
@@ -83,213 +83,63 @@ const reservationInput = (
   ...overrides,
 });
 
-type BookingState = {
-  id: string;
-  currency: string;
-  totalAmount: number;
-  paymentAmount: number | null;
-  paymentId: string | null;
-  paymentStatus: string;
-  status: string;
-  epteraReservationPayload: unknown;
-  epteraReservationId: string | null;
-  voucherNumber: string | null;
-  epteraReservationSyncStatus: string;
-  epteraReservationSyncAttemptedAt: Date | null;
-  epteraReservationSyncedAt: Date | null;
-  epteraReservationSyncErrorCode: string | null;
-  epteraReservationSyncErrorMessage: string | null;
-  epteraPaymentSyncStatus: string;
-  epteraPaymentSyncAttemptedAt: Date | null;
-  epteraPaymentSyncedAt: Date | null;
-  epteraPaymentSyncErrorCode: string | null;
-  epteraPaymentSyncErrorMessage: string | null;
-};
-
 type HarnessOptions = {
-  readonly reservationError?: Error;
-  readonly epteraPaymentError?: Error;
-  readonly paymentError?: Error;
+  readonly cancellationError?: Error;
+  readonly createResponse?: unknown;
   readonly repositoryError?: Error;
+  readonly paymentError?: Error;
 };
 
 const createHarness = (
   selectedOffer: EpteraOffer = offer,
   options: HarnessOptions = {},
 ) => {
-  let state: BookingState = {
-    currency: "RUB",
-    epteraPaymentSyncAttemptedAt: null,
-    epteraPaymentSyncErrorCode: null,
-    epteraPaymentSyncErrorMessage: null,
-    epteraPaymentSyncStatus: "pending",
-    epteraPaymentSyncedAt: null,
-    epteraReservationId: null,
-    epteraReservationPayload: null,
-    epteraReservationSyncAttemptedAt: null,
-    epteraReservationSyncErrorCode: null,
-    epteraReservationSyncErrorMessage: null,
-    epteraReservationSyncStatus: "pending",
-    epteraReservationSyncedAt: null,
-    id: "booking-1",
-    paymentAmount: null,
-    paymentId: null,
-    paymentStatus: "payment_pending",
-    status: "awaiting_payment",
-    totalAmount: 900,
-    voucherNumber: null,
-  };
-  let createReservationCalls = 0;
-  let addPaymentCalls = 0;
-  let createGuestBookingCalls = 0;
-  let paymentCalls = 0;
+  let createPayload: Record<string, unknown> | undefined;
+  let getOffersCalled = false;
   let getOffersInput: unknown;
+  let createReservationCalled = false;
+  let createGuestBookingCalled = false;
+  let findOrCreateGuestCalled = false;
+  let paymentCalled = false;
+  const cancellationIds: number[] = [];
 
   const eptera = {
-    addPayment: async () => {
-      addPaymentCalls += 1;
-      if (options.epteraPaymentError) throw options.epteraPaymentError;
+    createReservation: async (body: Record<string, unknown>) => {
+      createReservationCalled = true;
+      createPayload = body;
+      return options.createResponse ?? { "reservation-id": "123456" };
     },
-    createReservation: async () => {
-      createReservationCalls += 1;
-      if (options.reservationError) throw options.reservationError;
-      return { "reservation-id": "123456" };
+    cancelReservation: async (reservationId: number) => {
+      cancellationIds.push(reservationId);
+      if (options.cancellationError) throw options.cancellationError;
     },
     getOffers: async (input: unknown) => {
+      getOffersCalled = true;
       getOffersInput = input;
       return [selectedOffer];
     },
   } as unknown as EpteraClient;
-
   const repository = {
-    createGuestBooking: async (input: Record<string, unknown>) => {
-      createGuestBookingCalls += 1;
+    createGuestBooking: async (input: { id?: string; totalAmount: number }) => {
+      createGuestBookingCalled = true;
       if (options.repositoryError) throw options.repositoryError;
-      state = {
-        ...state,
-        ...(input as Partial<BookingState>),
-        id: "booking-1",
-        totalAmount: Number(input.totalAmount),
-      };
-      return state;
+      return { id: input.id ?? "booking-1", totalAmount: input.totalAmount };
     },
-    findOrCreateGuest: async () => ({ id: "guest-1" }),
-    findBooking: async () => state,
-    findBookingByPaymentId: async () => state,
-    updatePayment: async (input: {
-      paymentAmount: number;
-      paymentId: string;
-      paymentStatus: string;
-      status: string;
-    }) => {
-      state = { ...state, ...input };
-      return state;
+    findOrCreateGuest: async () => {
+      findOrCreateGuestCalled = true;
+      return { id: "guest-1" };
     },
-    markPaymentCreationFailed: async () => {
-      state = {
-        ...state,
-        paymentStatus: "creation_failed",
-        status: "payment_creation_failed",
-      };
-      return state;
-    },
-    markYooKassaPaymentSucceeded: async (input: {
-      paymentAmount: number;
-      paymentId: string;
-    }) => {
-      state = {
-        ...state,
-        ...input,
-        paymentStatus: "succeeded",
-        status: "eptera_reservation_pending",
-      };
-      return state;
-    },
-    claimEpteraReservationCreation: async (input: { attemptedAt: Date }) => {
-      if (
-        state.epteraReservationId ||
-        state.epteraReservationSyncStatus !== "pending"
-      )
-        return false;
-      state = {
-        ...state,
-        epteraReservationSyncAttemptedAt: input.attemptedAt,
-        epteraReservationSyncStatus: "processing",
-      };
-      return true;
-    },
-    markEpteraReservationCreated: async (input: {
-      attemptedAt: Date;
-      reservationId: string;
-      syncedAt: Date;
-      voucherNumber: string | null;
-    }) => {
-      if (state.epteraReservationSyncAttemptedAt !== input.attemptedAt)
-        return { count: 0 };
-      state = {
-        ...state,
-        epteraReservationId: input.reservationId,
-        epteraReservationSyncStatus: "succeeded",
-        epteraReservationSyncedAt: input.syncedAt,
-        status: "eptera_payment_pending",
-        voucherNumber: input.voucherNumber,
-      };
-      return { count: 1 };
-    },
-    markEpteraReservationSyncFailed: async (input: {
-      errorCode: string;
-      errorMessage: string;
-    }) => {
-      state = {
-        ...state,
-        epteraReservationSyncErrorCode: input.errorCode,
-        epteraReservationSyncErrorMessage: input.errorMessage,
-        epteraReservationSyncStatus: "failed",
-        status: "eptera_reservation_failed",
-      };
-      return { count: 1 };
-    },
-    claimEpteraPaymentSync: async (input: { attemptedAt: Date }) => {
-      if (
-        !state.epteraReservationId ||
-        state.epteraPaymentSyncStatus !== "pending"
-      )
-        return false;
-      state = {
-        ...state,
-        epteraPaymentSyncAttemptedAt: input.attemptedAt,
-        epteraPaymentSyncStatus: "processing",
-        status: "payment_sync_pending",
-      };
-      return true;
-    },
-    markEpteraPaymentSyncSucceeded: async (input: { syncedAt: Date }) => {
-      state = {
-        ...state,
-        epteraPaymentSyncStatus: "succeeded",
-        epteraPaymentSyncedAt: input.syncedAt,
-        status: "confirmed",
-      };
-      return { count: 1 };
-    },
-    markEpteraPaymentSyncFailed: async (input: {
-      errorCode: string;
-      errorMessage: string;
-    }) => {
-      state = {
-        ...state,
-        epteraPaymentSyncErrorCode: input.errorCode,
-        epteraPaymentSyncErrorMessage: input.errorMessage,
-        epteraPaymentSyncStatus: "failed",
-        status: "payment_sync_failed",
-      };
-      return { count: 1 };
-    },
+    updatePayment: async () => ({
+      epteraPaymentSyncAttemptedAt: null,
+      epteraPaymentSyncStatus: "pending",
+      epteraPaymentSyncedAt: null,
+      id: "booking-1",
+      totalAmount: 900,
+    }),
   } as unknown as BookingRepository;
-
   const yookassa = {
     createPayment: async () => {
-      paymentCalls += 1;
+      paymentCalled = true;
       if (options.paymentError) throw options.paymentError;
       return {
         amount: { currency: "RUB", value: "900.00" },
@@ -301,48 +151,43 @@ const createHarness = (
     },
   } as unknown as YooKassaClient;
 
-  const service = createBookingService(repository, eptera, yookassa);
-  const paidPayment: YooPayment = {
-    amount: { currency: "RUB", value: "900.00" },
-    id: "payment-1",
-    metadata: { bookingId: "booking-1" },
-    paid: true,
-    status: "succeeded",
-  };
   return {
-    createReservation: service.createReservation,
-    get state() {
-      return state;
+    createReservation: createBookingService(repository, eptera, yookassa)
+      .createReservation,
+    get createPayload() {
+      return createPayload;
     },
-    get epteraReservationPayload() {
-      return state.epteraReservationPayload;
+    get createReservationCalled() {
+      return createReservationCalled;
     },
-    get createReservationCalls() {
-      return createReservationCalls;
-    },
-    get addPaymentCalls() {
-      return addPaymentCalls;
-    },
-    get createGuestBookingCalls() {
-      return createGuestBookingCalls;
-    },
-    get paymentCalls() {
-      return paymentCalls;
+    get getOffersCalled() {
+      return getOffersCalled;
     },
     get getOffersInput() {
       return getOffersInput;
     },
-    paidPayment,
-    reconcilePayment: service.reconcilePayment,
+    get createGuestBookingCalled() {
+      return createGuestBookingCalled;
+    },
+    get findOrCreateGuestCalled() {
+      return findOrCreateGuestCalled;
+    },
+    get paymentCalled() {
+      return paymentCalled;
+    },
+    get cancellationIds() {
+      return cancellationIds;
+    },
   };
 };
 
-test("stores the Eptera payload and does not create a reservation before payment", async () => {
+test("builds the adult-only Eptera payload without undefined optional fields", async () => {
   const harness = createHarness();
 
   await harness.createReservation(reservationInput({ notes: undefined }));
 
-  const payload = harness.epteraReservationPayload as Record<string, unknown>;
+  const payload = harness.createPayload;
+  assert.ok(payload);
   assert.deepEqual(JSON.parse(JSON.stringify(payload)), payload);
   assert.deepEqual(Object.keys(payload).sort(), [
     "adult-count",
@@ -360,12 +205,22 @@ test("stores the Eptera payload and does not create a reservation before payment
     "total-price",
     "younger-child-count",
   ]);
-  assert.equal(harness.createReservationCalls, 0);
-  assert.equal(harness.createGuestBookingCalls, 1);
-  assert.equal(harness.paymentCalls, 1);
+  assert.deepEqual(payload["guest-list"], [
+    {
+      birthday: null,
+      country: "RU",
+      name: "Test",
+      surname: "Testov",
+      "title-id": 0,
+    },
+  ]);
+  assert.equal(payload["elder-child-count"], 0);
+  assert.equal(payload["baby-count"], 0);
+  assert.equal(payload["younger-child-count"], 0);
+  assert.equal(payload["total-price"], 900);
 });
 
-test("preserves child buckets in the deferred Eptera payload", async () => {
+test("uses the fresh quote total and child buckets for two adults aged 4 and 7", async () => {
   const harness = createHarness({
     ...offer,
     discountedPrice: 0,
@@ -384,7 +239,8 @@ test("preserves child buckets in the deferred Eptera payload", async () => {
     }),
   );
 
-  const payload = harness.epteraReservationPayload as Record<string, unknown>;
+  const payload = harness.createPayload;
+  assert.ok(payload);
   assert.equal(payload["total-price"], 25_410);
   assert.equal(payload["elder-child-count"], 1);
   assert.equal(payload["younger-child-count"], 1);
@@ -393,70 +249,54 @@ test("preserves child buckets in the deferred Eptera payload", async () => {
     (harness.getOffersInput as { childAges: number[] }).childAges,
     [4, 7],
   );
+  assert.deepEqual(
+    (payload["guest-list"] as Array<Record<string, unknown>>).map(
+      (guest) => guest["title-id"],
+    ),
+    [0, 0, 2, 2],
+  );
 });
 
-test("creates the Eptera reservation and forwards payment only once", async () => {
+test("keeps guest buckets and total price consistent for multiple rooms", async () => {
   const harness = createHarness();
-  await harness.createReservation(reservationInput());
 
-  await harness.reconcilePayment(harness.paidPayment);
-  await harness.reconcilePayment(harness.paidPayment);
+  await harness.createReservation(
+    reservationInput({
+      adults: 2,
+      guests: [
+        adult("Adult 1"),
+        adult("Adult 2"),
+        child("child", "Baby", "2026-08-01"),
+        child("child", "Child 1", "2023-07-08"),
+        child("child", "Child 2", "2015-11-09"),
+      ],
+      roomCount: 2,
+    }),
+  );
 
-  assert.equal(harness.createReservationCalls, 1);
-  assert.equal(harness.addPaymentCalls, 1);
-  assert.equal(harness.state.status, "confirmed");
-  assert.equal(harness.state.epteraReservationId, "123456");
-  assert.equal(harness.state.epteraPaymentSyncStatus, "succeeded");
-});
-
-test("keeps a diagnostic failure and does not retry reservation creation", async () => {
-  const harness = createHarness(offer, {
-    reservationError: new Error("provider unavailable"),
-  });
-  await harness.createReservation(reservationInput());
-
-  await harness.reconcilePayment(harness.paidPayment);
-  await harness.reconcilePayment(harness.paidPayment);
-
-  assert.equal(harness.createReservationCalls, 1);
-  assert.equal(harness.addPaymentCalls, 0);
-  assert.equal(harness.state.status, "eptera_reservation_failed");
-  assert.equal(
-    harness.state.epteraReservationSyncErrorCode,
-    "EPTERA_RESERVATION_CREATE_FAILED",
+  const payload = harness.createPayload;
+  assert.ok(payload);
+  assert.deepEqual(JSON.parse(JSON.stringify(payload)), payload);
+  assert.equal(payload["total-price"], 1_800);
+  assert.equal(payload["elder-child-count"], 1);
+  assert.equal(payload["younger-child-count"], 1);
+  assert.equal(payload["baby-count"], 1);
+  assert.equal((payload["guest-list"] as unknown[]).length, 5);
+  assert.deepEqual(
+    (payload["guest-list"] as Array<Record<string, unknown>>).map(
+      (guest) => guest.birthday,
+    ),
+    [null, null, "2026-08-01", "2023-07-08", "2015-11-09"],
+  );
+  assert.deepEqual(
+    (payload["guest-list"] as Array<Record<string, unknown>>).map(
+      (guest) => guest["title-id"],
+    ),
+    [0, 0, 3, 2, 2],
   );
 });
 
-test("keeps payment transfer failure without retrying a possibly applied payment", async () => {
-  const harness = createHarness(offer, {
-    epteraPaymentError: new Error("payment provider unavailable"),
-  });
-  await harness.createReservation(reservationInput());
-
-  await harness.reconcilePayment(harness.paidPayment);
-  await harness.reconcilePayment(harness.paidPayment);
-
-  assert.equal(harness.createReservationCalls, 1);
-  assert.equal(harness.addPaymentCalls, 1);
-  assert.equal(harness.state.status, "payment_sync_failed");
-  assert.equal(
-    harness.state.epteraPaymentSyncErrorCode,
-    "EPTERA_PAYMENT_SYNC_FAILED",
-  );
-});
-
-test("marks payment creation failure locally without calling Eptera", async () => {
-  const harness = createHarness(offer, {
-    paymentError: new Error("payment failed"),
-  });
-
-  await assert.rejects(harness.createReservation(reservationInput()));
-  assert.equal(harness.createReservationCalls, 0);
-  assert.equal(harness.state.status, "payment_creation_failed");
-  assert.equal(harness.state.paymentStatus, "creation_failed");
-});
-
-test("rejects a child birthday after check-in before any provider request", async () => {
+test("rejects a child birthday after check-in before any Eptera request", async () => {
   const harness = createHarness();
 
   await assert.rejects(
@@ -467,8 +307,8 @@ test("rejects a child birthday after check-in before any provider request", asyn
     ),
     { code: "GUESTS_INVALID" },
   );
-  assert.equal(harness.createReservationCalls, 0);
-  assert.equal(harness.paymentCalls, 0);
+  assert.equal(harness.getOffersCalled, false);
+  assert.equal(harness.createReservationCalled, false);
 });
 
 test("requires real birth dates for child and baby guests", () => {
@@ -517,6 +357,52 @@ test("keeps count-only searches free of invented child ages", async () => {
   assert.equal(query.roomCount, 2);
 });
 
+test("rejects an offer with fewer rooms to sell than requested", async () => {
+  const harness = createHarness({ ...offer, roomToSell: 1 });
+
+  await assert.rejects(
+    harness.createReservation(reservationInput({ roomCount: 2 })),
+    { code: "OFFER_UNAVAILABLE" },
+  );
+  assert.equal(harness.createReservationCalled, false);
+});
+
+test("rejects a create response without a reservation identifier", async () => {
+  const harness = createHarness(offer, { createResponse: {} });
+
+  await assert.rejects(harness.createReservation(reservationInput()), {
+    code: "EPTERA_RESPONSE_INVALID",
+  });
+  assert.equal(harness.findOrCreateGuestCalled, false);
+  assert.equal(harness.createGuestBookingCalled, false);
+  assert.equal(harness.paymentCalled, false);
+});
+
+test("cancels Eptera reservation when local persistence fails", async () => {
+  const persistenceError = new Error("database failed");
+  const harness = createHarness(offer, { repositoryError: persistenceError });
+
+  await assert.rejects(
+    harness.createReservation(reservationInput()),
+    (error) => error === persistenceError,
+  );
+  assert.deepEqual(harness.cancellationIds, [123456]);
+});
+
+test("keeps the payment error when best-effort cancellation also fails", async () => {
+  const paymentError = new Error("payment failed");
+  const harness = createHarness(offer, {
+    cancellationError: new Error("cancel failed"),
+    paymentError,
+  });
+
+  await assert.rejects(
+    harness.createReservation(reservationInput()),
+    (error) => error === paymentError,
+  );
+  assert.deepEqual(harness.cancellationIds, [123456]);
+});
+
 test("always uses the configured hotel id for createReservation", async () => {
   const originalFetch = globalThis.fetch;
   const requests: Array<{ body: string; url: string }> = [];
@@ -542,11 +428,41 @@ test("always uses the configured hotel id for createReservation", async () => {
   }) as typeof fetch;
 
   try {
+    const reservationPayload = {
+      "adult-count": 2,
+      "board-type-id": 22,
+      "check-in": "2026-08-13",
+      "check-out": "2026-08-15",
+      "currency-code": "RUB",
+      "elder-child-count": 1,
+      "guest-list": [
+        {
+          birthday: null,
+          country: "RU",
+          name: "Adult 1",
+          surname: "Testov",
+          "title-id": 0,
+        },
+        {
+          birthday: "2022-04-12",
+          country: "RU",
+          name: "Child 4",
+          surname: "Testov",
+          "title-id": 2,
+        },
+      ],
+      nationality: "RU",
+      "price-agency-id": 55,
+      "rate-type-id": 33,
+      "room-type-id": 11,
+      "total-price": 25_410,
+      "younger-child-count": 1,
+    };
     await createEpteraClient({
       apiKey: "test-key",
       hotelId: "901016",
     }).createReservation({
-      "adult-count": 2,
+      ...reservationPayload,
       "hotel-id": 7,
     });
 
@@ -554,7 +470,10 @@ test("always uses the configured hotel id for createReservation", async () => {
       requests[1]?.url,
       "https://bookingapi.eptera.ru/hotel/901016/createReservation",
     );
-    assert.equal(JSON.parse(requests[1]?.body ?? "{}")["hotel-id"], 901016);
+    assert.deepEqual(JSON.parse(requests[1]?.body ?? "{}"), {
+      ...reservationPayload,
+      "hotel-id": 901016,
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
