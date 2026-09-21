@@ -37,16 +37,6 @@ const displayBoardType = (value: string | undefined) =>
     ? "Полный пансион (завтрак, обед и ужин)"
     : value;
 
-const epteraStatusLabel = (value: string | null) => {
-  const normalized = value?.trim().toLocaleLowerCase("ru-RU") ?? "";
-  if (!normalized) return "Статус уточняется";
-  if (/(cancel|отмен|аннул)/u.test(normalized)) return "Отменена";
-  if (/(complete|finish|заверш|checkout)/u.test(normalized)) return "Завершена";
-  if (/(confirm|reserve|reservation|active|подтверж|актив)/u.test(normalized))
-    return "Подтверждена";
-  return value ?? "Статус уточняется";
-};
-
 const formatSyncDate = (value: string | null) =>
   value
     ? new Date(value).toLocaleString("ru-RU", {
@@ -179,21 +169,20 @@ export const AccountBookingsSection = ({
                 Номер брони:{" "}
                 {booking.voucherNumber ?? getBookingNumber(booking.id)}
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-full bg-page px-3 py-1 font-semibold text-brand">
-                  {epteraStatusLabel(booking.epteraStatus)}
-                </span>
-                {booking.epteraRoomNumber && (
-                  <span className="text-muted-ui-foreground">
-                    Комната {booking.epteraRoomNumber}
-                  </span>
-                )}
-                {booking.epteraLastSyncedAt && (
-                  <span className="text-muted-ui-foreground">
-                    Обновлено {formatSyncDate(booking.epteraLastSyncedAt)}
-                  </span>
-                )}
-              </div>
+              {(booking.epteraRoomNumber || booking.epteraLastSyncedAt) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  {booking.epteraRoomNumber && (
+                    <span className="text-muted-ui-foreground">
+                      Комната {booking.epteraRoomNumber}
+                    </span>
+                  )}
+                  {booking.epteraLastSyncedAt && (
+                    <span className="text-muted-ui-foreground">
+                      Обновлено {formatSyncDate(booking.epteraLastSyncedAt)}
+                    </span>
+                  )}
+                </div>
+              )}
               <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
