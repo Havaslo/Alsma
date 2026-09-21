@@ -152,6 +152,14 @@ const BookingDetails = ({
                 </h3>
                 <div className="mt-2 grid gap-1.5">
                   <p>
+                    <span className="text-muted-ui-foreground">Телефон:</span>{" "}
+                    {booking.orderItem.order.phone || "Не указан"}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Email:</span>{" "}
+                    {booking.orderItem.order.email || "Не указан"}
+                  </p>
+                  <p>
                     <span className="text-muted-ui-foreground">Услуга:</span>{" "}
                     {booking.service.name} · {booking.variant.name}
                   </p>
