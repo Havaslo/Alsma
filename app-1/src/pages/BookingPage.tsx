@@ -48,6 +48,10 @@ const dateText = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
     new Date(`${value}T12:00:00`),
   );
+const displayBoardType = (value: string) =>
+  value.trim().toUpperCase() === "FB"
+    ? "Полный пансион (завтрак, обед и ужин)"
+    : value;
 
 const steps = ["Номера", "Тарифы", "Контакты"];
 type RoomChild = {
@@ -654,7 +658,10 @@ export const BookingPage = () => {
                               {item.rateType}
                             </h3>
                             <p className="mt-1 text-muted-ui-foreground">
-                              Питание: {item.boardType || "не включено"}
+                              Питание:{" "}
+                              {item.boardType
+                                ? displayBoardType(item.boardType)
+                                : "не включено"}
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               {rateBenefits(item).map((benefit) => (
@@ -1294,7 +1301,7 @@ const GuestCounter = ({
 
 const rateBenefits = (offer: BookingOffer) => {
   const benefits = [...offer.benefits];
-  if (offer.boardType) benefits.unshift(offer.boardType);
+  if (offer.boardType) benefits.unshift(displayBoardType(offer.boardType));
   if (
     offer.cancellationPenalty &&
     (offer.cancellationPenalty["is-refundable"] ||
@@ -1401,7 +1408,7 @@ const BookingSummary = ({
       <div className="mt-5 border-t border-line pt-5">
         <p className="font-semibold">{offer.roomType}</p>
         <p className="mt-1 text-sm text-muted-ui-foreground">
-          {offer.rateType} · {offer.boardType}
+          {offer.rateType} · {displayBoardType(offer.boardType)}
         </p>
         <p className="mt-5 flex justify-between border-t border-line pt-4 text-lg font-semibold">
           <span>Итого</span>

@@ -32,6 +32,10 @@ const getBookingServices = (roomName: string, status: string) =>
 
 const paymentMethodLabel = (method: "full" | "first_night") =>
   method === "first_night" ? "Оплата первых суток" : "Полная оплата";
+const displayBoardType = (value: string | undefined) =>
+  value?.trim().toUpperCase() === "FB"
+    ? "Полный пансион (завтрак, обед и ужин)"
+    : value;
 
 const escapeHtml = (value: string) =>
   value.replace(
@@ -60,7 +64,7 @@ const downloadBookingPdf = async (
     (guest) => guest.type === "child" || guest.type === "baby",
   );
   const tariff = [
-    booking.selectedOffer?.boardType,
+    displayBoardType(booking.selectedOffer?.boardType),
     booking.selectedOffer?.rateType,
     booking.selectedOffer?.rateDescription,
   ]
