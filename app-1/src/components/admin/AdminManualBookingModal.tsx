@@ -58,7 +58,7 @@ export const AdminManualBookingModal = ({
       role="dialog"
     >
       <form
-        className="w-full max-w-md rounded-3xl bg-brand-foreground p-6 shadow-2xl"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md min-w-0 overflow-x-hidden overflow-y-auto rounded-3xl bg-brand-foreground p-6 shadow-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           mutation.mutate();
@@ -80,7 +80,7 @@ export const AdminManualBookingModal = ({
             Имя
             <input
               required
-              className="rounded-xl border border-line px-3 py-2"
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setName(event.target.value)}
               value={name}
             />
@@ -89,7 +89,7 @@ export const AdminManualBookingModal = ({
             Телефон
             <input
               required
-              className="rounded-xl border border-line px-3 py-2"
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setPhone(event.target.value)}
               value={phone}
             />
@@ -100,7 +100,7 @@ export const AdminManualBookingModal = ({
               (необязательно)
             </span>
             <input
-              className="rounded-xl border border-line px-3 py-2"
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setEmail(event.target.value)}
               type="email"
               value={email}
@@ -109,7 +109,7 @@ export const AdminManualBookingModal = ({
           <label className="grid gap-1 text-sm font-medium">
             Вариант услуги
             <select
-              className="rounded-xl border border-line px-3 py-2"
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setVariantId(event.target.value)}
               value={variantId}
             >
@@ -123,7 +123,7 @@ export const AdminManualBookingModal = ({
           <label className="grid gap-1 text-sm font-medium">
             Ответственный менеджер
             <select
-              className="rounded-xl border border-line px-3 py-2"
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setResponsibleManagerId(event.target.value)}
               required
               value={responsibleManagerId}
