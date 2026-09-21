@@ -97,7 +97,7 @@ const BookingDetails = ({
   bookings,
   date,
   end,
-  canAddBooking,
+  remainingCapacity,
   onAddBooking,
   start,
   onClose,
@@ -105,7 +105,7 @@ const BookingDetails = ({
   readonly bookings: ServiceBooking[];
   readonly date: string;
   readonly end: number;
-  readonly canAddBooking: boolean;
+  readonly remainingCapacity: number;
   readonly onAddBooking: () => void;
   readonly start: number;
   readonly onClose: () => void;
@@ -140,6 +140,9 @@ const BookingDetails = ({
           </h2>
           <p className="mt-2 text-sm text-muted-ui-foreground">
             Записей в интервале: {bookings.length}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-brand">
+            Свободных мест по услуге: {remainingCapacity}
           </p>
           <div className="mt-5 grid gap-3">
             {bookings.map((booking) => (
@@ -180,12 +183,12 @@ const BookingDetails = ({
             ))}
           </div>
           <div className="mt-5 rounded-2xl bg-muted-ui/30 px-4 py-3 text-sm text-muted-ui-foreground">
-            {canAddBooking
-              ? "В этом интервале ещё есть свободное место. Можно добавить запись вручную."
-              : "Свободного места в этом интервале нет."}
+            {remainingCapacity > 0
+              ? `В этом интервале ещё есть свободных мест: ${remainingCapacity}. Можно добавить запись вручную.`
+              : "Свободных мест по этой услуге в интервале нет."}
           </div>
           <div className="mt-6 flex flex-wrap justify-end gap-3">
-            {canAddBooking && (
+            {remainingCapacity > 0 && (
               <button
                 className="rounded-full border border-brand px-5 py-2 font-semibold text-brand"
                 onClick={onAddBooking}
@@ -319,25 +322,30 @@ export const AdminServiceCalendarPage = () => {
         used,
       };
     });
-  const slotCanAcceptAnotherBooking = (slotBookings: ServiceBooking[]) => {
-    if (!selectedVariant) return false;
+  const slotRemainingCapacity = (slotBookings: ServiceBooking[]) => {
+    if (!selectedVariant) return 0;
     if (selectedResources.length) {
       const usage = resourceUsageFor(slotBookings);
-      return selectedResources.every((selectedResource) => {
-        const current = usage.find(
-          (resource) => resource.resourceId === selectedResource.resourceId,
-        );
-        return (
-          current !== undefined &&
-          current.used + selectedResource.quantity <= current.total
-        );
-      });
+      return Math.min(
+        ...selectedResources.map((selectedResource) => {
+          const current = usage.find(
+            (resource) => resource.resourceId === selectedResource.resourceId,
+          );
+          if (!current || selectedResource.quantity <= 0) return 0;
+          return Math.max(
+            0,
+            Math.floor(
+              (current.total - current.used) / selectedResource.quantity,
+            ),
+          );
+        }),
+      );
     }
     const bookedQuantity = slotBookings.reduce(
       (total, booking) => total + booking.orderItem.quantity,
       0,
     );
-    return bookedQuantity < selectedVariant.capacity;
+    return Math.max(0, selectedVariant.capacity - bookedQuantity);
   };
 
   return (
@@ -579,7 +587,7 @@ export const AdminServiceCalendarPage = () => {
       {selectedSlot && (
         <BookingDetails
           bookings={selectedSlot.bookings}
-          canAddBooking={slotCanAcceptAnotherBooking(selectedSlot.bookings)}
+          remainingCapacity={slotRemainingCapacity(selectedSlot.bookings)}
           date={selectedDate}
           end={selectedSlot.end}
           onAddBooking={() => {
