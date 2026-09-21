@@ -410,12 +410,37 @@ const calendarCache = new Map<
 const dateKey = (date: Date) =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 const nextDate = (date: Date) => new Date(date.getTime() + 86_400_000);
+const normalizeProviderText = (value: string): string =>
+  value
+    .toLocaleLowerCase("ru-RU")
+    .replaceAll("ё", "е")
+    .replace(/\s+/gu, " ")
+    .trim();
+const isRussianBathCottage = (roomType: string): boolean =>
+  normalizeProviderText(roomType).includes("русская баня");
+const isNoMealBoard = (boardType: string): boolean => {
+  const normalized = normalizeProviderText(boardType);
+  return (
+    normalized.length === 0 ||
+    normalized.includes("без питания") ||
+    normalized === "ro" ||
+    normalized.includes("room only")
+  );
+};
+const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
+  offers.filter(
+    (offer) =>
+      isRussianBathCottage(offer.roomType) || !isNoMealBoard(offer.boardType),
+  );
 
 export const createBookingService = (
   repository: BookingRepository,
   eptera: EpteraClient,
   yookassa: YooKassaClient,
 ) => {
+  const getBookableOffers = async (
+    input: Parameters<EpteraClient["getOffers"]>[0],
+  ) => filterBookingOffers(await eptera.getOffers(input));
   const service = {
     offers: async (input: OffersQuery) => {
       if (date(input.checkOut) <= date(input.checkIn)) {
@@ -425,7 +450,7 @@ export const createBookingService = (
           "Дата выезда должна быть позже даты заезда.",
         );
       }
-      return { offers: await eptera.getOffers(input), search: input };
+      return { offers: await getBookableOffers(input), search: input };
     },
     calendarPrices: async (input: CalendarPricesQuery) => {
       const cacheKey = JSON.stringify(input);
@@ -447,7 +472,7 @@ export const createBookingService = (
           const current = dates[cursor++];
           if (!current) return;
           try {
-            const offers = await eptera.getOffers({
+            const offers = await getBookableOffers({
               adults: input.adults,
               checkIn: dateKey(current),
               checkOut: dateKey(nextDate(current)),
@@ -531,7 +556,7 @@ export const createBookingService = (
             room.adults,
             input.checkIn,
           );
-          const offers = await eptera.getOffers({
+          const offers = await getBookableOffers({
             adults: room.adults,
             checkIn: input.checkIn,
             checkOut: input.checkOut,
@@ -838,7 +863,7 @@ export const createBookingService = (
           "Укажите корректную дату рождения для каждого ребёнка.",
         );
       }
-      const offers = await eptera.getOffers({
+      const offers = await getBookableOffers({
         adults: input.adults,
         checkIn: input.checkIn,
         checkOut: input.checkOut,

@@ -575,6 +575,46 @@ test("keeps count-only searches free of invented child ages", async () => {
   assert.equal(query.roomCount, 2);
 });
 
+test("keeps only meal plans except for the Russian bath cottage", async () => {
+  const service = createBookingService(
+    {} as BookingRepository,
+    {
+      getOffers: async () => [
+        { ...offer, id: "standard-meal", boardType: "FB" },
+        { ...offer, id: "standard-no-meal", boardType: "Без питания" },
+        {
+          ...offer,
+          id: "bath-cottage-meal",
+          boardType: "Все включено",
+          roomType: "Коттедж Русская баня",
+        },
+        {
+          ...offer,
+          id: "bath-cottage-no-meal",
+          boardType: "Без питания",
+          roomType: "Коттедж Русская баня",
+        },
+      ],
+    } as unknown as EpteraClient,
+    {} as YooKassaClient,
+  );
+
+  const result = await service.offers(
+    offersQuerySchema.parse({
+      adults: 2,
+      checkIn: "2026-08-13",
+      checkOut: "2026-08-15",
+      children: 0,
+      roomCount: 1,
+    }),
+  );
+
+  assert.deepEqual(
+    result.offers.map((item) => item.id),
+    ["standard-meal", "bath-cottage-meal", "bath-cottage-no-meal"],
+  );
+});
+
 test("rejects an offer with fewer rooms to sell than requested", async () => {
   const harness = createHarness({ ...offer, roomToSell: 1 });
 
