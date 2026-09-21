@@ -718,6 +718,7 @@ export const createServicesRouter = (database: Database): Router => {
         variantId: z.string().uuid(),
         startsAt: z.string().datetime(),
         responsibleManagerId: z.string().uuid(),
+        paymentStatus: z.enum(["pending", "succeeded"]),
       })
       .parse(request.body);
     const variant = await database.client.serviceVariant.findFirst({
@@ -781,8 +782,9 @@ export const createServicesRouter = (database: Database): Router => {
             email,
             phone: input.phone,
             userId: user.id,
-            paymentStatus: "pending",
-            status: "new",
+            paymentStatus: input.paymentStatus,
+            paidAt: input.paymentStatus === "succeeded" ? new Date() : null,
+            status: input.paymentStatus === "succeeded" ? "paid" : "new",
             total: 0,
             items: {
               create: {

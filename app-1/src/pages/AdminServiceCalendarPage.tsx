@@ -55,6 +55,13 @@ const statusLabel = (status: string) =>
     confirmed: "Подтверждена",
     requested: "Ожидает подтверждения",
   })[status] ?? status;
+const statusDescription = (status: string) =>
+  ({
+    cancelled: "Запись отменена и больше не занимает слот.",
+    completed: "Услуга оказана, запись оставлена в истории.",
+    confirmed: "Слот закреплён за клиентом и учитывается в загрузке.",
+    requested: "Запись создана, но ещё не подтверждена администратором.",
+  })[status] ?? "Статус записи не расшифрован.";
 const bookingSourceLabel = (source: string) =>
   ({
     legacy: "Источник не определён",
@@ -68,6 +75,12 @@ const paymentStatusLabel = (status: string) =>
     failed: "Ошибка оплаты",
     refunded: "Возвращено",
   })[status] ?? status;
+const paymentStatusDescription = (status: string) =>
+  status === "succeeded"
+    ? "Оплата отмечена администратором или подтверждена онлайн."
+    : status === "pending"
+      ? "Деньги ещё не отмечены как полученные."
+      : "Статус оплаты требует проверки.";
 const slotDate = (date: string, minutes: number) => {
   // The API stores UTC instants, while the calendar is a local-time interface.
   // Constructing this as local time keeps the visible 08:00–22:00 workday and
@@ -117,12 +130,16 @@ const BookingDetails = ({
   bookings,
   date,
   end,
+  canAddBooking,
+  onAddBooking,
   start,
   onClose,
 }: {
   readonly bookings: ServiceBooking[];
   readonly date: string;
   readonly end: number;
+  readonly canAddBooking: boolean;
+  readonly onAddBooking: () => void;
   readonly start: number;
   readonly onClose: () => void;
 }) => (
@@ -176,8 +193,11 @@ const BookingDetails = ({
                 {formatServiceTime(booking.endsAt)}
               </p>
               <p>
-                <span className="text-muted-ui-foreground">Статус:</span>{" "}
+                <span className="text-muted-ui-foreground">Статус записи:</span>{" "}
                 {statusLabel(booking.status)}
+              </p>
+              <p className="text-xs text-muted-ui-foreground">
+                {statusDescription(booking.status)}
               </p>
               <p>
                 <span className="text-muted-ui-foreground">Источник:</span>{" "}
@@ -197,14 +217,33 @@ const BookingDetails = ({
                 {booking.responsibleManager?.displayName ?? "Не назначен"}
               </p>
               <p>
-                <span className="text-muted-ui-foreground">Оплата:</span>{" "}
+                <span className="text-muted-ui-foreground">Статус оплаты:</span>{" "}
                 {paymentStatusLabel(booking.orderItem.order.paymentStatus)}
+              </p>
+              <p className="text-xs text-muted-ui-foreground">
+                {paymentStatusDescription(
+                  booking.orderItem.order.paymentStatus,
+                )}
               </p>
             </div>
           </article>
         ))}
       </div>
-      <div className="mt-6 flex justify-end">
+      <div className="mt-5 rounded-2xl bg-muted-ui/30 px-4 py-3 text-sm text-muted-ui-foreground">
+        {canAddBooking
+          ? "В этом интервале ещё есть свободное место. Можно добавить запись вручную."
+          : "Свободного места в этом интервале нет."}
+      </div>
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
+        {canAddBooking && (
+          <button
+            className="rounded-full border border-brand px-5 py-2 font-semibold text-brand"
+            onClick={onAddBooking}
+            type="button"
+          >
+            Добавить запись
+          </button>
+        )}
         <button
           className="rounded-full bg-brand px-5 py-2 font-semibold text-brand-foreground"
           onClick={onClose}
@@ -322,11 +361,32 @@ export const AdminServiceCalendarPage = () => {
         return total + (assignment?.quantity ?? 0) * booking.orderItem.quantity;
       }, 0);
       return {
+        resourceId: selectedResource.resourceId,
         name: selectedResource.resource.name,
         total: selectedResource.resource.totalUnits,
         used,
       };
     });
+  const slotCanAcceptAnotherBooking = (slotBookings: ServiceBooking[]) => {
+    if (!selectedVariant) return false;
+    if (selectedResources.length) {
+      const usage = resourceUsageFor(slotBookings);
+      return selectedResources.every((selectedResource) => {
+        const current = usage.find(
+          (resource) => resource.resourceId === selectedResource.resourceId,
+        );
+        return (
+          current !== undefined &&
+          current.used + selectedResource.quantity <= current.total
+        );
+      });
+    }
+    const bookedQuantity = slotBookings.reduce(
+      (total, booking) => total + booking.orderItem.quantity,
+      0,
+    );
+    return bookedQuantity < selectedVariant.capacity;
+  };
 
   return (
     <section className="space-y-6">
@@ -567,8 +627,13 @@ export const AdminServiceCalendarPage = () => {
       {selectedSlot && (
         <BookingDetails
           bookings={selectedSlot.bookings}
+          canAddBooking={slotCanAcceptAnotherBooking(selectedSlot.bookings)}
           date={selectedDate}
           end={selectedSlot.end}
+          onAddBooking={() => {
+            setSelectedSlot(undefined);
+            setManualSlot(selectedSlot.start);
+          }}
           onClose={() => setSelectedSlot(undefined)}
           start={selectedSlot.start}
         />

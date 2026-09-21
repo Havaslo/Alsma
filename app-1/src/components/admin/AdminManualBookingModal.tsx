@@ -35,6 +35,9 @@ export const AdminManualBookingModal = ({
   const [variantId, setVariantId] = useState(
     selectedVariantId ?? variants[0]?.id ?? "",
   );
+  const [paymentStatus, setPaymentStatus] = useState<"pending" | "succeeded">(
+    "succeeded",
+  );
   const [responsibleManagerId, setResponsibleManagerId] =
     useState(currentAdminId);
   const mutation = useMutation({
@@ -46,6 +49,7 @@ export const AdminManualBookingModal = ({
         startsAt,
         variantId,
         responsibleManagerId,
+        paymentStatus,
       }),
     onSuccess: () => {
       onCreated();
@@ -134,6 +138,23 @@ export const AdminManualBookingModal = ({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Статус оплаты
+            <select
+              className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
+              onChange={(event) =>
+                setPaymentStatus(event.target.value as "pending" | "succeeded")
+              }
+              value={paymentStatus}
+            >
+              <option value="succeeded">Оплачено</option>
+              <option value="pending">Ожидает оплаты</option>
+            </select>
+            <span className="text-xs font-normal text-muted-ui-foreground">
+              Для ручной записи статус отмечает менеджер. Наличные и другие
+              способы оплаты система автоматически не проверяет.
+            </span>
           </label>
           {!managers.length && (
             <p className="text-sm text-destructive">

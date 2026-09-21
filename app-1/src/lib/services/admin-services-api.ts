@@ -62,6 +62,7 @@ export const createManualServiceBooking = (input: {
   variantId: string;
   startsAt: string;
   responsibleManagerId: string;
+  paymentStatus: "pending" | "succeeded";
 }) =>
   apiClient.post<{ orderId: string }>(
     "/services/admin/manual-bookings",
