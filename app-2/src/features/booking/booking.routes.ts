@@ -5,12 +5,14 @@ import { validateRequest } from "../../lib/http/validate-request.js";
 import {
   createOffersHandler,
   createReservationHandler,
+  paymentStatusHandler,
   paymentWebhookHandler,
 } from "./booking.handlers.js";
 import {
   calendarPricesQuerySchema,
   createReservationBodySchema,
   offersQuerySchema,
+  paymentStatusQuerySchema,
 } from "./booking.schemas.js";
 import type { BookingService } from "./booking.service.js";
 import type { YooKassaClient } from "./yookassa.client.js";
@@ -54,6 +56,11 @@ export const createBookingRouter = (
     "/reservations",
     validateRequest({ body: createReservationBodySchema }),
     createReservationHandler(service),
+  );
+  router.get(
+    "/payments/status",
+    validateRequest({ query: paymentStatusQuerySchema }),
+    paymentStatusHandler(service),
   );
   router.post("/payments/webhook", paymentWebhookHandler(service, yookassa));
   return router;

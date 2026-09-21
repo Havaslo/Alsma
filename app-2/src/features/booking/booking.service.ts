@@ -54,6 +54,11 @@ const nightsBetween = (checkIn: string, checkOut: string) =>
     ),
   );
 const amountText = (value: number) => value.toFixed(2);
+const paymentReturnUrl = (returnUrl: string, bookingId: string) => {
+  const url = new URL(returnUrl);
+  url.searchParams.set("bookingId", bookingId);
+  return url.toString();
+};
 const EPTERA_PAYMENT_SYNC_STALE_AFTER_MS = 60_000;
 export const BOOKING_PAYMENT_DEADLINE_MS = 30 * 60_000;
 const EXPIRED_BOOKING_BATCH_SIZE = 25;
@@ -687,7 +692,7 @@ export const createBookingService = (
               currency: room.reservationOffer.currency,
               description: `Бронирование ${voucherNumber ?? booking.id}`,
               customer: { email: input.contact.email.toLowerCase(), phone },
-              returnUrl: input.returnUrl,
+              returnUrl: paymentReturnUrl(input.returnUrl, booking.id),
             });
             paymentCreated = true;
             createdBooking.paymentId = payment.id;
@@ -972,7 +977,7 @@ export const createBookingService = (
           currency: offer.currency,
           description: `Бронирование ${voucherNumber ?? booking.id}`,
           customer: { email: input.contact.email.toLowerCase(), phone },
-          returnUrl: input.returnUrl,
+          returnUrl: paymentReturnUrl(input.returnUrl, booking.id),
         });
         const savedBooking = await repository.updatePayment({
           bookingId: booking.id,
@@ -998,6 +1003,52 @@ export const createBookingService = (
         await cancelReservationBestEffort(eptera, reservationId);
         throw error;
       }
+    },
+    paymentStatus: async (input: { bookingId: string }) => {
+      const booking = await repository.findBooking(input.bookingId);
+      if (!booking) {
+        throw new HttpError(
+          404,
+          "BOOKING_NOT_FOUND",
+          "Бронирование не найдено.",
+        );
+      }
+      if (!booking.paymentId) {
+        return {
+          booking: {
+            epteraPaymentSyncStatus: booking.epteraPaymentSyncStatus,
+            id: booking.id,
+            paymentStatus: booking.paymentStatus,
+            status: booking.status,
+            voucherNumber: booking.voucherNumber,
+          },
+          payment: null,
+        };
+      }
+      const payment = await yookassa.getPayment(booking.paymentId);
+      try {
+        await service.reconcilePayment(payment);
+      } catch {
+        // The payment result remains useful even if Eptera temporarily rejects
+        // the separate payment synchronization request.
+      }
+      const currentBooking =
+        (await repository.findBooking(booking.id)) ?? booking;
+      return {
+        booking: {
+          epteraPaymentSyncStatus: currentBooking.epteraPaymentSyncStatus,
+          id: currentBooking.id,
+          paymentStatus: currentBooking.paymentStatus,
+          status: currentBooking.status,
+          voucherNumber: currentBooking.voucherNumber,
+        },
+        payment: {
+          amount: payment.amount,
+          id: payment.id,
+          paid: payment.paid,
+          status: payment.status,
+        },
+      };
     },
     cancelExpiredBookings: async (
       input: {

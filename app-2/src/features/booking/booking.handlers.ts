@@ -1,6 +1,10 @@
 import type { RequestHandler } from "express";
 
-import type { CreateReservationBody, OffersQuery } from "./booking.schemas.js";
+import type {
+  CreateReservationBody,
+  OffersQuery,
+  PaymentStatusQuery,
+} from "./booking.schemas.js";
 import type { BookingService } from "./booking.service.js";
 import type { YooKassaClient } from "./yookassa.client.js";
 
@@ -22,6 +26,16 @@ export const createReservationHandler =
           response.locals.input.body as CreateReservationBody,
         ),
       );
+  };
+
+export const paymentStatusHandler =
+  (service: BookingService): RequestHandler =>
+  async (_request, response) => {
+    response.json(
+      await service.paymentStatus(
+        response.locals.input.query as PaymentStatusQuery,
+      ),
+    );
   };
 
 export const paymentWebhookHandler =

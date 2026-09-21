@@ -94,6 +94,22 @@ export type BookingPaymentLink = {
   readonly voucherNumber: string | null;
 };
 
+export type BookingPaymentStatus = {
+  readonly booking: {
+    readonly epteraPaymentSyncStatus: string;
+    readonly id: string;
+    readonly paymentStatus: string;
+    readonly status: string;
+    readonly voucherNumber: string | null;
+  };
+  readonly payment: {
+    readonly amount: { readonly currency: string; readonly value: string };
+    readonly id: string;
+    readonly paid: boolean;
+    readonly status: string;
+  } | null;
+};
+
 export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
   apiClient.get<{ offers: BookingOffer[]; search: BookingSearch }>(
     "/booking/offers",
@@ -126,3 +142,12 @@ export const createBookingReservation = (input: CreateBookingInput) =>
     payments?: BookingPaymentLink[];
     payment: { confirmationUrl: string | null; status: string };
   }>("/booking/reservations", input);
+
+export const loadBookingPaymentStatus = (
+  bookingId: string,
+  signal: AbortSignal,
+) =>
+  apiClient.get<BookingPaymentStatus>("/booking/payments/status", {
+    params: { bookingId },
+    signal,
+  });

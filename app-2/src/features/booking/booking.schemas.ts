@@ -57,6 +57,10 @@ export const calendarPricesQuerySchema = z
     children: input.children ?? input.childAges.length,
   }));
 
+export const paymentStatusQuerySchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 const adultGuestSchema = z.object({
   birthDate: isoDate.optional(),
   firstName: z.string().trim().min(1).max(80),
@@ -107,3 +111,4 @@ export const createReservationBodySchema = z.object({
 export type CalendarPricesQuery = z.infer<typeof calendarPricesQuerySchema>;
 export type CreateReservationBody = z.infer<typeof createReservationBodySchema>;
 export type OffersQuery = z.infer<typeof offersQuerySchema>;
+export type PaymentStatusQuery = z.infer<typeof paymentStatusQuerySchema>;

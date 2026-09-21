@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useMutation } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { Form } from "@/components/Form";
@@ -14,7 +14,6 @@ import { writeGuestSession } from "@/lib/auth/session";
 import { ROUTES } from "@/route-constants";
 
 export const LoginPage = () => {
-  const navigate = useNavigate();
   const form = useForm({ defaultValues: { email: "", code: "" } });
   const [isCodeStep, setIsCodeStep] = useState(false);
   const requestCodeMutation = useMutation({
@@ -35,7 +34,7 @@ export const LoginPage = () => {
       toast.error(getApiErrorMessage(error, "Не удалось подтвердить почту.")),
     onSuccess: (result) => {
       writeGuestSession(result.data.token);
-      navigate({ to: ROUTES.account });
+      window.location.replace(ROUTES.account);
     },
   });
 

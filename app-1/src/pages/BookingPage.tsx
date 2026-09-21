@@ -27,6 +27,7 @@ import {
   type BookingSearch,
   createBookingReservation,
   loadBookingOffers,
+  loadBookingPaymentStatus,
 } from "@/lib/booking/booking-api";
 import { cn } from "@/lib/cn";
 import { useApiQuery } from "@/lib/query/use-api-query";
@@ -177,9 +178,41 @@ export const BookingPage = () => {
   );
   const [completed, setCompleted] = useState<{
     id: string;
+    epteraPaymentSyncStatus?: string;
+    paymentConfirmed?: boolean;
     voucherNumber: string | null;
   } | null>(null);
   const [paymentLinks, setPaymentLinks] = useState<BookingPaymentLink[]>([]);
+  const paymentReturn = useMemo(() => {
+    const params = new URLSearchParams(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    return {
+      bookingId: params.get("bookingId"),
+      isReturn: params.get("payment") === "return",
+    };
+  }, []);
+  const paymentStatusQuery = useApiQuery(
+    ["booking-payment-status", paymentReturn.bookingId],
+    (signal) => loadBookingPaymentStatus(paymentReturn.bookingId ?? "", signal),
+    {
+      enabled: Boolean(paymentReturn.isReturn && paymentReturn.bookingId),
+      errorMessage: "Не удалось проверить статус оплаты.",
+    },
+  );
+  const returnedPaymentCompleted =
+    paymentReturn.isReturn &&
+    paymentStatusQuery.data?.payment?.status === "succeeded" &&
+    paymentStatusQuery.data.payment.paid
+      ? {
+          epteraPaymentSyncStatus:
+            paymentStatusQuery.data.booking.epteraPaymentSyncStatus,
+          id: paymentStatusQuery.data.booking.id,
+          paymentConfirmed: true,
+          voucherNumber: paymentStatusQuery.data.booking.voucherNumber,
+        }
+      : null;
+  const displayedCompleted = completed ?? returnedPaymentCompleted;
   const offersQuery = useApiQuery(
     ["booking-offers", submittedSearch],
     (signal) => loadBookingOffers(submittedSearch, signal),
@@ -404,22 +437,86 @@ export const BookingPage = () => {
             </div>
           ))}
         </div>
-        {completed ? (
+        {paymentReturn.isReturn &&
+        paymentReturn.bookingId &&
+        !displayedCompleted ? (
+          <div className="mx-auto mt-14 max-w-2xl rounded-4xl border border-line bg-panel p-8 text-center shadow-booking sm:p-12">
+            {paymentStatusQuery.isLoading ? (
+              <>
+                <div className="mx-auto grid size-16 place-items-center rounded-full bg-brand/10 text-brand">
+                  <LoaderCircle className="size-8 animate-spin" />
+                </div>
+                <h2 className="mt-6 font-heading text-4xl font-semibold">
+                  Проверяем оплату
+                </h2>
+                <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
+                  Подтверждаем результат платежа и статус бронирования. Это
+                  займёт несколько секунд.
+                </p>
+              </>
+            ) : paymentStatusQuery.error ? (
+              <>
+                <div className="mx-auto grid size-16 place-items-center rounded-full bg-destructive/10 text-destructive">
+                  !
+                </div>
+                <h2 className="mt-6 font-heading text-4xl font-semibold">
+                  Не удалось проверить оплату
+                </h2>
+                <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
+                  Обновите проверку ещё раз. Деньги не списываются повторно.
+                </p>
+                <button
+                  className="mt-8 rounded-xl bg-brand px-6 py-3 font-semibold text-brand-foreground"
+                  onClick={() => void paymentStatusQuery.refetch()}
+                  type="button"
+                >
+                  Проверить ещё раз
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto grid size-16 place-items-center rounded-full bg-accent-ui/15 text-accent-ui-foreground">
+                  !
+                </div>
+                <h2 className="mt-6 font-heading text-4xl font-semibold">
+                  Оплата ещё не подтверждена
+                </h2>
+                <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
+                  ЮKassa не вернула подтверждение успешного платежа. Если вы
+                  закрыли страницу оплаты, повторите оплату по исходной ссылке
+                  или обратитесь к менеджеру.
+                </p>
+                <button
+                  className="mt-8 rounded-xl border border-line px-6 py-3 font-semibold text-brand"
+                  onClick={() => void paymentStatusQuery.refetch()}
+                  type="button"
+                >
+                  Проверить ещё раз
+                </button>
+              </>
+            )}
+          </div>
+        ) : displayedCompleted ? (
           <div className="mx-auto mt-14 max-w-2xl rounded-4xl border border-brand/20 bg-panel p-8 text-center shadow-booking sm:p-12">
             <div className="mx-auto grid size-16 place-items-center rounded-full bg-brand text-brand-foreground">
               <Check />
             </div>
             <h2 className="mt-6 font-heading text-4xl font-semibold">
-              Бронирование создано
+              {displayedCompleted.paymentConfirmed
+                ? "Оплата подтверждена — бронь оформлена"
+                : "Бронирование создано"}
             </h2>
             <p className="mx-auto mt-4 max-w-lg leading-7 text-muted-ui-foreground">
-              Бронь создана в системе бронирования. Если оплата ещё не
-              завершена, её можно продолжить по ссылке для оплаты.
+              {displayedCompleted.paymentConfirmed
+                ? displayedCompleted.epteraPaymentSyncStatus === "failed"
+                  ? "Платёж подтверждён в ЮKassa, а бронь сохранена. Передача отметки об оплате в систему бронирования ещё не подтверждена — мы повторим синхронизацию."
+                  : "Платёж подтверждён в ЮKassa, а бронь сохранена. Все данные и документы доступны в личном кабинете."
+                : "Бронь создана в системе бронирования. Если оплата ещё не завершена, её можно продолжить по ссылке для оплаты."}
             </p>
             <p className="mt-6 text-sm text-muted-ui-foreground">
               Номер брони:{" "}
               <strong className="text-page-foreground">
-                {completed.voucherNumber ?? completed.id}
+                {displayedCompleted.voucherNumber ?? displayedCompleted.id}
               </strong>
             </p>
             {paymentLinks.length > 0 && (
