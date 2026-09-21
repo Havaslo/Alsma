@@ -765,9 +765,7 @@ export const createServicesRouter = (database: Database): Router => {
           message: "Выбранный ответственный менеджер недоступен.",
         },
       });
-    const email =
-      input.email?.trim().toLowerCase() ||
-      `manual-${input.phone.replace(/\D/g, "")}@local.invalid`;
+    const email = input.email?.trim().toLowerCase() || "";
     const order = await database.client
       .$transaction(async (transaction) => {
         await lockServiceAvailability(
@@ -785,20 +783,24 @@ export const createServicesRouter = (database: Database): Router => {
           ))
         )
           throw new Error("BOOKING_SLOT_UNAVAILABLE");
-        const existingByEmail = email.endsWith("@local.invalid")
-          ? null
-          : await transaction.guestUser.findFirst({
+        const existingByEmail = email
+          ? await transaction.guestUser.findFirst({
               where: { email: { equals: email, mode: "insensitive" } },
-            });
+            })
+          : null;
         const user = existingByEmail
           ? await transaction.guestUser.update({
               where: { id: existingByEmail.id },
-              data: { fullName: input.name },
+              data: { email: email || null, fullName: input.name },
             })
           : await transaction.guestUser.upsert({
               where: { phone: input.phone },
-              create: { email, phone: input.phone, fullName: input.name },
-              update: { email, fullName: input.name },
+              create: {
+                email: email || null,
+                phone: input.phone,
+                fullName: input.name,
+              },
+              update: { email: email || null, fullName: input.name },
             });
         return transaction.serviceOrder.create({
           data: {

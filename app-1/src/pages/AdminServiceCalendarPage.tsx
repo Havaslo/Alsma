@@ -160,7 +160,10 @@ const BookingDetails = ({
                   </p>
                   <p>
                     <span className="text-muted-ui-foreground">Email:</span>{" "}
-                    {booking.orderItem.order.email || "Не указан"}
+                    {booking.orderItem.order.email &&
+                    !booking.orderItem.order.email.endsWith("@local.invalid")
+                      ? booking.orderItem.order.email
+                      : "Не указан"}
                   </p>
                   <p>
                     <span className="text-muted-ui-foreground">Услуга:</span>{" "}
