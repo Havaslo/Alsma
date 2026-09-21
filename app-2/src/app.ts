@@ -15,6 +15,7 @@ type CreateAppOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly epteraPaymentLoginToken?: string;
+  readonly epteraReservationLoginToken?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
   readonly openaiSip: {
@@ -69,6 +70,7 @@ export const createApp = ({
   epteraApiKey,
   epteraHotelId,
   epteraPaymentLoginToken,
+  epteraReservationLoginToken,
   logger,
   managedStorage,
   mailRu,
@@ -115,6 +117,7 @@ export const createApp = ({
     epteraApiKey,
     epteraHotelId,
     epteraPaymentLoginToken,
+    epteraReservationLoginToken,
     logger,
     managedStorage,
     openaiApiKey,

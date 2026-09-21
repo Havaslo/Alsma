@@ -31,6 +31,10 @@ export type GuestProfile = {
     readonly contactLastName: string | null;
     readonly contactPhone: string | null;
     readonly epteraReservationId: string | null;
+    readonly epteraLastSyncedAt: string | null;
+    readonly epteraRoomNumber: string | null;
+    readonly epteraStatus: string | null;
+    readonly epteraSyncStatus: string;
     readonly guestsCount: number;
     readonly guestList: Array<{
       readonly birthDate?: string;

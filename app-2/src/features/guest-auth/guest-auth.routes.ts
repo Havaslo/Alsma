@@ -20,11 +20,13 @@ import { createGuestAuthService } from "./guest-auth.service.js";
 export const createGuestAuthRouter = (
   database: Database,
   mailRu: { readonly email?: string; readonly password?: string },
+  syncUserBookings?: (userId: string) => Promise<void>,
 ): Router => {
   const router = Router();
   const service = createGuestAuthService(
     createGuestAuthRepository(database),
     mailRu,
+    syncUserBookings,
   );
   router.post(
     "/request-code",

@@ -36,6 +36,13 @@ const publicUser = (user: {
     epteraPaymentSyncAttemptedAt: Date | null;
     epteraPaymentSyncStatus: string;
     epteraPaymentSyncedAt: Date | null;
+    epteraLastSyncedAt: Date | null;
+    epteraRoomNumber: string | null;
+    epteraStatus: string | null;
+    epteraSyncAttemptedAt: Date | null;
+    epteraSyncError: string | null;
+    epteraSyncStatus: string;
+    epteraSnapshot: unknown;
     guestsCount: number;
     guestList: unknown;
     id: string;
@@ -78,6 +85,9 @@ const publicUser = (user: {
       epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
       epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
       epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
+      epteraSyncAttemptedAt: _epteraSyncAttemptedAt,
+      epteraSyncError: _epteraSyncError,
+      epteraSnapshot: _epteraSnapshot,
       paymentDeadlineAt: _paymentDeadlineAt,
       ...publicBooking
     } = booking;
@@ -112,20 +122,28 @@ const publicUser = (user: {
 export const createGuestAuthService = (
   repository: GuestAuthRepository,
   mailRu: { readonly email?: string; readonly password?: string },
+  syncUserBookings?: (userId: string) => Promise<void>,
 ) => ({
   completeProfile: async (token: string, input: CompleteProfileBody) => {
     const session = await repository.findSession(hash(token));
     if (!session?.user)
       throw new HttpError(401, "SESSION_INVALID", "Сессия недействительна.");
-    return publicUser(
-      await repository.completeProfile(session.user.id, input.fullName),
+    const user = await repository.completeProfile(
+      session.user.id,
+      input.fullName,
     );
+    await syncUserBookings?.(session.user.id).catch(() => undefined);
+    const refreshed = await repository.findSession(hash(token));
+    return publicUser(refreshed?.user ?? user);
   },
   me: async (token: string | null) => {
     if (!token) return { authenticated: false, guest: null };
     const session = await repository.findSession(hash(token));
-    return session?.user
-      ? { authenticated: true, guest: publicUser(session.user) }
+    if (!session?.user) return { authenticated: false, guest: null };
+    await syncUserBookings?.(session.user.id).catch(() => undefined);
+    const refreshed = await repository.findSession(hash(token));
+    return refreshed?.user
+      ? { authenticated: true, guest: publicUser(refreshed.user) }
       : { authenticated: false, guest: null };
   },
   logout: async (token: string | null) => {

@@ -368,6 +368,13 @@ model GuestBooking {
   epteraPaymentSyncStatus        String     @default("pending") @map("eptera_payment_sync_status")
   epteraPaymentSyncAttemptedAt   DateTime?  @map("eptera_payment_sync_attempted_at") @db.Timestamptz(3)
   epteraPaymentSyncedAt           DateTime?  @map("eptera_payment_synced_at") @db.Timestamptz(3)
+  epteraStatus        String?   @map("eptera_status")
+  epteraRoomNumber    String?   @map("eptera_room_number")
+  epteraSyncStatus    String    @default("pending") @map("eptera_sync_status")
+  epteraSyncAttemptedAt DateTime? @map("eptera_sync_attempted_at") @db.Timestamptz(3)
+  epteraLastSyncedAt  DateTime? @map("eptera_last_synced_at") @db.Timestamptz(3)
+  epteraSyncError     String?   @map("eptera_sync_error")
+  epteraSnapshot      Json?     @map("eptera_snapshot")
   paymentMethod       String    @default("full") @map("payment_method")
   paymentAmount       Decimal?  @map("payment_amount") @db.Decimal(12, 2)
   paymentId           String?   @unique @map("payment_id")
@@ -391,6 +398,7 @@ model GuestBooking {
   @@index([userId, checkInDate])
   @@index([groupId])
   @@index([paymentStatus, paymentDeadlineAt, cancellationStatus])
+  @@index([epteraSyncStatus, epteraLastSyncedAt])
   @@map("guest_bookings")
 }
 

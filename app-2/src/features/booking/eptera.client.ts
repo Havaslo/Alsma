@@ -3,6 +3,8 @@ import { type RoomDefinition, readDefinitions } from "./eptera.rooms.js";
 
 const EPTERA_BASE_URL = "https://bookingapi.eptera.ru";
 const EPTERA_PAYMENT_URL = "https://api.eptera.ru/Execute/SP_WEB_PAYMENT";
+const EPTERA_RESERVATION_URL =
+  "https://api.eptera.ru/Select/QA_HOTEL_RESERVATION";
 const REQUEST_TIMEOUT_MS = 15_000;
 const TOKEN_REFRESH_MARGIN_MS = 60_000;
 const MAX_TRANSIENT_RETRIES = 2;
@@ -11,6 +13,7 @@ type EpteraClientOptions = {
   readonly apiKey?: string;
   readonly hotelId?: string;
   readonly paymentLoginToken?: string;
+  readonly reservationLoginToken?: string;
 };
 
 type Session = {
@@ -55,6 +58,22 @@ export type AvailabilityRequest = {
   readonly roomCount: number;
 };
 
+export type EpteraReservationSnapshot = {
+  readonly reservationId: string;
+  readonly voucherNumber: string | null;
+  readonly roomNumber: string | null;
+  readonly roomType: string | null;
+  readonly roomTypeName: string | null;
+  readonly agency: string | null;
+  readonly boardType: string | null;
+  readonly rateType: string | null;
+  readonly checkIn: string | null;
+  readonly checkOut: string | null;
+  readonly totalPrice: number | null;
+  readonly state: string | null;
+  readonly raw: Record<string, unknown>;
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -71,6 +90,71 @@ const nullableNumber = (
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const nullableString = (
+  record: Record<string, unknown>,
+  ...keys: readonly string[]
+): string | null => {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value))
+      return String(value);
+  }
+  return null;
+};
+
+const readReservationRecords = (
+  payload: unknown,
+): Record<string, unknown>[] => {
+  const records: Record<string, unknown>[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 5) return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, depth + 1));
+      return;
+    }
+    const item = asRecord(value);
+    if (!item) return;
+    if (
+      Object.keys(item).some((key) =>
+        ["RESID", "RESSTATE", "VOUCHERNO", "ROOMTYPE", "CHECKIN"].includes(
+          key.toUpperCase(),
+        ),
+      )
+    )
+      records.push(item);
+    for (const nested of Object.values(item)) visit(nested, depth + 1);
+  };
+  visit(payload, 0);
+  return records;
+};
+
+const readReservationSnapshot = (
+  payload: unknown,
+  reservationId: string,
+): EpteraReservationSnapshot | null => {
+  const response = readReservationRecords(payload)[0];
+  if (!response) return null;
+  const totalPriceValue = nullableString(response, "TOTALPRICE", "total-price");
+  const totalPrice = totalPriceValue === null ? null : Number(totalPriceValue);
+  return {
+    reservationId:
+      nullableString(response, "RESID", "reservation-id") ?? reservationId,
+    voucherNumber: nullableString(response, "VOUCHERNO", "voucher-number"),
+    roomNumber: nullableString(response, "ROOMNO", "room-number"),
+    roomType: nullableString(response, "ROOMTYPE", "room-type"),
+    roomTypeName: nullableString(response, "ROOMTYPENAME", "room-type-name"),
+    agency: nullableString(response, "AGENCY", "agency"),
+    boardType: nullableString(response, "BOARDTYPE", "board-type"),
+    rateType: nullableString(response, "RATETYPE", "rate-type"),
+    checkIn: nullableString(response, "CHECKIN", "check-in"),
+    checkOut: nullableString(response, "CHECKOUT", "check-out"),
+    totalPrice: Number.isFinite(totalPrice) ? totalPrice : null,
+    state: nullableString(response, "RESSTATE", "reservation-state"),
+    raw: response,
+  };
 };
 
 const PROVIDER_DIAGNOSTIC_MAX_LENGTH = 256;
@@ -285,6 +369,7 @@ export const createEpteraClient = ({
   apiKey,
   hotelId,
   paymentLoginToken,
+  reservationLoginToken,
 }: EpteraClientOptions) => {
   let session: Session | undefined;
   let loginPromise: Promise<Session> | undefined;
@@ -335,6 +420,29 @@ export const createEpteraClient = ({
       hotelId: hotelNumber,
       loginToken: normalizedLoginToken,
     };
+  };
+
+  const requireReservationConfiguration = (): {
+    hotelId: number;
+    loginToken: string;
+  } => {
+    const normalizedHotelId = hotelId?.trim();
+    const normalizedLoginToken = reservationLoginToken?.trim();
+    const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
+    if (
+      !normalizedLoginToken ||
+      !normalizedHotelId ||
+      !/^\d+$/.test(normalizedHotelId) ||
+      !Number.isSafeInteger(hotelNumber) ||
+      hotelNumber < 1
+    ) {
+      throw new HttpError(
+        503,
+        "EPTERA_RESERVATION_NOT_CONFIGURED",
+        "Актуализация бронирования временно недоступна.",
+      );
+    }
+    return { hotelId: hotelNumber, loginToken: normalizedLoginToken };
   };
 
   const login = async (): Promise<Session> => {
@@ -734,6 +842,70 @@ export const createEpteraClient = ({
             : { status: response.status, ...readProviderDiagnostics(payload) },
         );
       }
+    },
+    getReservation: async (
+      reservationId: string,
+    ): Promise<EpteraReservationSnapshot | null> => {
+      const config = requireReservationConfiguration();
+      const normalizedReservationId = reservationId.trim();
+      if (!/^\d+$/.test(normalizedReservationId)) {
+        throw new HttpError(
+          409,
+          "EPTERA_BOOKING_REFERENCE_INVALID",
+          "Не удалось определить номер бронирования для актуализации.",
+        );
+      }
+      let response: Response;
+      try {
+        response = await fetch(EPTERA_RESERVATION_URL, {
+          body: JSON.stringify({
+            Action: "Select",
+            Object: "QA_HOTEL_RESERVATION",
+            Select: [
+              "RESID",
+              "VOUCHERNO",
+              "ROOMNO",
+              "ROOMTYPE",
+              "ROOMTYPENAME",
+              "AGENCY",
+              "BOARDTYPE",
+              "RATETYPE",
+              "CHECKIN",
+              "CHECKOUT",
+              "TOTALPRICE",
+              "RESSTATE",
+            ],
+            Where: [
+              { Column: "HOTELID", Operator: "=", Value: config.hotelId },
+              {
+                Column: "ID",
+                Operator: "=",
+                Value: Number(normalizedReservationId),
+              },
+            ],
+            LoginToken: config.loginToken,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        throw new HttpError(
+          502,
+          "EPTERA_RESERVATION_UNAVAILABLE",
+          "Не удалось получить актуальные данные бронирования.",
+        );
+      }
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new HttpError(
+          response.status >= 500 ? 502 : 400,
+          "EPTERA_RESERVATION_REQUEST_FAILED",
+          "Эптера не смогла вернуть данные бронирования.",
+          { status: response.status, ...readProviderDiagnostics(payload) },
+        );
+      }
+      return readReservationSnapshot(payload, normalizedReservationId);
     },
   };
 };

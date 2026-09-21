@@ -14,6 +14,7 @@ import { createBookingRepository } from "./features/booking/booking.repository.j
 import { createBookingRouter } from "./features/booking/booking.routes.js";
 import { createBookingService } from "./features/booking/booking.service.js";
 import { createEpteraClient } from "./features/booking/eptera.client.js";
+import { createGuestBookingSyncService } from "./features/booking/guest-booking-sync.service.js";
 import { createYooKassaClient } from "./features/booking/yookassa.client.js";
 import { createChatRouter } from "./features/chat/chat.routes.js";
 import { createChatService } from "./features/chat/chat.service.js";
@@ -39,6 +40,7 @@ type CreateApiRouterOptions = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly epteraPaymentLoginToken?: string;
+  readonly epteraReservationLoginToken?: string;
   readonly openaiApiKey?: string;
   readonly openaiBaseUrl?: string;
   readonly openaiSip: {
@@ -80,6 +82,7 @@ export const createApiRouter = ({
   epteraApiKey,
   epteraHotelId,
   epteraPaymentLoginToken,
+  epteraReservationLoginToken,
   logger,
   managedStorage,
   openaiApiKey,
@@ -99,7 +102,13 @@ export const createApiRouter = ({
     apiKey: epteraApiKey,
     hotelId: epteraHotelId,
     paymentLoginToken: epteraPaymentLoginToken,
+    reservationLoginToken: epteraReservationLoginToken,
   });
+  const guestBookingSync = createGuestBookingSyncService(
+    database,
+    eptera,
+    logger,
+  );
   const yookassa = createYooKassaClient({
     secretKey: yooKassaSecretKey,
     shopId: yooKassaShopId,
@@ -167,7 +176,10 @@ export const createApiRouter = ({
     }),
   );
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
-  router.use("/auth", createGuestAuthRouter(database, mailRu));
+  router.use(
+    "/auth",
+    createGuestAuthRouter(database, mailRu, guestBookingSync.syncUserBookings),
+  );
   router.use("/booking", createBookingRouter(booking, yookassa, logger));
   router.use("/chat", createChatRouter(database, chat, agent));
   router.use(

@@ -26,6 +26,7 @@ const environmentSchema = z.object({
   EPTERA_API_KEY: z.string().min(1).optional(),
   EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
   EPTERA_PAYMENT_LOGIN_TOKEN: z.string().min(1).optional(),
+  EPTERA_RESERVATION_LOGIN_TOKEN: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
   AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
@@ -60,6 +61,7 @@ export type AppConfig = {
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly epteraPaymentLoginToken?: string;
+  readonly epteraReservationLoginToken?: string;
   readonly managedStorage: {
     readonly apiUrl: string;
     readonly projectToken: string;
@@ -110,6 +112,9 @@ export const readConfig = (
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
     epteraPaymentLoginToken: parsed.EPTERA_PAYMENT_LOGIN_TOKEN,
+    epteraReservationLoginToken:
+      parsed.EPTERA_RESERVATION_LOGIN_TOKEN ??
+      parsed.EPTERA_PAYMENT_LOGIN_TOKEN,
     managedStorage: {
       apiUrl: parsed.AMAZI_STORAGE_API_URL,
       projectToken: parsed.AMAZI_STORAGE_PROJECT_TOKEN,
