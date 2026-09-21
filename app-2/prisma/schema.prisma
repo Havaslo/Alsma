@@ -58,6 +58,7 @@ model AdminUser {
   updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions            AdminSession[]
   tasks               ManagerTask[]  @relation("TaskAssignee")
+  serviceBookingsCreated ServiceBooking[] @relation("ServiceBookingCreatedByAdmin")
 
   @@map("admin_users")
 }
@@ -289,9 +290,13 @@ model ServiceBooking {
   startsAt    DateTime         @map("starts_at") @db.Timestamptz(3)
   endsAt      DateTime         @map("ends_at") @db.Timestamptz(3)
   status      String           @default("requested")
+  bookingSource String         @default("legacy") @map("booking_source")
+  createdByAdminId String?     @map("created_by_admin_id") @db.Uuid
+  createdByAdmin AdminUser?    @relation("ServiceBookingCreatedByAdmin", fields: [createdByAdminId], references: [id], onDelete: SetNull)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([startsAt, status])
+  @@index([createdByAdminId])
   @@map("service_bookings")
 }
 

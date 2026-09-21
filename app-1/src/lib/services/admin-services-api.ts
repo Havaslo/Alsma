@@ -6,10 +6,34 @@ export type ServiceBooking = {
   readonly startsAt: string;
   readonly endsAt: string;
   readonly status: string;
+  readonly bookingSource: "online" | "manual" | "legacy" | string;
+  readonly createdByAdmin: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly email: string;
+  } | null;
   readonly service: { readonly id: string; readonly name: string };
-  readonly variant: { readonly name: string };
+  readonly variant: {
+    readonly name: string;
+    readonly resources: Array<{
+      readonly resourceId: string;
+      readonly quantity: number;
+      readonly resource: {
+        readonly id: string;
+        readonly name: string;
+        readonly totalUnits: number;
+      };
+    }>;
+  };
   readonly orderItem: {
-    readonly order: { readonly name: string; readonly phone: string };
+    readonly quantity: number;
+    readonly order: {
+      readonly name: string;
+      readonly phone: string;
+      readonly email: string;
+      readonly status: string;
+      readonly paymentStatus: string;
+    };
   };
 };
 export const loadServiceCalendar = (from: string, to: string) =>

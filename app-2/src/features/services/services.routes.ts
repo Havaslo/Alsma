@@ -310,6 +310,8 @@ export const createServicesRouter = (database: Database): Router => {
                               new Date(item.startsAt).getTime() +
                                 (variant.durationMin ?? 60) * 60000,
                             ),
+                            status: "confirmed",
+                            bookingSource: "online",
                           },
                         },
                       }
@@ -688,6 +690,9 @@ export const createServicesRouter = (database: Database): Router => {
         service: true,
         variant: { include: { resources: { include: { resource: true } } } },
         orderItem: { include: { order: true } },
+        createdByAdmin: {
+          select: { id: true, displayName: true, email: true },
+        },
       },
       orderBy: { startsAt: "asc" },
     });
@@ -770,7 +775,9 @@ export const createServicesRouter = (database: Database): Router => {
                     endsAt: new Date(
                       startsAt.getTime() + (variant.durationMin ?? 60) * 60000,
                     ),
-                    status: "requested",
+                    status: "confirmed",
+                    bookingSource: "manual",
+                    createdByAdminId: response.locals.admin.id,
                   },
                 },
               },

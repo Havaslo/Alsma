@@ -54,6 +54,19 @@ const statusLabel = (status: string) =>
     confirmed: "Подтверждена",
     requested: "Ожидает подтверждения",
   })[status] ?? status;
+const bookingSourceLabel = (source: string) =>
+  ({
+    legacy: "Источник не определён",
+    manual: "Ручная запись менеджером",
+    online: "Пользователь записался самостоятельно",
+  })[source] ?? source;
+const paymentStatusLabel = (status: string) =>
+  ({
+    pending: "Ожидает оплаты",
+    succeeded: "Оплачено",
+    failed: "Ошибка оплаты",
+    refunded: "Возвращено",
+  })[status] ?? status;
 const slotDate = (date: string, minutes: number) => {
   // The API stores UTC instants, while the calendar is a local-time interface.
   // Constructing this as local time keeps the visible 08:00–22:00 workday and
@@ -100,10 +113,16 @@ const BookingCount = ({ count }: { readonly count: number }) => (
 );
 
 const BookingDetails = ({
-  booking,
+  bookings,
+  date,
+  end,
+  start,
   onClose,
 }: {
-  readonly booking: ServiceBooking;
+  readonly bookings: ServiceBooking[];
+  readonly date: string;
+  readonly end: number;
+  readonly start: number;
   readonly onClose: () => void;
 }) => (
   <div
@@ -117,31 +136,66 @@ const BookingDetails = ({
       onClick={(event) => event.stopPropagation()}
       role="dialog"
     >
-      <p className="text-sm text-muted-ui-foreground">Занятая запись</p>
+      <p className="text-sm text-muted-ui-foreground">Записи в слоте</p>
       <h2
         className="mt-1 font-heading text-2xl font-semibold"
         id="booking-details-title"
       >
-        {booking.orderItem.order.name}
+        {formatServiceTime(slotDate(date, start).toISOString())} —{" "}
+        {formatServiceTime(slotDate(date, end).toISOString())}
       </h2>
-      <div className="mt-4 grid gap-2 text-sm">
-        <p>
-          <span className="text-muted-ui-foreground">Телефон:</span>{" "}
-          {booking.orderItem.order.phone}
-        </p>
-        <p>
-          <span className="text-muted-ui-foreground">Услуга:</span>{" "}
-          {booking.service.name} · {booking.variant.name}
-        </p>
-        <p>
-          <span className="text-muted-ui-foreground">Время:</span>{" "}
-          {formatServiceTime(booking.startsAt)} —{" "}
-          {formatServiceTime(booking.endsAt)}
-        </p>
-        <p>
-          <span className="text-muted-ui-foreground">Статус:</span>{" "}
-          {statusLabel(booking.status)}
-        </p>
+      <p className="mt-2 text-sm text-muted-ui-foreground">
+        Записей в интервале: {bookings.length}
+      </p>
+      <div className="mt-5 grid gap-3">
+        {bookings.map((booking) => (
+          <article
+            className="rounded-2xl border border-line bg-page p-4 text-sm"
+            key={booking.id}
+          >
+            <h3 className="font-semibold text-brand">
+              {booking.orderItem.order.name}
+            </h3>
+            <div className="mt-2 grid gap-1.5">
+              <p>
+                <span className="text-muted-ui-foreground">Телефон:</span>{" "}
+                {booking.orderItem.order.phone}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Email:</span>{" "}
+                {booking.orderItem.order.email}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Услуга:</span>{" "}
+                {booking.service.name} · {booking.variant.name}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Время:</span>{" "}
+                {formatServiceTime(booking.startsAt)} —{" "}
+                {formatServiceTime(booking.endsAt)}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Статус:</span>{" "}
+                {statusLabel(booking.status)}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Источник:</span>{" "}
+                {bookingSourceLabel(booking.bookingSource)}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Кто внёс:</span>{" "}
+                {booking.createdByAdmin?.displayName ??
+                  (booking.bookingSource === "online"
+                    ? "Пользователь"
+                    : "Не определён")}
+              </p>
+              <p>
+                <span className="text-muted-ui-foreground">Оплата:</span>{" "}
+                {paymentStatusLabel(booking.orderItem.order.paymentStatus)}
+              </p>
+            </div>
+          </article>
+        ))}
       </div>
       <div className="mt-6 flex justify-end">
         <button
@@ -167,7 +221,11 @@ export const AdminServiceCalendarPage = () => {
     Record<string, string>
   >({});
   const [manualSlot, setManualSlot] = useState<number | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<ServiceBooking>();
+  const [selectedSlot, setSelectedSlot] = useState<{
+    bookings: ServiceBooking[];
+    start: number;
+    end: number;
+  }>();
   const catalog = useQuery({
     queryKey: ["service-calendar-catalog"],
     queryFn: async () => (await loadServiceCatalog()).data,
@@ -196,12 +254,31 @@ export const AdminServiceCalendarPage = () => {
   const selectedVariant = selectedService?.variants.find(
     (variant) => variant.id === selectedVariantId,
   );
-  const bookings = (calendar.data?.bookings ?? []).filter(
-    (booking) =>
-      booking.service.id === activeServiceId &&
-      booking.status !== "cancelled" &&
-      dateKey(booking.startsAt) === selectedDate,
-  );
+  const selectedResources = (selectedVariant?.resources ?? []).filter(
+    (resource) => resource.resource,
+  ) as Array<{
+    readonly resourceId: string;
+    readonly quantity: number;
+    readonly resource: {
+      readonly id: string;
+      readonly name: string;
+      readonly totalUnits: number;
+    };
+  }>;
+  const bookings = (calendar.data?.bookings ?? []).filter((booking) => {
+    if (
+      booking.status === "cancelled" ||
+      dateKey(booking.startsAt) !== selectedDate
+    )
+      return false;
+    if (booking.service.id === activeServiceId) return true;
+    return selectedResources.some((selectedResource) =>
+      booking.variant.resources.some(
+        (bookingResource) =>
+          bookingResource.resourceId === selectedResource.resourceId,
+      ),
+    );
+  });
   const durationMinutes = selectedVariant?.durationMin ?? 60;
   // A service's duration is also the calendar step. This prevents a 60-minute
   // service from exposing overlapping 30-minute start times.
@@ -225,6 +302,20 @@ export const AdminServiceCalendarPage = () => {
       };
     },
   );
+  const resourceUsageFor = (slotBookings: ServiceBooking[]) =>
+    selectedResources.map((selectedResource) => {
+      const used = slotBookings.reduce((total, booking) => {
+        const assignment = booking.variant.resources.find(
+          (resource) => resource.resourceId === selectedResource.resourceId,
+        );
+        return total + (assignment?.quantity ?? 0) * booking.orderItem.quantity;
+      }, 0);
+      return {
+        name: selectedResource.resource.name,
+        total: selectedResource.resource.totalUnits,
+        used,
+      };
+    });
 
   return (
     <section className="space-y-6">
@@ -378,7 +469,11 @@ export const AdminServiceCalendarPage = () => {
                         key={`${slot.label}-${durationMinutes}`}
                         onClick={() =>
                           slot.bookings.length > 0
-                            ? setSelectedBooking(slot.bookings[0])
+                            ? setSelectedSlot({
+                                bookings: slot.bookings,
+                                end: slot.end,
+                                start: slot.start,
+                              })
                             : isServiceSlotPast(selectedDate, slot.start)
                               ? undefined
                               : setManualSlot(slot.start)
@@ -391,6 +486,15 @@ export const AdminServiceCalendarPage = () => {
                         {slot.bookings.length > 0 ? (
                           <>
                             <BookingCount count={slot.bookings.length} />
+                            {resourceUsageFor(slot.bookings).map((resource) => (
+                              <div
+                                className="mt-1 text-xs font-semibold text-brand"
+                                key={resource.name}
+                              >
+                                {resource.name}: {resource.used}/
+                                {resource.total}
+                              </div>
+                            ))}
                             {slot.bookings.map((booking) =>
                               bookingStartsInSlot(
                                 booking,
@@ -447,10 +551,13 @@ export const AdminServiceCalendarPage = () => {
           variants={selectedService.variants}
         />
       )}
-      {selectedBooking && (
+      {selectedSlot && (
         <BookingDetails
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(undefined)}
+          bookings={selectedSlot.bookings}
+          date={selectedDate}
+          end={selectedSlot.end}
+          onClose={() => setSelectedSlot(undefined)}
+          start={selectedSlot.start}
         />
       )}
     </section>
