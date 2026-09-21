@@ -2,7 +2,10 @@ import { useState } from "react";
 
 import { useMutation } from "@tanstack/react-query";
 
-import { createManualServiceBooking } from "@/lib/services/admin-services-api";
+import {
+  type ServiceManager,
+  createManualServiceBooking,
+} from "@/lib/services/admin-services-api";
 
 export const AdminManualBookingModal = ({
   date,
@@ -11,6 +14,8 @@ export const AdminManualBookingModal = ({
   selectedVariantId,
   serviceName,
   startsAt,
+  managers,
+  currentAdminId,
   variants,
 }: {
   readonly date: string;
@@ -18,6 +23,8 @@ export const AdminManualBookingModal = ({
   readonly onCreated: () => void;
   readonly serviceName: string;
   readonly startsAt: string;
+  readonly managers: ReadonlyArray<ServiceManager>;
+  readonly currentAdminId: string;
   readonly selectedVariantId?: string;
   readonly variants: ReadonlyArray<{ id: string; name: string }>;
 }) => {
@@ -27,6 +34,8 @@ export const AdminManualBookingModal = ({
   const [variantId, setVariantId] = useState(
     selectedVariantId ?? variants[0]?.id ?? "",
   );
+  const [responsibleManagerId, setResponsibleManagerId] =
+    useState(currentAdminId);
   const mutation = useMutation({
     mutationFn: () =>
       createManualServiceBooking({
@@ -35,6 +44,7 @@ export const AdminManualBookingModal = ({
         phone,
         startsAt,
         variantId,
+        responsibleManagerId,
       }),
     onSuccess: () => {
       onCreated();
@@ -113,6 +123,27 @@ export const AdminManualBookingModal = ({
               ))}
             </select>
           </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Ответственный менеджер
+            <select
+              className="rounded-xl border border-line px-3 py-2"
+              onChange={(event) => setResponsibleManagerId(event.target.value)}
+              required
+              value={responsibleManagerId}
+            >
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.displayName} · {manager.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!managers.length && (
+            <p className="text-sm text-destructive">
+              Не удалось загрузить список менеджеров. Запись пока нельзя
+              сохранить.
+            </p>
+          )}
         </div>
         {mutation.isError && (
           <p className="mt-3 text-sm text-destructive">
@@ -129,7 +160,7 @@ export const AdminManualBookingModal = ({
           </button>
           <button
             className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-60"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || !responsibleManagerId}
             type="submit"
           >
             Записать

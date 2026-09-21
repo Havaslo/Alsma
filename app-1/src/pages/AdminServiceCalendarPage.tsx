@@ -15,6 +15,7 @@ import {
   type ServiceBooking,
   loadServiceCalendar,
   loadServiceCatalog,
+  loadServiceManagers,
 } from "@/lib/services/admin-services-api";
 import {
   formatServiceTime,
@@ -190,6 +191,12 @@ const BookingDetails = ({
                     : "Не определён")}
               </p>
               <p>
+                <span className="text-muted-ui-foreground">
+                  Ответственный менеджер:
+                </span>{" "}
+                {booking.responsibleManager?.displayName ?? "Не назначен"}
+              </p>
+              <p>
                 <span className="text-muted-ui-foreground">Оплата:</span>{" "}
                 {paymentStatusLabel(booking.orderItem.order.paymentStatus)}
               </p>
@@ -241,6 +248,10 @@ export const AdminServiceCalendarPage = () => {
         )
       ).data,
     enabled: Boolean(selectedDate),
+  });
+  const managers = useQuery({
+    queryKey: ["service-calendar-managers"],
+    queryFn: async () => (await loadServiceManagers()).data,
   });
   const services = catalog.data?.services ?? [];
   const activeServiceId = selectedServiceId ?? services[0]?.id;
@@ -548,6 +559,8 @@ export const AdminServiceCalendarPage = () => {
           selectedVariantId={selectedVariantId}
           serviceName={selectedService.name}
           startsAt={slotDate(selectedDate, manualSlot).toISOString()}
+          currentAdminId={managers.data?.currentAdminId ?? ""}
+          managers={managers.data?.managers ?? []}
           variants={selectedService.variants}
         />
       )}

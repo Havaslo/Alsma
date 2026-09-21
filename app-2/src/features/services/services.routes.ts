@@ -355,6 +355,14 @@ export const createServicesRouter = (database: Database): Router => {
     ),
   );
   admin.use(createRequireAdminPermission("dashboard.access"));
+  admin.get("/managers", async (_request, response) => {
+    const managers = await database.client.adminUser.findMany({
+      where: { status: "active" },
+      select: { id: true, displayName: true, email: true },
+      orderBy: { displayName: "asc" },
+    });
+    response.json({ managers, currentAdminId: response.locals.admin.id });
+  });
   admin.get("/sections", async (_request, response) => {
     const sections = await database.client.serviceSection.findMany({
       include: {
@@ -693,6 +701,9 @@ export const createServicesRouter = (database: Database): Router => {
         createdByAdmin: {
           select: { id: true, displayName: true, email: true },
         },
+        responsibleManager: {
+          select: { id: true, displayName: true, email: true },
+        },
       },
       orderBy: { startsAt: "asc" },
     });
@@ -706,6 +717,7 @@ export const createServicesRouter = (database: Database): Router => {
         email: z.string().email().optional().or(z.literal("")),
         variantId: z.string().uuid(),
         startsAt: z.string().datetime(),
+        responsibleManagerId: z.string().uuid(),
       })
       .parse(request.body);
     const variant = await database.client.serviceVariant.findFirst({
@@ -717,6 +729,17 @@ export const createServicesRouter = (database: Database): Router => {
         .status(404)
         .json({ error: { code: "VARIANT_UNAVAILABLE" } });
     const startsAt = new Date(input.startsAt);
+    const responsibleManager = await database.client.adminUser.findFirst({
+      where: { id: input.responsibleManagerId, status: "active" },
+      select: { id: true },
+    });
+    if (!responsibleManager)
+      return response.status(400).json({
+        error: {
+          code: "RESPONSIBLE_MANAGER_UNAVAILABLE",
+          message: "Выбранный ответственный менеджер недоступен.",
+        },
+      });
     const email =
       input.email?.trim().toLowerCase() ||
       `manual-${input.phone.replace(/\D/g, "")}@local.invalid`;
@@ -778,6 +801,7 @@ export const createServicesRouter = (database: Database): Router => {
                     status: "confirmed",
                     bookingSource: "manual",
                     createdByAdminId: response.locals.admin.id,
+                    responsibleManagerId: input.responsibleManagerId,
                   },
                 },
               },

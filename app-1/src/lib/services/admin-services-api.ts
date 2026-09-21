@@ -12,6 +12,11 @@ export type ServiceBooking = {
     readonly displayName: string;
     readonly email: string;
   } | null;
+  readonly responsibleManager: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly email: string;
+  } | null;
   readonly service: { readonly id: string; readonly name: string };
   readonly variant: {
     readonly name: string;
@@ -40,12 +45,23 @@ export const loadServiceCalendar = (from: string, to: string) =>
   apiClient.get<{ bookings: ServiceBooking[] }>("/services/admin/calendar", {
     params: { from, to },
   });
+export type ServiceManager = {
+  readonly id: string;
+  readonly displayName: string;
+  readonly email: string;
+};
+export const loadServiceManagers = () =>
+  apiClient.get<{
+    managers: ServiceManager[];
+    currentAdminId: string;
+  }>("/services/admin/managers", { headers: headers() });
 export const createManualServiceBooking = (input: {
   name: string;
   phone: string;
   email?: string;
   variantId: string;
   startsAt: string;
+  responsibleManagerId: string;
 }) =>
   apiClient.post<{ orderId: string }>(
     "/services/admin/manual-bookings",
