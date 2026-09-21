@@ -709,6 +709,30 @@ export const createServicesRouter = (database: Database): Router => {
     });
     response.json({ bookings });
   });
+  admin.put("/bookings/:bookingId/payment", async (request, response) => {
+    const input = z
+      .object({ paymentStatus: z.enum(["pending", "succeeded"]) })
+      .parse(request.body);
+    const booking = await database.client.serviceBooking.findUnique({
+      where: { id: request.params.bookingId },
+      select: { orderItem: { select: { orderId: true } } },
+    });
+    if (!booking)
+      return response.status(404).json({
+        error: { code: "BOOKING_NOT_FOUND", message: "Запись не найдена." },
+      });
+    await database.client.serviceOrder.update({
+      where: { id: booking.orderItem.orderId },
+      data: {
+        paymentStatus: input.paymentStatus,
+        paidAt: input.paymentStatus === "succeeded" ? new Date() : null,
+      },
+    });
+    response.json({
+      bookingId: request.params.bookingId,
+      paymentStatus: input.paymentStatus,
+    });
+  });
   admin.post("/manual-bookings", async (request, response) => {
     const input = z
       .object({

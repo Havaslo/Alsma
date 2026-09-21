@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   CalendarDays,
   Check,
@@ -16,6 +16,7 @@ import {
   loadServiceCalendar,
   loadServiceCatalog,
   loadServiceManagers,
+  updateServiceBookingPaymentStatus,
 } from "@/lib/services/admin-services-api";
 import {
   formatServiceTime,
@@ -48,20 +49,6 @@ const getCalendarRange = () => {
 // by the manual-booking endpoint.
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 22;
-const statusLabel = (status: string) =>
-  ({
-    cancelled: "Отменена",
-    completed: "Завершена",
-    confirmed: "Подтверждена",
-    requested: "Ожидает подтверждения",
-  })[status] ?? status;
-const statusDescription = (status: string) =>
-  ({
-    cancelled: "Запись отменена и больше не занимает слот.",
-    completed: "Услуга оказана, запись оставлена в истории.",
-    confirmed: "Слот закреплён за клиентом и учитывается в загрузке.",
-    requested: "Запись создана, но ещё не подтверждена администратором.",
-  })[status] ?? "Статус записи не расшифрован.";
 const bookingSourceLabel = (source: string) =>
   ({
     legacy: "Источник не определён",
@@ -75,12 +62,6 @@ const paymentStatusLabel = (status: string) =>
     failed: "Ошибка оплаты",
     refunded: "Возвращено",
   })[status] ?? status;
-const paymentStatusDescription = (status: string) =>
-  status === "succeeded"
-    ? "Оплата отмечена администратором или подтверждена онлайн."
-    : status === "pending"
-      ? "Деньги ещё не отмечены как полученные."
-      : "Статус оплаты требует проверки.";
 const slotDate = (date: string, minutes: number) => {
   // The API stores UTC instants, while the calendar is a local-time interface.
   // Constructing this as local time keeps the visible 08:00–22:00 workday and
@@ -132,6 +113,7 @@ const BookingDetails = ({
   end,
   canAddBooking,
   onAddBooking,
+  onUpdated,
   start,
   onClose,
 }: {
@@ -140,121 +122,176 @@ const BookingDetails = ({
   readonly end: number;
   readonly canAddBooking: boolean;
   readonly onAddBooking: () => void;
+  readonly onUpdated: () => void;
   readonly start: number;
   readonly onClose: () => void;
-}) => (
-  <div
-    className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
-    onClick={onClose}
-    role="presentation"
-  >
+}) => {
+  const [paymentStatuses, setPaymentStatuses] = useState<
+    Record<string, "pending" | "succeeded">
+  >({});
+  const paymentMutation = useMutation({
+    mutationFn: ({
+      bookingId,
+      paymentStatus,
+    }: {
+      bookingId: string;
+      paymentStatus: "pending" | "succeeded";
+    }) => updateServiceBookingPaymentStatus(bookingId, paymentStatus),
+    onSuccess: onUpdated,
+    onError: (_error, variables) => {
+      setPaymentStatuses((current) => {
+        const next = { ...current };
+        delete next[variables.bookingId];
+        return next;
+      });
+    },
+  });
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  return (
     <div
-      aria-labelledby="booking-details-title"
-      className="w-full max-w-md rounded-3xl bg-brand-foreground p-6 shadow-2xl"
-      onClick={(event) => event.stopPropagation()}
-      role="dialog"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/40 p-4"
+      onClick={onClose}
+      role="presentation"
     >
-      <p className="text-sm text-muted-ui-foreground">Записи в слоте</p>
-      <h2
-        className="mt-1 font-heading text-2xl font-semibold"
-        id="booking-details-title"
-      >
-        {formatServiceTime(slotDate(date, start).toISOString())} —{" "}
-        {formatServiceTime(slotDate(date, end).toISOString())}
-      </h2>
-      <p className="mt-2 text-sm text-muted-ui-foreground">
-        Записей в интервале: {bookings.length}
-      </p>
-      <div className="mt-5 grid gap-3">
-        {bookings.map((booking) => (
-          <article
-            className="rounded-2xl border border-line bg-page p-4 text-sm"
-            key={booking.id}
-          >
-            <h3 className="font-semibold text-brand">
-              {booking.orderItem.order.name}
-            </h3>
-            <div className="mt-2 grid gap-1.5">
-              <p>
-                <span className="text-muted-ui-foreground">Телефон:</span>{" "}
-                {booking.orderItem.order.phone}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Email:</span>{" "}
-                {booking.orderItem.order.email}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Услуга:</span>{" "}
-                {booking.service.name} · {booking.variant.name}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Время:</span>{" "}
-                {formatServiceTime(booking.startsAt)} —{" "}
-                {formatServiceTime(booking.endsAt)}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Статус записи:</span>{" "}
-                {statusLabel(booking.status)}
-              </p>
-              <p className="text-xs text-muted-ui-foreground">
-                {statusDescription(booking.status)}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Источник:</span>{" "}
-                {bookingSourceLabel(booking.bookingSource)}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Кто внёс:</span>{" "}
-                {booking.createdByAdmin?.displayName ??
-                  (booking.bookingSource === "online"
-                    ? "Пользователь"
-                    : "Не определён")}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">
-                  Ответственный менеджер:
-                </span>{" "}
-                {booking.responsibleManager?.displayName ?? "Не назначен"}
-              </p>
-              <p>
-                <span className="text-muted-ui-foreground">Статус оплаты:</span>{" "}
-                {paymentStatusLabel(booking.orderItem.order.paymentStatus)}
-              </p>
-              <p className="text-xs text-muted-ui-foreground">
-                {paymentStatusDescription(
-                  booking.orderItem.order.paymentStatus,
-                )}
-              </p>
-            </div>
-          </article>
-        ))}
-      </div>
-      <div className="mt-5 rounded-2xl bg-muted-ui/30 px-4 py-3 text-sm text-muted-ui-foreground">
-        {canAddBooking
-          ? "В этом интервале ещё есть свободное место. Можно добавить запись вручную."
-          : "Свободного места в этом интервале нет."}
-      </div>
-      <div className="mt-6 flex flex-wrap justify-end gap-3">
-        {canAddBooking && (
-          <button
-            className="rounded-full border border-brand px-5 py-2 font-semibold text-brand"
-            onClick={onAddBooking}
-            type="button"
-          >
-            Добавить запись
-          </button>
-        )}
-        <button
-          className="rounded-full bg-brand px-5 py-2 font-semibold text-brand-foreground"
-          onClick={onClose}
-          type="button"
+      <div className="grid min-h-full place-items-center">
+        <div
+          aria-labelledby="booking-details-title"
+          className="my-0 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl bg-brand-foreground p-6 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
         >
-          Закрыть
-        </button>
+          <p className="text-sm text-muted-ui-foreground">Записи в слоте</p>
+          <h2
+            className="mt-1 font-heading text-2xl font-semibold"
+            id="booking-details-title"
+          >
+            {formatServiceTime(slotDate(date, start).toISOString())} —{" "}
+            {formatServiceTime(slotDate(date, end).toISOString())}
+          </h2>
+          <p className="mt-2 text-sm text-muted-ui-foreground">
+            Записей в интервале: {bookings.length}
+          </p>
+          <div className="mt-5 grid gap-3">
+            {bookings.map((booking) => (
+              <article
+                className="rounded-2xl border border-line bg-page p-4 text-sm"
+                key={booking.id}
+              >
+                <h3 className="font-semibold text-brand">
+                  {booking.orderItem.order.name}
+                </h3>
+                <div className="mt-2 grid gap-1.5">
+                  <p>
+                    <span className="text-muted-ui-foreground">Телефон:</span>{" "}
+                    {booking.orderItem.order.phone}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Email:</span>{" "}
+                    {booking.orderItem.order.email}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Услуга:</span>{" "}
+                    {booking.service.name} · {booking.variant.name}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Время:</span>{" "}
+                    {formatServiceTime(booking.startsAt)} —{" "}
+                    {formatServiceTime(booking.endsAt)}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Источник:</span>{" "}
+                    {bookingSourceLabel(booking.bookingSource)}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">Кто внёс:</span>{" "}
+                    {booking.createdByAdmin?.displayName ??
+                      (booking.bookingSource === "online"
+                        ? "Пользователь"
+                        : "Не определён")}
+                  </p>
+                  <p>
+                    <span className="text-muted-ui-foreground">
+                      Ответственный менеджер:
+                    </span>{" "}
+                    {booking.responsibleManager?.displayName ?? "Не назначен"}
+                  </p>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="text-muted-ui-foreground">
+                      Статус оплаты
+                    </span>
+                    <select
+                      aria-label={`Статус оплаты для ${booking.orderItem.order.name}`}
+                      className="box-border w-full min-w-0 rounded-xl border border-line bg-brand-foreground px-3 py-2"
+                      disabled={paymentMutation.isPending}
+                      onChange={(event) => {
+                        const paymentStatus = event.target.value as
+                          "pending" | "succeeded";
+                        setPaymentStatuses((current) => ({
+                          ...current,
+                          [booking.id]: paymentStatus,
+                        }));
+                        paymentMutation.mutate({
+                          bookingId: booking.id,
+                          paymentStatus,
+                        });
+                      }}
+                      value={
+                        paymentStatuses[booking.id] ??
+                        (booking.orderItem.order.paymentStatus === "succeeded"
+                          ? "succeeded"
+                          : "pending")
+                      }
+                    >
+                      <option value="succeeded">Оплачено</option>
+                      <option value="pending">Ожидает оплаты</option>
+                    </select>
+                    <span className="text-xs text-muted-ui-foreground">
+                      Для наличных выберите «Оплачено» после получения денег.
+                    </span>
+                  </label>
+                  {paymentMutation.isError && (
+                    <p className="text-xs text-destructive">
+                      Не удалось изменить статус оплаты.
+                    </p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="mt-5 rounded-2xl bg-muted-ui/30 px-4 py-3 text-sm text-muted-ui-foreground">
+            {canAddBooking
+              ? "В этом интервале ещё есть свободное место. Можно добавить запись вручную."
+              : "Свободного места в этом интервале нет."}
+          </div>
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            {canAddBooking && (
+              <button
+                className="rounded-full border border-brand px-5 py-2 font-semibold text-brand"
+                onClick={onAddBooking}
+                type="button"
+              >
+                Добавить запись
+              </button>
+            )}
+            <button
+              className="rounded-full bg-brand px-5 py-2 font-semibold text-brand-foreground"
+              onClick={onClose}
+              type="button"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const AdminServiceCalendarPage = () => {
   const range = useMemo(() => getCalendarRange(), []);
@@ -634,6 +671,7 @@ export const AdminServiceCalendarPage = () => {
             setSelectedSlot(undefined);
             setManualSlot(selectedSlot.start);
           }}
+          onUpdated={() => void calendar.refetch()}
           onClose={() => setSelectedSlot(undefined)}
           start={selectedSlot.start}
         />

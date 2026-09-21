@@ -45,6 +45,15 @@ export const loadServiceCalendar = (from: string, to: string) =>
   apiClient.get<{ bookings: ServiceBooking[] }>("/services/admin/calendar", {
     params: { from, to },
   });
+export const updateServiceBookingPaymentStatus = (
+  bookingId: string,
+  paymentStatus: "pending" | "succeeded",
+) =>
+  apiClient.put(
+    `/services/admin/bookings/${bookingId}/payment`,
+    { paymentStatus },
+    { headers: headers() },
+  );
 export type ServiceManager = {
   readonly id: string;
   readonly displayName: string;
