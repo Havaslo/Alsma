@@ -354,9 +354,9 @@ const reconcileGroupPayment = async (
     });
     if (!claimed) continue;
     try {
-      const bookingReference =
-        numericEpteraReference(booking.epteraReservationId) ??
-        numericEpteraReference(booking.voucherNumber);
+      const bookingReference = numericEpteraReference(
+        booking.epteraReservationId,
+      );
       if (!bookingReference) {
         throw new HttpError(
           409,
@@ -1291,9 +1291,9 @@ export const createBookingService = (
       if (!claimed) return repository.findBooking(booking.id);
 
       try {
-        const bookingReference =
-          numericEpteraReference(savedPayment.epteraReservationId) ??
-          numericEpteraReference(savedPayment.voucherNumber);
+        const bookingReference = numericEpteraReference(
+          savedPayment.epteraReservationId,
+        );
         if (!bookingReference) {
           throw new HttpError(
             409,

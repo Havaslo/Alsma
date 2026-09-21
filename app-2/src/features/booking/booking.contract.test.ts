@@ -697,6 +697,55 @@ test("always uses the configured hotel id for createReservation", async () => {
   }
 });
 
+test("accepts Eptera nested success response when adding a payment", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody = "";
+  globalThis.fetch = (async (input, init) => {
+    requestBody = typeof init?.body === "string" ? init.body : "";
+    assert.equal(String(input), "https://api.eptera.ru/Execute/SP_WEB_PAYMENT");
+    return new Response(
+      JSON.stringify([
+        [
+          {
+            MESSAGE: "SP_RES_MAKE_PAYMENT_SUCCESS",
+            SUCCESS: 1,
+          },
+        ],
+      ]),
+      { headers: { "Content-Type": "application/json" }, status: 200 },
+    );
+  }) as typeof fetch;
+
+  try {
+    await createEpteraClient({
+      hotelId: "901016",
+      paymentLoginToken: "payment-token",
+    }).addPayment({
+      amount: 21.62,
+      bookingReference: "126349",
+      currency: "RUB",
+    });
+
+    assert.deepEqual(JSON.parse(requestBody), {
+      Action: "Execute",
+      ActionTitle: "Deposit Amount From BookingAPI",
+      LoginToken: "payment-token",
+      Object: "SP_WEB_PAYMENT",
+      Parameters: {
+        DEPKODU: "94",
+        DOVIZKODU: "RUB",
+        DOVIZTUTAR: 21.62,
+        HESAPKODU: "A",
+        HOTELID: 901016,
+        KNO: "126349",
+        TLTUTAR: 21.62,
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("cancels an expired unpaid Eptera reservation exactly once", async () => {
   const cancelledIds: number[] = [];
   let markCancelledCalls = 0;

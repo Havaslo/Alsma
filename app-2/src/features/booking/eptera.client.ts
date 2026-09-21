@@ -171,26 +171,60 @@ const isFalseProviderValue = (value: unknown): boolean =>
       value.trim().toLowerCase(),
     ));
 
-const hasPaymentProviderFailure = (payload: unknown): boolean => {
-  const response = asRecord(payload);
-  if (!response) return true;
+const paymentProviderRecords = (
+  payload: unknown,
+): Record<string, unknown>[] => {
+  const records: Record<string, unknown>[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 4) return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, depth + 1));
+      return;
+    }
+    const response = asRecord(value);
+    if (response) records.push(response);
+  };
+  visit(payload, 0);
+  return records;
+};
 
-  for (const key of ["success", "Success", "isSuccess", "IsSuccess"]) {
-    if (isFalseProviderValue(response[key])) return true;
-  }
-  for (const key of ["status", "Status", "result", "Result"]) {
-    if (isFalseProviderValue(response[key])) return true;
-  }
-  for (const key of ["error", "Error", "errors", "Errors"]) {
-    const value = response[key];
-    if (
-      (typeof value === "string" && value.trim().length > 0) ||
-      (Array.isArray(value) && value.length > 0) ||
-      (value !== null &&
-        typeof value === "object" &&
-        Object.keys(value as object).length > 0)
-    ) {
-      return true;
+const hasPaymentProviderFailure = (payload: unknown): boolean => {
+  const records = paymentProviderRecords(payload);
+  if (records.length === 0) return true;
+
+  for (const response of records) {
+    for (const key of [
+      "success",
+      "Success",
+      "SUCCESS",
+      "isSuccess",
+      "IsSuccess",
+    ]) {
+      if (isFalseProviderValue(response[key])) return true;
+    }
+    for (const key of ["status", "Status", "result", "Result"]) {
+      if (isFalseProviderValue(response[key])) return true;
+    }
+    for (const key of ["error", "Error", "errors", "Errors"]) {
+      const value = response[key];
+      if (
+        (typeof value === "string" && value.trim().length > 0) ||
+        (Array.isArray(value) && value.length > 0) ||
+        (value !== null &&
+          typeof value === "object" &&
+          Object.keys(value as object).length > 0)
+      ) {
+        return true;
+      }
+    }
+    for (const key of ["message", "Message", "MESSAGE"]) {
+      const value = response[key];
+      if (
+        typeof value === "string" &&
+        /(error|fail|failure|denied|invalid)/i.test(value)
+      ) {
+        return true;
+      }
     }
   }
   return false;
@@ -695,7 +729,9 @@ export const createEpteraClient = ({
           502,
           "EPTERA_PAYMENT_SYNC_FAILED",
           "Eptera не подтвердила передачу оплаты.",
-          response.ok ? undefined : { status: response.status },
+          response.ok
+            ? readProviderDiagnostics(payload)
+            : { status: response.status, ...readProviderDiagnostics(payload) },
         );
       }
     },
