@@ -6,6 +6,7 @@ import {
   type ServiceManager,
   createManualServiceBooking,
 } from "@/lib/services/admin-services-api";
+import { formatServiceTime } from "@/lib/services/service-time";
 
 export const AdminManualBookingModal = ({
   date,
@@ -68,11 +69,7 @@ export const AdminManualBookingModal = ({
           {serviceName}
         </h2>
         <p className="mt-1 text-sm text-muted-ui-foreground">
-          {date} ·{" "}
-          {new Intl.DateTimeFormat("ru-RU", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(new Date(startsAt))}
+          {date} · {formatServiceTime(startsAt)}
         </p>
         <p className="mt-2 rounded-xl bg-muted-ui/30 px-3 py-2 text-xs text-muted-ui-foreground">
           Создатель записи будет определён автоматически по вашей учётной записи
