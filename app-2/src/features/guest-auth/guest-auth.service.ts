@@ -58,6 +58,7 @@ const publicUser = (user: {
   }>;
   serviceOrders: Array<{
     id: string;
+    paymentStatus: string | null;
     status: string;
     total: { toString(): string };
     currency: string;
@@ -99,6 +100,7 @@ const publicUser = (user: {
   }),
   serviceOrders: user.serviceOrders.map((order) => ({
     id: order.id,
+    paymentStatus: order.paymentStatus ?? "pending",
     status: order.status,
     total: order.total.toString(),
     currency: order.currency,

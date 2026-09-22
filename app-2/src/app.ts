@@ -113,6 +113,7 @@ export const createApp = ({
     response.json({ service: "booking-api", status: "ok" }),
   );
   const apiRouter = createApiRouter({
+    corsAllowedOrigins,
     database,
     epteraApiKey,
     epteraHotelId,

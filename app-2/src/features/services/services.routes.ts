@@ -8,6 +8,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import type { YooKassaClient, YooPayment } from "../booking/yookassa.client.js";
 import { hashGuestToken, readGuestToken } from "../guest-auth/guest-session.js";
 import {
   isProductVariant,
@@ -15,7 +16,14 @@ import {
   listServiceAvailability,
   listServiceAvailabilityDetails,
   lockServiceAvailability,
+  lockServiceAvailabilityForVariants,
 } from "./service-availability.js";
+import {
+  expireServicePaymentHolds,
+  reconcileServicePayment,
+  servicePaymentDeadline,
+  servicePaymentReturnUrl,
+} from "./service-payments.js";
 
 const sortServicesByPlacement = <
   T extends { placements: Array<{ pageSlug: string; position: number }> },
@@ -81,9 +89,11 @@ const imageUrlSchema = z
   );
 
 const orderSchema = z.object({
+  checkoutRequestId: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
   email: z.string().email(),
   phone: z.string().trim().min(7).max(32),
+  returnUrl: z.string().url(),
   items: z
     .array(
       z.object({
@@ -96,7 +106,24 @@ const orderSchema = z.object({
     .max(30),
 });
 
-export const createServicesRouter = (database: Database): Router => {
+const isAllowedReturnUrl = (
+  value: string,
+  allowedOrigins: readonly string[],
+  requestOrigin?: string,
+) => {
+  try {
+    const origin = new URL(value).origin;
+    return origin === requestOrigin || allowedOrigins.includes(origin);
+  } catch {
+    return false;
+  }
+};
+
+export const createServicesRouter = (
+  database: Database,
+  yookassa: YooKassaClient,
+  allowedReturnOrigins: readonly string[],
+): Router => {
   const router = Router();
   router.get("/", async (request, response) => {
     const services = await database.client.service.findMany({
@@ -182,171 +209,419 @@ export const createServicesRouter = (database: Database): Router => {
     });
   });
   router.post("/orders", async (request, response) => {
-    const input = orderSchema.parse(request.body);
-    const token = readGuestToken(request);
-    const session = token
-      ? await database.client.guestLoginCode.findFirst({
-          where: {
-            codeHash: hashGuestToken(token),
-            consumedAt: { not: null },
-            expiresAt: { gt: new Date() },
-          },
-          select: { userId: true },
-        })
-      : null;
-    let userId =
-      session?.userId ??
-      (
-        await database.client.guestUser.findFirst({
-          where: {
-            email: {
-              equals: input.email.trim().toLowerCase(),
-              mode: "insensitive",
-            },
-          },
-          select: { id: true },
-        })
-      )?.id;
-    if (!userId) {
-      const email = input.email.trim().toLowerCase();
-      const user = await database.client.guestUser.upsert({
-        where: { phone: `email:${email}` },
-        create: { email, phone: `email:${email}`, fullName: input.name },
-        update: { email },
-        select: { id: true },
+    const parsed = orderSchema.safeParse(request.body);
+    if (!parsed.success)
+      return response.status(400).json({
+        error: {
+          code: "INVALID_ORDER",
+          message: "Проверьте данные заказа и выбранные позиции.",
+          details: parsed.error.flatten(),
+        },
       });
-      userId = user.id;
-    }
-    const variants = await database.client.serviceVariant.findMany({
-      where: {
-        id: { in: input.items.map((item) => item.variantId) },
-        active: true,
+    const input = parsed.data;
+    if (
+      !isAllowedReturnUrl(
+        input.returnUrl,
+        allowedReturnOrigins,
+        request.header("origin") ?? undefined,
+      )
+    )
+      return response.status(400).json({
+        error: {
+          code: "RETURN_URL_NOT_ALLOWED",
+          message: "Адрес возврата после оплаты не разрешён.",
+        },
+      });
+    await expireServicePaymentHolds(database.client, yookassa);
+
+    let order = await database.client.serviceOrder.findUnique({
+      where: { checkoutRequestId: input.checkoutRequestId },
+      include: {
+        items: {
+          include: {
+            booking: true,
+            service: true,
+            variant: true,
+          },
+        },
+        paymentAttempts: { orderBy: { createdAt: "desc" } },
       },
-      include: { service: true, resources: { include: { resource: true } } },
     });
-    if (variants.length !== input.items.length)
-      return response
-        .status(400)
-        .json({ error: { code: "VARIANT_UNAVAILABLE" } });
-    const byId = new Map(variants.map((variant) => [variant.id, variant]));
-    if (
-      input.items.some(
-        (item) =>
-          !isProductVariant(byId.get(item.variantId)!.name) && !item.startsAt,
-      )
-    )
-      return response.status(400).json({
-        error: {
-          code: "BOOKING_SLOT_REQUIRED",
-          message: "Для каждой услуги выберите дату и слот.",
-        },
+
+    if (order && order.status !== "awaiting_payment") {
+      const attempt = order.paymentAttempts[0];
+      return response.json({
+        orderId: order.id,
+        paymentId: attempt?.externalId ?? null,
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        total: order.total.toString(),
+        currency: order.currency,
+        paymentUrl: attempt?.confirmationUrl ?? null,
       });
-    if (
-      input.items.some(
-        (item) => item.quantity > byId.get(item.variantId)!.capacity,
-      )
-    )
-      return response.status(400).json({
-        error: {
-          code: "CAPACITY_EXCEEDED",
-          message: "Количество гостей превышает вместимость варианта.",
-        },
-      });
-    const total = input.items.reduce(
-      (sum, item) =>
-        sum + Number(byId.get(item.variantId)!.price) * item.quantity,
-      0,
-    );
-    const order = await database.client
-      .$transaction(async (transaction) => {
-        for (const item of input.items) {
-          const variant = byId.get(item.variantId)!;
-          if (isProductVariant(variant.name)) continue;
-          await lockServiceAvailability(
-            transaction as typeof database.client,
-            variant.serviceId,
-            variant,
-          );
-          const startsAt = new Date(item.startsAt!);
-          if (
-            Number.isNaN(startsAt.getTime()) ||
-            !(await isServiceSlotAvailable(
-              transaction as typeof database.client,
-              variant.serviceId,
-              variant,
-              startsAt,
-              item.quantity,
-            ))
-          ) {
-            throw new Error("BOOKING_SLOT_UNAVAILABLE");
-          }
-        }
-        return transaction.serviceOrder.create({
-          data: {
-            name: input.name,
-            email: input.email,
-            phone: input.phone,
-            userId,
-            paymentStatus: "succeeded",
-            paidAt: new Date(),
-            status: "paid",
-            total,
-            items: {
-              create: input.items.map((item) => {
-                const variant = byId.get(item.variantId)!;
-                return {
-                  variantId: variant.id,
-                  serviceId: variant.serviceId,
-                  quantity: item.quantity,
-                  unitPrice: variant.price,
-                  ...(item.startsAt && !isProductVariant(variant.name)
-                    ? {
-                        booking: {
-                          create: {
-                            serviceId: variant.serviceId,
-                            variantId: variant.id,
-                            startsAt: new Date(item.startsAt),
-                            endsAt: new Date(
-                              new Date(item.startsAt).getTime() +
-                                (variant.durationMin ?? 60) * 60000,
-                            ),
-                            status: "confirmed",
-                            bookingSource: "online",
-                          },
-                        },
-                      }
-                    : {}),
-                };
-              }),
+    }
+
+    const token = readGuestToken(request);
+    if (!order) {
+      const session = token
+        ? await database.client.guestLoginCode.findFirst({
+            where: {
+              codeHash: hashGuestToken(token),
+              consumedAt: { not: null },
+              expiresAt: { gt: new Date() },
             },
-          },
-          include: { items: true },
+            select: { userId: true },
+          })
+        : null;
+      let userId =
+        session?.userId ??
+        (
+          await database.client.guestUser.findFirst({
+            where: {
+              email: {
+                equals: input.email.trim().toLowerCase(),
+                mode: "insensitive",
+              },
+            },
+            select: { id: true },
+          })
+        )?.id;
+      if (!userId) {
+        const email = input.email.trim().toLowerCase();
+        const user = await database.client.guestUser.upsert({
+          where: { phone: `email:${email}` },
+          create: { email, phone: `email:${email}`, fullName: input.name },
+          update: { email },
+          select: { id: true },
         });
-      })
-      .catch((error: unknown) => {
-        if (
-          error instanceof Error &&
-          error.message === "BOOKING_SLOT_UNAVAILABLE"
-        )
-          return null;
-        throw error;
+        userId = user.id;
+      }
+
+      const normalizedItems = [
+        ...input.items.reduce((items, item) => {
+          const key = `${item.variantId}:${item.startsAt ?? ""}`;
+          const existing = items.get(key);
+          items.set(key, {
+            ...item,
+            quantity: (existing?.quantity ?? 0) + item.quantity,
+          });
+          return items;
+        }, new Map<string, (typeof input.items)[number]>()),
+      ].map(([, item]) => item);
+      const variantIds = [
+        ...new Set(normalizedItems.map((item) => item.variantId)),
+      ];
+      const variants = await database.client.serviceVariant.findMany({
+        where: { id: { in: variantIds }, active: true },
+        include: { service: true, resources: { include: { resource: true } } },
       });
-    if (!order)
-      return response.status(400).json({
+      if (variants.length !== variantIds.length)
+        return response
+          .status(400)
+          .json({ error: { code: "VARIANT_UNAVAILABLE" } });
+      const byId = new Map(variants.map((variant) => [variant.id, variant]));
+      if (
+        normalizedItems.some(
+          (item) =>
+            !isProductVariant(byId.get(item.variantId)!.name) && !item.startsAt,
+        )
+      )
+        return response.status(400).json({
+          error: {
+            code: "BOOKING_SLOT_REQUIRED",
+            message: "Для каждой услуги выберите дату и слот.",
+          },
+        });
+      if (
+        normalizedItems.some(
+          (item) => item.quantity > byId.get(item.variantId)!.capacity,
+        )
+      )
+        return response.status(400).json({
+          error: {
+            code: "CAPACITY_EXCEEDED",
+            message: "Количество гостей превышает вместимость варианта.",
+          },
+        });
+      const total = normalizedItems.reduce(
+        (sum, item) =>
+          sum + Number(byId.get(item.variantId)!.price) * item.quantity,
+        0,
+      );
+      const deadline = servicePaymentDeadline();
+      order = await database.client
+        .$transaction(async (transaction) => {
+          await lockServiceAvailabilityForVariants(
+            transaction,
+            normalizedItems
+              .filter(
+                (item) => !isProductVariant(byId.get(item.variantId)!.name),
+              )
+              .map((item) => ({
+                serviceId: byId.get(item.variantId)!.serviceId,
+                variant: byId.get(item.variantId)!,
+              })),
+          );
+          for (const item of normalizedItems) {
+            const variant = byId.get(item.variantId)!;
+            if (isProductVariant(variant.name)) continue;
+            const startsAt = new Date(item.startsAt!);
+            if (
+              Number.isNaN(startsAt.getTime()) ||
+              !(await isServiceSlotAvailable(
+                transaction as unknown as typeof database.client,
+                variant.serviceId,
+                variant,
+                startsAt,
+                item.quantity,
+              ))
+            ) {
+              throw new Error("BOOKING_SLOT_UNAVAILABLE");
+            }
+          }
+          const created = await transaction.serviceOrder.create({
+            data: {
+              checkoutRequestId: input.checkoutRequestId,
+              email: input.email,
+              name: input.name,
+              paymentDeadlineAt: deadline,
+              paymentProvider: "yookassa",
+              paymentStatus: "pending",
+              phone: input.phone,
+              status: "awaiting_payment",
+              total,
+              userId,
+              items: {
+                create: normalizedItems.map((item) => {
+                  const variant = byId.get(item.variantId)!;
+                  return {
+                    quantity: item.quantity,
+                    serviceId: variant.serviceId,
+                    unitPrice: variant.price,
+                    variantId: variant.id,
+                    ...(item.startsAt && !isProductVariant(variant.name)
+                      ? {
+                          booking: {
+                            create: {
+                              bookingSource: "online",
+                              endsAt: new Date(
+                                new Date(item.startsAt).getTime() +
+                                  (variant.durationMin ?? 60) * 60000,
+                              ),
+                              holdExpiresAt: deadline,
+                              serviceId: variant.serviceId,
+                              startsAt: new Date(item.startsAt),
+                              status: "held",
+                              variantId: variant.id,
+                            },
+                          },
+                        }
+                      : {}),
+                  };
+                }),
+              },
+            },
+          });
+          await transaction.paymentAttempt.create({
+            data: {
+              amount: total,
+              currency: created.currency,
+              idempotencyKey: `service-order-${created.id}`,
+              orderId: created.id,
+              provider: "yookassa",
+              status: "not_started",
+            },
+          });
+          return transaction.serviceOrder.findUniqueOrThrow({
+            where: { id: created.id },
+            include: {
+              items: {
+                include: { service: true, variant: true, booking: true },
+              },
+              paymentAttempts: { orderBy: { createdAt: "desc" } },
+            },
+          });
+        })
+        .catch((error: unknown) => {
+          if (
+            error instanceof Error &&
+            error.message === "BOOKING_SLOT_UNAVAILABLE"
+          )
+            return null;
+          throw error;
+        });
+      if (!order)
+        return response.status(409).json({
+          error: {
+            code: "BOOKING_SLOT_UNAVAILABLE",
+            message: "Выбранное время уже занято. Выберите другой слот.",
+          },
+        });
+    }
+
+    const attempt = order.paymentAttempts[0];
+    if (!attempt)
+      return response.status(500).json({
         error: {
-          code: "BOOKING_SLOT_UNAVAILABLE",
-          message: "Выбранное время больше недоступно. Выберите другой слот.",
+          code: "PAYMENT_ATTEMPT_NOT_FOUND",
+          message: "Не удалось подготовить оплату.",
         },
       });
-    await database.client.paymentAttempt.create({
-      data: { orderId: order.id, provider: "demo", status: "succeeded" },
+
+    let payment: YooPayment;
+    try {
+      payment = attempt.externalId
+        ? await yookassa.getPayment(attempt.externalId)
+        : await yookassa.createPayment({
+            amount: order.total.toString(),
+            bookingId: undefined,
+            capture: true,
+            currency: order.currency,
+            customer: { email: order.email, phone: order.phone },
+            description: `Оплата услуг ${order.id}`,
+            idempotenceKey:
+              attempt.idempotencyKey ?? `service-order-${order.id}`,
+            metadata: { serviceOrderId: order.id },
+            receiptItems: order.items.map((item) => ({
+              amount: (Number(item.unitPrice) * item.quantity).toFixed(2),
+              description: `${item.service.name} — ${item.variant.name}`,
+              paymentSubject: isProductVariant(item.variant.name)
+                ? "commodity"
+                : "service",
+              quantity: String(item.quantity),
+            })),
+            returnUrl: servicePaymentReturnUrl(input.returnUrl, order.id),
+          });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Платёжный сервис недоступен.";
+      await database.client.$transaction([
+        database.client.paymentAttempt.update({
+          data: { lastError: message, status: "failed" },
+          where: { id: attempt.id },
+        }),
+        database.client.serviceOrder.update({
+          data: {
+            paymentError: message,
+            paymentStatus: "pending",
+            status: "awaiting_payment",
+          },
+          where: { id: order.id },
+        }),
+      ]);
+      return response.status(502).json({
+        error: {
+          code: "PAYMENT_CREATION_FAILED",
+          message:
+            "Не удалось создать платёж. Временная бронь сохранена, повторите попытку.",
+        },
+      });
+    }
+
+    await database.client.paymentAttempt.update({
+      data: {
+        amount: payment.amount.value,
+        confirmationUrl: payment.confirmation?.confirmation_url ?? null,
+        currency: payment.amount.currency,
+        externalId: payment.id,
+        status: payment.status,
+      },
+      where: { id: attempt.id },
     });
-    response.status(201).json({
-      orderId: order.id,
-      status: order.status,
-      total: order.total.toString(),
-      currency: order.currency,
+    const reconciliation =
+      payment.status === "succeeded" && payment.paid
+        ? await reconcileServicePayment(database.client, yookassa, payment)
+        : null;
+    const current = await database.client.serviceOrder.findUnique({
+      where: { id: order.id },
+      include: { paymentAttempts: { orderBy: { createdAt: "desc" } } },
     });
+    const currentAttempt = current?.paymentAttempts[0] ?? attempt;
+    response
+      .status(order.checkoutRequestId === input.checkoutRequestId ? 200 : 201)
+      .json({
+        orderId: order.id,
+        paymentId: payment.id,
+        paymentStatus: current?.paymentStatus ?? payment.status,
+        paymentUrl: payment.confirmation?.confirmation_url ?? null,
+        reconciliation: reconciliation?.kind ?? null,
+        status: current?.status ?? order.status,
+        total: order.total.toString(),
+        currency: order.currency,
+        paymentAttemptStatus: currentAttempt.status,
+      });
+  });
+  router.get("/orders/:orderId/status", async (request, response) => {
+    await expireServicePaymentHolds(database.client, yookassa);
+    let order = await database.client.serviceOrder.findUnique({
+      where: { id: request.params.orderId },
+      include: {
+        items: { include: { booking: true } },
+        paymentAttempts: { orderBy: { createdAt: "desc" } },
+      },
+    });
+    if (!order)
+      return response.status(404).json({
+        error: { code: "ORDER_NOT_FOUND", message: "Заказ не найден." },
+      });
+    const attempt = order.paymentAttempts[0];
+    if (
+      attempt?.externalId &&
+      order.paymentStatus === "pending" &&
+      order.status === "awaiting_payment"
+    ) {
+      try {
+        const payment = await yookassa.getPayment(attempt.externalId);
+        await reconcileServicePayment(database.client, yookassa, payment);
+        order = await database.client.serviceOrder.findUnique({
+          where: { id: order.id },
+          include: {
+            items: { include: { booking: true } },
+            paymentAttempts: { orderBy: { createdAt: "desc" } },
+          },
+        });
+      } catch {
+        // The webhook remains the source of truth if the provider is temporarily unavailable.
+      }
+    }
+    response.json({
+      orderId: order!.id,
+      paymentStatus: order!.paymentStatus,
+      status: order!.status,
+      total: order!.total.toString(),
+      currency: order!.currency,
+      paymentError: order!.paymentError,
+      paymentUrl: order!.paymentAttempts[0]?.confirmationUrl ?? null,
+      bookings: order!.items
+        .filter((item) => item.booking)
+        .map((item) => ({
+          id: item.booking!.id,
+          startsAt: item.booking!.startsAt,
+          endsAt: item.booking!.endsAt,
+          status: item.booking!.status,
+        })),
+    });
+  });
+  router.post("/payments/webhook", async (request, response) => {
+    const body = request.body as {
+      event?: unknown;
+      object?: { id?: unknown };
+    };
+    if (
+      body.event !== "payment.succeeded" &&
+      body.event !== "payment.canceled" &&
+      body.event !== "payment.waiting_for_capture"
+    )
+      return response.sendStatus(204);
+    const paymentId =
+      typeof body.object?.id === "string" ? body.object.id : null;
+    if (paymentId)
+      await reconcileServicePayment(
+        database.client,
+        yookassa,
+        await yookassa.getPayment(paymentId),
+      );
+    response.sendStatus(204);
   });
   const admin = Router();
   admin.use(

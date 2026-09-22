@@ -36,6 +36,7 @@ import type { Database } from "./lib/database/database.js";
 import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 
 type CreateApiRouterOptions = {
+  readonly corsAllowedOrigins: readonly string[];
   readonly database: Database;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
@@ -78,6 +79,7 @@ type CreateApiRouterOptions = {
 };
 
 export const createApiRouter = ({
+  corsAllowedOrigins,
   database,
   epteraApiKey,
   epteraHotelId,
@@ -210,7 +212,10 @@ export const createApiRouter = ({
   );
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
-  router.use("/services", createServicesRouter(database));
+  router.use(
+    "/services",
+    createServicesRouter(database, yookassa, corsAllowedOrigins),
+  );
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));
   router.get("/voice-agent/readiness", (_request, response) =>

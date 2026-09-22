@@ -246,20 +246,24 @@ model ServiceScheduleBlock {
 }
 
 model ServiceOrder {
-  id              String             @id @default(uuid()) @db.Uuid
-  userId          String?            @map("user_id") @db.Uuid
-  user            GuestUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  name            String
-  email           String
-  phone           String
-  status          String             @default("new")
-  paymentStatus   String             @default("pending") @map("payment_status")
-  paidAt          DateTime?          @map("paid_at") @db.Timestamptz(3)
-  total           Decimal            @db.Decimal(12, 2)
-  currency        String             @default("RUB")
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  items           ServiceOrderItem[]
-  paymentAttempts PaymentAttempt[]
+  id                String             @id @default(uuid()) @db.Uuid
+  userId            String?            @map("user_id") @db.Uuid
+  user              GuestUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  checkoutRequestId String?            @unique @map("checkout_request_id") @db.Uuid
+  name              String
+  email             String
+  phone             String
+  status            String             @default("new")
+  paymentStatus     String             @default("pending") @map("payment_status")
+  paymentProvider   String?            @map("payment_provider")
+  paymentError      String?            @map("payment_error")
+  paidAt            DateTime?          @map("paid_at") @db.Timestamptz(3)
+  paymentDeadlineAt DateTime?          @map("payment_deadline_at") @db.Timestamptz(3)
+  total             Decimal            @db.Decimal(12, 2)
+  currency          String             @default("RUB")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  items             ServiceOrderItem[]
+  paymentAttempts   PaymentAttempt[]
 
   @@index([userId, createdAt])
   @@map("service_orders")
@@ -292,6 +296,7 @@ model ServiceBooking {
   endsAt      DateTime         @map("ends_at") @db.Timestamptz(3)
   status      String           @default("requested")
   bookingSource String         @default("legacy") @map("booking_source")
+  holdExpiresAt DateTime?      @map("hold_expires_at") @db.Timestamptz(3)
   createdByAdminId String?     @map("created_by_admin_id") @db.Uuid
   createdByAdmin AdminUser?    @relation("ServiceBookingCreatedByAdmin", fields: [createdByAdminId], references: [id], onDelete: SetNull)
   responsibleManagerId String?  @map("responsible_manager_id") @db.Uuid
@@ -305,13 +310,23 @@ model ServiceBooking {
 }
 
 model PaymentAttempt {
-  id         String       @id @default(uuid()) @db.Uuid
-  orderId    String       @map("order_id") @db.Uuid
-  order      ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  provider   String
-  status     String       @default("not_started")
-  externalId String?      @map("external_id")
-  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  id              String       @id @default(uuid()) @db.Uuid
+  orderId         String       @map("order_id") @db.Uuid
+  order           ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider        String
+  status          String       @default("not_started")
+  idempotencyKey  String?      @unique @map("idempotency_key")
+  externalId      String?      @unique @map("external_id")
+  confirmationUrl String?      @map("confirmation_url")
+  amount          Decimal?     @db.Decimal(12, 2)
+  currency        String?
+  lastError       String?      @map("last_error")
+  expiresAt       DateTime?    @map("expires_at") @db.Timestamptz(3)
+  capturedAt      DateTime?    @map("captured_at") @db.Timestamptz(3)
+  cancelledAt     DateTime?    @map("cancelled_at") @db.Timestamptz(3)
+  refundedAt      DateTime?    @map("refunded_at") @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([orderId, createdAt])
   @@map("payment_attempts")

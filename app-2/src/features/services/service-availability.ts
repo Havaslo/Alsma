@@ -19,12 +19,28 @@ export const lockServiceAvailability = async (
   serviceId: string,
   variant: Pick<AvailabilityVariant, "id" | "resources">,
 ) => {
-  const resourceIds = [...(variant.resources ?? [])]
-    .map((resource) => resource.resourceId)
-    .sort();
-  const lockKeys = resourceIds.length
-    ? resourceIds.map((resourceId) => `service-resource:${resourceId}`)
-    : [`service-capacity:${serviceId}:${variant.id}`];
+  await lockServiceAvailabilityForVariants(database, [{ serviceId, variant }]);
+};
+
+export const lockServiceAvailabilityForVariants = async (
+  database: AdvisoryLockExecutor,
+  variants: Array<{
+    serviceId: string;
+    variant: Pick<AvailabilityVariant, "id" | "resources">;
+  }>,
+) => {
+  const lockKeys = [
+    ...new Set(
+      variants.flatMap(({ serviceId, variant }) => {
+        const resourceIds = [...(variant.resources ?? [])]
+          .map((resource) => resource.resourceId)
+          .sort();
+        return resourceIds.length
+          ? resourceIds.map((resourceId) => `service-resource:${resourceId}`)
+          : [`service-capacity:${serviceId}:${variant.id}`];
+      }),
+    ),
+  ].sort();
   for (const lockKey of lockKeys) {
     // Prisma's pg adapter cannot deserialize PostgreSQL's `void` result.
     // Keep the lock in the transaction while returning a scalar value.
@@ -105,6 +121,7 @@ export const listServiceAvailabilityDetails = async (
   variant: AvailabilityVariant,
   date: string,
   quantity = 1,
+  excludeBookingId?: string,
 ): Promise<ServiceAvailabilityDetails> => {
   if (!isValidDate(date)) return { available: [], occupied: [] };
   const duration = variant.durationMin ?? 60;
@@ -123,6 +140,7 @@ export const listServiceAvailabilityDetails = async (
   );
   const bookings = await database.serviceBooking.findMany({
     where: {
+      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
       ...(resourceIds.length
         ? {
             variant: {
@@ -133,6 +151,10 @@ export const listServiceAvailabilityDetails = async (
       startsAt: { lt: toUtcDate(date, WORKDAY_END_MINUTE) },
       endsAt: { gt: from },
       status: { not: "cancelled" },
+      OR: [
+        { status: { not: "held" } },
+        { status: "held", holdExpiresAt: { gt: new Date() } },
+      ],
     },
     include: {
       orderItem: { select: { quantity: true } },
@@ -206,6 +228,7 @@ export const listServiceAvailability = async (
   variant: AvailabilityVariant,
   date: string,
   quantity = 1,
+  excludeBookingId?: string,
 ) => {
   const details = await listServiceAvailabilityDetails(
     database,
@@ -213,6 +236,7 @@ export const listServiceAvailability = async (
     variant,
     date,
     quantity,
+    excludeBookingId,
   );
   return details.available;
 };
@@ -223,6 +247,7 @@ export const isServiceSlotAvailable = async (
   variant: AvailabilityVariant,
   startsAt: Date,
   quantity: number,
+  excludeBookingId?: string,
 ) => {
   const date = startsAt.toISOString().slice(0, 10);
   const minute =
@@ -236,6 +261,7 @@ export const isServiceSlotAvailable = async (
     variant,
     date,
     quantity,
+    excludeBookingId,
   );
   return slots.some(
     (slot) => new Date(slot.startsAt).getTime() === startsAt.getTime(),

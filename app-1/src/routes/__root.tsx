@@ -11,6 +11,7 @@ import { AppProviders } from "@/app/AppProviders";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
 import { ServiceCartWidget } from "@/components/site/ServiceCartWidget";
+import { ServicePaymentReturnNotice } from "@/components/site/ServicePaymentReturnNotice";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ROUTES } from "@/route-constants";
 
@@ -87,6 +88,7 @@ const RootLayout = () => {
           <ChatWidget />
         </>
       )}
+      <ServicePaymentReturnNotice />
       <SiteOfferPopup />
     </AppProviders>
   );

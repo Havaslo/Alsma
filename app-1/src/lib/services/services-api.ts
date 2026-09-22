@@ -37,6 +37,22 @@ export type ServiceCartItem = {
   readonly variantName?: string;
 };
 
+export type ServiceOrderStatus = {
+  readonly orderId: string;
+  readonly paymentStatus: string;
+  readonly status: string;
+  readonly total: string;
+  readonly currency: string;
+  readonly paymentError: string | null;
+  readonly paymentUrl: string | null;
+  readonly bookings: Array<{
+    readonly id: string;
+    readonly startsAt: string;
+    readonly endsAt: string;
+    readonly status: string;
+  }>;
+};
+
 export const loadServices = (signal?: AbortSignal, page?: string) =>
   apiClient.get<{ services: Service[] }>("/services", {
     signal,
@@ -64,14 +80,25 @@ export const loadServiceAvailability = (
     },
   });
 export const createServiceOrder = (input: {
+  checkoutRequestId: string;
   name: string;
   email: string;
   phone: string;
+  returnUrl: string;
   items: ServiceCartItem[];
 }) =>
   apiClient.post<{
     orderId: string;
+    paymentId: string | null;
+    paymentStatus: string;
+    paymentUrl: string | null;
+    reconciliation: string | null;
     status: string;
     total: string;
     currency: string;
   }>("/services/orders", input);
+
+export const loadServiceOrderStatus = (orderId: string, signal?: AbortSignal) =>
+  apiClient.get<ServiceOrderStatus>(`/services/orders/${orderId}/status`, {
+    signal,
+  });

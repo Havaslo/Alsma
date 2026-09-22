@@ -20,12 +20,38 @@ export const ServiceCartPopup = ({
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [step, setStep] = useState<"details" | "success">("details");
   const [orderTotal, setOrderTotal] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const result = await createServiceOrder({ ...form, items: cart.items });
-    setOrderTotal(result.data.total);
-    cart.clear();
-    setStep("success");
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const returnUrl = new URL(window.location.href);
+      returnUrl.searchParams.delete("serviceOrderId");
+      returnUrl.searchParams.delete("payment");
+      const result = await createServiceOrder({
+        checkoutRequestId: crypto.randomUUID(),
+        ...form,
+        items: cart.items,
+        returnUrl: returnUrl.toString(),
+      });
+      setOrderTotal(result.data.total);
+      cart.clear();
+      if (result.data.paymentUrl) {
+        window.location.assign(result.data.paymentUrl);
+        return;
+      }
+      setStep("success");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Не удалось подготовить оплату. Попробуйте ещё раз.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return (
     <Modal open={open} onClose={onClose} title="Корзина услуг">
@@ -54,6 +80,14 @@ export const ServiceCartPopup = ({
         </div>
       ) : (
         <>
+          {error && (
+            <p
+              className="mb-5 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
           <form className="space-y-5" onSubmit={submit}>
             <div className="space-y-4">
               <label className="block text-sm font-medium text-page-foreground">
@@ -134,10 +168,10 @@ export const ServiceCartPopup = ({
               )}
               <button
                 className="w-full rounded-full bg-brand p-3 font-semibold text-brand-foreground"
-                disabled={!cart.items.length}
+                disabled={!cart.items.length || isSubmitting}
                 type="submit"
               >
-                Перейти к оплате
+                {isSubmitting ? "Подготавливаем оплату…" : "Перейти к оплате"}
               </button>
             </div>
           </form>

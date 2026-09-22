@@ -120,32 +120,52 @@ export const createYooKassaClient = ({
       amount: string;
       currency: string;
       description: string;
-      bookingId: string;
+      bookingId?: string;
+      idempotenceKey?: string;
+      metadata?: Record<string, string>;
+      capture?: boolean;
+      receiptItems?: Array<{
+        description: string;
+        amount: string;
+        quantity: string;
+        paymentSubject?: string;
+      }>;
       returnUrl: string;
       customer: { email: string; phone: string };
     }) =>
       readPayment(
         await request<unknown>("/payments", {
           method: "POST",
-          headers: { "Idempotence-Key": `booking-${input.bookingId}` },
+          headers: {
+            "Idempotence-Key":
+              input.idempotenceKey ?? `booking-${input.bookingId}`,
+          },
           body: JSON.stringify({
             amount: { value: input.amount, currency: input.currency },
             confirmation: { type: "redirect", return_url: input.returnUrl },
-            capture: true,
+            capture: input.capture ?? true,
             description: input.description,
-            metadata: { bookingId: input.bookingId },
+            metadata:
+              input.metadata ??
+              (input.bookingId ? { bookingId: input.bookingId } : undefined),
             receipt: {
               customer: input.customer,
-              items: [
-                {
-                  amount: { value: input.amount, currency: input.currency },
-                  description: input.description,
-                  payment_mode: "full",
-                  payment_subject: "service",
-                  quantity: "1.00",
-                  vat_code: 1,
-                },
-              ],
+              items: (
+                input.receiptItems ?? [
+                  {
+                    amount: input.amount,
+                    description: input.description,
+                    quantity: "1.00",
+                  },
+                ]
+              ).map((item) => ({
+                amount: { value: item.amount, currency: input.currency },
+                description: item.description,
+                payment_mode: "full",
+                payment_subject: item.paymentSubject ?? "service",
+                quantity: item.quantity,
+                vat_code: 1,
+              })),
             },
           }),
         }),
@@ -154,6 +174,33 @@ export const createYooKassaClient = ({
       readPayment(
         await request<unknown>(`/payments/${encodeURIComponent(paymentId)}`),
       ),
+    cancelPayment: async (paymentId: string, idempotenceKey: string) => {
+      await request<unknown>(
+        `/payments/${encodeURIComponent(paymentId)}/cancel`,
+        {
+          method: "POST",
+          headers: { "Idempotence-Key": idempotenceKey },
+          body: JSON.stringify({}),
+        },
+      );
+    },
+    refundPayment: async (input: {
+      paymentId: string;
+      amount: string;
+      currency: string;
+      idempotenceKey: string;
+      description?: string;
+    }) => {
+      await request<unknown>("/refunds", {
+        method: "POST",
+        headers: { "Idempotence-Key": input.idempotenceKey },
+        body: JSON.stringify({
+          payment_id: input.paymentId,
+          amount: { value: input.amount, currency: input.currency },
+          description: input.description,
+        }),
+      });
+    },
   };
 };
 

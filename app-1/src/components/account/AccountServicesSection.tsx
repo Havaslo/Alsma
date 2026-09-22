@@ -13,9 +13,18 @@ const formatDate = (value: string) =>
 const formatStatus = (status: string) =>
   ({
     paid: "Оплачено",
+    succeeded: "Оплачено",
+    awaiting_payment: "Ожидает оплаты",
+    pending: "Ожидает оплаты",
+    payment_failed: "Ошибка оплаты",
+    canceled: "Отменено",
     confirmed: "Подтверждено",
     completed: "Завершено",
     cancelled: "Отменено",
+    held: "Временно удерживается",
+    expired: "Время оплаты истекло",
+    refund_pending: "Ожидает возврата",
+    refunded: "Возвращено",
   })[status] ?? status;
 
 const formatAmount = (total: string, currency: string) =>
@@ -49,7 +58,7 @@ const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
           Статус оплаты
         </dt>
         <dd className="mt-2 font-semibold text-brand">
-          {formatStatus(order.status)}
+          {formatStatus(order.paymentStatus ?? order.status)}
         </dd>
       </div>
       <div>
@@ -100,8 +109,6 @@ export const AccountServicesSection = ({
 }: {
   serviceOrders: GuestProfile["serviceOrders"];
 }) => {
-  const paidOrders = serviceOrders.filter((order) => order.status === "paid");
-
   return (
     <section className="mt-10">
       <div className="flex items-center gap-3">
@@ -111,12 +118,12 @@ export const AccountServicesSection = ({
         </h2>
       </div>
       <div className="mt-6 space-y-5">
-        {paidOrders.map((order) => (
+        {serviceOrders.map((order) => (
           <AccountServiceOrderCard key={order.id} order={order} />
         ))}
-        {!paidOrders.length && (
+        {!serviceOrders.length && (
           <div className="rounded-3xl border border-line bg-panel p-8 text-muted-ui-foreground">
-            Оплаченных услуг пока нет.
+            Заказов услуг пока нет.
           </div>
         )}
       </div>

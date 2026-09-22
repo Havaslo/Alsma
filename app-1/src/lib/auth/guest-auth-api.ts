@@ -4,6 +4,7 @@ import { readGuestSession } from "@/lib/auth/session";
 export type GuestProfile = {
   readonly serviceOrders: Array<{
     readonly id: string;
+    readonly paymentStatus: string;
     readonly status: string;
     readonly total: string;
     readonly currency: string;
