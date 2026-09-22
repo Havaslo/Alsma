@@ -92,6 +92,10 @@ export const AdminServicesCatalog = () => {
   const [statusError, setStatusError] = useState("");
   const refresh = () =>
     void client.invalidateQueries({ queryKey: ["service-sections"] });
+  const refreshResources = () => {
+    void resourcesQuery.refetch();
+    void client.invalidateQueries({ queryKey: ["service-sections"] });
+  };
   const selected = query.data?.data.sections.find(
     (item) => item.id === sectionId,
   );
@@ -322,7 +326,7 @@ export const AdminServicesCatalog = () => {
   return (
     <div className="space-y-6">
       <AdminServiceResourceDirectory
-        onResourceCreated={() => void resourcesQuery.refetch()}
+        onResourcesChanged={refreshResources}
         resources={resourcesQuery.data?.data.resources ?? []}
       />
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">

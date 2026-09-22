@@ -465,10 +465,15 @@ export const createServicesRouter = (database: Database): Router => {
     });
   });
   admin.get("/resources", async (_request, response) => {
+    const resources = await database.client.serviceResource.findMany({
+      orderBy: { name: "asc" },
+      include: { _count: { select: { variants: true } } },
+    });
     response.json({
-      resources: await database.client.serviceResource.findMany({
-        orderBy: { name: "asc" },
-      }),
+      resources: resources.map(({ _count, ...resource }) => ({
+        ...resource,
+        assignedVariantsCount: _count.variants,
+      })),
     });
   });
   admin.post("/resources", async (request, response) => {
@@ -489,6 +494,26 @@ export const createServicesRouter = (database: Database): Router => {
         totalUnits: z.number().int().positive(),
       })
       .parse(request.body);
+    const resource = await database.client.serviceResource.findUnique({
+      where: { id: request.params.resourceId },
+      select: { id: true, variants: { select: { quantity: true } } },
+    });
+    if (!resource)
+      return response.status(404).json({
+        error: { code: "RESOURCE_NOT_FOUND", message: "Ресурс не найден." },
+      });
+    const assignedQuantity = Math.max(
+      0,
+      ...resource.variants.map(({ quantity }) => quantity),
+    );
+    if (input.totalUnits < assignedQuantity) {
+      return response.status(409).json({
+        error: {
+          code: "RESOURCE_TOTAL_UNITS_BELOW_ASSIGNMENT",
+          message: `Количество ресурса не может быть меньше уже назначенного услугам значения (${assignedQuantity}).`,
+        },
+      });
+    }
     response.json({
       resource: await database.client.serviceResource.update({
         where: { id: request.params.resourceId },
@@ -497,6 +522,32 @@ export const createServicesRouter = (database: Database): Router => {
     });
   });
   admin.delete("/resources/:resourceId", async (request, response) => {
+    const resource = await database.client.serviceResource.findUnique({
+      where: { id: request.params.resourceId },
+      select: {
+        id: true,
+        variants: {
+          select: {
+            variant: {
+              select: { name: true, service: { select: { name: true } } },
+            },
+          },
+        },
+      },
+    });
+    if (!resource)
+      return response.status(404).json({
+        error: { code: "RESOURCE_NOT_FOUND", message: "Ресурс не найден." },
+      });
+    if (resource.variants.length) {
+      return response.status(409).json({
+        error: {
+          code: "RESOURCE_IN_USE",
+          message:
+            "Ресурс назначен вариантам услуг. Сначала снимите его с этих вариантов.",
+        },
+      });
+    }
     await database.client.serviceResource.delete({
       where: { id: request.params.resourceId },
     });

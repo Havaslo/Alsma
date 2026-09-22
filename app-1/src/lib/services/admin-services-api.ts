@@ -228,7 +228,12 @@ export const updateVariant = (
     input,
     { headers: headers() },
   );
-export type ServiceResource = { id: string; name: string; totalUnits: number };
+export type ServiceResource = {
+  id: string;
+  name: string;
+  totalUnits: number;
+  assignedVariantsCount?: number;
+};
 export const loadServiceResources = () =>
   apiClient.get<{ resources: ServiceResource[] }>("/services/admin/resources", {
     headers: headers(),
@@ -239,6 +244,15 @@ export const createServiceResource = (input: {
 }) =>
   apiClient.post<{ resource: ServiceResource }>(
     "/services/admin/resources",
+    input,
+    { headers: headers() },
+  );
+export const updateServiceResource = (
+  id: string,
+  input: { name: string; totalUnits: number },
+) =>
+  apiClient.put<{ resource: ServiceResource }>(
+    `/services/admin/resources/${id}`,
     input,
     { headers: headers() },
   );
