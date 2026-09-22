@@ -27,6 +27,11 @@ const formatDate = (value: string) =>
 
 const getBookingNumber = (id: string) => `ALS-${id.slice(0, 8).toUpperCase()}`;
 
+const getEpteraBookingNumber = (booking: GuestProfile["bookings"][number]) =>
+  booking.voucherNumber?.trim() ||
+  booking.epteraReservationId?.trim() ||
+  "Номер не получен";
+
 const getBookingServices = (roomName: string) =>
   bookingServices[roomName] ?? [];
 
@@ -88,7 +93,11 @@ const downloadBookingPdf = async (
   booking: GuestProfile["bookings"][number],
   profile: Pick<GuestProfile, "email" | "fullName" | "phone">,
 ) => {
-  const bookingNumber = getBookingNumber(booking.id);
+  const bookingNumber = getEpteraBookingNumber(booking);
+  const pdfFileName =
+    booking.voucherNumber?.trim() ||
+    booking.epteraReservationId?.trim() ||
+    getBookingNumber(booking.id);
   const guests = booking.guestList ?? [];
   const contactName = [booking.contactFirstName, booking.contactLastName]
     .filter(Boolean)
@@ -128,7 +137,7 @@ const downloadBookingPdf = async (
     </div>
     <div style="margin-top: 42px;">
       <div style="font-size: 28px; font-weight: 700;">${escapeHtml(booking.roomName)}</div>
-      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони: ${escapeHtml(booking.voucherNumber ?? bookingNumber)}</div>
+      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони Eptera: ${escapeHtml(bookingNumber)}</div>
     </div>
     <div style="margin-top: 42px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
       <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Контактное лицо</div>
@@ -162,7 +171,7 @@ const downloadBookingPdf = async (
     const width = 190;
     const height = (canvas.height * width) / canvas.width;
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, width, height);
-    pdf.save(`bron-${bookingNumber}.pdf`);
+    pdf.save(`bron-${pdfFileName}.pdf`);
   } finally {
     document.remove();
   }
@@ -200,8 +209,7 @@ export const AccountBookingsSection = ({
                   {booking.roomName}
                 </h3>
                 <p className="mt-2 text-sm text-muted-ui-foreground">
-                  Номер брони:{" "}
-                  {booking.voucherNumber ?? getBookingNumber(booking.id)}
+                  Номер брони Eptera: {getEpteraBookingNumber(booking)}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                   <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
