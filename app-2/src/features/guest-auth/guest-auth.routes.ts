@@ -21,12 +21,14 @@ export const createGuestAuthRouter = (
   database: Database,
   mailRu: { readonly email?: string; readonly password?: string },
   syncUserBookings?: (userId: string) => Promise<void>,
+  syncServiceOrders?: () => Promise<void>,
 ): Router => {
   const router = Router();
   const service = createGuestAuthService(
     createGuestAuthRepository(database),
     mailRu,
     syncUserBookings,
+    syncServiceOrders,
   );
   router.post(
     "/request-code",

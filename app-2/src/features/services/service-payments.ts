@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type {
   YooKassaClient,
@@ -113,6 +115,129 @@ export const reconcileServiceRefund = async (
     }),
   ]);
   return { kind: "refund_pending" as const, orderId: attempt.orderId };
+};
+
+export const resumeServicePayment = async (
+  database: PrismaClient,
+  yookassa: YooKassaClient,
+  input: { orderId: string; returnUrl: string; userId: string },
+) => {
+  await expireServicePaymentHolds(database, yookassa);
+  let order = await database.serviceOrder.findFirst({
+    where: { id: input.orderId, userId: input.userId },
+    include: {
+      items: { include: { service: true, variant: true } },
+      paymentAttempts: { orderBy: { createdAt: "desc" } },
+    },
+  });
+  if (!order) return { kind: "not_found" as const };
+  if (order.status === "paid")
+    return { kind: "completed" as const, orderId: order.id };
+  if (order.status !== "awaiting_payment")
+    return { kind: "not_available" as const, status: order.status };
+  if (order.paymentDeadlineAt && order.paymentDeadlineAt <= new Date())
+    return { kind: "expired" as const };
+
+  let attempt = order.paymentAttempts[0];
+  if (!attempt) return { kind: "not_available" as const, status: order.status };
+
+  if (attempt.externalId) {
+    const payment = await yookassa.getPayment(attempt.externalId);
+    if (payment.status === "succeeded" && payment.paid) {
+      await reconcileServicePayment(database, yookassa, payment);
+      return { kind: "completed" as const, orderId: order.id };
+    }
+    if (
+      payment.status !== "canceled" &&
+      payment.confirmation?.confirmation_url
+    ) {
+      await database.paymentAttempt.update({
+        data: { status: payment.status },
+        where: { id: attempt.id },
+      });
+      return {
+        kind: "ready" as const,
+        orderId: order.id,
+        paymentUrl: payment.confirmation.confirmation_url,
+      };
+    }
+
+    if (payment.status === "canceled") {
+      attempt = await database.paymentAttempt.create({
+        data: {
+          amount: order.total,
+          currency: order.currency,
+          idempotencyKey: `service-order-${order.id}-${randomUUID()}`,
+          orderId: order.id,
+          provider: "yookassa",
+          status: "not_started",
+        },
+      });
+    }
+  }
+
+  let payment: YooPayment;
+  try {
+    payment = await yookassa.createPayment({
+      amount: order.total.toString(),
+      capture: true,
+      currency: order.currency,
+      customer: {
+        email: order.email,
+        fullName: order.name,
+        phone: order.phone,
+      },
+      description: `Оплата услуг ${order.id}`,
+      idempotenceKey: attempt.idempotencyKey ?? `service-order-${order.id}`,
+      metadata: { serviceOrderId: order.id },
+      receiptItems: order.items.map((item) => ({
+        amount: Number(item.unitPrice).toFixed(2),
+        description: `${item.service.name} — ${item.variant.name}`,
+        paymentSubject: isProductVariant(item.variant.name)
+          ? "commodity"
+          : "service",
+        quantity: String(item.quantity),
+      })),
+      returnUrl: servicePaymentReturnUrl(input.returnUrl, order.id),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Платёжный сервис недоступен.";
+    await database.paymentAttempt.update({
+      data: { lastError: message, status: "failed" },
+      where: { id: attempt.id },
+    });
+    return { kind: "provider_failed" as const, message };
+  }
+
+  await database.paymentAttempt.update({
+    data: {
+      amount: payment.amount.value,
+      confirmationUrl: payment.confirmation?.confirmation_url ?? null,
+      currency: payment.amount.currency,
+      externalId: payment.id,
+      lastError: null,
+      status: payment.status,
+    },
+    where: { id: attempt.id },
+  });
+  const reconciliation =
+    payment.status === "succeeded" && payment.paid
+      ? await reconcileServicePayment(database, yookassa, payment)
+      : null;
+  order = await database.serviceOrder.findUnique({
+    where: { id: order.id },
+    include: {
+      items: { include: { service: true, variant: true } },
+      paymentAttempts: { orderBy: { createdAt: "desc" } },
+    },
+  });
+  return {
+    kind: reconciliation?.kind === "confirmed" ? "completed" : "ready",
+    orderId: input.orderId,
+    paymentUrl: payment.confirmation?.confirmation_url ?? null,
+    status: order?.status ?? "awaiting_payment",
+  } as const;
 };
 
 export const cancelServiceOrder = async (

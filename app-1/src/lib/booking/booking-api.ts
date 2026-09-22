@@ -104,6 +104,7 @@ export type BookingPaymentStatus = {
   };
   readonly payment: {
     readonly amount: { readonly currency: string; readonly value: string };
+    readonly confirmationUrl: string | null;
     readonly id: string;
     readonly paid: boolean;
     readonly status: string;

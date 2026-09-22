@@ -141,9 +141,18 @@ export const ServicePaymentReturnNotice = () => {
               Проверяем оплату
             </h2>
             <p className="mx-auto mt-3 max-w-md text-muted-ui-foreground">
-              Подтверждаем оплату и закрепляем выбранное время. Не закрывайте
-              страницу и не оплачивайте заказ повторно.
+              Платёж ещё не подтверждён. Если вы закрыли страницу оплаты,
+              вернитесь к ней по кнопке ниже. Не оплачивайте заказ повторно.
             </p>
+            {order?.paymentUrl && (
+              <button
+                className="mt-7 rounded-full bg-brand px-6 py-3 font-semibold text-brand-foreground"
+                onClick={() => window.location.assign(order.paymentUrl!)}
+                type="button"
+              >
+                Вернуться к оплате
+              </button>
+            )}
           </>
         )}
       </div>

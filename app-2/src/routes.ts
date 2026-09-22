@@ -24,6 +24,7 @@ import { createLeadsRouter } from "./features/leads/leads.routes.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
+import { expireServicePaymentHolds } from "./features/services/service-payments.js";
 import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
@@ -180,9 +181,20 @@ export const createApiRouter = ({
   router.use("/admin/agent-scenarios", createAgentScenariosRouter(database));
   router.use(
     "/auth",
-    createGuestAuthRouter(database, mailRu, guestBookingSync.syncUserBookings),
+    createGuestAuthRouter(
+      database,
+      mailRu,
+      guestBookingSync.syncUserBookings,
+      () =>
+        expireServicePaymentHolds(database.client, yookassa).then(
+          () => undefined,
+        ),
+    ),
   );
-  router.use("/booking", createBookingRouter(booking, yookassa, logger, database));
+  router.use(
+    "/booking",
+    createBookingRouter(booking, yookassa, logger, database),
+  );
   router.use("/chat", createChatRouter(database, chat, agent));
   router.use(
     "/max",

@@ -7,6 +7,7 @@ const guestInclude = {
     orderBy: { createdAt: "desc" as const },
     include: {
       items: { include: { service: true, variant: true, booking: true } },
+      paymentAttempts: { orderBy: { createdAt: "desc" as const } },
     },
   },
 } as const;

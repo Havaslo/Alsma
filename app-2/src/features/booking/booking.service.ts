@@ -1069,6 +1069,7 @@ export const createBookingService = (
         },
         payment: {
           amount: payment.amount,
+          confirmationUrl: payment.confirmation?.confirmation_url ?? null,
           id: payment.id,
           paid: payment.paid,
           status: payment.status,

@@ -9,7 +9,9 @@ export type GuestProfile = {
     readonly cancelledAt: string | null;
     readonly id: string;
     readonly paymentError: string | null;
+    readonly paymentDeadlineAt: string | null;
     readonly paymentStatus: string;
+    readonly paymentUrl: string | null;
     readonly refundError: string | null;
     readonly refundStatus: string;
     readonly refundedAt: string | null;

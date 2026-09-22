@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/api-client";
+import { readGuestSession } from "@/lib/auth/session";
 
 export type ServiceVariant = {
   readonly id: string;
@@ -44,6 +45,7 @@ export type ServiceOrderStatus = {
   readonly total: string;
   readonly currency: string;
   readonly paymentError: string | null;
+  readonly paymentDeadlineAt: string | null;
   readonly paymentUrl: string | null;
   readonly bookings: Array<{
     readonly id: string;
@@ -102,3 +104,23 @@ export const loadServiceOrderStatus = (orderId: string, signal?: AbortSignal) =>
   apiClient.get<ServiceOrderStatus>(`/services/orders/${orderId}/status`, {
     signal,
   });
+
+export const resumeServiceOrderPayment = (input: {
+  orderId: string;
+  returnUrl: string;
+}) =>
+  apiClient.post<{
+    orderId: string;
+    paymentUrl: string | null;
+    status: string;
+  }>(
+    `/services/orders/${input.orderId}/resume-payment`,
+    {
+      returnUrl: input.returnUrl,
+    },
+    {
+      headers: readGuestSession()
+        ? { Authorization: `Bearer ${readGuestSession()}` }
+        : {},
+    },
+  );

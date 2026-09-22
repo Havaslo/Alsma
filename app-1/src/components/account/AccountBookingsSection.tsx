@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { GuestProfile } from "@/lib/auth/guest-auth-api";
 import { requestBookingCancellation } from "@/lib/auth/guest-auth-api";
+import { loadBookingPaymentStatus } from "@/lib/booking/booking-api";
 
 const bookingServices: Record<string, readonly string[]> = {
   "SPA-weekend в лесном корпусе": [
@@ -222,6 +223,9 @@ export const AccountBookingsSection = ({
   const [submittingBookingId, setSubmittingBookingId] = useState<string | null>(
     null,
   );
+  const [resumingBookingId, setResumingBookingId] = useState<string | null>(
+    null,
+  );
   const sortedBookings = [...bookings].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -343,6 +347,45 @@ export const AccountBookingsSection = ({
                 >
                   <Download className="size-4" /> Скачать PDF
                 </button>
+                {booking.paymentStatus !== "succeeded" &&
+                  booking.status !== "cancelled" && (
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={resumingBookingId === booking.id}
+                      onClick={() => {
+                        setResumingBookingId(booking.id);
+                        void loadBookingPaymentStatus(
+                          booking.id,
+                          new AbortController().signal,
+                        )
+                          .then(({ data }) => {
+                            if (data.payment?.confirmationUrl)
+                              window.location.assign(
+                                data.payment.confirmationUrl,
+                              );
+                            else
+                              toast.info(
+                                "Срок оплаты истёк или платёж уже обработан.",
+                              );
+                          })
+                          .catch((error: unknown) => {
+                            toast.error(
+                              getApiErrorMessage(
+                                error,
+                                "Не удалось открыть оплату брони.",
+                              ),
+                            );
+                          })
+                          .finally(() => setResumingBookingId(null));
+                      }}
+                      type="button"
+                    >
+                      {resumingBookingId === booking.id && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
+                      Вернуться к оплате
+                    </button>
+                  )}
                 {canRequestCancellation(booking) && (
                   <button
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-3 font-semibold text-red-800 transition hover:bg-red-100"

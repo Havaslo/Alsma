@@ -73,6 +73,7 @@ const publicUser = (user: {
     id: string;
     paymentStatus: string | null;
     paymentError: string | null;
+    paymentDeadlineAt: Date | null;
     refundError: string | null;
     refundStatus: string;
     refundedAt: Date | null;
@@ -86,6 +87,7 @@ const publicUser = (user: {
       variant: { name: string };
       booking: { startsAt: Date; status: string } | null;
     }>;
+    paymentAttempts?: Array<{ confirmationUrl: string | null }>;
   }>;
   email: string | null;
   fullName: string | null;
@@ -134,7 +136,12 @@ const publicUser = (user: {
     cancelledAt: order.cancelledAt,
     id: order.id,
     paymentError: order.paymentError,
+    paymentDeadlineAt: order.paymentDeadlineAt,
     paymentStatus: order.paymentStatus ?? "pending",
+    paymentUrl:
+      order.status === "awaiting_payment"
+        ? (order.paymentAttempts?.[0]?.confirmationUrl ?? null)
+        : null,
     refundError: order.refundError,
     refundStatus: order.refundStatus,
     refundedAt: order.refundedAt,
@@ -162,6 +169,7 @@ export const createGuestAuthService = (
   repository: GuestAuthRepository,
   mailRu: { readonly email?: string; readonly password?: string },
   syncUserBookings?: (userId: string) => Promise<void>,
+  syncServiceOrders?: () => Promise<void>,
 ) => ({
   completeProfile: async (token: string, input: CompleteProfileBody) => {
     const session = await repository.findSession(hash(token));
@@ -172,6 +180,7 @@ export const createGuestAuthService = (
       input.fullName,
     );
     await syncUserBookings?.(session.user.id).catch(() => undefined);
+    await syncServiceOrders?.().catch(() => undefined);
     const refreshed = await repository.findSession(hash(token));
     return publicUser(refreshed?.user ?? user);
   },
@@ -180,6 +189,7 @@ export const createGuestAuthService = (
     const session = await repository.findSession(hash(token));
     if (!session?.user) return { authenticated: false, guest: null };
     await syncUserBookings?.(session.user.id).catch(() => undefined);
+    await syncServiceOrders?.().catch(() => undefined);
     const refreshed = await repository.findSession(hash(token));
     return refreshed?.user
       ? { authenticated: true, guest: publicUser(refreshed.user) }

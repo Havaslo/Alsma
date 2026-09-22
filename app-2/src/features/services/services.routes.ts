@@ -24,6 +24,7 @@ import {
   expireServicePaymentHolds,
   reconcileServicePayment,
   reconcileServiceRefund,
+  resumeServicePayment,
   servicePaymentDeadline,
   servicePaymentReturnUrl,
 } from "./service-payments.js";
@@ -620,8 +621,12 @@ export const createServicesRouter = (
       status: order!.status,
       total: order!.total.toString(),
       currency: order!.currency,
+      paymentDeadlineAt: order!.paymentDeadlineAt,
       paymentError: order!.paymentError,
-      paymentUrl: order!.paymentAttempts[0]?.confirmationUrl ?? null,
+      paymentUrl:
+        order!.status === "awaiting_payment"
+          ? (order!.paymentAttempts[0]?.confirmationUrl ?? null)
+          : null,
       bookings: order!.items
         .filter((item) => item.booking)
         .map((item) => ({
@@ -632,6 +637,64 @@ export const createServicesRouter = (
         })),
     });
   });
+  router.post(
+    "/orders/:orderId/resume-payment",
+    requireGuestUser,
+    async (request, response) => {
+      const returnUrl =
+        typeof request.body?.returnUrl === "string"
+          ? request.body.returnUrl
+          : "";
+      if (
+        !isAllowedReturnUrl(
+          returnUrl,
+          allowedReturnOrigins,
+          request.header("origin") ?? undefined,
+        )
+      )
+        return response.status(400).json({
+          error: {
+            code: "RETURN_URL_NOT_ALLOWED",
+            message: "Адрес возврата после оплаты не разрешён.",
+          },
+        });
+      const result = await resumeServicePayment(database.client, yookassa, {
+        orderId: String(request.params.orderId),
+        returnUrl,
+        userId: response.locals.guestUserId as string,
+      });
+      if (result.kind === "not_found")
+        return response.status(404).json({
+          error: { code: "ORDER_NOT_FOUND", message: "Заказ не найден." },
+        });
+      if (result.kind === "expired")
+        return response.status(409).json({
+          error: {
+            code: "PAYMENT_HOLD_EXPIRED",
+            message: "Срок временной брони истёк. Выберите услугу заново.",
+          },
+        });
+      if (result.kind === "not_available")
+        return response.status(409).json({
+          error: {
+            code: "PAYMENT_NOT_AVAILABLE",
+            message: "Этот заказ уже нельзя вернуть к оплате.",
+          },
+        });
+      if (result.kind === "provider_failed")
+        return response.status(502).json({
+          error: {
+            code: "PAYMENT_RESUME_FAILED",
+            message: "Не удалось вернуть заказ к оплате. Попробуйте ещё раз.",
+          },
+        });
+      response.json({
+        orderId: result.orderId,
+        paymentUrl: result.paymentUrl ?? null,
+        status: result.kind === "completed" ? "paid" : result.status,
+      });
+    },
+  );
   router.post(
     "/orders/:orderId/cancel",
     requireGuestUser,

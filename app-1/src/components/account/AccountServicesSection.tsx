@@ -10,6 +10,7 @@ import {
   requestServiceOrderCancellation,
 } from "@/lib/auth/guest-auth-api";
 import { formatServiceDateTime } from "@/lib/services/service-time";
+import { resumeServiceOrderPayment } from "@/lib/services/services-api";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("ru-RU", {
@@ -57,9 +58,13 @@ const canCancelServiceOrder = (order: ServiceOrder) => {
 const AccountServiceOrderCard = ({
   order,
   onCancel,
+  onResumePayment,
+  resuming,
 }: {
   order: ServiceOrder;
   onCancel: (order: ServiceOrder) => void;
+  onResumePayment: (order: ServiceOrder) => void;
+  resuming: boolean;
 }) => (
   <article className="rounded-4xl border border-line bg-panel p-6 sm:p-8">
     <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
@@ -139,6 +144,17 @@ const AccountServiceOrderCard = ({
         <CircleX className="size-4" /> Отменить заказ
       </button>
     )}
+    {order.status === "awaiting_payment" && order.paymentUrl && (
+      <button
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={resuming}
+        onClick={() => onResumePayment(order)}
+        type="button"
+      >
+        {resuming && <Loader2 className="size-4 animate-spin" />}
+        Вернуться к оплате
+      </button>
+    )}
   </article>
 );
 
@@ -152,6 +168,7 @@ export const AccountServicesSection = ({
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resumingOrderId, setResumingOrderId] = useState<string | null>(null);
   const sortedServiceOrders = [...serviceOrders].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -170,7 +187,31 @@ export const AccountServicesSection = ({
           <AccountServiceOrderCard
             key={order.id}
             onCancel={setSelectedOrder}
+            onResumePayment={(selected) => {
+              setResumingOrderId(selected.id);
+              const returnUrl = new URL(window.location.href);
+              returnUrl.searchParams.delete("payment");
+              returnUrl.searchParams.delete("serviceOrderId");
+              void resumeServiceOrderPayment({
+                orderId: selected.id,
+                returnUrl: returnUrl.toString(),
+              })
+                .then(({ data }) => {
+                  if (data.paymentUrl) window.location.assign(data.paymentUrl);
+                  else toast.info("Заказ уже обработан.");
+                })
+                .catch((error: unknown) => {
+                  toast.error(
+                    getApiErrorMessage(
+                      error,
+                      "Не удалось вернуть заказ к оплате.",
+                    ),
+                  );
+                })
+                .finally(() => setResumingOrderId(null));
+            }}
             order={order}
+            resuming={resumingOrderId === order.id}
           />
         ))}
         {!sortedServiceOrders.length && (
