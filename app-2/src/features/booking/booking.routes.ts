@@ -1,14 +1,19 @@
-import { Router } from "express";
+import { type RequestHandler, Router } from "express";
 import type { Logger } from "pino";
 
+import type { Database } from "../../lib/database/database.js";
+import { HttpError } from "../../lib/http/http-error.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import { hashGuestToken, readGuestToken } from "../guest-auth/guest-session.js";
 import {
+  bookingCancellationRequestHandler,
   createOffersHandler,
   createReservationHandler,
   paymentStatusHandler,
   paymentWebhookHandler,
 } from "./booking.handlers.js";
 import {
+  bookingCancellationRequestBodySchema,
   calendarPricesQuerySchema,
   createReservationBodySchema,
   offersQuerySchema,
@@ -21,8 +26,28 @@ export const createBookingRouter = (
   service: BookingService,
   yookassa: YooKassaClient,
   logger: Logger,
+  database: Database,
 ): Router => {
   const router = Router();
+  const requireGuestUser: RequestHandler = async (request, response, next) => {
+    const token = readGuestToken(request);
+    const session = token
+      ? await database.client.guestLoginCode.findFirst({
+          select: { userId: true },
+          where: {
+            codeHash: hashGuestToken(token),
+            consumedAt: { not: null },
+            expiresAt: { gt: new Date() },
+          },
+        })
+      : null;
+    if (!session?.userId) {
+      next(new HttpError(401, "SESSION_INVALID", "Войдите в личный кабинет."));
+      return;
+    }
+    response.locals.guestUserId = session.userId;
+    next();
+  };
   const cancelExpiredBookings = async (): Promise<void> => {
     try {
       const result = await service.cancelExpiredBookings();
@@ -61,6 +86,12 @@ export const createBookingRouter = (
     "/payments/status",
     validateRequest({ query: paymentStatusQuerySchema }),
     paymentStatusHandler(service),
+  );
+  router.post(
+    "/cancellation-requests",
+    requireGuestUser,
+    validateRequest({ body: bookingCancellationRequestBodySchema }),
+    bookingCancellationRequestHandler(service),
   );
   router.post("/payments/webhook", paymentWebhookHandler(service, yookassa));
   return router;

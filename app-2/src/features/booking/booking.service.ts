@@ -1,6 +1,7 @@
 import { HttpError } from "../../lib/http/http-error.js";
 import type { BookingRepository } from "./booking.repository.js";
 import type {
+  BookingCancellationRequestBody,
   CalendarPricesQuery,
   CreateReservationBody,
   OffersQuery,
@@ -1073,6 +1074,53 @@ export const createBookingService = (
           status: payment.status,
         },
       };
+    },
+    requestCancellation: async (
+      input: BookingCancellationRequestBody & { userId: string },
+    ) => {
+      const booking = await repository.findBookingForCancellation({
+        bookingId: input.bookingId,
+        userId: input.userId,
+      });
+      if (!booking)
+        throw new HttpError(
+          404,
+          "BOOKING_NOT_FOUND",
+          "Бронирование не найдено.",
+        );
+      if (booking.paymentStatus !== "succeeded")
+        throw new HttpError(
+          409,
+          "BOOKING_NOT_PAID",
+          "Запрос на отмену доступен после подтверждения оплаты.",
+        );
+      if (
+        booking.cancellationStatus === "requested" ||
+        booking.cancellationStatus === "processing" ||
+        booking.cancellationStatus === "succeeded"
+      ) {
+        return booking;
+      }
+
+      const updated = await repository.requestBookingCancellation({
+        bookingId: input.bookingId,
+        reason: input.reason?.trim() || null,
+        requestedAt: new Date(),
+        userId: input.userId,
+      });
+      if (!updated)
+        throw new HttpError(
+          409,
+          "BOOKING_CANCELLATION_CONFLICT",
+          "Не удалось зарегистрировать запрос на отмену.",
+        );
+      if (updated.paymentStatus !== "succeeded")
+        throw new HttpError(
+          409,
+          "BOOKING_NOT_PAID",
+          "Запрос на отмену доступен после подтверждения оплаты.",
+        );
+      return updated;
     },
     cancelExpiredBookings: async (
       input: {

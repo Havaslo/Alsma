@@ -32,6 +32,8 @@ export type GuestProfile = {
     readonly contactFirstName: string | null;
     readonly contactLastName: string | null;
     readonly contactPhone: string | null;
+    readonly cancellationRequestedAt: string | null;
+    readonly cancellationStatus: string;
     readonly epteraReservationId: string | null;
     readonly epteraLastSyncedAt: string | null;
     readonly epteraRoomNumber: string | null;
@@ -48,6 +50,7 @@ export type GuestProfile = {
     readonly paymentStatus: string;
     readonly paymentMethod: "full" | "first_night";
     readonly paymentAmount: string | null;
+    readonly refundStatus: string;
     readonly roomName: string;
     readonly selectedOffer: {
       readonly boardType?: string;
@@ -89,6 +92,21 @@ export const loadGuestProfile = (signal?: AbortSignal) =>
 
 export const completeGuestProfile = (input: { fullName: string }) =>
   apiClient.post<AuthState>("/auth/complete-profile", input, {
+    headers: authHeaders(),
+  });
+export const requestBookingCancellation = (input: {
+  bookingId: string;
+  reason?: string;
+}) =>
+  apiClient.post<{
+    booking: {
+      readonly cancellationRequestedAt: string | null;
+      readonly cancellationStatus: string;
+      readonly id: string;
+      readonly refundStatus: string;
+      readonly status: string;
+    };
+  }>("/booking/cancellation-requests", input, {
     headers: authHeaders(),
   });
 export const logoutGuest = () =>

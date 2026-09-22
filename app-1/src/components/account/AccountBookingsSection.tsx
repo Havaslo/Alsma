@@ -1,8 +1,13 @@
+import { useState } from "react";
+
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
-import { CalendarDays, Download } from "lucide-react";
+import { CalendarDays, CircleX, Download, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { GuestProfile } from "@/lib/auth/guest-auth-api";
+import { requestBookingCancellation } from "@/lib/auth/guest-auth-api";
 
 const bookingServices: Record<string, readonly string[]> = {
   "SPA-weekend в лесном корпусе": [
@@ -52,6 +57,8 @@ const bookingStatusLabel = (status: string) => {
       return "Ошибка оплаты";
     case "cancellation_pending":
       return "Отмена выполняется";
+    case "cancellation_requested":
+      return "Запрос на отмену принят";
     case "cancellation_failed":
       return "Ошибка отмены";
     case "creating_reservations":
@@ -62,6 +69,28 @@ const bookingStatusLabel = (status: string) => {
       return "Статус уточняется";
   }
 };
+
+const cancellationStatusLabel = (status: string) => {
+  switch (status) {
+    case "requested":
+      return "Запрос на отмену принят";
+    case "processing":
+      return "Отмена выполняется";
+    case "succeeded":
+      return "Бронь отменена";
+    case "failed":
+      return "Не удалось отменить бронь";
+    default:
+      return null;
+  }
+};
+
+const canRequestCancellation = (booking: GuestProfile["bookings"][number]) =>
+  booking.paymentStatus === "succeeded" &&
+  !["requested", "processing", "succeeded"].includes(
+    booking.cancellationStatus,
+  ) &&
+  booking.status !== "cancelled";
 
 const paymentMethodLabel = (method: "full" | "first_night") =>
   method === "first_night" ? "Оплата первых суток" : "Полная оплата";
@@ -180,14 +209,44 @@ const downloadBookingPdf = async (
 export const AccountBookingsSection = ({
   bookings,
   profile,
+  onCancellationRequested,
 }: {
   bookings: GuestProfile["bookings"];
   profile: Pick<GuestProfile, "email" | "fullName" | "phone">;
+  onCancellationRequested?: () => Promise<void>;
 }) => {
+  const [selectedBooking, setSelectedBooking] = useState<
+    GuestProfile["bookings"][number] | null
+  >(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [submittingBookingId, setSubmittingBookingId] = useState<string | null>(
+    null,
+  );
   const sortedBookings = [...bookings].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   );
+
+  const submitCancellation = async () => {
+    if (!selectedBooking) return;
+    setSubmittingBookingId(selectedBooking.id);
+    try {
+      await requestBookingCancellation({
+        bookingId: selectedBooking.id,
+        reason: cancellationReason.trim() || undefined,
+      });
+      setSelectedBooking(null);
+      setCancellationReason("");
+      toast.success("Запрос на отмену отправлен.");
+      await onCancellationRequested?.();
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(error, "Не удалось отправить запрос на отмену."),
+      );
+    } finally {
+      setSubmittingBookingId(null);
+    }
+  };
 
   return (
     <section className="mt-8">
@@ -215,6 +274,11 @@ export const AccountBookingsSection = ({
                   <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
                     {bookingStatusLabel(booking.status)}
                   </span>
+                  {cancellationStatusLabel(booking.cancellationStatus) && (
+                    <span className="text-muted-ui-foreground">
+                      {cancellationStatusLabel(booking.cancellationStatus)}
+                    </span>
+                  )}
                   {booking.epteraRoomNumber && (
                     <span className="text-muted-ui-foreground">
                       Комната {booking.epteraRoomNumber}
@@ -279,6 +343,15 @@ export const AccountBookingsSection = ({
                 >
                   <Download className="size-4" /> Скачать PDF
                 </button>
+                {canRequestCancellation(booking) && (
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-3 font-semibold text-red-800 transition hover:bg-red-100"
+                    onClick={() => setSelectedBooking(booking)}
+                    type="button"
+                  >
+                    <CircleX className="size-4" /> Запросить отмену
+                  </button>
+                )}
               </div>
             </div>
           </article>
@@ -289,6 +362,73 @@ export const AccountBookingsSection = ({
           </div>
         )}
       </div>
+      {selectedBooking && (
+        <div
+          aria-labelledby="booking-cancellation-title"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-center bg-brand/35 px-4 py-6"
+          role="dialog"
+        >
+          <div className="w-full max-w-lg rounded-3xl border border-line bg-panel p-6 shadow-2xl sm:p-8">
+            <div className="flex items-start justify-between gap-5">
+              <div>
+                <p className="text-sm text-muted-ui-foreground">Бронирование</p>
+                <h2
+                  className="mt-1 font-heading text-2xl font-semibold text-brand"
+                  id="booking-cancellation-title"
+                >
+                  Запросить отмену?
+                </h2>
+              </div>
+              <button
+                aria-label="Закрыть окно"
+                className="rounded-full p-2 text-muted-ui-foreground transition hover:bg-page hover:text-brand"
+                onClick={() => setSelectedBooking(null)}
+                type="button"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <p className="mt-5 leading-7 text-muted-ui-foreground">
+              Мы зарегистрируем запрос и передадим его на обработку. Сейчас
+              бронь не отменяется автоматически, а деньги не возвращаются.
+            </p>
+            <label className="mt-6 block text-sm font-semibold text-brand">
+              Причина отмены{" "}
+              <span className="font-normal text-muted-ui-foreground">
+                (необязательно)
+              </span>
+              <textarea
+                className="mt-2 min-h-28 w-full resize-y rounded-2xl border border-line bg-page px-4 py-3 font-normal transition outline-none placeholder:text-muted-ui-foreground focus:border-brand"
+                maxLength={500}
+                onChange={(event) => setCancellationReason(event.target.value)}
+                placeholder="Например: изменились планы"
+                value={cancellationReason}
+              />
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                className="rounded-full border border-line px-5 py-3 font-semibold text-brand"
+                onClick={() => setSelectedBooking(null)}
+                type="button"
+              >
+                Не отменять
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submittingBookingId === selectedBooking.id}
+                onClick={() => void submitCancellation()}
+                type="button"
+              >
+                {submittingBookingId === selectedBooking.id && (
+                  <Loader2 className="size-4 animate-spin" />
+                )}
+                Отправить запрос
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

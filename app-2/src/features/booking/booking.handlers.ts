@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 
 import type {
+  BookingCancellationRequestBody,
   CreateReservationBody,
   OffersQuery,
   PaymentStatusQuery,
@@ -36,6 +37,24 @@ export const paymentStatusHandler =
         response.locals.input.query as PaymentStatusQuery,
       ),
     );
+  };
+
+export const bookingCancellationRequestHandler =
+  (service: BookingService): RequestHandler =>
+  async (_request, response) => {
+    const booking = await service.requestCancellation({
+      ...(response.locals.input.body as BookingCancellationRequestBody),
+      userId: response.locals.guestUserId as string,
+    });
+    response.json({
+      booking: {
+        cancellationRequestedAt: booking.cancellationRequestedAt,
+        cancellationStatus: booking.cancellationStatus,
+        id: booking.id,
+        refundStatus: booking.refundStatus,
+        status: booking.status,
+      },
+    });
   };
 
 export const paymentWebhookHandler =

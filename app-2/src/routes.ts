@@ -182,7 +182,7 @@ export const createApiRouter = ({
     "/auth",
     createGuestAuthRouter(database, mailRu, guestBookingSync.syncUserBookings),
   );
-  router.use("/booking", createBookingRouter(booking, yookassa, logger));
+  router.use("/booking", createBookingRouter(booking, yookassa, logger, database));
   router.use("/chat", createChatRouter(database, chat, agent));
   router.use(
     "/max",

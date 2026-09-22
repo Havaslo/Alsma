@@ -104,7 +104,13 @@ export const AccountPage = () => {
           {activeTab === "services" ? (
             <AccountServicesSection serviceOrders={guest.serviceOrders} />
           ) : (
-            <AccountBookingsSection bookings={guest.bookings} profile={guest} />
+            <AccountBookingsSection
+              bookings={guest.bookings}
+              onCancellationRequested={async () => {
+                await auth.refetch();
+              }}
+              profile={guest}
+            />
           )}
         </section>
       </div>

@@ -91,8 +91,8 @@ const publicUser = (user: {
       cancellationErrorCode: _cancellationErrorCode,
       cancellationErrorMessage: _cancellationErrorMessage,
       cancellationReason: _cancellationReason,
-      cancellationRequestedAt: _cancellationRequestedAt,
-      cancellationStatus: _cancellationStatus,
+      cancellationRequestedAt,
+      cancellationStatus,
       cancelledAt: _cancelledAt,
       epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
       epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
@@ -106,13 +106,16 @@ const publicUser = (user: {
       refundErrorMessage: _refundErrorMessage,
       refundId: _refundId,
       refundRequestedAt: _refundRequestedAt,
-      refundStatus: _refundStatus,
+      refundStatus,
       refundedAt: _refundedAt,
       ...publicBooking
     } = booking;
     return {
       ...publicBooking,
+      cancellationRequestedAt,
+      cancellationStatus,
       paymentAmount: booking.paymentAmount?.toString() ?? null,
+      refundStatus,
       totalAmount: booking.totalAmount?.toString() ?? null,
     };
   }),

@@ -752,6 +752,75 @@ export const createBookingRepository = (database: Database) => ({
     }),
   findBookingByPaymentId: (paymentId: string) =>
     database.client.guestBooking.findUnique({ where: { paymentId } }),
+  findBookingForCancellation: (input: { bookingId: string; userId: string }) =>
+    database.client.guestBooking.findFirst({
+      include: { group: true },
+      where: { id: input.bookingId, userId: input.userId },
+    }),
+  requestBookingCancellation: (input: {
+    bookingId: string;
+    userId: string;
+    requestedAt: Date;
+    reason: string | null;
+  }) =>
+    database.client.$transaction(async (transaction) => {
+      const booking = await transaction.guestBooking.findFirst({
+        select: {
+          groupId: true,
+          id: true,
+          paymentStatus: true,
+          userId: true,
+        },
+        where: { id: input.bookingId, userId: input.userId },
+      });
+      if (!booking) return null;
+      if (booking.paymentStatus !== "succeeded")
+        return transaction.guestBooking.findUnique({
+          where: { id: input.bookingId },
+        });
+
+      const cancellationData = {
+        cancellationErrorCode: null,
+        cancellationErrorMessage: null,
+        cancellationReason: input.reason,
+        cancellationRequestedAt: input.requestedAt,
+        cancellationStatus: "requested",
+        status: "cancellation_requested",
+      } as const;
+      if (booking.groupId) {
+        await transaction.guestBookingGroup.updateMany({
+          data: cancellationData,
+          where: {
+            cancellationStatus: { in: ["not_started", "failed", "skipped"] },
+            id: booking.groupId,
+            paymentStatus: "succeeded",
+            userId: input.userId,
+          },
+        });
+        await transaction.guestBooking.updateMany({
+          data: cancellationData,
+          where: {
+            cancellationStatus: { in: ["not_started", "failed", "skipped"] },
+            groupId: booking.groupId,
+            paymentStatus: "succeeded",
+            userId: input.userId,
+          },
+        });
+      } else {
+        await transaction.guestBooking.updateMany({
+          data: cancellationData,
+          where: {
+            cancellationStatus: { in: ["not_started", "failed", "skipped"] },
+            id: input.bookingId,
+            paymentStatus: "succeeded",
+            userId: input.userId,
+          },
+        });
+      }
+      return transaction.guestBooking.findUnique({
+        where: { id: input.bookingId },
+      });
+    }),
   findBooking: (bookingId: string) =>
     database.client.guestBooking.findUnique({ where: { id: bookingId } }),
   findOrCreateGuest: (input: {
