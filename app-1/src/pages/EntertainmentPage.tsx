@@ -1,5 +1,3 @@
-import { Check, RussianRuble } from "lucide-react";
-
 import entertainmentHeroImage from "@/assets/alsma/entertainment-hero-new.webp";
 import { CatalogSections } from "@/components/site/CatalogSections";
 import { HorizontalCarousel } from "@/components/site/HorizontalCarousel";
@@ -10,8 +8,6 @@ import {
   ACTIVE_ZONES,
   ANIMATION_PROGRAM,
   type AnimationProgram,
-  EQUIPMENT,
-  type EquipmentCard,
   KIDS_SERVICES,
   type KidsService,
   SEASONS,
@@ -54,13 +50,6 @@ export const EntertainmentPage = () => {
     ANIMATION_PROGRAM,
   )
     .map(normalizeAnimationProgram)
-    .filter((item) => item.isActive !== false)
-    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
-  const equipment = getSiteCollection<EquipmentCard>(
-    content.data?.items,
-    "equipment-cards",
-    EQUIPMENT,
-  )
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const kidsServices = getSiteCollection<KidsServiceWithDescription>(
@@ -268,77 +257,6 @@ export const EntertainmentPage = () => {
                 </div>
               </article>
             ))}
-          </div>
-        </div>
-      </section>
-      <section className="py-20">
-        <div className="mx-auto max-w-[100rem] px-5 sm:px-8">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm font-semibold text-brand">
-              Для активного отдыха
-            </p>
-            <h2 className="mt-4 font-heading text-4xl font-semibold sm:text-5xl">
-              Прокат оборудования
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-              Берите всё необходимое для прогулок, спорта и семейных игр прямо
-              на территории комплекса — от велосипедов и SUP-бордов до зимнего
-              инвентаря и настольных развлечений.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {equipment.map((group) => (
-              <article
-                className="rounded-3xl bg-brand-foreground p-7"
-                key={group.title}
-              >
-                <h3 className="font-heading text-3xl font-semibold text-brand">
-                  {group.title}
-                </h3>
-                <ul className="mt-6 space-y-4">
-                  {group.items.map((item) => (
-                    <li
-                      className="flex items-center gap-3 rounded-2xl bg-panel px-4 py-3"
-                      key={item.label}
-                    >
-                      <span
-                        className={
-                          item.availability === "paid"
-                            ? "grid size-9 shrink-0 place-items-center rounded-full bg-accent-ui/20 text-accent-ui-foreground"
-                            : "grid size-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand"
-                        }
-                      >
-                        {item.availability === "paid" ? (
-                          <RussianRuble className="size-4" />
-                        ) : (
-                          <Check className="size-4" />
-                        )}
-                      </span>{" "}
-                      <span className="flex-1">{item.label}</span>
-                      <span className="text-xs font-semibold text-brand">
-                        {item.availability === "paid"
-                          ? "Платно"
-                          : "Всё включено"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-          <div className="mt-8 flex flex-wrap gap-6 rounded-3xl bg-panel px-6 py-5 text-sm text-muted-ui-foreground">
-            <span className="flex items-center gap-3">
-              <span className="grid size-8 place-items-center rounded-full bg-accent-ui/20 text-accent-ui-foreground">
-                <RussianRuble className="size-4" />
-              </span>
-              Платная услуга
-            </span>
-            <span className="flex items-center gap-3">
-              <span className="grid size-8 place-items-center rounded-full bg-brand/10 text-brand">
-                <Check className="size-4" />
-              </span>
-              Входит в «Всё включено»
-            </span>
           </div>
         </div>
       </section>
