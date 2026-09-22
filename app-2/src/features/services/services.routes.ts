@@ -483,7 +483,7 @@ export const createServicesRouter = (
               attempt.idempotencyKey ?? `service-order-${order.id}`,
             metadata: { serviceOrderId: order.id },
             receiptItems: order.items.map((item) => ({
-              amount: (Number(item.unitPrice) * item.quantity).toFixed(2),
+              amount: Number(item.unitPrice).toFixed(2),
               description: `${item.service.name} — ${item.variant.name}`,
               paymentSubject: isProductVariant(item.variant.name)
                 ? "commodity"
