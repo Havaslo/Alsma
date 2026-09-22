@@ -38,7 +38,7 @@ const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
       <div>
         <h3 className="text-xl font-semibold text-brand">Заказ услуг</h3>
         <p className="mt-2 text-sm text-muted-ui-foreground">
-          Оформлен {formatDate(order.createdAt)}
+          Покупка/бронирование {formatDate(order.createdAt)}
         </p>
       </div>
       <span className="w-fit rounded-full border border-line bg-page px-4 py-2 text-sm font-semibold text-brand">
@@ -49,7 +49,7 @@ const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
     <dl className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       <div>
         <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-          Дата заказа
+          Дата покупки/бронирования
         </dt>
         <dd className="mt-2 font-semibold">{formatDate(order.createdAt)}</dd>
       </div>
@@ -109,6 +109,11 @@ export const AccountServicesSection = ({
 }: {
   serviceOrders: GuestProfile["serviceOrders"];
 }) => {
+  const sortedServiceOrders = [...serviceOrders].sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+
   return (
     <section className="mt-10">
       <div className="flex items-center gap-3">
@@ -118,10 +123,10 @@ export const AccountServicesSection = ({
         </h2>
       </div>
       <div className="mt-6 space-y-5">
-        {serviceOrders.map((order) => (
+        {sortedServiceOrders.map((order) => (
           <AccountServiceOrderCard key={order.id} order={order} />
         ))}
-        {!serviceOrders.length && (
+        {!sortedServiceOrders.length && (
           <div className="rounded-3xl border border-line bg-panel p-8 text-muted-ui-foreground">
             Заказов услуг пока нет.
           </div>

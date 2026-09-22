@@ -174,106 +174,113 @@ export const AccountBookingsSection = ({
 }: {
   bookings: GuestProfile["bookings"];
   profile: Pick<GuestProfile, "email" | "fullName" | "phone">;
-}) => (
-  <section className="mt-8">
-    <div className="flex items-center gap-3">
-      <CalendarDays className="size-7 text-brand" />
-      <h2 className="font-heading text-3xl font-semibold text-brand">
-        История бронирований
-      </h2>
-    </div>
-    <div className="mt-6 space-y-5">
-      {bookings.map((booking) => (
-        <article
-          className="rounded-4xl border border-line bg-panel p-6 sm:p-8"
-          key={booking.id}
-        >
-          <div className="flex flex-col justify-between gap-6 lg:flex-row">
-            <div className="min-w-0 flex-1">
-              <h3 className="text-xl font-semibold text-brand">
-                {booking.roomName}
-              </h3>
-              <p className="mt-2 text-sm text-muted-ui-foreground">
-                Номер брони:{" "}
-                {booking.voucherNumber ?? getBookingNumber(booking.id)}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
-                  {bookingStatusLabel(booking.status)}
-                </span>
-                {booking.epteraRoomNumber && (
+}) => {
+  const sortedBookings = [...bookings].sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-center gap-3">
+        <CalendarDays className="size-7 text-brand" />
+        <h2 className="font-heading text-3xl font-semibold text-brand">
+          История бронирований
+        </h2>
+      </div>
+      <div className="mt-6 space-y-5">
+        {sortedBookings.map((booking) => (
+          <article
+            className="rounded-4xl border border-line bg-panel p-6 sm:p-8"
+            key={booking.id}
+          >
+            <div className="flex flex-col justify-between gap-6 lg:flex-row">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold text-brand">
+                  {booking.roomName}
+                </h3>
+                <p className="mt-2 text-sm text-muted-ui-foreground">
+                  Номер брони:{" "}
+                  {booking.voucherNumber ?? getBookingNumber(booking.id)}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
+                    {bookingStatusLabel(booking.status)}
+                  </span>
+                  {booking.epteraRoomNumber && (
+                    <span className="text-muted-ui-foreground">
+                      Комната {booking.epteraRoomNumber}
+                    </span>
+                  )}
                   <span className="text-muted-ui-foreground">
-                    Комната {booking.epteraRoomNumber}
+                    Создано {formatCreatedAt(booking.createdAt)}
                   </span>
-                )}
-                <span className="text-muted-ui-foreground">
-                  Создано {formatCreatedAt(booking.createdAt)}
-                </span>
+                </div>
+                <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                      Заезд
+                    </dt>
+                    <dd className="mt-2 font-semibold">
+                      {formatDate(booking.checkInDate)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                      Выезд
+                    </dt>
+                    <dd className="mt-2 font-semibold">
+                      {formatDate(booking.checkOutDate)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                      Гости
+                    </dt>
+                    <dd className="mt-2 font-semibold">
+                      {booking.guestsCount} гостя
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
+                      Итоговая цена
+                    </dt>
+                    <dd className="mt-2 font-semibold text-brand">
+                      {booking.totalAmount
+                        ? `${Number(booking.totalAmount).toLocaleString("ru-RU")} ₽`
+                        : "По запросу"}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-7 flex flex-wrap gap-2">
+                  {getBookingServices(booking.roomName).map((service) => (
+                    <span
+                      className="rounded-full border border-line bg-page px-4 py-2 text-sm"
+                      key={service}
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                    Заезд
-                  </dt>
-                  <dd className="mt-2 font-semibold">
-                    {formatDate(booking.checkInDate)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                    Выезд
-                  </dt>
-                  <dd className="mt-2 font-semibold">
-                    {formatDate(booking.checkOutDate)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                    Гости
-                  </dt>
-                  <dd className="mt-2 font-semibold">
-                    {booking.guestsCount} гостя
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
-                    Итоговая цена
-                  </dt>
-                  <dd className="mt-2 font-semibold text-brand">
-                    {booking.totalAmount
-                      ? `${Number(booking.totalAmount).toLocaleString("ru-RU")} ₽`
-                      : "По запросу"}
-                  </dd>
-                </div>
-              </dl>
-              <div className="mt-7 flex flex-wrap gap-2">
-                {getBookingServices(booking.roomName).map((service) => (
-                  <span
-                    className="rounded-full border border-line bg-page px-4 py-2 text-sm"
-                    key={service}
-                  >
-                    {service}
-                  </span>
-                ))}
+              <div className="flex shrink-0 flex-col gap-3">
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-page px-5 py-3 font-semibold text-brand"
+                  onClick={() => void downloadBookingPdf(booking, profile)}
+                  type="button"
+                >
+                  <Download className="size-4" /> Скачать PDF
+                </button>
               </div>
             </div>
-            <div className="flex shrink-0 flex-col gap-3">
-              <button
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-page px-5 py-3 font-semibold text-brand"
-                onClick={() => void downloadBookingPdf(booking, profile)}
-                type="button"
-              >
-                <Download className="size-4" /> Скачать PDF
-              </button>
-            </div>
+          </article>
+        ))}
+        {!sortedBookings.length && (
+          <div className="rounded-3xl bg-panel p-8 text-muted-ui-foreground">
+            Активных бронирований пока нет.
           </div>
-        </article>
-      ))}
-      {!bookings.length && (
-        <div className="rounded-3xl bg-panel p-8 text-muted-ui-foreground">
-          Активных бронирований пока нет.
-        </div>
-      )}
-    </div>
-  </section>
-);
+        )}
+      </div>
+    </section>
+  );
+};
