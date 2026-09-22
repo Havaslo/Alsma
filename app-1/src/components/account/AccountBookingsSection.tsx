@@ -27,8 +27,36 @@ const formatDate = (value: string) =>
 
 const getBookingNumber = (id: string) => `ALS-${id.slice(0, 8).toUpperCase()}`;
 
-const getBookingServices = (roomName: string, status: string) =>
-  bookingServices[roomName] ?? [status];
+const getBookingServices = (roomName: string) =>
+  bookingServices[roomName] ?? [];
+
+const bookingStatusLabel = (status: string) => {
+  switch (status) {
+    case "confirmed":
+      return "Подтверждена оплата";
+    case "cancelled":
+      return "Отменена";
+    case "awaiting_payment":
+    case "payment_pending":
+      return "Ожидает оплаты";
+    case "payment_sync_pending":
+      return "Ожидает подтверждения оплаты";
+    case "payment_sync_failed":
+      return "Ошибка передачи оплаты";
+    case "payment_creation_failed":
+      return "Ошибка оплаты";
+    case "cancellation_pending":
+      return "Отмена выполняется";
+    case "cancellation_failed":
+      return "Ошибка отмены";
+    case "creating_reservations":
+      return "Бронь оформляется";
+    case "reservation_creation_failed":
+      return "Ошибка создания брони";
+    default:
+      return "Статус уточняется";
+  }
+};
 
 const paymentMethodLabel = (method: "full" | "first_night") =>
   method === "first_night" ? "Оплата первых суток" : "Полная оплата";
@@ -37,7 +65,7 @@ const displayBoardType = (value: string | undefined) =>
     ? "Полный пансион (завтрак, обед и ужин)"
     : value;
 
-const formatSyncDate = (value: string | null) =>
+const formatCreatedAt = (value: string) =>
   value
     ? new Date(value).toLocaleString("ru-RU", {
         day: "numeric",
@@ -169,20 +197,19 @@ export const AccountBookingsSection = ({
                 Номер брони:{" "}
                 {booking.voucherNumber ?? getBookingNumber(booking.id)}
               </p>
-              {(booking.epteraRoomNumber || booking.epteraLastSyncedAt) && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  {booking.epteraRoomNumber && (
-                    <span className="text-muted-ui-foreground">
-                      Комната {booking.epteraRoomNumber}
-                    </span>
-                  )}
-                  {booking.epteraLastSyncedAt && (
-                    <span className="text-muted-ui-foreground">
-                      Обновлено {formatSyncDate(booking.epteraLastSyncedAt)}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
+                  {bookingStatusLabel(booking.status)}
+                </span>
+                {booking.epteraRoomNumber && (
+                  <span className="text-muted-ui-foreground">
+                    Комната {booking.epteraRoomNumber}
+                  </span>
+                )}
+                <span className="text-muted-ui-foreground">
+                  Создано {formatCreatedAt(booking.createdAt)}
+                </span>
+              </div>
               <dl className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <dt className="text-xs tracking-wider text-muted-ui-foreground uppercase">
@@ -220,16 +247,14 @@ export const AccountBookingsSection = ({
                 </div>
               </dl>
               <div className="mt-7 flex flex-wrap gap-2">
-                {getBookingServices(booking.roomName, booking.status).map(
-                  (service) => (
-                    <span
-                      className="rounded-full border border-line bg-page px-4 py-2 text-sm"
-                      key={service}
-                    >
-                      {service}
-                    </span>
-                  ),
-                )}
+                {getBookingServices(booking.roomName).map((service) => (
+                  <span
+                    className="rounded-full border border-line bg-page px-4 py-2 text-sm"
+                    key={service}
+                  >
+                    {service}
+                  </span>
+                ))}
               </div>
             </div>
             <div className="flex shrink-0 flex-col gap-3">

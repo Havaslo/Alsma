@@ -26,6 +26,7 @@ export type GuestProfile = {
   readonly bookings: Array<{
     readonly checkInDate: string;
     readonly checkOutDate: string;
+    readonly createdAt: string;
     readonly contactComment: string | null;
     readonly contactEmail: string | null;
     readonly contactFirstName: string | null;
