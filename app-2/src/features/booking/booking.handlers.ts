@@ -41,9 +41,18 @@ export const paymentStatusHandler =
 export const paymentWebhookHandler =
   (service: BookingService, yookassa: YooKassaClient): RequestHandler =>
   async (request, response) => {
-    const body = request.body as { event?: unknown; object?: { id?: unknown } };
+    const body = request.body as {
+      event?: unknown;
+      object?: { id?: unknown };
+    };
     const paymentId =
       typeof body.object?.id === "string" ? body.object.id : null;
+    if (body.event === "refund.succeeded" || body.event === "refund.canceled") {
+      if (paymentId)
+        await service.reconcileRefund(await yookassa.getRefund(paymentId));
+      response.sendStatus(204);
+      return;
+    }
     if (
       body.event !== "payment.succeeded" &&
       body.event !== "payment.canceled"

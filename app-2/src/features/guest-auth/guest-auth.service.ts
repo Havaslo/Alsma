@@ -23,6 +23,8 @@ const publicUser = (user: {
     cancellationAttemptedAt: Date | null;
     cancellationErrorCode: string | null;
     cancellationErrorMessage: string | null;
+    cancellationReason: string | null;
+    cancellationRequestedAt: Date | null;
     cancellationStatus: string;
     cancelledAt: Date | null;
     checkInDate: Date;
@@ -50,6 +52,13 @@ const publicUser = (user: {
     paymentMethod: string;
     paymentAmount: { toString(): string } | null;
     paymentDeadlineAt: Date | null;
+    refundAmount: { toString(): string } | null;
+    refundErrorCode: string | null;
+    refundErrorMessage: string | null;
+    refundId: string | null;
+    refundRequestedAt: Date | null;
+    refundStatus: string;
+    refundedAt: Date | null;
     roomName: string;
     selectedOffer: unknown;
     status: string;
@@ -81,6 +90,8 @@ const publicUser = (user: {
       cancellationAttemptedAt: _cancellationAttemptedAt,
       cancellationErrorCode: _cancellationErrorCode,
       cancellationErrorMessage: _cancellationErrorMessage,
+      cancellationReason: _cancellationReason,
+      cancellationRequestedAt: _cancellationRequestedAt,
       cancellationStatus: _cancellationStatus,
       cancelledAt: _cancelledAt,
       epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
@@ -90,6 +101,13 @@ const publicUser = (user: {
       epteraSyncError: _epteraSyncError,
       epteraSnapshot: _epteraSnapshot,
       paymentDeadlineAt: _paymentDeadlineAt,
+      refundAmount: _refundAmount,
+      refundErrorCode: _refundErrorCode,
+      refundErrorMessage: _refundErrorMessage,
+      refundId: _refundId,
+      refundRequestedAt: _refundRequestedAt,
+      refundStatus: _refundStatus,
+      refundedAt: _refundedAt,
       ...publicBooking
     } = booking;
     return {

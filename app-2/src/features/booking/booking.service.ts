@@ -6,7 +6,11 @@ import type {
   OffersQuery,
 } from "./booking.schemas.js";
 import type { EpteraClient, EpteraOffer } from "./eptera.client.js";
-import type { YooKassaClient, YooPayment } from "./yookassa.client.js";
+import type {
+  YooKassaClient,
+  YooPayment,
+  YooRefund,
+} from "./yookassa.client.js";
 
 const normalizePhone = (value: string): string => {
   let digits = value.replace(/\D/g, "");
@@ -141,12 +145,21 @@ const withoutEpteraPaymentSyncState = <T extends Record<string, unknown>>(
     cancellationAttemptedAt: _cancellationAttemptedAt,
     cancellationErrorCode: _cancellationErrorCode,
     cancellationErrorMessage: _cancellationErrorMessage,
+    cancellationReason: _cancellationReason,
+    cancellationRequestedAt: _cancellationRequestedAt,
     cancellationStatus: _cancellationStatus,
     cancelledAt: _cancelledAt,
     epteraPaymentSyncAttemptedAt: _epteraPaymentSyncAttemptedAt,
     epteraPaymentSyncStatus: _epteraPaymentSyncStatus,
     epteraPaymentSyncedAt: _epteraPaymentSyncedAt,
     paymentDeadlineAt: _paymentDeadlineAt,
+    refundAmount: _refundAmount,
+    refundErrorCode: _refundErrorCode,
+    refundErrorMessage: _refundErrorMessage,
+    refundId: _refundId,
+    refundRequestedAt: _refundRequestedAt,
+    refundStatus: _refundStatus,
+    refundedAt: _refundedAt,
     ...publicBooking
   } = booking;
   return publicBooking;
@@ -183,6 +196,17 @@ const cancellationFailure = (error: unknown) => {
 
 const isPaidPayment = (payment: YooPayment): boolean =>
   payment.status === "succeeded" && payment.paid;
+
+const refundAmount = (refund: YooRefund): number => {
+  const amount = Number(refund.amount.value);
+  if (!Number.isFinite(amount) || amount <= 0)
+    throw new HttpError(
+      502,
+      "YOOKASSA_REFUND_AMOUNT_INVALID",
+      "Платёжный сервис вернул некорректную сумму возврата.",
+    );
+  return amount;
+};
 
 type ReservationRoom = NonNullable<CreateReservationBody["rooms"]>[number];
 
@@ -1404,6 +1428,62 @@ export const createBookingService = (
         syncedAt,
       });
       if (syncResult.count === 0) return repository.findBooking(booking.id);
+      return repository.findBooking(booking.id);
+    },
+    reconcileRefund: async (refund: YooRefund) => {
+      const groupByRefundId =
+        typeof repository.findGroupByRefundId === "function"
+          ? await repository.findGroupByRefundId(refund.id)
+          : null;
+      const group =
+        groupByRefundId ??
+        (typeof repository.findGroupByPaymentId === "function"
+          ? await repository.findGroupByPaymentId(refund.paymentId)
+          : null);
+      if (group) {
+        if (refund.status === "succeeded") {
+          await repository.markGroupRefundSucceeded({
+            groupId: group.id,
+            refundAmount: refundAmount(refund),
+            refundId: refund.id,
+            refundedAt: new Date(),
+          });
+        } else if (refund.status === "canceled" || refund.status === "failed") {
+          await repository.markGroupRefundFailed({
+            errorCode: `YOOKASSA_REFUND_${refund.status.toUpperCase()}`,
+            errorMessage: "Платёжный сервис не подтвердил возврат денег.",
+            groupId: group.id,
+            refundId: refund.id,
+          });
+        }
+        return repository.findGroup(group.id);
+      }
+
+      const bookingByRefundId =
+        typeof repository.findBookingByRefundId === "function"
+          ? await repository.findBookingByRefundId(refund.id)
+          : null;
+      const booking =
+        bookingByRefundId ??
+        (typeof repository.findBookingByPaymentId === "function"
+          ? await repository.findBookingByPaymentId(refund.paymentId)
+          : null);
+      if (!booking) return null;
+      if (refund.status === "succeeded") {
+        await repository.markBookingRefundSucceeded({
+          bookingId: booking.id,
+          refundAmount: refundAmount(refund),
+          refundId: refund.id,
+          refundedAt: new Date(),
+        });
+      } else if (refund.status === "canceled" || refund.status === "failed") {
+        await repository.markBookingRefundFailed({
+          bookingId: booking.id,
+          errorCode: `YOOKASSA_REFUND_${refund.status.toUpperCase()}`,
+          errorMessage: "Платёжный сервис не подтвердил возврат денег.",
+          refundId: refund.id,
+        });
+      }
       return repository.findBooking(booking.id);
     },
   };

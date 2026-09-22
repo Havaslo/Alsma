@@ -17,6 +17,13 @@ export type YooPayment = {
   readonly metadata?: Record<string, string>;
 };
 
+export type YooRefund = {
+  readonly id: string;
+  readonly status: string;
+  readonly paymentId: string;
+  readonly amount: { readonly value: string; readonly currency: string };
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -50,6 +57,31 @@ const readPayment = (value: unknown): YooPayment => {
         ? { confirmation_url: confirmation["confirmation_url"] }
         : undefined,
     metadata: asRecord(record.metadata) as Record<string, string> | undefined,
+  };
+};
+
+const readRefund = (value: unknown): YooRefund => {
+  const record = asRecord(value);
+  const amount = asRecord(record?.amount);
+  if (
+    !record ||
+    typeof record.id !== "string" ||
+    typeof record.status !== "string" ||
+    typeof record.payment_id !== "string" ||
+    typeof amount?.value !== "string" ||
+    typeof amount.currency !== "string"
+  ) {
+    throw new HttpError(
+      502,
+      "YOOKASSA_INVALID_REFUND_RESPONSE",
+      "Платёжный сервис вернул некорректный ответ по возврату.",
+    );
+  }
+  return {
+    amount: { currency: amount.currency, value: amount.value },
+    id: record.id,
+    paymentId: record.payment_id,
+    status: record.status,
   };
 };
 
@@ -174,6 +206,10 @@ export const createYooKassaClient = ({
       readPayment(
         await request<unknown>(`/payments/${encodeURIComponent(paymentId)}`),
       ),
+    getRefund: async (refundId: string) =>
+      readRefund(
+        await request<unknown>(`/refunds/${encodeURIComponent(refundId)}`),
+      ),
     cancelPayment: async (paymentId: string, idempotenceKey: string) => {
       await request<unknown>(
         `/payments/${encodeURIComponent(paymentId)}/cancel`,
@@ -190,17 +226,18 @@ export const createYooKassaClient = ({
       currency: string;
       idempotenceKey: string;
       description?: string;
-    }) => {
-      await request<unknown>("/refunds", {
-        method: "POST",
-        headers: { "Idempotence-Key": input.idempotenceKey },
-        body: JSON.stringify({
-          payment_id: input.paymentId,
-          amount: { value: input.amount, currency: input.currency },
-          description: input.description,
+    }) =>
+      readRefund(
+        await request<unknown>("/refunds", {
+          method: "POST",
+          headers: { "Idempotence-Key": input.idempotenceKey },
+          body: JSON.stringify({
+            payment_id: input.paymentId,
+            amount: { value: input.amount, currency: input.currency },
+            description: input.description,
+          }),
         }),
-      });
-    },
+      ),
   };
 };
 

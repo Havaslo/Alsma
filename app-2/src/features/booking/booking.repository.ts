@@ -248,6 +248,11 @@ export const createBookingRepository = (database: Database) => ({
       include: { bookings: { orderBy: { createdAt: "asc" } } },
       where: { paymentId },
     }),
+  findGroupByRefundId: (refundId: string) =>
+    database.client.guestBookingGroup.findFirst({
+      include: { bookings: { orderBy: { createdAt: "asc" } } },
+      where: { refundId },
+    }),
   markGroupPaymentSucceeded: (input: {
     groupId: string;
     paymentAmount: number;
@@ -652,6 +657,98 @@ export const createBookingRepository = (database: Database) => ({
         id: input.bookingId,
         paymentStatus: "succeeded",
       },
+    }),
+  findBookingByRefundId: (refundId: string) =>
+    database.client.guestBooking.findFirst({ where: { refundId } }),
+  markGroupRefundSucceeded: (input: {
+    groupId: string;
+    refundId: string;
+    refundAmount: number;
+    refundedAt: Date;
+  }) =>
+    database.client.$transaction(async (transaction) => {
+      const group = await transaction.guestBookingGroup.updateMany({
+        data: {
+          refundAmount: input.refundAmount,
+          refundErrorCode: null,
+          refundErrorMessage: null,
+          refundId: input.refundId,
+          refundStatus: "succeeded",
+          refundedAt: input.refundedAt,
+        },
+        where: { id: input.groupId, refundStatus: { not: "succeeded" } },
+      });
+      await transaction.guestBooking.updateMany({
+        data: {
+          refundAmount: input.refundAmount,
+          refundErrorCode: null,
+          refundErrorMessage: null,
+          refundId: input.refundId,
+          refundStatus: "succeeded",
+          refundedAt: input.refundedAt,
+        },
+        where: { groupId: input.groupId, refundStatus: { not: "succeeded" } },
+      });
+      return group;
+    }),
+  markGroupRefundFailed: (input: {
+    groupId: string;
+    refundId: string;
+    errorCode: string;
+    errorMessage: string;
+  }) =>
+    database.client.$transaction(async (transaction) => {
+      const group = await transaction.guestBookingGroup.updateMany({
+        data: {
+          refundErrorCode: input.errorCode,
+          refundErrorMessage: input.errorMessage,
+          refundId: input.refundId,
+          refundStatus: "failed",
+        },
+        where: { id: input.groupId, refundStatus: { not: "succeeded" } },
+      });
+      await transaction.guestBooking.updateMany({
+        data: {
+          refundErrorCode: input.errorCode,
+          refundErrorMessage: input.errorMessage,
+          refundId: input.refundId,
+          refundStatus: "failed",
+        },
+        where: { groupId: input.groupId, refundStatus: { not: "succeeded" } },
+      });
+      return group;
+    }),
+  markBookingRefundSucceeded: (input: {
+    bookingId: string;
+    refundId: string;
+    refundAmount: number;
+    refundedAt: Date;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        refundAmount: input.refundAmount,
+        refundErrorCode: null,
+        refundErrorMessage: null,
+        refundId: input.refundId,
+        refundStatus: "succeeded",
+        refundedAt: input.refundedAt,
+      },
+      where: { id: input.bookingId, refundStatus: { not: "succeeded" } },
+    }),
+  markBookingRefundFailed: (input: {
+    bookingId: string;
+    refundId: string;
+    errorCode: string;
+    errorMessage: string;
+  }) =>
+    database.client.guestBooking.updateMany({
+      data: {
+        refundErrorCode: input.errorCode,
+        refundErrorMessage: input.errorMessage,
+        refundId: input.refundId,
+        refundStatus: "failed",
+      },
+      where: { id: input.bookingId, refundStatus: { not: "succeeded" } },
     }),
   findBookingByPaymentId: (paymentId: string) =>
     database.client.guestBooking.findUnique({ where: { paymentId } }),
