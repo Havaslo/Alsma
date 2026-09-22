@@ -137,7 +137,7 @@ const downloadBookingPdf = async (
     </div>
     <div style="margin-top: 42px;">
       <div style="font-size: 28px; font-weight: 700;">${escapeHtml(booking.roomName)}</div>
-      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони Eptera: ${escapeHtml(bookingNumber)}</div>
+      <div style="color: #6c716c; font-size: 16px; margin-top: 12px;">Номер брони: ${escapeHtml(bookingNumber)}</div>
     </div>
     <div style="margin-top: 42px; padding-top: 24px; border-top: 1px solid #d9cdbb;">
       <div style="font-size: 14px; color: #6c716c; margin-bottom: 14px;">Контактное лицо</div>
@@ -209,7 +209,7 @@ export const AccountBookingsSection = ({
                   {booking.roomName}
                 </h3>
                 <p className="mt-2 text-sm text-muted-ui-foreground">
-                  Номер брони Eptera: {getEpteraBookingNumber(booking)}
+                  Номер брони: {getEpteraBookingNumber(booking)}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                   <span className="rounded-full border border-line bg-page px-4 py-2 font-medium text-brand">
