@@ -66,8 +66,16 @@ const publicUser = (user: {
     voucherNumber: string | null;
   }>;
   serviceOrders: Array<{
+    cancellationReason: string | null;
+    cancellationRequestedAt: Date | null;
+    cancellationStatus: string;
+    cancelledAt: Date | null;
     id: string;
     paymentStatus: string | null;
+    paymentError: string | null;
+    refundError: string | null;
+    refundStatus: string;
+    refundedAt: Date | null;
     status: string;
     total: { toString(): string };
     currency: string;
@@ -120,8 +128,16 @@ const publicUser = (user: {
     };
   }),
   serviceOrders: user.serviceOrders.map((order) => ({
+    cancellationReason: order.cancellationReason,
+    cancellationRequestedAt: order.cancellationRequestedAt,
+    cancellationStatus: order.cancellationStatus,
+    cancelledAt: order.cancelledAt,
     id: order.id,
+    paymentError: order.paymentError,
     paymentStatus: order.paymentStatus ?? "pending",
+    refundError: order.refundError,
+    refundStatus: order.refundStatus,
+    refundedAt: order.refundedAt,
     status: order.status,
     total: order.total.toString(),
     currency: order.currency,

@@ -3,8 +3,16 @@ import { readGuestSession } from "@/lib/auth/session";
 
 export type GuestProfile = {
   readonly serviceOrders: Array<{
+    readonly cancellationReason: string | null;
+    readonly cancellationRequestedAt: string | null;
+    readonly cancellationStatus: string;
+    readonly cancelledAt: string | null;
     readonly id: string;
+    readonly paymentError: string | null;
     readonly paymentStatus: string;
+    readonly refundError: string | null;
+    readonly refundStatus: string;
+    readonly refundedAt: string | null;
     readonly status: string;
     readonly total: string;
     readonly currency: string;
@@ -109,6 +117,27 @@ export const requestBookingCancellation = (input: {
   }>("/booking/cancellation-requests", input, {
     headers: authHeaders(),
   });
+export const requestServiceOrderCancellation = (input: {
+  orderId: string;
+  reason?: string;
+}) =>
+  apiClient.post<{
+    order: {
+      readonly cancellationStatus: string;
+      readonly id: string;
+      readonly paymentError: string | null;
+      readonly paymentStatus: string;
+      readonly refundError: string | null;
+      readonly refundStatus: string;
+      readonly status: string;
+    };
+  }>(
+    `/services/orders/${input.orderId}/cancel`,
+    { reason: input.reason },
+    {
+      headers: authHeaders(),
+    },
+  );
 export const logoutGuest = () =>
   apiClient.post<{ ok: boolean }>(
     "/auth/logout",

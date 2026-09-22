@@ -1,7 +1,8 @@
-import { Router } from "express";
+import { type RequestHandler, Router } from "express";
 import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
+import { HttpError } from "../../lib/http/http-error.js";
 import {
   createRequireAdmin,
   createRequireAdminPermission,
@@ -19,8 +20,10 @@ import {
   lockServiceAvailabilityForVariants,
 } from "./service-availability.js";
 import {
+  cancelServiceOrder,
   expireServicePaymentHolds,
   reconcileServicePayment,
+  reconcileServiceRefund,
   servicePaymentDeadline,
   servicePaymentReturnUrl,
 } from "./service-payments.js";
@@ -106,6 +109,10 @@ const orderSchema = z.object({
     .max(30),
 });
 
+const serviceCancellationSchema = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
+
 const isAllowedReturnUrl = (
   value: string,
   allowedOrigins: readonly string[],
@@ -125,6 +132,25 @@ export const createServicesRouter = (
   allowedReturnOrigins: readonly string[],
 ): Router => {
   const router = Router();
+  const requireGuestUser: RequestHandler = async (request, response, next) => {
+    const token = readGuestToken(request);
+    const session = token
+      ? await database.client.guestLoginCode.findFirst({
+          select: { userId: true },
+          where: {
+            codeHash: hashGuestToken(token),
+            consumedAt: { not: null },
+            expiresAt: { gt: new Date() },
+          },
+        })
+      : null;
+    if (!session?.userId) {
+      next(new HttpError(401, "SESSION_INVALID", "Войдите в личный кабинет."));
+      return;
+    }
+    response.locals.guestUserId = session.userId;
+    next();
+  };
   router.get("/", async (request, response) => {
     const services = await database.client.service.findMany({
       where: {
@@ -477,7 +503,11 @@ export const createServicesRouter = (
             bookingId: undefined,
             capture: true,
             currency: order.currency,
-            customer: { email: order.email, phone: order.phone },
+            customer: {
+              email: order.email,
+              fullName: order.name,
+              phone: order.phone,
+            },
             description: `Оплата услуг ${order.id}`,
             idempotenceKey:
               attempt.idempotencyKey ?? `service-order-${order.id}`,
@@ -602,19 +632,67 @@ export const createServicesRouter = (
         })),
     });
   });
+  router.post(
+    "/orders/:orderId/cancel",
+    requireGuestUser,
+    async (request, response) => {
+      const parsed = serviceCancellationSchema.safeParse(request.body);
+      if (!parsed.success)
+        return response.status(400).json({
+          error: {
+            code: "INVALID_CANCELLATION",
+            message: "Проверьте причину отмены.",
+            details: parsed.error.flatten(),
+          },
+        });
+      const orderId = String(request.params.orderId);
+      const result = await cancelServiceOrder(database.client, yookassa, {
+        orderId,
+        reason: parsed.data.reason,
+        userId: response.locals.guestUserId as string,
+      });
+      if (result.kind === "not_found")
+        return response.status(404).json({
+          error: { code: "ORDER_NOT_FOUND", message: "Заказ не найден." },
+        });
+      if (result.kind === "too_late")
+        return response.status(409).json({
+          error: {
+            code: "ORDER_CANCELLATION_TOO_LATE",
+            message: "Услугу уже начали оказывать, отмена недоступна.",
+          },
+        });
+      if (result.kind === "not_cancellable")
+        return response.status(409).json({
+          error: {
+            code: "ORDER_NOT_CANCELLABLE",
+            message: "Этот заказ сейчас нельзя отменить.",
+          },
+        });
+      response.json({ order: result.order });
+    },
+  );
   router.post("/payments/webhook", async (request, response) => {
     const body = request.body as {
       event?: unknown;
       object?: { id?: unknown };
     };
+    const paymentId =
+      typeof body.object?.id === "string" ? body.object.id : null;
+    if (body.event === "refund.succeeded" || body.event === "refund.canceled") {
+      if (paymentId)
+        await reconcileServiceRefund(
+          database.client,
+          await yookassa.getRefund(paymentId),
+        );
+      return response.sendStatus(204);
+    }
     if (
       body.event !== "payment.succeeded" &&
       body.event !== "payment.canceled" &&
       body.event !== "payment.waiting_for_capture"
     )
       return response.sendStatus(204);
-    const paymentId =
-      typeof body.object?.id === "string" ? body.object.id : null;
     if (paymentId)
       await reconcileServicePayment(
         database.client,

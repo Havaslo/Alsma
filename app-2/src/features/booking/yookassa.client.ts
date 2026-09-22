@@ -163,7 +163,7 @@ export const createYooKassaClient = ({
         paymentSubject?: string;
       }>;
       returnUrl: string;
-      customer: { email: string; phone: string };
+      customer: { email: string; phone: string; fullName?: string };
     }) =>
       readPayment(
         await request<unknown>("/payments", {
@@ -181,7 +181,13 @@ export const createYooKassaClient = ({
               input.metadata ??
               (input.bookingId ? { bookingId: input.bookingId } : undefined),
             receipt: {
-              customer: input.customer,
+              customer: {
+                ...(input.customer.fullName
+                  ? { full_name: input.customer.fullName }
+                  : {}),
+                email: input.customer.email,
+                phone: input.customer.phone,
+              },
               items: (
                 input.receiptItems ?? [
                   {

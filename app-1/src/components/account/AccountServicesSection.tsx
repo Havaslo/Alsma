@@ -1,6 +1,14 @@
-import { ShoppingBag } from "lucide-react";
+import { useState } from "react";
 
-import type { GuestProfile } from "@/lib/auth/guest-auth-api";
+import { CircleX, Loader2, ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
+
+import { Modal } from "@/components/ui/Modal";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import {
+  type GuestProfile,
+  requestServiceOrderCancellation,
+} from "@/lib/auth/guest-auth-api";
 import { formatServiceDateTime } from "@/lib/services/service-time";
 
 const formatDate = (value: string) =>
@@ -25,6 +33,9 @@ const formatStatus = (status: string) =>
     expired: "Время оплаты истекло",
     refund_pending: "Ожидает возврата",
     refunded: "Возвращено",
+    cancellation_pending: "Отмена выполняется",
+    cancellation_requested: "Запрос на отмену принят",
+    cancellation_failed: "Ошибка отмены",
   })[status] ?? status;
 
 const formatAmount = (total: string, currency: string) =>
@@ -32,7 +43,24 @@ const formatAmount = (total: string, currency: string) =>
 
 type ServiceOrder = GuestProfile["serviceOrders"][number];
 
-const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
+const canCancelServiceOrder = (order: ServiceOrder) => {
+  if (
+    !["awaiting_payment", "paid"].includes(order.status) ||
+    ["requested", "processing", "succeeded"].includes(order.cancellationStatus)
+  )
+    return false;
+  return order.items.every(
+    (item) => !item.booking || new Date(item.booking.startsAt) > new Date(),
+  );
+};
+
+const AccountServiceOrderCard = ({
+  order,
+  onCancel,
+}: {
+  order: ServiceOrder;
+  onCancel: (order: ServiceOrder) => void;
+}) => (
   <article className="rounded-4xl border border-line bg-panel p-6 sm:p-8">
     <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
       <div>
@@ -101,14 +129,29 @@ const AccountServiceOrderCard = ({ order }: { order: ServiceOrder }) => (
         </div>
       ))}
     </div>
+
+    {canCancelServiceOrder(order) && (
+      <button
+        className="mt-7 inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-5 py-3 font-semibold text-red-800 transition hover:bg-red-100"
+        onClick={() => onCancel(order)}
+        type="button"
+      >
+        <CircleX className="size-4" /> Отменить заказ
+      </button>
+    )}
   </article>
 );
 
 export const AccountServicesSection = ({
   serviceOrders,
+  onOrderChanged,
 }: {
   serviceOrders: GuestProfile["serviceOrders"];
+  onOrderChanged?: () => Promise<void>;
 }) => {
+  const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const sortedServiceOrders = [...serviceOrders].sort(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -124,7 +167,11 @@ export const AccountServicesSection = ({
       </div>
       <div className="mt-6 space-y-5">
         {sortedServiceOrders.map((order) => (
-          <AccountServiceOrderCard key={order.id} order={order} />
+          <AccountServiceOrderCard
+            key={order.id}
+            onCancel={setSelectedOrder}
+            order={order}
+          />
         ))}
         {!sortedServiceOrders.length && (
           <div className="rounded-3xl border border-line bg-panel p-8 text-muted-ui-foreground">
@@ -132,6 +179,80 @@ export const AccountServicesSection = ({
           </div>
         )}
       </div>
+      <Modal
+        onClose={() => {
+          if (!isSubmitting) setSelectedOrder(null);
+        }}
+        open={Boolean(selectedOrder)}
+        title="Отмена заказа услуг"
+      >
+        <div className="space-y-5 py-3">
+          <p className="leading-7 text-muted-ui-foreground">
+            Заказ и выбранное время будут отменены. Если заказ уже оплачен,
+            запустим полный возврат денег через ЮKassa.
+          </p>
+          <label className="block text-sm font-semibold text-brand">
+            Причина отмены{" "}
+            <span className="font-normal text-muted-ui-foreground">
+              (необязательно)
+            </span>
+            <textarea
+              className="mt-2 min-h-28 w-full resize-y rounded-2xl border border-line bg-page px-4 py-3 font-normal outline-none focus:border-brand"
+              maxLength={500}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Например: изменились планы"
+              value={reason}
+            />
+          </label>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              className="rounded-full border border-line px-5 py-3 font-semibold text-brand"
+              disabled={isSubmitting}
+              onClick={() => setSelectedOrder(null)}
+              type="button"
+            >
+              Не отменять
+            </button>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting || !selectedOrder}
+              onClick={() => {
+                if (!selectedOrder) return;
+                setIsSubmitting(true);
+                void requestServiceOrderCancellation({
+                  orderId: selectedOrder.id,
+                  reason: reason.trim() || undefined,
+                })
+                  .then(({ data }) => {
+                    setSelectedOrder(null);
+                    setReason("");
+                    toast.success(
+                      data.order.status === "refunded"
+                        ? "Заказ отменён, деньги возвращены."
+                        : data.order.status === "refund_pending"
+                          ? "Заказ отменён, возврат выполняется."
+                          : "Заказ отменён, слот освобождён.",
+                    );
+                    return onOrderChanged?.();
+                  })
+                  .catch((error: unknown) => {
+                    toast.error(
+                      getApiErrorMessage(
+                        error,
+                        "Не удалось отменить заказ услуг.",
+                      ),
+                    );
+                  })
+                  .finally(() => setIsSubmitting(false));
+              }}
+              type="button"
+            >
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              Подтвердить отмену
+            </button>
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 };

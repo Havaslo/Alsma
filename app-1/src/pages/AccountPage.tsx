@@ -102,7 +102,12 @@ export const AccountPage = () => {
             ))}
           </div>
           {activeTab === "services" ? (
-            <AccountServicesSection serviceOrders={guest.serviceOrders} />
+            <AccountServicesSection
+              onOrderChanged={async () => {
+                await auth.refetch();
+              }}
+              serviceOrders={guest.serviceOrders}
+            />
           ) : (
             <AccountBookingsSection
               bookings={guest.bookings}

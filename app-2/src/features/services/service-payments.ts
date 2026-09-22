@@ -1,5 +1,9 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import type { YooKassaClient, YooPayment } from "../booking/yookassa.client.js";
+import type {
+  YooKassaClient,
+  YooPayment,
+  YooRefund,
+} from "../booking/yookassa.client.js";
 import {
   isProductVariant,
   isServiceSlotAvailable,
@@ -19,6 +23,305 @@ export const servicePaymentReturnUrl = (value: string, orderId: string) => {
 
 export const servicePaymentDeadline = (now = new Date()) =>
   new Date(now.getTime() + SERVICE_HOLD_MINUTES * 60_000);
+
+const serviceOrderResult = (order: {
+  cancellationStatus: string;
+  id: string;
+  paymentError: string | null;
+  paymentStatus: string;
+  refundError: string | null;
+  refundStatus: string;
+  status: string;
+}) => ({
+  cancellationStatus: order.cancellationStatus,
+  orderId: order.id,
+  paymentError: order.paymentError,
+  paymentStatus: order.paymentStatus,
+  refundError: order.refundError,
+  refundStatus: order.refundStatus,
+  status: order.status,
+});
+
+export const reconcileServiceRefund = async (
+  database: PrismaClient,
+  refund: YooRefund,
+) => {
+  const attempt = await database.paymentAttempt.findFirst({
+    where: { externalId: refund.paymentId },
+  });
+  if (!attempt) return { kind: "ignored" as const };
+
+  if (refund.status === "succeeded") {
+    await database.$transaction([
+      database.paymentAttempt.update({
+        data: { refundedAt: new Date(), lastError: null, status: "refunded" },
+        where: { id: attempt.id },
+      }),
+      database.serviceOrder.update({
+        data: {
+          cancellationStatus: "succeeded",
+          cancelledAt: new Date(),
+          paymentError: null,
+          paymentStatus: "refunded",
+          refundError: null,
+          refundId: refund.id,
+          refundStatus: "succeeded",
+          refundedAt: new Date(),
+          status: "refunded",
+        },
+        where: { id: attempt.orderId },
+      }),
+    ]);
+    return { kind: "refunded" as const, orderId: attempt.orderId };
+  }
+
+  if (refund.status === "canceled" || refund.status === "failed") {
+    const message = "ЮKassa не завершила возврат оплаты.";
+    await database.$transaction([
+      database.paymentAttempt.update({
+        data: { lastError: message, status: "refund_pending" },
+        where: { id: attempt.id },
+      }),
+      database.serviceOrder.update({
+        data: {
+          cancellationStatus: "failed",
+          paymentError: message,
+          refundError: message,
+          refundId: refund.id,
+          refundStatus: "failed",
+          status: "refund_pending",
+        },
+        where: { id: attempt.orderId },
+      }),
+    ]);
+    return { kind: "refund_failed" as const, orderId: attempt.orderId };
+  }
+
+  await database.$transaction([
+    database.paymentAttempt.update({
+      data: { status: "refund_pending" },
+      where: { id: attempt.id },
+    }),
+    database.serviceOrder.update({
+      data: {
+        cancellationStatus: "processing",
+        refundId: refund.id,
+        refundStatus: "pending",
+        status: "refund_pending",
+      },
+      where: { id: attempt.orderId },
+    }),
+  ]);
+  return { kind: "refund_pending" as const, orderId: attempt.orderId };
+};
+
+export const cancelServiceOrder = async (
+  database: PrismaClient,
+  yookassa: YooKassaClient,
+  input: { orderId: string; reason?: string | null; userId: string },
+) => {
+  const order = await database.serviceOrder.findFirst({
+    where: { id: input.orderId, userId: input.userId },
+    include: {
+      items: { include: { booking: true } },
+      paymentAttempts: { orderBy: { createdAt: "desc" } },
+    },
+  });
+  if (!order) return { kind: "not_found" as const };
+
+  if (order.status === "refunded" || order.status === "cancelled")
+    return { kind: "already_done" as const, order: serviceOrderResult(order) };
+  if (order.status === "refund_pending")
+    return {
+      kind: "already_processing" as const,
+      order: serviceOrderResult(order),
+    };
+  if (order.status !== "awaiting_payment" && order.status !== "paid")
+    return { kind: "not_cancellable" as const };
+
+  const now = new Date();
+  if (
+    order.items.some(
+      (item) => item.booking?.startsAt && item.booking.startsAt <= now,
+    )
+  )
+    return { kind: "too_late" as const };
+
+  const reason = input.reason?.trim() || null;
+  const claimed = await database.$transaction(async (transaction) => {
+    const current = await transaction.serviceOrder.findFirst({
+      where: { id: input.orderId, userId: input.userId },
+      include: { paymentAttempts: { orderBy: { createdAt: "desc" } } },
+    });
+    if (!current) return null;
+    if (current.status === "refunded" || current.status === "cancelled")
+      return current;
+    if (current.status === "refund_pending") return current;
+
+    const paid =
+      current.status === "paid" && current.paymentStatus === "succeeded";
+    await transaction.serviceOrder.update({
+      data: {
+        cancellationReason: reason,
+        cancellationRequestedAt: new Date(),
+        cancellationStatus: paid ? "processing" : "requested",
+        paymentError: paid ? "Выполняется возврат оплаты." : null,
+        paymentStatus: paid ? "succeeded" : "canceled",
+        refundStatus: paid ? "pending" : "not_started",
+        status: paid ? "refund_pending" : "cancelled",
+      },
+      where: { id: current.id },
+    });
+    await transaction.serviceBooking.updateMany({
+      data: { holdExpiresAt: null, status: "cancelled" },
+      where: {
+        orderItem: { orderId: current.id },
+        status: { in: ["held", "confirmed"] },
+      },
+    });
+    return transaction.serviceOrder.findUniqueOrThrow({
+      where: { id: current.id },
+      include: { paymentAttempts: { orderBy: { createdAt: "desc" } } },
+    });
+  });
+
+  if (!claimed) return { kind: "not_found" as const };
+  if (
+    claimed.status === "refunded" ||
+    (claimed.status === "cancelled" &&
+      claimed.cancellationStatus === "succeeded")
+  )
+    return {
+      kind: "already_done" as const,
+      order: serviceOrderResult(claimed),
+    };
+  if (
+    claimed.status === "refund_pending" &&
+    claimed.paymentStatus !== "succeeded"
+  )
+    return {
+      kind: "already_processing" as const,
+      order: serviceOrderResult(claimed),
+    };
+
+  const attempt = claimed.paymentAttempts[0];
+  if (!attempt?.externalId) {
+    if (claimed.status === "refund_pending") {
+      const updated = await database.serviceOrder.update({
+        data: {
+          cancellationStatus: "failed",
+          paymentError: "Не найден платёж для возврата.",
+          refundError: "Не найден платёж для возврата.",
+          refundStatus: "failed",
+        },
+        where: { id: claimed.id },
+      });
+      return {
+        kind: "refund_failed" as const,
+        order: serviceOrderResult(updated),
+      };
+    }
+    const updated = await database.serviceOrder.update({
+      data: {
+        cancellationStatus: "succeeded",
+        cancelledAt: new Date(),
+        status: "cancelled",
+      },
+      where: { id: claimed.id },
+    });
+    return { kind: "cancelled" as const, order: serviceOrderResult(updated) };
+  }
+
+  let payment: YooPayment;
+  try {
+    payment = await yookassa.getPayment(attempt.externalId);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Не удалось проверить платёж.";
+    const updated = await database.serviceOrder.update({
+      data: {
+        cancellationStatus: "failed",
+        paymentError: message,
+        refundError: claimed.status === "refund_pending" ? message : null,
+        status:
+          claimed.status === "refund_pending" ? "refund_pending" : "cancelled",
+      },
+      where: { id: claimed.id },
+    });
+    return {
+      kind: "provider_failed" as const,
+      order: serviceOrderResult(updated),
+    };
+  }
+
+  if (payment.status === "succeeded" && payment.paid) {
+    try {
+      const refund = await yookassa.refundPayment({
+        amount: payment.amount.value,
+        currency: payment.amount.currency,
+        description: `Возврат заказа услуг ${claimed.id}`,
+        idempotenceKey: `service-refund-${claimed.id}`,
+        paymentId: payment.id,
+      });
+      const reconciled = await reconcileServiceRefund(database, refund);
+      const updated = await database.serviceOrder.findUniqueOrThrow({
+        where: { id: claimed.id },
+      });
+      return {
+        kind: reconciled.kind,
+        order: serviceOrderResult(updated),
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось оформить возврат.";
+      const updated = await database.serviceOrder.update({
+        data: {
+          cancellationStatus: "failed",
+          paymentError: message,
+          refundError: message,
+          refundStatus: "failed",
+          status: "refund_pending",
+        },
+        where: { id: claimed.id },
+      });
+      return {
+        kind: "refund_failed" as const,
+        order: serviceOrderResult(updated),
+      };
+    }
+  }
+
+  try {
+    if (payment.status !== "canceled")
+      await yookassa.cancelPayment(payment.id, `service-cancel-${claimed.id}`);
+    const updated = await database.serviceOrder.update({
+      data: {
+        cancellationStatus: "succeeded",
+        cancelledAt: new Date(),
+        paymentError: null,
+        paymentStatus: "canceled",
+        status: "cancelled",
+      },
+      where: { id: claimed.id },
+    });
+    return { kind: "cancelled" as const, order: serviceOrderResult(updated) };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Не удалось отменить платёж.";
+    const updated = await database.serviceOrder.update({
+      data: {
+        cancellationStatus: "failed",
+        paymentError: message,
+        status: "cancelled",
+      },
+      where: { id: claimed.id },
+    });
+    return {
+      kind: "provider_failed" as const,
+      order: serviceOrderResult(updated),
+    };
+  }
+};
 
 const updateBookings = async (
   database: PrismaClient,
@@ -211,6 +514,7 @@ export const reconcileServicePayment = async (
         data: {
           paymentError: "Слот уже недоступен, выполняется возврат оплаты.",
           paymentStatus: "succeeded",
+          refundStatus: "pending",
           status: "refund_pending",
         },
         where: { id: current.id },
@@ -250,7 +554,7 @@ export const reconcileServicePayment = async (
 
   if (result.kind !== "refund") return result;
   try {
-    await yookassa.refundPayment({
+    const refund = await yookassa.refundPayment({
       amount: payment.amount.value,
       currency: payment.amount.currency,
       description: `Возврат заказа услуг ${result.orderId}`,
@@ -263,7 +567,15 @@ export const reconcileServicePayment = async (
         where: { id: attempt.id },
       }),
       database.serviceOrder.update({
-        data: { paymentError: null, status: "refunded" },
+        data: {
+          paymentError: null,
+          paymentStatus: "refunded",
+          refundError: null,
+          refundId: refund.id,
+          refundStatus: refund.status === "succeeded" ? "succeeded" : "pending",
+          status: refund.status === "succeeded" ? "refunded" : "refund_pending",
+          ...(refund.status === "succeeded" ? { refundedAt: new Date() } : {}),
+        },
         where: { id: result.orderId },
       }),
     ]);
@@ -276,7 +588,12 @@ export const reconcileServicePayment = async (
       where: { id: attempt.id },
     });
     await database.serviceOrder.update({
-      data: { paymentError: message, status: "refund_pending" },
+      data: {
+        paymentError: message,
+        refundError: message,
+        refundStatus: "failed",
+        status: "refund_pending",
+      },
       where: { id: result.orderId },
     });
     return { kind: "refund_pending" as const };

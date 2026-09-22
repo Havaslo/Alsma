@@ -269,6 +269,14 @@ model ServiceOrder {
   paymentError      String?            @map("payment_error")
   paidAt            DateTime?          @map("paid_at") @db.Timestamptz(3)
   paymentDeadlineAt DateTime?          @map("payment_deadline_at") @db.Timestamptz(3)
+  cancellationStatus String             @default("not_started") @map("cancellation_status")
+  cancellationRequestedAt DateTime?    @map("cancellation_requested_at") @db.Timestamptz(3)
+  cancellationReason String?            @map("cancellation_reason")
+  cancelledAt       DateTime?           @map("cancelled_at") @db.Timestamptz(3)
+  refundStatus      String              @default("not_started") @map("refund_status")
+  refundId          String?             @map("refund_id")
+  refundError       String?             @map("refund_error")
+  refundedAt        DateTime?           @map("refunded_at") @db.Timestamptz(3)
   total             Decimal            @db.Decimal(12, 2)
   currency          String             @default("RUB")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -276,6 +284,8 @@ model ServiceOrder {
   paymentAttempts   PaymentAttempt[]
 
   @@index([userId, createdAt])
+  @@index([userId, cancellationStatus, createdAt])
+  @@index([refundStatus, createdAt])
   @@map("service_orders")
 }
 
