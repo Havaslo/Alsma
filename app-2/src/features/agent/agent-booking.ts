@@ -60,10 +60,10 @@ export type AgentOfferSummary = Pick<
 >;
 
 const isExcludedRoom = (
-  offer: Pick<AgentOfferSummary, "roomType" | "roomDescription">,
+  offer: Pick<AgentOfferSummary, "rateType" | "roomType" | "roomDescription">,
 ) =>
-  /(?:для\s+групп|группов(?:ой|ого|ые)|^\s*корпус\s*2\b|^\s*тест(?:овый|овая|овое)?\b)/iu.test(
-    `${offer.roomType} ${offer.roomDescription ?? ""}`,
+  /(?:для\s+групп|группов(?:ой|ого|ые)|(?:^|\s)корпус\s*2\b|(?:^|\s)тест(?:овый|овая|овое)?(?=\s|$|[),.;:]))/iu.test(
+    `${offer.roomType} ${offer.rateType} ${offer.roomDescription ?? ""}`,
   );
 
 const offerPrice = (

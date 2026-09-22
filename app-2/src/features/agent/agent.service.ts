@@ -333,6 +333,27 @@ const bookingFromContext = (context?: BookingContext) => {
   const parsed = bookingSchema.safeParse(context);
   return parsed.success ? parsed.data : null;
 };
+const normalizedOfferLabel = (value: string) =>
+  value
+    .replace(/[«»"']/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .toLocaleLowerCase("ru-RU");
+const findOfferMentionedByGuest = (
+  message: string,
+  offers: ReturnType<typeof summarizeEpteraOffers>,
+) => {
+  const normalizedMessage = normalizedOfferLabel(message);
+  return [
+    ...new Map(
+      offers.map((offer) => [normalizedOfferLabel(offer.roomType), offer]),
+    ).values(),
+  ]
+    .sort((left, right) => right.roomType.length - left.roomType.length)
+    .find((offer) =>
+      normalizedMessage.includes(normalizedOfferLabel(offer.roomType)),
+    );
+};
 export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
@@ -922,17 +943,56 @@ export const createAiAgentService = (options: AgentOptions) => {
       !Array.isArray(result.booking)
         ? (result.booking as Record<string, unknown>)
         : {};
-    const requestedOfferId =
+    const confirmationReceived = bookingConfirmationMessage;
+    const modelOfferId =
       typeof bookingCandidate.offerId === "string"
         ? bookingCandidate.offerId
-        : (result.offerId ?? nextBooking.offerId);
-    const selectedOffer = availabilityOffers.find(
-      (offer) => offer.id === requestedOfferId,
-    );
+        : result.offerId;
+    const storedOffer = nextBooking.offerId
+      ? availabilityOffers.find((offer) => offer.id === nextBooking.offerId)
+      : undefined;
+    const modelOffer = modelOfferId
+      ? availabilityOffers.find((offer) => offer.id === modelOfferId)
+      : undefined;
+    const mentionedOffer =
+      !currentMessageHasDate && !confirmationReceived
+        ? findOfferMentionedByGuest(message, availabilityOffers)
+        : undefined;
+    // Once the guest confirms, the server-side state is authoritative. The
+    // model may repeat a room name such as "Стандарт" instead of the exact
+    // Eptera offer id, or may return a malformed booking object.
+    const selectedOffer = confirmationReceived
+      ? (storedOffer ?? modelOffer ?? mentionedOffer)
+      : (modelOffer ?? mentionedOffer ?? storedOffer);
+    const requestedOfferId = selectedOffer?.id;
     const bookingState = requestedOfferId
       ? { ...nextBooking, offerId: requestedOfferId }
       : nextBooking;
-    if (hasBookingContactData(nextBookingContact) || requestedOfferId) {
+    const candidateBookingNames = splitName(
+      typeof bookingCandidate.firstName === "string" &&
+        typeof bookingCandidate.lastName === "string"
+        ? `${bookingCandidate.firstName} ${bookingCandidate.lastName}`
+        : (result.name ?? detectedName),
+    );
+    const effectiveBookingContact: BookingContact = {
+      ...nextBookingContact,
+      ...(nextBookingContact.firstName || !candidateBookingNames.firstName
+        ? {}
+        : { firstName: candidateBookingNames.firstName }),
+      ...(nextBookingContact.lastName || !candidateBookingNames.lastName
+        ? {}
+        : { lastName: candidateBookingNames.lastName }),
+      ...(nextBookingContact.phone || typeof bookingCandidate.phone !== "string"
+        ? {}
+        : { phone: bookingCandidate.phone }),
+      ...(nextBookingContact.email || typeof bookingCandidate.email !== "string"
+        ? {}
+        : { email: bookingCandidate.email }),
+      ...(nextBookingContact.email || typeof result.email !== "string"
+        ? {}
+        : { email: result.email }),
+    };
+    if (hasBookingContactData(effectiveBookingContact) || requestedOfferId) {
       await options.database.client.adminRequest.update({
         where: { id: conversationId },
         data: {
@@ -943,15 +1003,15 @@ export const createAiAgentService = (options: AgentOptions) => {
               : {}),
             ...(availabilityOffers.length ? { availabilityOffers } : {}),
             bookingContext: bookingState,
-            bookingContact: nextBookingContact,
+            bookingContact: effectiveBookingContact,
             serviceContext: nextServiceContext,
           },
         },
       });
     }
-    const confirmationReceived = bookingConfirmationMessage;
-    const missingContactFields =
-      missingBookingContactFields(nextBookingContact);
+    const missingContactFields = missingBookingContactFields(
+      effectiveBookingContact,
+    );
     const canCompleteBooking = Boolean(
       settings.canCreateBooking &&
       confirmationReceived &&
@@ -964,44 +1024,22 @@ export const createAiAgentService = (options: AgentOptions) => {
     let generatedAnswer: string | undefined;
     let bookingUrl: string | undefined;
     if (finalAction === "create_booking") {
-      const bookingNames = splitName(
-        typeof bookingCandidate.firstName === "string" &&
-          typeof bookingCandidate.lastName === "string"
-          ? `${bookingCandidate.firstName} ${bookingCandidate.lastName}`
-          : (result.name ?? detectedName),
-      );
       const bookingData = agentBookingSchema.safeParse({
-        ...bookingCandidate,
-        adults: bookingCandidate.adults ?? bookingState.adults,
-        checkInDate: bookingCandidate.checkInDate ?? bookingState.checkInDate,
-        checkOutDate:
-          bookingCandidate.checkOutDate ?? bookingState.checkOutDate,
-        childAges: bookingCandidate.childAges ?? bookingState.childAges ?? [],
-        email:
-          nextBookingContact.email ??
-          (bookingCandidate.email as string | undefined) ??
-          result.email,
-        firstName:
-          nextBookingContact.firstName ??
-          (bookingCandidate.firstName as string | undefined) ??
-          bookingNames.firstName,
-        lastName:
-          nextBookingContact.lastName ??
-          (bookingCandidate.lastName as string | undefined) ??
-          bookingNames.lastName,
-        offerId:
-          bookingCandidate.offerId ?? result.offerId ?? bookingState.offerId,
-        phone:
-          nextBookingContact.phone ??
-          (bookingCandidate.phone as string | undefined) ??
-          result.phone,
-        roomCount: bookingCandidate.roomCount ?? bookingState.roomCount,
+        adults: bookingState.adults,
+        checkInDate: bookingState.checkInDate,
+        checkOutDate: bookingState.checkOutDate,
+        childAges: bookingState.childAges ?? [],
+        email: effectiveBookingContact.email,
+        firstName: effectiveBookingContact.firstName,
+        lastName: effectiveBookingContact.lastName,
+        offerId: selectedOffer?.id ?? bookingState.offerId,
+        paymentMethod:
+          bookingCandidate.paymentMethod === "first_night"
+            ? "first_night"
+            : "full",
+        phone: effectiveBookingContact.phone,
+        roomCount: bookingState.roomCount,
       });
-      const selectedOfferId = bookingData.success
-        ? bookingData.data.offerId
-        : typeof bookingCandidate.offerId === "string"
-          ? bookingCandidate.offerId
-          : (result.offerId ?? bookingState.offerId);
       const returnUrl =
         options.bookingReturnUrl ??
         (/^https?:\/\//iu.test(settings.bookingUrl)
@@ -1014,6 +1052,15 @@ export const createAiAgentService = (options: AgentOptions) => {
         !bookingData.success ||
         !returnUrl
       ) {
+        if (!bookingData.success) {
+          options.logger.warn(
+            {
+              conversationId,
+              issues: bookingData.error.issues.map((issue) => issue.path),
+            },
+            "AI booking payload validation failed",
+          );
+        }
         finalAction = "answer";
         generatedAnswer = missingContactFields.length
           ? `Перед созданием брони ещё нужны: ${missingContactFields.join(", ")}.`

@@ -26,7 +26,7 @@ const offer = {
   price: 10_000,
 };
 
-const createHarness = () => {
+const createHarness = (options: { malformedConfirmation?: boolean } = {}) => {
   let details: Record<string, unknown> = {};
   const published: Array<{ text: string; bookingUrl?: string }> = [];
   const bookingSearches: unknown[] = [];
@@ -119,18 +119,30 @@ const createHarness = () => {
       ? {
           action: "create_booking",
           answer: "Оформляю выбранный вариант.",
-          booking: {
-            adults: 1,
-            checkInDate: "2026-08-13",
-            checkOutDate: "2026-08-15",
-            childAges: [],
-            email: "ivan@example.com",
-            firstName: "Иван",
-            lastName: "Иванов",
-            offerId: "offer-1",
-            phone: "+79990000000",
-            roomCount: 1,
-          },
+          booking: options.malformedConfirmation
+            ? {
+                adults: "один",
+                checkInDate: "13 августа 2026",
+                checkOutDate: "15 августа 2026",
+                email: "не email",
+                firstName: "Стандарт",
+                lastName: "",
+                offerId: "Стандарт",
+                phone: "не телефон",
+                roomCount: 0,
+              }
+            : {
+                adults: 1,
+                checkInDate: "2026-08-13",
+                checkOutDate: "2026-08-15",
+                childAges: [],
+                email: "ivan@example.com",
+                firstName: "Иван",
+                lastName: "Иванов",
+                offerId: "offer-1",
+                phone: "+79990000000",
+                roomCount: 1,
+              },
           confirmed: true,
           offerId: "offer-1",
         }
@@ -289,6 +301,16 @@ test("normalizes the 117-offer Eptera payload before it reaches the chat", () =>
   assert.doesNotMatch(formatted, /Комфортный номер|группов|техническ/u);
 });
 
+test("does not expose technical test tariffs to the booking agent", () => {
+  assert.deepEqual(
+    normalizeAgentOfferSummaries([
+      { ...offer, id: "test-rate", rateType: "тест тест" },
+      offer,
+    ]),
+    [offer],
+  );
+});
+
 test("creates a confirmed booking and sends the YooKassa link to chat", async () => {
   const harness = createHarness();
   try {
@@ -402,6 +424,40 @@ test("extracts names from natural and labeled messages in the booking flow", asy
       lastName: "Наумов",
       phone: "89525012159",
     });
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("creates a booking from saved state when the model repeats malformed booking JSON", async () => {
+  const harness = createHarness({ malformedConfirmation: true });
+  try {
+    await harness.service.reply(
+      "conversation-malformed-confirmation",
+      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+    );
+    await harness.service.reply(
+      "conversation-malformed-confirmation",
+      "Беру вариант 1",
+    );
+    await harness.service.reply(
+      "conversation-malformed-confirmation",
+      "Дима Наумов, телефон 89525012159",
+    );
+    await harness.service.reply(
+      "conversation-malformed-confirmation",
+      "email d.naymow13@gmail.com",
+    );
+    await harness.service.reply(
+      "conversation-malformed-confirmation",
+      "подтверждаю",
+    );
+
+    assert.equal(harness.reservations.length, 1);
+    assert.equal(
+      (harness.published.at(-1) as { bookingUrl?: string }).bookingUrl,
+      "https://yookassa.test/payment-1",
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
