@@ -146,6 +146,24 @@ export const createVkRouter = ({
     },
   ) => {
     const createdAt = new Date(item.date * 1_000);
+    const author =
+      item.fromId === `-${groupId}` || item.fromId === groupId
+        ? "agent"
+        : "guest";
+    const externalId = `vk:${item.id}`;
+
+    // The callback and messages.getHistory expose two different message
+    // identifiers. The callback uses the real VK message id, while the old
+    // implementation used conversation_message_id. Before inserting history,
+    // collapse an equivalent message already stored by the other path and
+    // promote it to the canonical real-message id.
+    const exact = await database.client.chatMessage.findUnique({
+      where: {
+        conversationId_externalId: { conversationId, externalId },
+      },
+      select: { id: true },
+    });
+    if (exact) return;
     const localOutgoing = await database.client.chatMessage.findFirst({
       where: {
         conversationId,
@@ -167,15 +185,31 @@ export const createVkRouter = ({
       });
       return;
     }
-    const author =
-      item.fromId === `-${groupId}` || item.fromId === groupId
-        ? "agent"
-        : "guest";
+    const equivalent = await database.client.chatMessage.findFirst({
+      where: {
+        conversationId,
+        author,
+        text: item.text,
+        createdAt: {
+          gte: new Date(createdAt.getTime() - 2_000),
+          lte: new Date(createdAt.getTime() + 2_000),
+        },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, externalId: true },
+    });
+    if (equivalent) {
+      await database.client.chatMessage.update({
+        where: { id: equivalent.id },
+        data: { externalId },
+      });
+      return;
+    }
     await chat.importMessage(
       conversationId,
       author,
       item.text,
-      `vk:${item.id}`,
+      externalId,
       createdAt,
     );
   };
@@ -224,9 +258,7 @@ export const createVkRouter = ({
     const text = textOf(message.text || object.text);
     const id = textOf(event.event_id);
     const messageId = textOf(
-      message.conversation_message_id ||
-        message.id ||
-        object.conversation_message_id,
+      message.id || message.conversation_message_id || object.id,
     );
     const externalId = messageId
       ? `vk:${messageId}`
@@ -246,6 +278,7 @@ export const createVkRouter = ({
     )
       return;
     if (isSyntheticTestMessage(text, externalId)) return;
+    const messageDate = Number(message.date ?? 0);
     let agentAlreadyCompleted = false;
     if (id) {
       // VK can redeliver an event after a timeout, and an earlier attempt may
@@ -321,6 +354,28 @@ export const createVkRouter = ({
         // the callback reaches this point. That must suppress only the
         // duplicate INSERT, not the agent turn for this callback.
         incomingMessageStored = Boolean(alreadyStored);
+        if (!incomingMessageStored && messageDate > 0) {
+          const equivalent = await database.client.chatMessage.findFirst({
+            where: {
+              conversationId,
+              author: "guest",
+              text,
+              createdAt: {
+                gte: new Date(messageDate * 1_000 - 2_000),
+                lte: new Date(messageDate * 1_000 + 2_000),
+              },
+            },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, externalId: true },
+          });
+          if (equivalent) {
+            await database.client.chatMessage.update({
+              where: { id: equivalent.id },
+              data: { externalId },
+            });
+            incomingMessageStored = true;
+          }
+        }
       }
       await database.client.adminRequest.upsert({
         where: { id: conversationId },
