@@ -297,6 +297,18 @@ export const createVkRouter = ({
         select: { details: true },
       });
       const details = record(existing?.details);
+      // Keep the channel identity in one object and reuse it below. The old
+      // flow wrote VK metadata during the upsert, then wrote history flags
+      // from the stale `details` snapshot. For a new conversation that
+      // snapshot was empty, so history reconciliation immediately erased
+      // `source`, `channelType` and the VK identifiers.
+      const vkDetails = {
+        ...details,
+        channelType: "chat",
+        source: "VK",
+        vkPeerId: peerId,
+        vkUserId: senderId,
+      };
       let incomingMessageStored = false;
       if (externalId) {
         const alreadyStored = await database.client.chatMessage.findUnique({
@@ -317,12 +329,7 @@ export const createVkRouter = ({
           category: "VK",
           contact: `vk:${senderId}`,
           description: text,
-          details: {
-            channelType: "chat",
-            source: "VK",
-            vkPeerId: peerId,
-            vkUserId: senderId,
-          },
+          details: vkDetails,
           requester: `VK ${senderId}`,
           status: "new",
           title: "Сообщение из VK",
@@ -330,12 +337,7 @@ export const createVkRouter = ({
         update: {
           contact: `vk:${senderId}`,
           description: text,
-          details: {
-            ...details,
-            source: "VK",
-            vkPeerId: peerId,
-            vkUserId: senderId,
-          },
+          details: vkDetails,
         },
       });
       // `vkHistorySynced` was set by the old importer, which could leave
@@ -353,7 +355,7 @@ export const createVkRouter = ({
             where: { id: conversationId },
             data: {
               details: {
-                ...details,
+                ...vkDetails,
                 vkHistoryReconciled: true,
                 vkHistorySynced: true,
               },
@@ -384,11 +386,16 @@ export const createVkRouter = ({
       if (!agentAlreadyCompleted && !managerMode) {
         const result = await agent.reply(conversationId, text, "vk");
         if (result?.action === "transfer") {
+          const currentRequest = await database.client.adminRequest.findUnique({
+            where: { id: conversationId },
+            select: { details: true },
+          });
           await database.client.adminRequest.update({
             where: { id: conversationId },
             data: {
               details: {
-                ...details,
+                ...record(currentRequest?.details),
+                channelType: "chat",
                 chatMode: "manager",
                 managerRequested: true,
                 source: "VK",

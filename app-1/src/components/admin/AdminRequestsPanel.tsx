@@ -25,12 +25,24 @@ const statusOptions: { label: string; value: StatusFilter }[] = [
     value: value as Exclude<StatusFilter, "all">,
   })),
 ];
-const sourceLabel = (source: string | undefined) => {
-  const value = source?.toLocaleLowerCase("ru-RU") ?? "";
+const sourceLabel = (item: AdminRequest) => {
+  const value = [
+    item.details.source,
+    item.category,
+    item.contact,
+    item.requester,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("ru-RU");
   if (value.includes("vk")) return "VK";
   if (value.includes("telegram") || value.includes("max")) return "MAX";
   return "Сайт";
 };
+const channelLabel = (item: AdminRequest) =>
+  sourceLabel(item) === "Сайт" && item.details.channelType !== "chat"
+    ? "Сайт"
+    : "Чат";
 const readKey = (id: string) => `alsma-admin-request-read-${id}`;
 
 const assignee = (item: AdminRequest) => {
@@ -169,10 +181,10 @@ export const AdminRequestsPanel = () => {
                   >
                     <td className="px-5 py-4">
                       <strong className="block font-semibold text-brand">
-                        {sourceLabel(item.details.source)}
+                        {sourceLabel(item)}
                       </strong>
                       <span className="mt-1 block text-xs text-muted-ui-foreground">
-                        {item.details.channelType === "chat" ? "Чат" : "Сайт"}
+                        {channelLabel(item)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-muted-ui-foreground">
