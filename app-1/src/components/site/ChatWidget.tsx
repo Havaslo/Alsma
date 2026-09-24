@@ -281,12 +281,6 @@ export const ChatWidget = () => {
           ) : (
             <>
               <div className="flex-1 space-y-3 overflow-y-auto bg-brand-foreground p-4">
-                {messages.length === 0 && (
-                  <p className="rounded-2xl bg-page p-4 text-sm text-muted-ui-foreground">
-                    Здравствуйте! Я AI-помощник отеля «Алсма». Подскажу по
-                    отдыху, номерам и бронированию.
-                  </p>
-                )}
                 {messages.map((message) => (
                   <div
                     className={cn(

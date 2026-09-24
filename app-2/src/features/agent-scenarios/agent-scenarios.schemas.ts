@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { DEFAULT_AGENT_GLOBAL_INSTRUCTIONS } from "../agent/agent-instructions.js";
+
 export const agentScenarioBodySchema = z.object({
   action: z.enum(["answer", "open_page", "transfer"]).default("answer"),
   enabled: z.boolean().default(true),
@@ -49,6 +51,12 @@ export const agentSettingsSchema = z
     tone: z.string().trim().min(1).max(2_000),
     language: z.string().trim().min(1).max(500),
     greeting: z.string().trim().min(1).max(2_000),
+    globalInstructions: z
+      .string()
+      .trim()
+      .min(1)
+      .max(10_000)
+      .default(DEFAULT_AGENT_GLOBAL_INSTRUCTIONS),
     bookingUrl: z.string().trim().min(1).max(2_000),
     canCheckAvailability: z.boolean(),
     canCreateRequest: z.boolean(),

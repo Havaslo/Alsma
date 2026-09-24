@@ -1,4 +1,5 @@
 import type { Database } from "../../lib/database/database.js";
+import { DEFAULT_AGENT_GLOBAL_INSTRUCTIONS } from "../agent/agent-instructions.js";
 import type {
   AgentScenarioBody,
   AgentSettingsBody,
@@ -11,6 +12,10 @@ const normalizeSettings = (value: unknown) => {
   const record = source as Record<string, unknown>;
   return {
     ...record,
+    globalInstructions:
+      typeof record.globalInstructions === "string"
+        ? record.globalInstructions
+        : DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
     canCheckAvailability: true,
     canCreateBooking: true,
     enabled: typeof record.enabled === "boolean" ? record.enabled : true,

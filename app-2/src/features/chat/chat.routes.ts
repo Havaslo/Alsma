@@ -11,9 +11,10 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import type { AiAgentService } from "../agent/agent.service.js";
-import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
-import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
 import type { ChatService } from "./chat.service.js";
+
+const agentUnavailableMessage =
+  "Извините, сейчас не удалось подготовить ответ. Попробуйте, пожалуйста, отправить сообщение ещё раз немного позже.";
 
 const conversationSchema = z.object({
   conversationId: z.string().trim().min(1).max(100),
@@ -97,9 +98,6 @@ export const createChatRouter = (
   agent: AiAgentService,
 ): Router => {
   const router = Router();
-  const knowledge = createKnowledgeBaseService(
-    createKnowledgeBaseRepository(database),
-  );
   const getMode = async (conversationId: string): Promise<ChatMode> => {
     const request = await database.client.adminRequest.findUnique({
       where: { id: conversationId },
@@ -228,18 +226,11 @@ export const createChatRouter = (
             return;
           }
           if (!result) {
-            let fallbackText =
-              "Не удалось сформировать ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.";
-            try {
-              const fallback = await knowledge.answer({
-                channel: "text",
-                question: input.text,
-              });
-              fallbackText = fallback.answer;
-            } catch {
-              // The fallback itself must never prevent a final chat message.
-            }
-            await chat.publish(input.conversationId, "agent", fallbackText);
+            await chat.publish(
+              input.conversationId,
+              "agent",
+              agentUnavailableMessage,
+            );
           }
           chat.publishStatus(input.conversationId, "idle", "");
         })
@@ -252,7 +243,7 @@ export const createChatRouter = (
           await chat.publish(
             input.conversationId,
             "agent",
-            "Не удалось получить ответ автоматически. Попробуйте переформулировать вопрос — я попробую ещё раз.",
+            agentUnavailableMessage,
           );
           chat.publishStatus(input.conversationId, "idle", "");
         });

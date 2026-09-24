@@ -10,13 +10,14 @@ import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import {
   agentBookingSchema,
   formatEpteraOffersForAgent,
-  formatEpteraOffersForGuest,
   isExplicitBookingConfirmation,
   normalizeAgentOfferSummaries,
   summarizeEpteraOffers,
   toReservationBody,
 } from "./agent-booking.js";
+import { DEFAULT_AGENT_GLOBAL_INSTRUCTIONS } from "./agent-instructions.js";
 import { ensureDefaultAgentPlaybook } from "./agent-playbook.js";
+import { createAgentGatewayClient } from "./agent.gateway.js";
 import { loadPublishedOffersContext } from "./offers-context.js";
 
 const settingsKey = "agent.settings";
@@ -31,6 +32,7 @@ const actionSchema = z.object({
   action: z.enum([
     "answer",
     "open_page",
+    "check_availability",
     "create_booking",
     "create_request",
     "transfer",
@@ -76,6 +78,18 @@ const agentPageRoutes = {
   rooms: "/rooms",
   spa: "/spa",
 } as const;
+const parseAgentCompletion = (content: string) => {
+  const jsonContent = content
+    .replace(/^```(?:json)?\s*/iu, "")
+    .replace(/\s*```$/u, "")
+    .trim();
+  try {
+    const parsed = actionSchema.safeParse(JSON.parse(jsonContent));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
 const isAgentPage = (value: unknown): value is keyof typeof agentPageRoutes =>
   typeof value === "string" && Object.hasOwn(agentPageRoutes, value);
 type AgentOptions = {
@@ -94,8 +108,9 @@ const asSettings = (value: unknown) => ({
   voice: true,
   vk: true,
   max: true,
-  tone: "доброжелательный, приветливый, спокойный и полезный",
+  tone: "обходительный, вежливый, дружелюбный и уважительный",
   language: "русский",
+  globalInstructions: DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
   bookingUrl: "",
   canCheckAvailability: true,
   canCreateRequest: true,
@@ -105,7 +120,6 @@ const asSettings = (value: unknown) => ({
   ...(value && typeof value === "object" ? value : {}),
   canCreateBooking: true,
 });
-const normalizeBaseUrl = (value?: string) => (value ?? "").replace(/\/$/u, "");
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
@@ -150,11 +164,6 @@ const serviceMention = (
   if (/spa|спа|массаж|хаммам|саун|бассейн/iu.test(text)) return "spa";
   return null;
 };
-const asksCheckInOutTime = (text: string) =>
-  /(?:когда|во\s+сколько|врем|час).*(?:заезд|въезд|засел|выезд|отъезд)|(?:заезд|въезд|засел|выезд|отъезд).*(?:когда|во\s+сколько|врем|час)|расч[её]тн(?:ый|ого)\s+час/iu.test(
-    text,
-  );
-
 type BookingContext = Partial<z.infer<typeof bookingSchema>> & {
   offerId?: string;
   lastCheckedDates?: string;
@@ -219,26 +228,6 @@ const asConversationState = (value: unknown): ConversationState => {
         : undefined,
   };
 };
-const scenarioMatches = (trigger: string, text: string) =>
-  trigger
-    .split(/[\n,;|]+/u)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .some((item) =>
-      text.toLocaleLowerCase("ru-RU").includes(item.toLocaleLowerCase("ru-RU")),
-    );
-const choosesManagerTransfer = (text: string) =>
-  /перевед(?:ите|и)|соедин(?:ите|и)|сразу\s+менеджер|переда(?:йте|йт)\s+менеджер|хочу\s+с\s+менеджер/iu.test(
-    text,
-  );
-const choosesCallback = (text: string) =>
-  /остав(?:лю|ить)|контакт|номер\s+телефон|пусть\s+менеджер\s+свяж|второй\s+вариант|по\s+контактам/iu.test(
-    text,
-  );
-const explicitlyRequestsAgentRequest = (text: string) =>
-  /(?:созд(?:ай|ать|айте)|сдел(?:ай|ать|айте)|оформ(?:и|ить|ите)|запиш(?:и|ите|ать))\s+(?:мне\s+)?заявк|пересозд(?:ай|ать|айте)\s+(?:е[её]|заявк)|заявк[уы]\s+занов/iu.test(
-    text,
-  );
 const isBookingRequest = (message: string, booking?: BookingContext) =>
   Boolean(
     booking?.checkInDate ||
@@ -389,6 +378,7 @@ export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
   );
+  const completeWithGateway = createAgentGatewayClient(options);
   const conversationQueues = new Map<string, Promise<void>>();
   const saveAgentRequest = async (input: {
     conversationId: string;
@@ -412,7 +402,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     const name = input.name ?? input.contactRequest?.name;
     const details = {
       ...existingDetails,
-      source: "AI-agent",
+      source: existingDetails.source === "Сайт" ? "Сайт" : "AI-agent",
       channelType: "chat",
       conversationId: input.conversationId,
       requestType: bookingRequest ? "booking" : "agent-contact",
@@ -503,12 +493,6 @@ export const createAiAgentService = (options: AgentOptions) => {
       !options.baseUrl
     )
       return null;
-    if (asksCheckInOutTime(message)) {
-      const answer =
-        "Для проживания время заезда и выезда фиксированное и не зависит от тарифа или номера: заезд — в 16:00, выезд — в 14:00. Ранний заезд и поздний выезд возможны отдельно, если доступны, и оплачиваются по правилам отеля.";
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
     const conversationMessages = (
       await options.chat.list(conversationId)
     ).slice(-20);
@@ -525,11 +509,6 @@ export const createAiAgentService = (options: AgentOptions) => {
     const previousState = asConversationState(requestState?.details);
     const previousContactRequest = previousState.contactRequest ?? {};
     const previousBookingContact = previousState.bookingContact ?? {};
-    const contactScenario =
-      await options.database.client.agentScenario.findFirst({
-        where: { title: "Перезвон и нестандартные мероприятия", enabled: true },
-        select: { response: true, trigger: true },
-      });
     const currentPhone = phoneFromText(message);
     const currentEmail = emailFromText(message);
     const currentName = nameFromText(message);
@@ -564,153 +543,11 @@ export const createAiAgentService = (options: AgentOptions) => {
       ...(currentPhone ? { phone: currentPhone } : {}),
       ...(currentEmail ? { email: currentEmail } : {}),
     };
-    const hasContactData = Boolean(detectedName && detectedPhone);
-    const contactIntent = Boolean(
-      contactScenario && scenarioMatches(contactScenario.trigger, message),
-    );
-    const managerTransfer = choosesManagerTransfer(message);
-    const callbackChoice = choosesCallback(message);
-    const explicitCreateRequest = explicitlyRequestsAgentRequest(message);
-    const awaitingContacts =
-      previousContactRequest.awaitingContacts === true ||
-      previousContactRequest.awaitingChoice === true ||
-      (contactIntent && callbackChoice);
     const contactRequestDetails = {
-      ...previousContactRequest,
-      ...(contactIntent || previousContactRequest.awaitingChoice
-        ? { awaitingChoice: false }
-        : {}),
-      ...(awaitingContacts ? { awaitingContacts: true } : {}),
       ...(detectedName ? { name: detectedName } : {}),
       ...(detectedPhone ? { phone: detectedPhone } : {}),
       ...(detectedEmail ? { email: detectedEmail } : {}),
     };
-    if (explicitCreateRequest) {
-      if (!hasContactData) {
-        const missing = detectedName
-          ? "номер телефона"
-          : detectedPhone
-            ? "имя"
-            : "имя и номер телефона";
-        const answer = `Чтобы создать заявку, напишите ${missing}.`;
-        await options.database.client.adminRequest.update({
-          where: { id: conversationId },
-          data: {
-            details: {
-              ...(requestState?.details &&
-              typeof requestState.details === "object"
-                ? requestState.details
-                : {}),
-              contactRequest: {
-                ...contactRequestDetails,
-                awaitingContacts: true,
-              },
-            },
-          },
-        });
-        await options.chat.publish(conversationId, "agent", answer);
-        return { action: "answer" as const, answer };
-      }
-      await saveAgentRequest({
-        conversationId,
-        currentDetails: requestState?.details,
-        message,
-        history,
-        contactRequest: { ...contactRequestDetails, created: true },
-        booking: previousState.booking,
-        name: detectedName,
-        phone: detectedPhone,
-      });
-      const answer = previousContactRequest.created
-        ? "Заявка обновлена. Менеджер свяжется с вами по указанному номеру."
-        : "Заявка создана. Менеджер свяжется с вами по указанному номеру.";
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
-    if (
-      contactIntent &&
-      !callbackChoice &&
-      !managerTransfer &&
-      !hasContactData
-    ) {
-      const answer =
-        "Могу сразу передать диалог менеджеру или принять ваши имя и номер телефона — менеджер свяжется с вами. Какой вариант удобнее?";
-      await options.database.client.adminRequest.update({
-        where: { id: conversationId },
-        data: {
-          details: {
-            ...(requestState?.details &&
-            typeof requestState.details === "object"
-              ? requestState.details
-              : {}),
-            contactRequest: { awaitingChoice: true },
-          },
-        },
-      });
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
-    if (managerTransfer) {
-      if (
-        hasContactData ||
-        previousContactRequest.awaitingContacts ||
-        previousContactRequest.awaitingChoice ||
-        previousState.booking
-      ) {
-        await saveAgentRequest({
-          conversationId,
-          currentDetails: requestState?.details,
-          message,
-          history,
-          contactRequest: contactRequestDetails,
-          booking: previousState.booking,
-          name: detectedName,
-          phone: detectedPhone,
-        });
-      }
-      return {
-        action: "transfer" as const,
-        answer: "Передаю диалог менеджеру — он подключится к вам.",
-      };
-    }
-    if (awaitingContacts && !hasContactData) {
-      const missing = detectedName
-        ? "номер телефона"
-        : detectedPhone
-          ? "имя"
-          : "имя и номер телефона";
-      const answer = `Пожалуйста, напишите ${missing}. Их можно отправить одним сообщением или по очереди.`;
-      await options.database.client.adminRequest.update({
-        where: { id: conversationId },
-        data: {
-          details: {
-            ...(requestState?.details &&
-            typeof requestState.details === "object"
-              ? requestState.details
-              : {}),
-            contactRequest: contactRequestDetails,
-          },
-        },
-      });
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
-    if (awaitingContacts && hasContactData && !previousContactRequest.created) {
-      const answer =
-        "Спасибо, я передал заявку менеджеру. Он свяжется с вами по указанному номеру.";
-      await saveAgentRequest({
-        conversationId,
-        currentDetails: requestState?.details,
-        message,
-        history,
-        contactRequest: { ...contactRequestDetails, created: true },
-        booking: previousState.booking,
-        name: detectedName,
-        phone: detectedPhone,
-      });
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
     const currentMessageHasDate = hasDateInMessage(message);
     const requestedOtherDates =
       asksForOtherDates(message) && !currentMessageHasDate;
@@ -743,103 +580,17 @@ export const createAiAgentService = (options: AgentOptions) => {
             ? { availabilityOffers: nextAvailabilityOffers }
             : {}),
           serviceContext: nextServiceContext,
+          ...(Object.keys(contactRequestDetails).length
+            ? { contactRequest: contactRequestDetails }
+            : {}),
           ...(hasBookingContactData(nextBookingContact)
             ? { bookingContact: nextBookingContact }
             : {}),
         },
       },
     });
-    const extractedBooking = bookingFromContext(nextBooking);
     let availabilityOffers = nextAvailabilityOffers ?? [];
-    const bookingCriteriaChanged = Boolean(
-      entities.adults !== undefined ||
-      entities.childAges !== undefined ||
-      entities.roomCount !== undefined,
-    );
-    const shouldRefreshAvailability = Boolean(
-      settings.canCheckAvailability &&
-      extractedBooking &&
-      (currentMessageHasDate ||
-        bookingCriteriaChanged ||
-        availabilityOffers.length === 0),
-    );
-    let availabilityLookupAttempted = false;
-    if (shouldRefreshAvailability && extractedBooking) {
-      options.chat.publishStatus(
-        conversationId,
-        "checking_availability",
-        "Проверяю доступные варианты",
-      );
-      try {
-        const search = {
-          adults: extractedBooking.adults,
-          checkIn: extractedBooking.checkInDate,
-          checkOut: extractedBooking.checkOutDate,
-          childAges: extractedBooking.childAges,
-          children: extractedBooking.childAges.length,
-          currency: "RUB",
-          language: "ru",
-          nationality: "RU",
-          roomCount: extractedBooking.roomCount,
-        };
-        availabilityLookupAttempted = true;
-        let summarizedOffers: ReturnType<typeof summarizeEpteraOffers> = [];
-        for (let attempt = 0; attempt < 2; attempt += 1) {
-          const result = await options.booking.offers(search);
-          summarizedOffers = summarizeEpteraOffers(result.offers);
-          if (summarizedOffers.length > 0 || attempt === 1) break;
-          options.chat.publishStatus(
-            conversationId,
-            "checking_availability",
-            "Получаю подтверждённые варианты",
-          );
-          await wait(500);
-        }
-        availabilityOffers = summarizedOffers;
-        await options.database.client.adminRequest.update({
-          where: { id: conversationId },
-          data: {
-            details: {
-              ...(requestState?.details &&
-              typeof requestState.details === "object"
-                ? requestState.details
-                : {}),
-              availabilityOffers,
-              bookingContext: nextBooking,
-              serviceContext: nextServiceContext,
-              ...(hasBookingContactData(nextBookingContact)
-                ? { bookingContact: nextBookingContact }
-                : {}),
-            },
-          },
-        });
-      } catch (error) {
-        availabilityLookupAttempted = true;
-        options.logger.warn(
-          {
-            error: error instanceof Error ? error.message : "Unknown error",
-          },
-          "Eptera availability lookup for chat agent failed",
-        );
-        availabilityOffers = [];
-      }
-    }
     const bookingConfirmationMessage = isExplicitBookingConfirmation(message);
-    const shouldAnswerAvailabilityDirectly = Boolean(
-      extractedBooking &&
-      availabilityLookupAttempted &&
-      (currentMessageHasDate || bookingCriteriaChanged) &&
-      !hasBookingContactData(nextBookingContact) &&
-      !bookingConfirmationMessage &&
-      !serviceMention(message),
-    );
-    if (shouldAnswerAvailabilityDirectly) {
-      const answer = availabilityOffers.length
-        ? `На указанные даты доступны следующие номера:\n\n${formatEpteraOffersForGuest(availabilityOffers, nextBooking.checkInDate, nextBooking.checkOutDate)}\n\nКакой вариант хотите рассмотреть подробнее?`
-        : "Пока не удалось получить подтверждённый список вариантов на эти даты. Я не буду показывать непроверенные данные — попробуйте запросить наличие ещё раз немного позже.";
-      await options.chat.publish(conversationId, "agent", answer);
-      return { action: "answer" as const, answer };
-    }
     const isBookingContactMessage = Boolean(
       currentName ||
       currentPhone ||
@@ -849,197 +600,50 @@ export const createAiAgentService = (options: AgentOptions) => {
     const knowledgeResult = isBookingContactMessage
       ? { sources: [] as Array<{ content: string }> }
       : await knowledge.answer({ channel: "text", question: message });
-    const [
-      scenarios,
-      transferRules,
-      knowledgeRules,
-      offersContext,
-      eventsContext,
-    ] = await Promise.all([
-      options.database.client.agentScenario.findMany({
-        where: { enabled: true, channels: { has: "text" } },
-        orderBy: { updatedAt: "desc" },
-      }),
-      options.database.client.agentTransferRule.findMany({
-        where: { enabled: true, channels: { has: "text" } },
-        orderBy: { createdAt: "asc" },
-      }),
-      options.database.client.agentRule.findMany({
-        where: { enabled: true, channels: { has: "text" } },
-        orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
-      }),
+    const [offersContext, eventsContext] = await Promise.all([
       loadPublishedOffersContext(options.database),
       loadPublishedEventsContext(
         options.database,
         calendarDateInMessage(message),
       ).catch(() => ""),
     ]);
-    if (serviceMention(message) === "offers" && !offersContext) {
-      const transferNotice =
-        "Сейчас нет опубликованных актуальных акций. Передам вопрос менеджеру, чтобы он уточнил доступные предложения.";
-      await options.chat.publish(conversationId, "agent", transferNotice);
-      return { action: "transfer" as const, answer: transferNotice };
-    }
     options.chat.publishStatus(conversationId, "composing", "Формирую ответ");
     const context = knowledgeResult.sources
       .map((source) => source.content)
       .join("\n\n")
       .slice(0, 9_000);
-    const transferContext = transferRules
-      .map((item) => `${item.title}: ${item.condition} => ${item.destination}`)
-      .join("\n");
-    const knowledgeRuleContext = knowledgeRules
-      .map((item) => `${item.title}: ${item.content}`)
-      .join("\n");
-    const scenarioTrigger =
-      serviceMention(message) ??
-      (currentMessageHasDate || extractedBooking ? "booking" : undefined);
-    const selectedScenario = scenarioTrigger
-      ? scenarios.find((item) => item.trigger === scenarioTrigger)
-      : undefined;
     const asksOfferDetails =
       /сравн|тариф|питан|услов|отмен|включен|услуг|подроб|отлич(?:а|ие)|комфорт|балкон|кроват/iu.test(
         message,
       );
-    const prompt = [
-      `Ты — дружелюбный AI-помощник отеля «Алсма». Тон: ${settings.tone}. Отвечай на ${settings.language}.`,
-      "Веди себя как хороший мальчик, по всем деталям Алсмы отвечай только проверенной информацией из документации и тулов Алсмы.",
-      "Отвечай естественно и доброжелательно. Если гость спрашивает, кто ты, честно представься AI-помощником отеля «Алсма».",
-      "Основывай информацию об отеле на базе знаний и результатах подключённых инструментов. Не выдумывай детали, цены или наличие.",
-      "Сначала ответь на вопрос по существу. Если на сайте есть подходящая страница с подробностями, приложи её ссылку-кнопку к ответу: верни action open_page и подходящий page. Не заменяй ответ одной ссылкой.",
-      `Для проживания и наличия используй проверенные данные Eptera: ${settings.canCheckAvailability}. Создание бронирования разрешено: ${settings.canCreateBooking}. Используй только переданные варианты и собранные данные гостя.`,
-      "Создавай бронирование только после явного подтверждения гостем выбранного варианта; до подтверждения уточняй только необходимые сведения. Для передачи сотруднику используй action transfer, если гость попросил об этом или есть подходящее правило.",
-      "Верни только JSON без markdown: {action:'answer'|'open_page'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'about'|'all-inclusive'|'celebrations'|'entertainment'|'faq'|'hardware-procedures'|'offers'|'rooms'|'spa', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page укажи page. Для create_booking укажи confirmed:true только при явном подтверждении гостя.",
+    const globalInstructions = [
+      settings.globalInstructions.trim() || DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
+      `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`,
+      "Выбирай инструмент самостоятельно по контексту разговора. После результата инструмента сформулируй для гостя естественный ответ; не подменяй ответ готовой репликой и не утверждай, что действие завершено, пока его результат не подтверждён.",
+      "Технический формат ответа: верни только JSON без markdown: {action:'answer'|'open_page'|'check_availability'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'about'|'all-inclusive'|'celebrations'|'entertainment'|'faq'|'hardware-procedures'|'offers'|'rooms'|'spa', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page укажи page; для check_availability передай параметры в booking.",
+    ].join("\n\n");
+    const userInput = [
       `База знаний:\n${context || "Нет подходящей статьи."}`,
-      `Актуальные акции с опубликованной страницы offers (используй эти данные для вопросов об акциях; не придумывай условия):\n${offersContext || "Опубликованных акций сейчас нет."}`,
-      `Опубликованные актуальные мероприятия с публичного календаря${calendarDateInMessage(message) ? ` на дату ${calendarDateInMessage(message)}` : ""} (не выдумывай события):\n${eventsContext || "Опубликованных мероприятий на запрошенную дату сейчас нет или календарь недоступен."}`,
-      `Актуальные варианты Eptera для проживания (это подтверждённые данные поиска; можно сравнивать, но нельзя придумывать дополнительные варианты):\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Варианты ещё не найдены. Сначала уточни даты, гостей и количество номеров."}`,
-      `Сохранённые контакты для оформления брони (не запрашивай уже указанные поля повторно): ${JSON.stringify(nextBookingContact)}. Если часть данных отсутствует, попроси только недостающие поля. Email и телефон — это данные бронирования, а не вопрос к базе знаний. После выбора номера и получения всех контактов покажи итог и спроси: «Подтверждаете создание брони?»`,
-      `Выбранный сценарий для этого сообщения:\n${selectedScenario ? JSON.stringify({ title: selectedScenario.title, trigger: selectedScenario.trigger, action: selectedScenario.action, page: selectedScenario.page, response: selectedScenario.response }) : "не определён"}`,
-      `Правила передачи:\n${transferContext || "Нет дополнительных правил."}`,
-      `Активные правила базы знаний:\n${knowledgeRuleContext || "Нет дополнительных правил."}`,
-      `Сохранённое состояние диалога:\n${JSON.stringify({ availabilityOffers, booking: nextBooking, serviceContext: nextServiceContext })}`,
+      `Опубликованные акции:\n${offersContext || "Нет опубликованных акций."}`,
+      `Опубликованные мероприятия${calendarDateInMessage(message) ? ` на ${calendarDateInMessage(message)}` : ""}:\n${eventsContext || "Нет данных из публичного календаря."}`,
+      `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`,
+      `Уже известные контакты для брони: ${JSON.stringify(nextBookingContact)}. Контакты для заявки: ${JSON.stringify(contactRequestDetails)}.`,
+      `Состояние диалога: ${JSON.stringify({ availabilityOffers, booking: nextBooking, serviceContext: nextServiceContext })}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
     ]
       .filter(Boolean)
       .join("\n\n");
-    const endpoint = `${normalizeBaseUrl(options.baseUrl)}/chat/completions`;
-    const request = async (responseFormat?: { readonly type: "json_object" }) =>
-      fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-6-luna",
-          ...(responseFormat ? { response_format: responseFormat } : {}),
-          messages: [{ role: "user", content: prompt }],
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
-    const sanitizeGatewayLogMessage = (value: string) => {
-      let sanitized = options.apiKey
-        ? value.replaceAll(options.apiKey, "[REDACTED]")
-        : value;
-      return sanitized
-        .replace(/Bearer\s+[^\s"'`]+/giu, "Bearer [REDACTED]")
-        .replace(/sk-[A-Za-z0-9_-]+/giu, "[REDACTED]")
-        .replace(/https?:\/\/[^\s"'`]+/giu, "[URL REDACTED]")
-        .slice(0, 240);
-    };
-    const logGatewayFailure = async (response: Response) => {
-      const body = await response.text().catch(() => "");
-      let gatewayError: {
-        code?: unknown;
-        message?: unknown;
-        type?: unknown;
-      } | null = null;
-      try {
-        const payload = JSON.parse(body) as { error?: unknown };
-        if (payload.error && typeof payload.error === "object")
-          gatewayError = payload.error as {
-            code?: unknown;
-            message?: unknown;
-            type?: unknown;
-          };
-      } catch {
-        gatewayError = null;
-      }
-      options.logger.warn(
-        {
-          gatewayErrorCode:
-            typeof gatewayError?.code === "string"
-              ? gatewayError.code
-              : undefined,
-          gatewayErrorMessage:
-            typeof gatewayError?.message === "string"
-              ? sanitizeGatewayLogMessage(gatewayError.message)
-              : undefined,
-          gatewayErrorType:
-            typeof gatewayError?.type === "string"
-              ? gatewayError.type
-              : undefined,
-          gatewayRequestId:
-            response.headers.get("x-request-id") ??
-            response.headers.get("openai-request-id") ??
-            undefined,
-          gatewayStatus: response.status,
-          gatewayStatusText: response.statusText,
-        },
-        "AI Gateway request failed",
-      );
-    };
-    let response: Response;
-    try {
-      response = await request({ type: "json_object" });
-      if (!response.ok) {
-        await logGatewayFailure(response);
-        response = await request();
-      }
-    } catch (error) {
-      options.logger.warn(
-        {
-          error:
-            error instanceof Error
-              ? sanitizeGatewayLogMessage(error.message)
-              : "Unknown error",
-        },
-        "AI Gateway request could not be completed",
-      );
-      return null;
-    }
-    if (!response.ok) {
-      await logGatewayFailure(response);
-      return null;
-    }
-    const payload = (await response.json().catch(() => null)) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    } | null;
-    const content = payload?.choices?.[0]?.message?.content?.trim();
+    const content = await completeWithGateway({
+      instructions: globalInstructions,
+      input: userInput,
+    });
     if (!content) return null;
-    const jsonContent = content
-      .replace(/^```(?:json)?\s*/iu, "")
-      .replace(/\s*```$/u, "")
-      .trim();
-    let decoded: unknown = null;
-    try {
-      decoded = JSON.parse(jsonContent);
-    } catch {
-      return null;
-    }
-    const parsed = actionSchema.safeParse(decoded);
-    if (!parsed.success) return null;
-    const result = parsed.data;
+    const result = parseAgentCompletion(content);
+    if (!result) return null;
     const requestedBooking = bookingSchema.safeParse(result.booking);
-    const scenarioAction = selectedScenario?.action ?? "answer";
-    const effectiveAction =
-      scenarioAction === "answer" ? result.action : scenarioAction;
-    const effectivePage =
-      scenarioAction === "open_page"
-        ? (selectedScenario?.page ?? result.page)
-        : result.page;
+    const effectiveAction = result.action;
+    const effectivePage = result.page;
     const bookingCandidate =
       result.booking &&
       typeof result.booking === "object" &&
@@ -1068,7 +672,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       ? (storedOffer ?? modelOffer ?? mentionedOffer)
       : (modelOffer ?? mentionedOffer ?? storedOffer);
     const requestedOfferId = selectedOffer?.id;
-    const bookingState = requestedOfferId
+    let bookingState = requestedOfferId
       ? { ...nextBooking, offerId: requestedOfferId }
       : nextBooking;
     const candidateBookingNames = splitName(
@@ -1123,9 +727,107 @@ export const createAiAgentService = (options: AgentOptions) => {
       missingContactFields.length === 0,
     );
     let finalAction = effectiveAction;
-    if (canCompleteBooking) finalAction = "create_booking";
-    let generatedAnswer: string | undefined;
     let bookingUrl: string | undefined;
+    let actionOutcome: Record<string, unknown> | undefined;
+    if (finalAction === "check_availability") {
+      finalAction = "answer";
+      const searchCriteria = requestedBooking.success
+        ? requestedBooking.data
+        : bookingFromContext(nextBooking);
+      if (!settings.canCheckAvailability) {
+        actionOutcome = {
+          tool: "check_availability",
+          status: "unavailable",
+        };
+      } else if (!searchCriteria) {
+        actionOutcome = {
+          tool: "check_availability",
+          status: "not_performed",
+          missingParameters: [
+            "checkInDate",
+            "checkOutDate",
+            "adults",
+            "roomCount",
+          ],
+        };
+      } else {
+        options.chat.publishStatus(
+          conversationId,
+          "checking_availability",
+          "Проверяю доступные варианты",
+        );
+        const search = {
+          adults: searchCriteria.adults,
+          checkIn: searchCriteria.checkInDate,
+          checkOut: searchCriteria.checkOutDate,
+          childAges: searchCriteria.childAges,
+          children: searchCriteria.childAges.length,
+          currency: "RUB",
+          language: "ru",
+          nationality: "RU",
+          roomCount: searchCriteria.roomCount,
+        };
+        try {
+          let resultOffers: ReturnType<typeof summarizeEpteraOffers> = [];
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            const searchResult = await options.booking.offers(search);
+            resultOffers = summarizeEpteraOffers(searchResult.offers);
+            if (resultOffers.length > 0 || attempt === 1) break;
+            options.chat.publishStatus(
+              conversationId,
+              "checking_availability",
+              "Получаю подтверждённые варианты",
+            );
+            await wait(500);
+          }
+          availabilityOffers = resultOffers;
+          bookingState = {
+            ...searchCriteria,
+            lastCheckedDates: `${searchCriteria.checkInDate}/${searchCriteria.checkOutDate}`,
+            awaitingNewDates: false,
+          };
+          await options.database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: {
+                ...(requestState?.details &&
+                typeof requestState.details === "object"
+                  ? requestState.details
+                  : {}),
+                availabilityOffers,
+                bookingContext: bookingState,
+                serviceContext: nextServiceContext,
+                ...(Object.keys(contactRequestDetails).length
+                  ? { contactRequest: contactRequestDetails }
+                  : {}),
+                ...(hasBookingContactData(nextBookingContact)
+                  ? { bookingContact: nextBookingContact }
+                  : {}),
+              },
+            },
+          });
+          actionOutcome = {
+            tool: "check_availability",
+            status: "completed",
+            checkInDate: searchCriteria.checkInDate,
+            checkOutDate: searchCriteria.checkOutDate,
+            optionsFound: availabilityOffers.length,
+            verifiedOptions:
+              formatEpteraOffersForAgent(availabilityOffers, true) ||
+              "Подтверждённые варианты на эти даты не найдены.",
+          };
+        } catch {
+          options.logger.warn(
+            { conversationId },
+            "Eptera availability lookup for chat agent failed",
+          );
+          actionOutcome = {
+            tool: "check_availability",
+            status: "failed",
+          };
+        }
+      }
+    }
     if (finalAction === "create_booking") {
       const bookingData = agentBookingSchema.safeParse({
         adults: bookingState.adults,
@@ -1148,13 +850,20 @@ export const createAiAgentService = (options: AgentOptions) => {
         (/^https?:\/\//iu.test(settings.bookingUrl)
           ? new URL("/booking/return", settings.bookingUrl).toString()
           : undefined);
-      if (
-        !settings.canCreateBooking ||
-        (!confirmationReceived && result.confirmed !== true) ||
-        !selectedOffer ||
-        !bookingData.success ||
-        !returnUrl
-      ) {
+      const bookingFailure = !settings.canCreateBooking
+        ? "booking_disabled"
+        : !confirmationReceived
+          ? "guest_confirmation_required"
+          : !canCompleteBooking
+            ? "booking_requirements_incomplete"
+            : !selectedOffer
+              ? "no_confirmed_offer"
+              : !bookingData.success
+                ? "invalid_booking_details"
+                : !returnUrl
+                  ? "return_url_unavailable"
+                  : undefined;
+      if (bookingFailure || !bookingData.success || !returnUrl) {
         if (!bookingData.success) {
           options.logger.warn(
             {
@@ -1165,121 +874,156 @@ export const createAiAgentService = (options: AgentOptions) => {
           );
         }
         finalAction = "answer";
-        generatedAnswer = missingContactFields.length
-          ? `Перед созданием брони ещё нужны: ${missingContactFields.join(", ")}.`
-          : !confirmationReceived
-            ? "Данные для бронирования получил. Подтверждаете создание брони?"
-            : !selectedOffer
-              ? "Сначала выберите один из доступных вариантов номера."
-              : "Не удалось проверить данные бронирования. Проверьте выбранный номер и контакты.";
+        actionOutcome = {
+          tool: "create_booking",
+          status: "not_created",
+          reason: bookingFailure ?? "invalid_booking_details",
+          ...(missingContactFields.length ? { missingContactFields } : {}),
+        };
       } else {
+        let reservation: Awaited<
+          ReturnType<BookingService["createReservation"]>
+        > | null = null;
         try {
-          const reservation = await options.booking.createReservation(
+          reservation = await options.booking.createReservation(
             toReservationBody(bookingData.data, returnUrl),
           );
-          const paymentLink = reservation.payment.confirmationUrl;
-          if (!paymentLink) throw new Error("Payment link is missing");
-          bookingUrl = paymentLink;
-          generatedAnswer =
-            "Бронь создана. Перейдите по ссылке оплаты и завершите оплату в течение 30 минут, иначе бронь будет автоматически отменена.";
-          await options.database.client.adminRequest.update({
-            where: { id: conversationId },
-            data: {
-              details: {
-                ...(requestState?.details &&
-                typeof requestState.details === "object"
-                  ? requestState.details
-                  : {}),
-                ...(availabilityOffers.length ? { availabilityOffers } : {}),
-                bookingContext: bookingState,
-                bookingContact: nextBookingContact,
-                serviceContext: nextServiceContext,
-                bookingCreatedByAgent: true,
-                paymentLinkSent: true,
-              },
-            },
-          });
         } catch {
           finalAction = "answer";
-          generatedAnswer =
-            "Не удалось создать бронь по выбранному варианту. Попробуйте ещё раз или я передам диалог менеджеру.";
+          actionOutcome = {
+            tool: "create_booking",
+            status: "failed",
+          };
+        }
+        if (reservation) {
+          const paymentLink = reservation.payment.confirmationUrl;
+          if (paymentLink) bookingUrl = paymentLink;
+          actionOutcome = {
+            tool: "create_booking",
+            status: "created",
+            paymentLinkAvailable: Boolean(paymentLink),
+            paymentDeadlineMinutes: paymentLink ? 30 : undefined,
+          };
+          try {
+            await options.database.client.adminRequest.update({
+              where: { id: conversationId },
+              data: {
+                details: {
+                  ...(requestState?.details &&
+                  typeof requestState.details === "object"
+                    ? requestState.details
+                    : {}),
+                  ...(availabilityOffers.length ? { availabilityOffers } : {}),
+                  bookingContext: bookingState,
+                  bookingContact: nextBookingContact,
+                  serviceContext: nextServiceContext,
+                  bookingCreatedByAgent: true,
+                  paymentLinkSent: Boolean(paymentLink),
+                },
+              },
+            });
+          } catch {
+            options.logger.warn(
+              { conversationId },
+              "AI booking succeeded but chat state could not be updated",
+            );
+          }
         }
       }
     }
-    const suppliedBookingContact = Boolean(
-      nameFromText(message) || phoneFromText(message) || emailFromText(message),
-    );
-    if (
-      finalAction !== "create_booking" &&
-      suppliedBookingContact &&
-      bookingFromContext(bookingState) &&
-      !confirmationReceived
-    ) {
-      finalAction = "answer";
-      if (missingContactFields.length > 0) {
-        generatedAnswer = `Спасибо, данные получил. Для оформления брони ещё нужны: ${missingContactFields.join(", ")}.`;
-      } else if (selectedOffer) {
-        generatedAnswer = `Данные получил. Вы выбрали номер «${selectedOffer.roomType}» на даты ${bookingState.checkInDate} — ${bookingState.checkOutDate}. Подтверждаете создание брони?`;
-      } else {
-        generatedAnswer =
-          "Контакты получил и сохранил. Какой из доступных номеров оформить?";
-      }
-    }
-    if (
-      settings.canCreateRequest &&
-      (finalAction === "create_request" || finalAction === "transfer")
-    ) {
+    if (finalAction === "create_request" && settings.canCreateRequest) {
       await saveAgentRequest({
         conversationId,
         currentDetails: requestState?.details,
         message,
         history,
-        contactRequest: previousContactRequest,
+        contactRequest: { ...contactRequestDetails, created: true },
         booking: requestedBooking.success ? requestedBooking.data : nextBooking,
         name: result.name ?? detectedName,
         phone: result.phone ?? detectedPhone,
         email: result.email,
       });
+      actionOutcome = {
+        tool: "create_request",
+        status: "registered",
+      };
+    } else if (finalAction === "create_request") {
+      finalAction = "answer";
+      actionOutcome = {
+        tool: "create_request",
+        status: "unavailable",
+      };
+    }
+    if (finalAction === "transfer" && settings.canTransferToEmployee) {
+      if (settings.canCreateRequest)
+        await saveAgentRequest({
+          conversationId,
+          currentDetails: requestState?.details,
+          message,
+          history,
+          contactRequest: contactRequestDetails,
+          booking: requestedBooking.success
+            ? requestedBooking.data
+            : nextBooking,
+          name: result.name ?? detectedName,
+          phone: result.phone ?? detectedPhone,
+          email: result.email,
+        });
+      actionOutcome = {
+        tool: "transfer",
+        status: "handoff_requested",
+      };
+    } else if (finalAction === "transfer") {
+      finalAction = "answer";
+      actionOutcome = {
+        tool: "transfer",
+        status: "unavailable",
+      };
     }
     if (finalAction === "open_page") {
-      bookingUrl =
-        agentPageRoutes[isAgentPage(effectivePage) ? effectivePage : "spa"];
+      if (isAgentPage(effectivePage)) {
+        bookingUrl = agentPageRoutes[effectivePage];
+      } else {
+        finalAction = "answer";
+      }
     }
-    const transferNotice =
-      "Я передал диалог сотруднику — он подключится к вам.";
-    const answerWithTransfer =
-      finalAction === "transfer" &&
-      settings.canTransferToEmployee &&
-      !result.answer.includes(transferNotice)
-        ? `${generatedAnswer ?? result.answer} ${transferNotice}`
-        : (generatedAnswer ?? result.answer);
-    const withoutDisclosure = answerWithTransfer
-      .replace(
-        /В этом чате отвечает AI-ассистент\.\s*При необходимости подключим сотрудника\.\s*/iu,
-        "",
+    let guestAnswer = result.answer;
+    if (actionOutcome) {
+      const outcomePrompt = [
+        "Составь только окончательный ответ гостю по фактическому результату. Не запускай новое действие в этом сообщении.",
+        "Не упоминай JSON, коды ошибок или технические детали. Если бронь создана и есть ссылка на оплату, сообщи об этом и сроке оплаты — ссылка будет приложена отдельно. Если перевод только запрошен, сообщи, что сейчас подключишь сотрудника, не утверждай, что он уже ответил.",
+        `Проверенный результат действия: ${JSON.stringify(actionOutcome)}`,
+        `Контекст разговора:\n${history || "Нет предыдущих сообщений."}`,
+        `Первоначальный ответ агента:\n${result.answer}`,
+        `Сообщение гостя: ${message}`,
+      ].join("\n\n");
+      const followup = await completeWithGateway({
+        instructions: globalInstructions,
+        input: outcomePrompt,
+      });
+      const followupResult = followup ? parseAgentCompletion(followup) : null;
+      if (followupResult) {
+        guestAnswer = followupResult.answer;
+        if (
+          !bookingUrl &&
+          followupResult.action === "open_page" &&
+          isAgentPage(followupResult.page)
+        )
+          bookingUrl = agentPageRoutes[followupResult.page];
+      } else if (
+        actionOutcome.status !== "created" &&
+        actionOutcome.status !== "registered" &&
+        actionOutcome.status !== "handoff_requested" &&
+        actionOutcome.status !== "completed"
       )
-      .replace(/^Здравствуйте!\s*/iu, "")
-      .replace(/\/?booking(?:\?[^\s]*)?/giu, "после уточнения параметров")
-      .trim();
-    const guestSafeAnswer = withoutDisclosure
+        guestAnswer =
+          "Извините, сейчас не удалось выполнить это действие. Я могу помочь вам продолжить обращение.";
+    }
+    const guestSafeAnswer = guestAnswer
       .replace(/\bEptera(?:\s+Booking\s+API)?\b/giu, "система бронирования")
       .replace(/\bЭптера\b/giu, "система бронирования")
       .trim();
-    const availabilityWasFound = availabilityOffers.length > 0;
-    const availabilityIsNew =
-      currentMessageHasDate ||
-      bookingCriteriaChanged ||
-      !previousState.availabilityOffers?.length;
-    const availabilityLookupNeedsNotice =
-      availabilityLookupAttempted && !availabilityWasFound;
-    const answerWithAvailability =
-      availabilityWasFound && availabilityIsNew && finalAction === "answer"
-        ? `На указанные даты доступны следующие номера:\n\n${formatEpteraOffersForGuest(availabilityOffers, nextBooking.checkInDate, nextBooking.checkOutDate)}\n\nКакой вариант хотите рассмотреть подробнее?`
-        : availabilityLookupNeedsNotice && finalAction === "answer"
-          ? "Пока не удалось получить подтверждённый список вариантов на эти даты. Я не буду показывать непроверенные данные — попробуйте запросить наличие ещё раз немного позже."
-          : guestSafeAnswer;
-    let answer =
-      answerWithAvailability || "Подскажите, пожалуйста, чем я могу помочь?";
+    const answer = guestSafeAnswer;
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
   };

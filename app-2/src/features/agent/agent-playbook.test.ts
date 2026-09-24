@@ -84,10 +84,7 @@ test("refreshes only unchanged conversational defaults and preserves admin edits
 
   await ensureDefaultAgentPlaybook(database);
 
-  assert.deepEqual(scenarioUpdates.map(({ id }) => id).sort(), [
-    "text-fallback",
-    "voice-base",
-  ]);
+  assert.deepEqual(scenarioUpdates.map(({ id }) => id).sort(), ["voice-base"]);
   assert.ok(scenarioUpdates.every(({ data }) => Boolean(data.response)));
   assert.ok(
     scenarioUpdates.every(

@@ -48,6 +48,7 @@ export type AgentSettings = {
   readonly tone: string;
   readonly language: string;
   readonly greeting: string;
+  readonly globalInstructions: string;
   readonly bookingUrl: string;
   readonly canCheckAvailability: boolean;
   readonly canCreateRequest: boolean;

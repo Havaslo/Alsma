@@ -30,10 +30,11 @@ const createHarness = (
   options: {
     emptyOffersFirst?: boolean;
     gatewayFailure?: boolean;
+    initialDetails?: Record<string, unknown>;
     malformedConfirmation?: boolean;
   } = {},
 ) => {
-  let details: Record<string, unknown> = {};
+  let details: Record<string, unknown> = options.initialDetails ?? {};
   let emptyOffersRemaining = options.emptyOffersFirst ? 1 : 0;
   const published: Array<{
     author: string;
@@ -41,7 +42,11 @@ const createHarness = (
     bookingUrl?: string;
   }> = [];
   const bookingSearches: unknown[] = [];
-  const requestBodies: Array<{ model?: string; temperature?: number }> = [];
+  const requestBodies: Array<{
+    messages?: Array<{ content?: string; role?: string }>;
+    model?: string;
+    temperature?: number;
+  }> = [];
   const knowledgeQueries: string[] = [];
   const models: string[] = [];
   const reservations: unknown[] = [];
@@ -133,11 +138,15 @@ const createHarness = (
     const body = JSON.parse(String(init?.body)) as {
       model?: string;
       temperature?: number;
-      messages?: Array<{ content?: string }>;
+      messages?: Array<{ content?: string; role?: string }>;
     };
     requestBodies.push(body);
     if (body.model) models.push(body.model);
-    const prompt = body.messages?.[0]?.content ?? "";
+    const systemPrompt =
+      body.messages?.find((item) => item.role === "system")?.content ?? "";
+    const userPrompt =
+      body.messages?.find((item) => item.role === "user")?.content ?? "";
+    const prompt = `${systemPrompt}\n\n${userPrompt}`;
     prompts.push(prompt);
     if (options.gatewayFailure)
       return new Response(
@@ -150,72 +159,138 @@ const createHarness = (
         }),
         { headers: { "x-request-id": "req-test" }, status: 400 },
       );
-    const guestMessage = prompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
-    const content = /Да, бронируйте|создавай|подтверждаю/iu.test(guestMessage)
+    const guestMessage =
+      userPrompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
+    const outcomeText = userPrompt.match(
+      /Проверенный результат действия: (.*)$/mu,
+    )?.[1];
+    const actionOutcome = outcomeText
+      ? (JSON.parse(outcomeText) as {
+          optionsFound?: number;
+          status?: string;
+          tool?: string;
+        })
+      : null;
+    const content = actionOutcome
       ? {
-          action: "create_booking",
-          answer: "Оформляю выбранный вариант.",
-          booking: options.malformedConfirmation
-            ? {
-                adults: "один",
-                checkInDate: "13 августа 2026",
-                checkOutDate: "15 августа 2026",
-                email: "не email",
-                firstName: "Стандарт",
-                lastName: "",
-                offerId: "Стандарт",
-                phone: "не телефон",
-                roomCount: 0,
-              }
-            : {
-                adults: 1,
-                checkInDate: "2026-08-13",
-                checkOutDate: "2026-08-15",
-                childAges: [],
-                email: "ivan@example.com",
-                firstName: "Иван",
-                lastName: "Иванов",
-                offerId: "offer-1",
-                phone: "+79990000000",
-                roomCount: 1,
-              },
-          confirmed: true,
-          offerId: "offer-1",
+          action: "answer",
+          answer:
+            actionOutcome.status === "created"
+              ? "Бронь создана, ссылка на оплату приложена. На оплату есть 30 минут."
+              : actionOutcome.status === "registered"
+                ? "Ваше обращение зарегистрировано. Сотрудник свяжется с вами."
+                : actionOutcome.status === "handoff_requested"
+                  ? "Сейчас подключу к разговору сотрудника."
+                  : actionOutcome.status === "completed"
+                    ? actionOutcome.optionsFound
+                      ? "На выбранные даты доступен номер **Стандарт**. Цена за ночь: 4 500 ₽."
+                      : "На эти даты не нашлось подтверждённых вариантов."
+                    : "Не удалось выполнить действие; сейчас уточню, как продолжить.",
         }
-      : /^(?:привет|здравствуйте|добрый день)[,!\s]/iu.test(guestMessage)
+      : /Да, бронируйте|создавай|подтверждаю/iu.test(guestMessage)
         ? {
-            action: "answer",
-            answer: "Привет! Спасибо, всё хорошо 🙂 Чем могу помочь?",
+            action: "create_booking",
+            answer: "Оформляю выбранный вариант.",
+            booking: options.malformedConfirmation
+              ? {
+                  adults: "один",
+                  checkInDate: "13 августа 2026",
+                  checkOutDate: "15 августа 2026",
+                  email: "не email",
+                  firstName: "Стандарт",
+                  lastName: "",
+                  offerId: "Стандарт",
+                  phone: "не телефон",
+                  roomCount: 0,
+                }
+              : {
+                  adults: 1,
+                  checkInDate: "2026-10-13",
+                  checkOutDate: "2026-10-15",
+                  childAges: [],
+                  email: "ivan@example.com",
+                  firstName: "Иван",
+                  lastName: "Иванов",
+                  offerId: "offer-1",
+                  phone: "+79990000000",
+                  roomCount: 1,
+                },
+            confirmed: true,
+            offerId: "offer-1",
           }
-        : /расскажите.*spa/iu.test(guestMessage)
+        : /обратный звонок/iu.test(guestMessage)
           ? {
-              action: "open_page",
-              answer: "В SPA есть бассейн, сауны и массажные процедуры.",
-              page: "spa",
+              action: "create_request",
+              answer: "Сейчас зафиксирую ваше обращение.",
+              name: "Иван Иванов",
+              phone: "+79990000000",
             }
-          : /расскажите.*номера/iu.test(guestMessage)
+          : /Нужен номер/iu.test(guestMessage)
             ? {
-                action: "open_page",
-                answer: "В отеле есть несколько категорий номеров.",
-                page: "rooms",
+                action: "check_availability",
+                answer: "Сейчас проверяю доступность.",
+                booking: {
+                  adults: 1,
+                  checkInDate: "2026-10-13",
+                  checkOutDate: "2026-10-15",
+                  childAges: [],
+                  roomCount: 1,
+                },
               }
-            : guestMessage.includes("Беру вариант 1")
+            : /^(?:привет|здравствуйте|добрый день)[,!\s]/iu.test(guestMessage)
               ? {
                   action: "answer",
-                  answer: "Хорошо, для оформления нужны контакты.",
-                  offerId: "offer-1",
+                  answer: "Привет! Спасибо, всё хорошо 🙂 Чем могу помочь?",
                 }
-              : /погода на Марсе/iu.test(guestMessage)
+              : /расскажите.*spa/iu.test(guestMessage)
                 ? {
-                    action: "answer",
-                    answer:
-                      "Не могу подсказать погоду на Марсе, но могу помочь с отдыхом в АЛСМА или подобрать даты поездки.",
+                    action: "open_page",
+                    answer: "В SPA есть бассейн, сауны и массажные процедуры.",
+                    page: "spa",
                   }
-                : {
-                    action: "answer",
-                    answer:
-                      "Сейчас подтверждённых вариантов по этим датам нет.",
-                  };
+                : /расскажите.*номера/iu.test(guestMessage)
+                  ? {
+                      action: "open_page",
+                      answer: "В отеле есть несколько категорий номеров.",
+                      page: "rooms",
+                    }
+                  : guestMessage.includes("Беру вариант 1")
+                    ? {
+                        action: "answer",
+                        answer: "Хорошо, для оформления нужны контакты.",
+                        offerId: "offer-1",
+                      }
+                    : /(?:телефон|89525012159)/iu.test(guestMessage)
+                      ? {
+                          action: "answer",
+                          answer:
+                            "Спасибо, Дима. Для бронирования осталось сообщить email.",
+                          offerId: "offer-1",
+                        }
+                      : /d\.naymow13@gmail\.com/iu.test(guestMessage)
+                        ? {
+                            action: "answer",
+                            answer:
+                              "Благодарю, данные получили. Подтвердите, пожалуйста, создание брони.",
+                            offerId: "offer-1",
+                          }
+                        : /погода на Марсе/iu.test(guestMessage)
+                          ? {
+                              action: "answer",
+                              answer:
+                                "Не могу подсказать погоду на Марсе, но могу помочь с отдыхом в АЛСМА или подобрать даты поездки.",
+                            }
+                          : /заезд и выезд/iu.test(guestMessage)
+                            ? {
+                                action: "answer",
+                                answer:
+                                  "Не нашёл подтверждённого времени заезда и выезда в доступных материалах.",
+                              }
+                            : {
+                                action: "answer",
+                                answer:
+                                  "Сейчас подтверждённых вариантов по этим датам нет.",
+                              };
     return {
       ok: true,
       status: 200,
@@ -254,12 +329,12 @@ const createHarness = (
   };
 };
 
-test("searches Eptera availability and exposes offers for comparison", async () => {
+test("lets the model choose Eptera availability and use its verified result", async () => {
   const harness = createHarness();
   try {
     await harness.service.reply(
       "conversation-1",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     assert.match(harness.published.at(-1)?.text ?? "", /Стандарт/u);
     assert.match(
@@ -276,8 +351,8 @@ test("searches Eptera availability and exposes offers for comparison", async () 
     assert.equal(harness.bookingSearches.length, 1);
     assert.deepEqual(harness.bookingSearches[0], {
       adults: 1,
-      checkIn: "2026-08-13",
-      checkOut: "2026-08-15",
+      checkIn: "2026-10-13",
+      checkOut: "2026-10-15",
       childAges: [],
       children: 0,
       currency: "RUB",
@@ -285,23 +360,33 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       nationality: "RU",
       roomCount: 1,
     });
-    assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
+    assert.match(harness.prompts[1] ?? "", /offerId: offer-1/u);
     assert.match(
       harness.prompts[0] ?? "",
       /Веди себя как хороший мальчик, по всем деталям Алсмы отвечай только проверенной информацией из документации и тулов Алсмы\./u,
     );
-    assert.match(harness.prompts[0] ?? "", /дружелюбный AI-помощник отеля/u);
+    assert.match(harness.prompts[0] ?? "", /AI-агент-помощник отеля «Алсма»/u);
     assert.match(
       harness.prompts[0] ?? "",
-      /Если на сайте есть подходящая страница с подробностями, приложи её ссылку-кнопку к ответу/u,
+      /обходительным и дружелюбным, обращайся к гостям на «Вы»/u,
     );
     assert.match(
       harness.prompts[0] ?? "",
-      /Создавай бронирование только после явного подтверждения гостем выбранного варианта/u,
+      /сам выбери соответствующую ссылку.*сначала дай содержательный ответ/su,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Перед созданием брони обязательно получи явное подтверждение гостя/u,
     );
     assert.doesNotMatch(harness.prompts[0] ?? "", /не упоминай, что ты AI/u);
     assert.equal(harness.models[0], "gpt-6-luna");
     assert.equal(harness.requestBodies[0]?.temperature, undefined);
+    assert.equal(harness.requestBodies[0]?.messages?.[0]?.role, "system");
+    assert.doesNotMatch(harness.prompts[0] ?? "", /ровно два варианта/u);
+    assert.doesNotMatch(
+      harness.prompts[0] ?? "",
+      /Выбранный сценарий для этого сообщения/u,
+    );
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
   } finally {
     globalThis.fetch = harness.originalFetch;
@@ -330,6 +415,31 @@ test("adds a matching page link without replacing the assistant answer", async (
       "В отеле есть несколько категорий номеров.",
     );
     assert.equal(harness.published.at(-1)?.bookingUrl, "/rooms");
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("lets the model choose a request tool and write the result response", async () => {
+  const harness = createHarness({
+    initialDetails: { channelType: "chat", source: "Сайт" },
+  });
+  try {
+    await harness.service.reply(
+      "conversation-agent-request",
+      "Пожалуйста, закажите обратный звонок, мой телефон +79990000000",
+    );
+    assert.equal(harness.prompts.length, 2);
+    assert.equal(harness.details().agentRequestCreated, true);
+    assert.equal(harness.details().source, "Сайт");
+    assert.match(
+      harness.prompts[1] ?? "",
+      /Проверенный результат действия: \{"tool":"create_request","status":"registered"\}/u,
+    );
+    assert.equal(
+      harness.published.at(-1)?.text,
+      "Ваше обращение зарегистрировано. Сотрудник свяжется с вами.",
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
@@ -369,20 +479,16 @@ test("logs Gateway failures without retaining raw secrets", async () => {
   }
 });
 
-test("waits for a delayed availability result and sends it without a second guest message", async () => {
+test("retries an empty availability response and lets the model describe the result", async () => {
   const harness = createHarness({ emptyOffersFirst: true });
   try {
     await harness.service.reply(
       "conversation-delayed-availability",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     assert.equal(harness.bookingSearches.length, 2);
-    assert.equal(harness.prompts.length, 0);
+    assert.equal(harness.prompts.length, 2);
     assert.match(harness.published.at(-1)?.text ?? "", /Стандарт/u);
-    assert.match(
-      harness.published.at(-1)?.text ?? "",
-      /Цена за ночь: 4[\s\u00a0]?500 ₽/u,
-    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
@@ -395,8 +501,8 @@ test("formats one compact block per room type without booking details", () => {
       { ...offer, discountedPrice: 11_000, id: "offer-2" },
       { ...offer, roomType: "Супериор", roomArea: null, roomCapacity: 3 },
     ],
-    "2026-08-13",
-    "2026-08-15",
+    "2026-10-13",
+    "2026-10-15",
   );
   assert.equal((formatted.match(/\*\*/gu) ?? []).length, 4);
   assert.match(formatted, /\*\*Стандарт\*\*/u);
@@ -472,7 +578,7 @@ test("creates a confirmed booking and sends the YooKassa link to chat", async ()
   try {
     await harness.service.reply(
       "conversation-2",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     await harness.service.reply("conversation-2", "Да, бронируйте вариант 1");
     assert.equal(harness.reservations.length, 1);
@@ -491,7 +597,7 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
   try {
     await harness.service.reply(
       "conversation-contacts",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     await harness.service.reply("conversation-contacts", "Беру вариант 1");
     const knowledgeQueriesBeforeContacts = harness.knowledgeQueries.length;
@@ -501,7 +607,10 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
       harness.knowledgeQueries.length,
       knowledgeQueriesBeforeContacts,
     );
-    assert.match(harness.published.at(-1)?.text ?? "", /ещё нужны: email/u);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /осталось сообщить email/u,
+    );
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
 
     await harness.service.reply(
@@ -514,7 +623,7 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
     );
     assert.match(
       harness.published.at(-1)?.text ?? "",
-      /Подтверждаете создание брони/u,
+      /Подтвердите, пожалуйста, создание брони/u,
     );
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /укажите имя/u);
 
@@ -534,7 +643,7 @@ test("extracts names from natural and labeled messages in the booking flow", asy
   try {
     await harness.service.reply(
       "conversation-screenshot-flow",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     await harness.service.reply(
       "conversation-screenshot-flow",
@@ -544,7 +653,10 @@ test("extracts names from natural and labeled messages in the booking flow", asy
       "conversation-screenshot-flow",
       "Дима Наумов, телефон 89525012159",
     );
-    assert.match(harness.published.at(-1)?.text ?? "", /ещё нужны: email/u);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /осталось сообщить email/u,
+    );
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
 
     await harness.service.reply(
@@ -554,7 +666,7 @@ test("extracts names from natural and labeled messages in the booking flow", asy
     const knowledgeQueriesBeforeConfirmation = harness.knowledgeQueries.length;
     assert.match(
       harness.published.at(-1)?.text ?? "",
-      /Подтверждаете создание брони/u,
+      /Подтвердите, пожалуйста, создание брони/u,
     );
     assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
@@ -590,7 +702,7 @@ test("creates a booking from saved state when the model repeats malformed bookin
   try {
     await harness.service.reply(
       "conversation-malformed-confirmation",
-      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     await harness.service.reply(
       "conversation-malformed-confirmation",
@@ -641,7 +753,7 @@ test("responds naturally to a greeting without treating it as a knowledge query"
     );
     assert.match(
       harness.prompts.at(-1) ?? "",
-      /честно представься AI-помощником отеля «Алсма»/u,
+      /На обычное приветствие отвечай приветливо/u,
     );
     assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
@@ -672,21 +784,21 @@ test("acknowledges an unknown fact without repeating a canned handoff", async ()
   }
 });
 
-test("answers fixed check-in and check-out times without model generation", async () => {
+test("leaves check-in and check-out answers to the model and available knowledge", async () => {
   const harness = createHarness();
   try {
     await harness.service.reply(
       "conversation-check-in-out",
       "Во сколько у вас заезд и выезд?",
     );
-    assert.equal(harness.prompts.length, 0);
+    assert.equal(harness.prompts.length, 1);
     assert.match(
-      harness.published.at(-1)?.text ?? "",
-      /заезд — в 16:00, выезд — в 14:00/u,
+      harness.prompts[0] ?? "",
+      /База знаний:\nНет подходящей статьи/u,
     );
-    assert.match(
+    assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
-      /не зависит от тарифа или номера/u,
+      /заезд — в 16:00/u,
     );
   } finally {
     globalThis.fetch = harness.originalFetch;
