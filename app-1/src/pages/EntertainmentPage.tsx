@@ -183,7 +183,7 @@ export const EntertainmentPage = () => {
             Программа анимации
           </h2>
           <p className="mt-5 text-lg text-muted-ui-foreground">
-            Ежедневная развлекательная программа
+            Развлекательная программа
           </p>
         </div>
         <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
