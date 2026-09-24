@@ -104,6 +104,7 @@ const createHarness = (
   let createGuestBookingCalled = false;
   let findOrCreateGuestCalled = false;
   let paymentCalled = false;
+  let paymentCustomerEmail: string | undefined;
   const cancellationIds: number[] = [];
 
   const eptera = {
@@ -141,8 +142,9 @@ const createHarness = (
     }),
   } as unknown as BookingRepository;
   const yookassa = {
-    createPayment: async () => {
+    createPayment: async (input: { customer: { email: string } }) => {
       paymentCalled = true;
+      paymentCustomerEmail = input.customer.email;
       if (options.paymentError) throw options.paymentError;
       return {
         amount: { currency: "RUB", value: "900.00" },
@@ -183,6 +185,9 @@ const createHarness = (
     },
     get paymentCalled() {
       return paymentCalled;
+    },
+    get paymentCustomerEmail() {
+      return paymentCustomerEmail;
     },
     get cancellationIds() {
       return cancellationIds;
@@ -436,6 +441,17 @@ test("builds the adult-only Eptera payload without undefined optional fields", a
   assert.equal(payload["baby-count"], 0);
   assert.equal(payload["younger-child-count"], 0);
   assert.equal(payload["total-price"], 900);
+});
+
+test("forwards the guest email to YooKassa for the payment receipt", async () => {
+  const harness = createHarness();
+  const email = "guest-receipt@example.com";
+
+  await harness.createReservation(
+    reservationInput({ contact: { ...reservationInput().contact, email } }),
+  );
+
+  assert.equal(harness.paymentCustomerEmail, email);
 });
 
 test("uses the fresh quote total and child buckets for two adults aged 4 and 7", async () => {

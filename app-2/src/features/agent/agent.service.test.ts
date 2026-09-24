@@ -31,6 +31,7 @@ const createHarness = (
     emptyOffersFirst?: boolean;
     gatewayFailure?: boolean;
     initialDetails?: Record<string, unknown>;
+    initialContact?: string;
     malformedConfirmation?: boolean;
   } = {},
 ) => {
@@ -40,6 +41,11 @@ const createHarness = (
     author: string;
     text: string;
     bookingUrl?: string;
+  }> = [];
+  const conversationMessages: Array<{
+    author: string;
+    conversationId: string;
+    text: string;
   }> = [];
   const bookingSearches: unknown[] = [];
   const requestBodies: Array<{
@@ -71,7 +77,10 @@ const createHarness = (
   };
   const client = {
     adminRequest: {
-      findUnique: async () => ({ details }),
+      findUnique: async () => ({
+        contact: options.initialContact ?? null,
+        details,
+      }),
       update: async ({ data }: { data: { details: unknown } }) => {
         details = data.details as Record<string, unknown>;
         return { details };
@@ -105,14 +114,18 @@ const createHarness = (
     },
   };
   const chat = {
-    list: async () => published,
+    list: async (conversationId: string) =>
+      conversationMessages.filter(
+        (item) => item.conversationId === conversationId,
+      ),
     publish: async (
-      _conversationId: string,
+      conversationId: string,
       author: string,
       text: string,
       bookingUrl?: string,
     ) => {
       published.push({ author, bookingUrl, text });
+      conversationMessages.push({ author, conversationId, text });
       return { text };
     },
     publishStatus: () => undefined,
@@ -167,6 +180,7 @@ const createHarness = (
     const actionOutcome = outcomeText
       ? (JSON.parse(outcomeText) as {
           optionsFound?: number;
+          missingContactFields?: string[];
           status?: string;
           tool?: string;
         })
@@ -185,7 +199,10 @@ const createHarness = (
                     ? actionOutcome.optionsFound
                       ? "На выбранные даты доступен номер **Стандарт**. Цена за ночь: 4 500 ₽."
                       : "На эти даты не нашлось подтверждённых вариантов."
-                    : "Не удалось выполнить действие; сейчас уточню, как продолжить.",
+                    : actionOutcome.status === "not_created" &&
+                        actionOutcome.missingContactFields?.includes("email")
+                      ? "Чтобы отправить чек ЮKassa и связать бронь с личным кабинетом, пожалуйста, сообщите ваш email."
+                      : "Не удалось выполнить действие; сейчас уточню, как продолжить.",
         }
       : /Да, бронируйте|создавай|подтверждаю/iu.test(guestMessage)
         ? {
@@ -267,7 +284,7 @@ const createHarness = (
                             "Спасибо, Дима. Для бронирования осталось сообщить email.",
                           offerId: "offer-1",
                         }
-                      : /d\.naymow13@gmail\.com/iu.test(guestMessage)
+                      : /[\w.+-]+@[\w.-]+\.[a-z]{2,}/iu.test(guestMessage)
                         ? {
                             action: "answer",
                             answer:
@@ -314,6 +331,21 @@ const createHarness = (
         warnings.push({ fields, message }),
     } as never,
   });
+  const testService = {
+    ...service,
+    reply: async (
+      conversationId: string,
+      message: string,
+      channel?: "site" | "vk" | "max",
+    ) => {
+      conversationMessages.push({
+        author: "guest",
+        conversationId,
+        text: message,
+      });
+      return service.reply(conversationId, message, channel);
+    },
+  };
   return {
     bookingSearches,
     details: () => details,
@@ -324,7 +356,7 @@ const createHarness = (
     published,
     requestBodies,
     reservations,
-    service,
+    service: testService,
     warnings,
   };
 };
@@ -573,15 +605,33 @@ test("does not expose technical test tariffs to the booking agent", () => {
   );
 });
 
-test("creates a confirmed booking and sends the YooKassa link to chat", async () => {
-  const harness = createHarness();
+test("requires a guest-provided email and uses it for the booking", async () => {
+  const harness = createHarness({ initialContact: "89525012159" });
   try {
     await harness.service.reply(
       "conversation-2",
       "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
+    await harness.service.reply("conversation-2", "Беру вариант 1");
+    await harness.service.reply("conversation-2", "Да, бронируйте вариант 1");
+    assert.equal(harness.reservations.length, 0);
+    assert.match(harness.published.at(-1)?.text ?? "", /сообщите ваш email/u);
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /ссылка на оплату/u,
+    );
+
+    await harness.service.reply(
+      "conversation-2",
+      "Имя: Иван, Фамилия: Иванов, email d.naymow13@gmail.com",
+    );
     await harness.service.reply("conversation-2", "Да, бронируйте вариант 1");
     assert.equal(harness.reservations.length, 1);
+    const reservation = harness.reservations[0] as {
+      contact: { email: string; phone: string };
+    };
+    assert.equal(reservation.contact.email, "d.naymow13@gmail.com");
+    assert.equal(reservation.contact.phone, "89525012159");
     assert.equal(
       (harness.published.at(-1) as { bookingUrl?: string }).bookingUrl,
       "https://yookassa.test/payment-1",

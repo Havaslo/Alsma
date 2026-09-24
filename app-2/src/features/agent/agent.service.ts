@@ -504,17 +504,21 @@ export const createAiAgentService = (options: AgentOptions) => {
       .join("\n");
     const requestState = await options.database.client.adminRequest.findUnique({
       where: { id: conversationId },
-      select: { details: true },
+      select: { contact: true, details: true },
     });
     const previousState = asConversationState(requestState?.details);
     const previousContactRequest = previousState.contactRequest ?? {};
     const previousBookingContact = previousState.bookingContact ?? {};
+    const initialContact =
+      typeof requestState?.contact === "string" ? requestState.contact : "";
+    const initialPhone = phoneFromText(initialContact);
+    const initialEmail = emailFromText(initialContact);
     const currentPhone = phoneFromText(message);
     const currentEmail = emailFromText(message);
     const currentName = nameFromText(message);
-    const detectedPhone = currentPhone ?? previousContactRequest.phone;
+    const detectedPhone =
+      currentPhone ?? previousContactRequest.phone ?? initialPhone;
     const detectedName = currentName ?? previousContactRequest.name;
-    const detectedEmail = currentEmail ?? previousContactRequest.email;
     const historicalBookingContact = conversationMessages
       .filter((item) => item.author === "guest")
       .map((item) => ({
@@ -531,18 +535,25 @@ export const createAiAgentService = (options: AgentOptions) => {
         }),
         {},
       );
+    // Only use email addresses explicitly supplied by the guest or in the
+    // site's initial contact field. Older conversation state may contain an
+    // address inferred by the model, so it is not authoritative.
+    const detectedEmail =
+      currentEmail ?? historicalBookingContact.email ?? initialEmail;
     const legacyContactName = contactNamePartsFromText(
       previousContactRequest.name ?? "",
     );
     const currentNameParts = contactNamePartsFromText(message);
     const nextBookingContact: BookingContact = {
+      ...(initialPhone ? { phone: initialPhone } : {}),
       ...previousBookingContact,
       ...historicalBookingContact,
       ...legacyContactName,
       ...currentNameParts,
       ...(currentPhone ? { phone: currentPhone } : {}),
-      ...(currentEmail ? { email: currentEmail } : {}),
+      ...(detectedEmail ? { email: detectedEmail } : {}),
     };
+    if (!detectedEmail) delete nextBookingContact.email;
     const contactRequestDetails = {
       ...(detectedName ? { name: detectedName } : {}),
       ...(detectedPhone ? { phone: detectedPhone } : {}),
@@ -620,6 +631,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       settings.globalInstructions.trim() || DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
       `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`,
       "Выбирай инструмент самостоятельно по контексту разговора. После результата инструмента сформулируй для гостя естественный ответ; не подменяй ответ готовой репликой и не утверждай, что действие завершено, пока его результат не подтверждён.",
+      "При подготовке бронирования не выдумывай контактные данные и не используй email, которого гость сам не сообщил. Сначала уточни только недостающие данные; email обязателен, потому что по нему ЮKassa отправляет чек и по нему гость входит в личный кабинет, где увидит бронь. Если в сохранённом контакте обращения уже указан телефон, считай его известным; иначе попроси гостя сообщить его. Бронь создавай только после явного подтверждения гостя и получения обязательных данных.",
       "Технический формат ответа: верни только JSON без markdown: {action:'answer'|'open_page'|'check_availability'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'about'|'all-inclusive'|'celebrations'|'entertainment'|'faq'|'hardware-procedures'|'offers'|'rooms'|'spa', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page укажи page; для check_availability передай параметры в booking.",
     ].join("\n\n");
     const userInput = [
@@ -628,6 +640,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       `Опубликованные мероприятия${calendarDateInMessage(message) ? ` на ${calendarDateInMessage(message)}` : ""}:\n${eventsContext || "Нет данных из публичного календаря."}`,
       `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`,
       `Уже известные контакты для брони: ${JSON.stringify(nextBookingContact)}. Контакты для заявки: ${JSON.stringify(contactRequestDetails)}.`,
+      `Обязательные контакты для брони: имя, фамилия, телефон и email. Сейчас не хватает: ${missingBookingContactFields(nextBookingContact).join(", ") || "ничего"}. Используй только данные, сообщённые гостем, и контакты, сохранённые в обращении; не заполняй недостающие поля самостоятельно.`,
       `Состояние диалога: ${JSON.stringify({ availabilityOffers, booking: nextBooking, serviceContext: nextServiceContext })}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
@@ -692,12 +705,6 @@ export const createAiAgentService = (options: AgentOptions) => {
       ...(nextBookingContact.phone || typeof bookingCandidate.phone !== "string"
         ? {}
         : { phone: bookingCandidate.phone }),
-      ...(nextBookingContact.email || typeof bookingCandidate.email !== "string"
-        ? {}
-        : { email: bookingCandidate.email }),
-      ...(nextBookingContact.email || typeof result.email !== "string"
-        ? {}
-        : { email: result.email }),
     };
     if (hasBookingContactData(effectiveBookingContact) || requestedOfferId) {
       await options.database.client.adminRequest.update({
@@ -992,6 +999,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       const outcomePrompt = [
         "Составь только окончательный ответ гостю по фактическому результату. Не запускай новое действие в этом сообщении.",
         "Не упоминай JSON, коды ошибок или технические детали. Если бронь создана и есть ссылка на оплату, сообщи об этом и сроке оплаты — ссылка будет приложена отдельно. Если перевод только запрошен, сообщи, что сейчас подключишь сотрудника, не утверждай, что он уже ответил.",
+        "Если бронирование не создано из-за недостающих обязательных контактных данных, вежливо попроси гостя сообщить только недостающие поля. Если среди них есть email, кратко объясни, что он нужен для чека ЮKassa и доступа к брони в личном кабинете. Не утверждай, что бронь создана.",
         `Проверенный результат действия: ${JSON.stringify(actionOutcome)}`,
         `Контекст разговора:\n${history || "Нет предыдущих сообщений."}`,
         `Первоначальный ответ агента:\n${result.answer}`,
