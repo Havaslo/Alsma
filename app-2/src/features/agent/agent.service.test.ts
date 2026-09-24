@@ -26,8 +26,11 @@ const offer = {
   price: 10_000,
 };
 
-const createHarness = (options: { malformedConfirmation?: boolean } = {}) => {
+const createHarness = (
+  options: { emptyOffersFirst?: boolean; malformedConfirmation?: boolean } = {},
+) => {
   let details: Record<string, unknown> = {};
+  let emptyOffersRemaining = options.emptyOffersFirst ? 1 : 0;
   const published: Array<{ text: string; bookingUrl?: string }> = [];
   const bookingSearches: unknown[] = [];
   const knowledgeQueries: string[] = [];
@@ -98,6 +101,10 @@ const createHarness = (options: { malformedConfirmation?: boolean } = {}) => {
   const booking = {
     offers: async (input: unknown) => {
       bookingSearches.push(input);
+      if (emptyOffersRemaining > 0) {
+        emptyOffersRemaining -= 1;
+        return { offers: [], search: input };
+      }
       return { offers: [offer], search: input };
     },
     createReservation: async (input: unknown) => {
@@ -225,8 +232,27 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       nationality: "RU",
       roomCount: 1,
     });
-    assert.match(harness.prompts[1] ?? "", /offerId: offer-1/u);
+    assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("waits for a delayed availability result and sends it without a second guest message", async () => {
+  const harness = createHarness({ emptyOffersFirst: true });
+  try {
+    await harness.service.reply(
+      "conversation-delayed-availability",
+      "Нужен номер с 2026-08-13 по 2026-08-15, 1 взрослый",
+    );
+    assert.equal(harness.bookingSearches.length, 2);
+    assert.equal(harness.prompts.length, 0);
+    assert.match(harness.published.at(-1)?.text ?? "", /Стандарт/u);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Цена за ночь: 4[\s\u00a0]?500 ₽/u,
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }

@@ -81,6 +81,8 @@ const asSettings = (value: unknown) => ({
   canCreateBooking: true,
 });
 const normalizeBaseUrl = (value?: string) => (value ?? "").replace(/\/$/u, "");
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 const monthNumbers: Record<string, string> = {
   января: "01",
@@ -362,6 +364,7 @@ export const createAiAgentService = (options: AgentOptions) => {
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
   );
+  const conversationQueues = new Map<string, Promise<void>>();
   const saveAgentRequest = async (input: {
     conversationId: string;
     currentDetails: unknown;
@@ -457,7 +460,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     }
   };
-  const reply = async (
+  const replyNow = async (
     conversationId: string,
     message: string,
     channel: "site" | "vk" | "max" = "site",
@@ -729,6 +732,7 @@ export const createAiAgentService = (options: AgentOptions) => {
         bookingCriteriaChanged ||
         availabilityOffers.length === 0),
     );
+    let availabilityLookupAttempted = false;
     if (shouldRefreshAvailability && extractedBooking) {
       options.chat.publishStatus(
         conversationId,
@@ -736,7 +740,7 @@ export const createAiAgentService = (options: AgentOptions) => {
         "Проверяю доступные варианты",
       );
       try {
-        const result = await options.booking.offers({
+        const search = {
           adults: extractedBooking.adults,
           checkIn: extractedBooking.checkInDate,
           checkOut: extractedBooking.checkOutDate,
@@ -746,8 +750,21 @@ export const createAiAgentService = (options: AgentOptions) => {
           language: "ru",
           nationality: "RU",
           roomCount: extractedBooking.roomCount,
-        });
-        availabilityOffers = summarizeEpteraOffers(result.offers);
+        };
+        availabilityLookupAttempted = true;
+        let summarizedOffers: ReturnType<typeof summarizeEpteraOffers> = [];
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const result = await options.booking.offers(search);
+          summarizedOffers = summarizeEpteraOffers(result.offers);
+          if (summarizedOffers.length > 0 || attempt === 1) break;
+          options.chat.publishStatus(
+            conversationId,
+            "checking_availability",
+            "Получаю подтверждённые варианты",
+          );
+          await wait(500);
+        }
+        availabilityOffers = summarizedOffers;
         await options.database.client.adminRequest.update({
           where: { id: conversationId },
           data: {
@@ -766,6 +783,7 @@ export const createAiAgentService = (options: AgentOptions) => {
           },
         });
       } catch (error) {
+        availabilityLookupAttempted = true;
         options.logger.warn(
           {
             error: error instanceof Error ? error.message : "Unknown error",
@@ -776,6 +794,21 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     }
     const bookingConfirmationMessage = isExplicitBookingConfirmation(message);
+    const shouldAnswerAvailabilityDirectly = Boolean(
+      extractedBooking &&
+      availabilityLookupAttempted &&
+      (currentMessageHasDate || bookingCriteriaChanged) &&
+      !hasBookingContactData(nextBookingContact) &&
+      !bookingConfirmationMessage &&
+      !serviceMention(message),
+    );
+    if (shouldAnswerAvailabilityDirectly) {
+      const answer = availabilityOffers.length
+        ? `На указанные даты доступны следующие номера:\n\n${formatEpteraOffersForGuest(availabilityOffers, nextBooking.checkInDate, nextBooking.checkOutDate)}\n\nКакой вариант хотите рассмотреть подробнее?`
+        : "Пока не удалось получить подтверждённый список вариантов на эти даты. Я не буду показывать непроверенные данные — попробуйте запросить наличие ещё раз немного позже.";
+      await options.chat.publish(conversationId, "agent", answer);
+      return { action: "answer" as const, answer };
+    }
     const isBookingContactMessage = Boolean(
       currentName ||
       currentPhone ||
@@ -1184,14 +1217,40 @@ export const createAiAgentService = (options: AgentOptions) => {
       currentMessageHasDate ||
       bookingCriteriaChanged ||
       !previousState.availabilityOffers?.length;
+    const availabilityLookupNeedsNotice =
+      availabilityLookupAttempted && !availabilityWasFound;
     const answerWithAvailability =
       availabilityWasFound && availabilityIsNew && finalAction === "answer"
         ? `На указанные даты доступны следующие номера:\n\n${formatEpteraOffersForGuest(availabilityOffers, nextBooking.checkInDate, nextBooking.checkOutDate)}\n\nКакой вариант хотите рассмотреть подробнее?`
-        : guestSafeAnswer;
+        : availabilityLookupNeedsNotice && finalAction === "answer"
+          ? "Пока не удалось получить подтверждённый список вариантов на эти даты. Я не буду показывать непроверенные данные — попробуйте запросить наличие ещё раз немного позже."
+          : guestSafeAnswer;
     let answer =
       answerWithAvailability || "Подскажите, пожалуйста, чем я могу помочь?";
     await options.chat.publish(conversationId, "agent", answer, bookingUrl);
     return { action: finalAction, answer };
+  };
+  const reply = async (
+    conversationId: string,
+    message: string,
+    channel: "site" | "vk" | "max" = "site",
+  ) => {
+    const previous =
+      conversationQueues.get(conversationId) ?? Promise.resolve();
+    let release!: () => void;
+    const turn = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const queued = previous.then(() => turn);
+    conversationQueues.set(conversationId, queued);
+    await previous;
+    try {
+      return await replyNow(conversationId, message, channel);
+    } finally {
+      release();
+      if (conversationQueues.get(conversationId) === queued)
+        conversationQueues.delete(conversationId);
+    }
   };
   return { reply };
 };
