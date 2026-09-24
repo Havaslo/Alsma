@@ -3,7 +3,10 @@ import test from "node:test";
 
 import type { Database } from "../../lib/database/database.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
-import { voiceTransferInstruction } from "./voice-agent.prompt.js";
+import {
+  voiceAgentCommunicationInstruction,
+  voiceTransferInstruction,
+} from "./voice-agent.prompt.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import { createVoiceAgentService } from "./voice-agent.service.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
@@ -47,10 +50,18 @@ test("keeps the transfer tool contract aligned with the prompt", () => {
 
 test("uses GPT-6 Luna for voice-agent text answers", async () => {
   const models: string[] = [];
+  const systemInstructions: string[] = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as { model?: string };
+    const body = JSON.parse(String(init?.body)) as {
+      model?: string;
+      messages?: Array<{ content?: string; role?: string }>;
+    };
     if (body.model) models.push(body.model);
+    const systemMessage = body.messages?.find(
+      (message) => message.role === "system",
+    );
+    if (systemMessage?.content) systemInstructions.push(systemMessage.content);
     return {
       json: async () => ({ choices: [{ message: { content: "Ответ" } }] }),
       ok: true,
@@ -70,6 +81,15 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     const result = await service.answer("Какой вопрос?");
     assert.equal(result.answer, "Ответ");
     assert.deepEqual(models, ["gpt-6-luna"]);
+    assert.match(
+      systemInstructions[0] ?? "",
+      /тепло, приветливо и уважительно/u,
+    );
+    assert.match(systemInstructions[0] ?? "", /не используй эмодзи/u);
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /тепло, приветливо и уважительно/u,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

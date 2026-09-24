@@ -237,6 +237,8 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       roomCount: 1,
     });
     assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
+    assert.match(harness.prompts[0] ?? "", /тепло и доброжелательно/u);
+    assert.match(harness.prompts[0] ?? "", /не более одного уместного эмодзи/u);
     assert.equal(harness.models[0], "gpt-6-luna");
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
   } finally {

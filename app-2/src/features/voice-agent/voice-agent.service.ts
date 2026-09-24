@@ -8,6 +8,7 @@ import { createAmaziLifecycle } from "./voice-agent.amazi.lifecycle.js";
 import { createVoiceTestAudioTurn } from "./voice-agent.audio.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
+import { voiceAgentCommunicationInstruction } from "./voice-agent.prompt.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
   CreateCallBody,
@@ -81,8 +82,7 @@ export const createVoiceAgentService = (
           messages: [
             {
               role: "system",
-              content:
-                "Ответь только на основе переданного ниже контекста; не добавляй неподтверждённые факты.",
+              content: `${voiceAgentCommunicationInstruction} Отвечай только на основе переданного ниже контекста и не добавляй неподтверждённые факты.`,
             },
             { role: "user", content: prompt },
           ],
