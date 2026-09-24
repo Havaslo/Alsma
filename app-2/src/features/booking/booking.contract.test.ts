@@ -626,7 +626,7 @@ test("shows only approved rates and board combinations per room category", async
         ),
         makeRate(
           "cottage-free-no-meal",
-          "Свободный",
+          "Свободный (без питания)",
           "Без питания",
           "Коттедж Русская баня",
         ),
@@ -638,7 +638,7 @@ test("shows only approved rates and board combinations per room category", async
         ),
         makeRate(
           "cottage-free-with-meal",
-          "Свободный",
+          "Свободный (без питания)",
           "FB",
           "Коттедж Русская баня",
         ),

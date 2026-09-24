@@ -448,6 +448,7 @@ const normalizeProviderText = (value: string): string =>
     .trim();
 const normalizeRateType = (value: string): string =>
   normalizeProviderText(value)
+    .replace(/[()]/gu, "")
     .replace(/[‐‑‒–—-]+/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
@@ -480,6 +481,10 @@ const BATH_COTTAGE_FULL_BOARD_RATES = new Set([
   "осенний хит",
   "осенний хит стандарт",
 ]);
+const BATH_COTTAGE_NO_MEAL_RATES = new Set([
+  "свободный",
+  "свободный без питания",
+]);
 const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
   offers.filter((offer) => {
     const rateType = normalizeRateType(offer.rateType);
@@ -487,7 +492,8 @@ const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
       return (
         (isFullBoard(offer.boardType) &&
           BATH_COTTAGE_FULL_BOARD_RATES.has(rateType)) ||
-        (rateType === "свободный" && isNoMealBoard(offer.boardType))
+        (BATH_COTTAGE_NO_MEAL_RATES.has(rateType) &&
+          isNoMealBoard(offer.boardType))
       );
     return (
       isFullBoard(offer.boardType) && STANDARD_FULL_BOARD_RATES.has(rateType)
