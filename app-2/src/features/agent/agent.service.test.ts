@@ -504,3 +504,24 @@ test("keeps the knowledge-base fallback for an unrelated unknown question", asyn
     globalThis.fetch = harness.originalFetch;
   }
 });
+
+test("answers fixed check-in and check-out times without model generation", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-check-in-out",
+      "Во сколько у вас заезд и выезд?",
+    );
+    assert.equal(harness.prompts.length, 0);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /заезд — в 16:00, выезд — в 14:00/u,
+    );
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /не зависит от тарифа или номера/u,
+    );
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
