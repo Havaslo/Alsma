@@ -20,6 +20,17 @@ type Identity = { requester: string; contact: string };
 const STORAGE_KEY = "alsma-chat-conversation";
 const IDENTITY_KEY = "alsma-chat-identity";
 const LAST_READ_KEY = "alsma-chat-last-read";
+const chatLinkLabels: Record<string, string> = {
+  "/about": "Подробнее об отеле",
+  "/all-inclusive": "Подробнее о питании «Всё включено»",
+  "/celebrations": "Подробнее о праздниках и мероприятиях",
+  "/entertainment": "Подробнее о развлечениях",
+  "/faq": "Частые вопросы",
+  "/hardware-procedures": "Подробнее об аппаратных процедурах",
+  "/offers": "Посмотреть акции",
+  "/rooms": "Подробнее о номерах",
+  "/spa": "Подробнее о SPA",
+};
 const getConversationId = () => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) return stored;
@@ -233,7 +244,7 @@ export const ChatWidget = () => {
               <span className="text-xs text-brand-foreground/70">
                 {chatMode === "manager"
                   ? "Сейчас отвечает менеджер"
-                  : "Сейчас отвечает AI-ассистент"}
+                  : "Сейчас отвечает AI-помощник АЛСМА"}
               </span>
             </div>
             <button aria-label="Закрыть чат" onClick={closeChat} type="button">
@@ -272,8 +283,8 @@ export const ChatWidget = () => {
               <div className="flex-1 space-y-3 overflow-y-auto bg-brand-foreground p-4">
                 {messages.length === 0 && (
                   <p className="rounded-2xl bg-page p-4 text-sm text-muted-ui-foreground">
-                    Здравствуйте! Я ИИ-помощник АЛСМА. Подскажу по отдыху,
-                    номерам и бронированию.
+                    Здравствуйте! Я AI-помощник отеля «Алсма». Подскажу по
+                    отдыху, номерам и бронированию.
                   </p>
                 )}
                 {messages.map((message) => (
@@ -289,7 +300,7 @@ export const ChatWidget = () => {
                     {message.author !== "guest" && (
                       <p className="mb-1 text-xs font-semibold opacity-60">
                         {message.author === "agent"
-                          ? "AI-ассистент"
+                          ? "AI-помощник АЛСМА"
                           : "Менеджер"}
                       </p>
                     )}
@@ -301,13 +312,8 @@ export const ChatWidget = () => {
                         className="mt-3 inline-flex rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-foreground no-underline"
                         href={message.bookingUrl}
                       >
-                        {message.bookingUrl.includes("hardware-procedures")
-                          ? "Открыть аппаратные процедуры"
-                          : message.bookingUrl === "/spa"
-                            ? "Открыть страницу SPA"
-                            : message.bookingUrl === "/offers"
-                              ? "Посмотреть акции"
-                              : "Открыть бронирование"}
+                        {chatLinkLabels[message.bookingUrl] ??
+                          "Открыть бронирование"}
                       </a>
                     )}
                   </div>

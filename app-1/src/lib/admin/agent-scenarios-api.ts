@@ -6,7 +6,17 @@ export type AgentScenario = {
   readonly enabled: boolean;
   readonly channels: Array<"text" | "voice">;
   readonly id: string;
-  readonly page: "spa" | "hardware-procedures" | "offers" | null;
+  readonly page:
+    | "about"
+    | "all-inclusive"
+    | "celebrations"
+    | "entertainment"
+    | "faq"
+    | "hardware-procedures"
+    | "offers"
+    | "rooms"
+    | "spa"
+    | null;
   readonly response: string;
   readonly title: string;
   readonly trigger: string;
@@ -42,7 +52,7 @@ export type AgentSettings = {
   readonly canCheckAvailability: boolean;
   readonly canCreateRequest: boolean;
   readonly canTransferToEmployee: boolean;
-  readonly canCreateBooking: false;
+  readonly canCreateBooking: boolean;
   readonly collectName: boolean;
   readonly collectPhone: boolean;
   readonly collectGuestsCount: boolean;

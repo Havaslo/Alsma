@@ -20,8 +20,14 @@ const ACTION_OPTIONS = [
   { label: "Передать менеджеру", value: "transfer" },
 ] as const;
 const PAGE_OPTIONS = [
+  { label: "Об отеле", value: "about" },
+  { label: "Всё включено", value: "all-inclusive" },
+  { label: "Праздники и мероприятия", value: "celebrations" },
+  { label: "Развлечения", value: "entertainment" },
+  { label: "Частые вопросы", value: "faq" },
   { label: "SPA", value: "spa" },
   { label: "Аппаратные процедуры", value: "hardware-procedures" },
+  { label: "Номера", value: "rooms" },
   { label: "Акции и скидки", value: "offers" },
 ] as const;
 

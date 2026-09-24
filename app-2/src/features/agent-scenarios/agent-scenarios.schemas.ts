@@ -8,7 +8,20 @@ export const agentScenarioBodySchema = z.object({
     .min(1)
     .default(["text"]),
   id: z.string().uuid().optional(),
-  page: z.enum(["spa", "hardware-procedures", "offers"]).nullable().optional(),
+  page: z
+    .enum([
+      "about",
+      "all-inclusive",
+      "celebrations",
+      "entertainment",
+      "faq",
+      "hardware-procedures",
+      "offers",
+      "rooms",
+      "spa",
+    ])
+    .nullable()
+    .optional(),
   response: z.string().trim().min(1).max(10_000),
   title: z.string().trim().min(1).max(255),
   trigger: z.string().trim().min(1).max(255),

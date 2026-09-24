@@ -187,22 +187,35 @@ const createHarness = (
             action: "answer",
             answer: "Привет! Спасибо, всё хорошо 🙂 Чем могу помочь?",
           }
-        : guestMessage.includes("Беру вариант 1")
+        : /расскажите.*spa/iu.test(guestMessage)
           ? {
-              action: "answer",
-              answer: "Хорошо, для оформления нужны контакты.",
-              offerId: "offer-1",
+              action: "open_page",
+              answer: "В SPA есть бассейн, сауны и массажные процедуры.",
+              page: "spa",
             }
-          : /погода на Марсе/iu.test(guestMessage)
+          : /расскажите.*номера/iu.test(guestMessage)
             ? {
-                action: "answer",
-                answer:
-                  "Не могу подсказать погоду на Марсе, но могу помочь с отдыхом в АЛСМА или подобрать даты поездки.",
+                action: "open_page",
+                answer: "В отеле есть несколько категорий номеров.",
+                page: "rooms",
               }
-            : {
-                action: "answer",
-                answer: "Сейчас подтверждённых вариантов по этим датам нет.",
-              };
+            : guestMessage.includes("Беру вариант 1")
+              ? {
+                  action: "answer",
+                  answer: "Хорошо, для оформления нужны контакты.",
+                  offerId: "offer-1",
+                }
+              : /погода на Марсе/iu.test(guestMessage)
+                ? {
+                    action: "answer",
+                    answer:
+                      "Не могу подсказать погоду на Марсе, но могу помочь с отдыхом в АЛСМА или подобрать даты поездки.",
+                  }
+                : {
+                    action: "answer",
+                    answer:
+                      "Сейчас подтверждённых вариантов по этим датам нет.",
+                  };
     return {
       ok: true,
       status: 200,
@@ -273,40 +286,67 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       roomCount: 1,
     });
     assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
-    assert.match(harness.prompts[0] ?? "", /тепло и доброжелательно/u);
-    assert.match(harness.prompts[0] ?? "", /не более одного уместного эмодзи/u);
-    assert.match(harness.prompts[0] ?? "", /Не превращай беседу в опрос/u);
     assert.match(
       harness.prompts[0] ?? "",
-      /не задавай вопросы о предпочтениях/u,
+      /Веди себя как хороший мальчик, по всем деталям Алсмы отвечай только проверенной информацией из документации и тулов Алсмы\./u,
+    );
+    assert.match(harness.prompts[0] ?? "", /дружелюбный AI-помощник отеля/u);
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Если на сайте есть подходящая страница с подробностями, приложи её ссылку-кнопку к ответу/u,
     );
     assert.match(
       harness.prompts[0] ?? "",
-      /Если гость выбрал направление или попросил подробности, сразу раскрой именно эту тему/u,
+      /Создавай бронирование только после явного подтверждения гостем выбранного варианта/u,
     );
-    assert.match(
-      harness.prompts[0] ?? "",
-      /не задавай следующий вопрос только ради продолжения беседы/u,
-    );
-    assert.match(
-      harness.prompts[0] ?? "",
-      /Не спрашивай «какую именно\?» до того, как показал варианты/u,
-    );
-    assert.match(
-      harness.prompts[0] ?? "",
-      /дай подробный ответ по ней, не задавая новый вопрос/u,
-    );
-    assert.match(
-      harness.prompts[0] ?? "",
-      /Не спрашивай «какую именно\?» до того, как показал варианты/u,
-    );
-    assert.match(
-      harness.prompts[0] ?? "",
-      /дай подробный ответ по ней, не задавая новый вопрос/u,
-    );
+    assert.doesNotMatch(harness.prompts[0] ?? "", /не упоминай, что ты AI/u);
     assert.equal(harness.models[0], "gpt-6-luna");
     assert.equal(harness.requestBodies[0]?.temperature, undefined);
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("adds a matching page link without replacing the assistant answer", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-page-links",
+      "Расскажите про SPA",
+    );
+    assert.equal(
+      harness.published.at(-1)?.text,
+      "В SPA есть бассейн, сауны и массажные процедуры.",
+    );
+    assert.equal(harness.published.at(-1)?.bookingUrl, "/spa");
+
+    await harness.service.reply(
+      "conversation-page-links",
+      "Расскажите про номера",
+    );
+    assert.equal(
+      harness.published.at(-1)?.text,
+      "В отеле есть несколько категорий номеров.",
+    );
+    assert.equal(harness.published.at(-1)?.bookingUrl, "/rooms");
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("attaches a matching detail page while keeping the answer", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-detail-link",
+      "Расскажите подробнее про SPA",
+    );
+    assert.equal(
+      harness.published.at(-1)?.text,
+      "В SPA есть бассейн, сауны и массажные процедуры.",
+    );
+    assert.equal(harness.published.at(-1)?.bookingUrl, "/spa");
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
@@ -595,8 +635,14 @@ test("responds naturally to a greeting without treating it as a knowledge query"
       harness.prompts.at(-1) ?? "",
       /AI-ассистент: Не могу подсказать погоду на Марсе/u,
     );
-    assert.match(harness.prompts[0] ?? "", /обычное приветствие/u);
-    assert.match(harness.prompts[0] ?? "", /не повторяй прошлый ответ/u);
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Веди себя как хороший мальчик, по всем деталям Алсмы отвечай только проверенной информацией из документации и тулов Алсмы\./u,
+    );
+    assert.match(
+      harness.prompts.at(-1) ?? "",
+      /честно представься AI-помощником отеля «Алсма»/u,
+    );
     assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
       /база знаний|менеджер/u,

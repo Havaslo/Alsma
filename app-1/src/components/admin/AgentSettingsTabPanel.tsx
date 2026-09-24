@@ -26,16 +26,16 @@ const DEFAULT_VALUES: AgentSettings = {
   voice: true,
   vk: true,
   max: true,
-  tone: "Тёплый, спокойный и уверенный. Отвечать коротко, по делу и без давления.",
+  tone: "Дружелюбный и естественный.",
   language:
     "Русский язык. Если клиент пишет на другом языке — отвечать на языке клиента.",
   greeting:
-    "Здравствуйте! Я AI-ассистент отеля АЛСМА. Помогу с вопросами о проживании, дам ссылку на страницу бронирования или передам диалог менеджеру.",
+    "Здравствуйте! Я AI-помощник отеля «Алсма». Подскажу об отеле, проверю наличие и помогу с бронированием.",
   bookingUrl: "/booking",
-  canCheckAvailability: false,
+  canCheckAvailability: true,
   canCreateRequest: true,
   canTransferToEmployee: true,
-  canCreateBooking: false,
+  canCreateBooking: true,
   collectName: true,
   collectPhone: true,
   collectGuestsCount: true,
@@ -43,7 +43,7 @@ const DEFAULT_VALUES: AgentSettings = {
   showAiDisclosure: true,
   notifyOnAiReply: true,
   disclosureText:
-    "В этом чате отвечает AI-ассистент. При необходимости подключим сотрудника.",
+    "Я AI-помощник отеля «Алсма». Если понадобится, к диалогу подключится сотрудник.",
 };
 
 export const AgentSettingsTabPanel = ({
@@ -146,18 +146,18 @@ export const AgentSettingsTabPanel = ({
             title="Разрешённые действия"
           >
             <p>
-              Агент может консультировать клиента и создавать обращение, но не
-              имеет права самостоятельно создавать бронь.
+              AI-помощник консультирует по проверенным данным и использует
+              актуальную доступность Eptera. Бронь создаётся только после явного
+              подтверждения гостем выбранного варианта.
             </p>
           </InfoCard>
           <div className="rounded-2xl border border-line bg-page p-4">
             <p className="font-medium text-page-foreground">
-              Проверка наличия через API недоступна
+              Проверка наличия подключена к Eptera
             </p>
             <p className="mt-1 text-sm text-muted-ui-foreground">
-              Этот режим отключён по правилам проекта и не может быть включён из
-              админ-панели. Используйте ссылку на виджет бронирования или
-              передачу менеджеру.
+              Для подбора используются актуальные варианты, полученные через
+              систему бронирования.
             </p>
           </div>
           <SettingCheckbox
@@ -174,13 +174,13 @@ export const AgentSettingsTabPanel = ({
           />
           <div className="rounded-2xl border border-line bg-page p-4">
             <CheckboxField
-              checked={false}
-              label="Создавать бронь"
+              checked={watched.canCreateBooking ?? true}
+              label="Помогать с бронированием через Eptera"
               onChange={() => undefined}
             />
             <p className="mt-1 ml-8 text-sm text-muted-ui-foreground">
-              Недоступно по правилам проекта. Клиенту можно отправить ссылку на
-              инструмент бронирования.
+              Создание брони доступно после явного подтверждения гостем
+              выбранного варианта.
             </p>
           </div>
         </div>
