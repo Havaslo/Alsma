@@ -925,17 +925,57 @@ export const createAiAgentService = (options: AgentOptions) => {
         },
         body: JSON.stringify({
           model: "gpt-6-luna",
-          temperature: 0.2,
           ...(responseFormat ? { response_format: responseFormat } : {}),
           messages: [{ role: "user", content: prompt }],
         }),
         signal: AbortSignal.timeout(20_000),
       });
+    const sanitizeGatewayLogMessage = (value: string) => {
+      let sanitized = options.apiKey
+        ? value.replaceAll(options.apiKey, "[REDACTED]")
+        : value;
+      return sanitized
+        .replace(/Bearer\s+[^\s"'`]+/giu, "Bearer [REDACTED]")
+        .replace(/sk-[A-Za-z0-9_-]+/giu, "[REDACTED]")
+        .replace(/https?:\/\/[^\s"'`]+/giu, "[URL REDACTED]")
+        .slice(0, 240);
+    };
     const logGatewayFailure = async (response: Response) => {
-      const body = (await response.text().catch(() => "")).slice(0, 1_000);
+      const body = await response.text().catch(() => "");
+      let gatewayError: {
+        code?: unknown;
+        message?: unknown;
+        type?: unknown;
+      } | null = null;
+      try {
+        const payload = JSON.parse(body) as { error?: unknown };
+        if (payload.error && typeof payload.error === "object")
+          gatewayError = payload.error as {
+            code?: unknown;
+            message?: unknown;
+            type?: unknown;
+          };
+      } catch {
+        gatewayError = null;
+      }
       options.logger.warn(
         {
-          gatewayError: body || undefined,
+          gatewayErrorCode:
+            typeof gatewayError?.code === "string"
+              ? gatewayError.code
+              : undefined,
+          gatewayErrorMessage:
+            typeof gatewayError?.message === "string"
+              ? sanitizeGatewayLogMessage(gatewayError.message)
+              : undefined,
+          gatewayErrorType:
+            typeof gatewayError?.type === "string"
+              ? gatewayError.type
+              : undefined,
+          gatewayRequestId:
+            response.headers.get("x-request-id") ??
+            response.headers.get("openai-request-id") ??
+            undefined,
           gatewayStatus: response.status,
           gatewayStatusText: response.statusText,
         },
@@ -951,7 +991,12 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     } catch (error) {
       options.logger.warn(
-        { error: error instanceof Error ? error.message : "Unknown error" },
+        {
+          error:
+            error instanceof Error
+              ? sanitizeGatewayLogMessage(error.message)
+              : "Unknown error",
+        },
         "AI Gateway request could not be completed",
       );
       return null;

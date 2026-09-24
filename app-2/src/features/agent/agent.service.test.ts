@@ -27,7 +27,11 @@ const offer = {
 };
 
 const createHarness = (
-  options: { emptyOffersFirst?: boolean; malformedConfirmation?: boolean } = {},
+  options: {
+    emptyOffersFirst?: boolean;
+    gatewayFailure?: boolean;
+    malformedConfirmation?: boolean;
+  } = {},
 ) => {
   let details: Record<string, unknown> = {};
   let emptyOffersRemaining = options.emptyOffersFirst ? 1 : 0;
@@ -37,10 +41,15 @@ const createHarness = (
     bookingUrl?: string;
   }> = [];
   const bookingSearches: unknown[] = [];
+  const requestBodies: Array<{ model?: string; temperature?: number }> = [];
   const knowledgeQueries: string[] = [];
   const models: string[] = [];
   const reservations: unknown[] = [];
   const prompts: string[] = [];
+  const warnings: Array<{
+    fields: Record<string, unknown>;
+    message: string;
+  }> = [];
   const settings = {
     bookingUrl: "/booking",
     canCheckAvailability: true,
@@ -123,11 +132,24 @@ const createHarness = (
   globalThis.fetch = async (_input, init) => {
     const body = JSON.parse(String(init?.body)) as {
       model?: string;
+      temperature?: number;
       messages?: Array<{ content?: string }>;
     };
+    requestBodies.push(body);
     if (body.model) models.push(body.model);
     const prompt = body.messages?.[0]?.content ?? "";
     prompts.push(prompt);
+    if (options.gatewayFailure)
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "unsupported_value",
+            message: "Invalid authorization value Bearer test-key",
+            type: "invalid_request_error",
+          },
+        }),
+        { headers: { "x-request-id": "req-test" }, status: 400 },
+      );
     const guestMessage = prompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
     const content = /Да, бронируйте|создавай|подтверждаю/iu.test(guestMessage)
       ? {
@@ -199,7 +221,10 @@ const createHarness = (
     bookingUrl: "/booking",
     chat: chat as never,
     database: { client } as unknown as Database,
-    logger: { warn: () => undefined } as never,
+    logger: {
+      warn: (fields: Record<string, unknown>, message: string) =>
+        warnings.push({ fields, message }),
+    } as never,
   });
   return {
     bookingSearches,
@@ -209,8 +234,10 @@ const createHarness = (
     originalFetch,
     prompts,
     published,
+    requestBodies,
     reservations,
     service,
+    warnings,
   };
 };
 
@@ -249,7 +276,25 @@ test("searches Eptera availability and exposes offers for comparison", async () 
     assert.match(harness.prompts[0] ?? "", /тепло и доброжелательно/u);
     assert.match(harness.prompts[0] ?? "", /не более одного уместного эмодзи/u);
     assert.equal(harness.models[0], "gpt-6-luna");
+    assert.equal(harness.requestBodies[0]?.temperature, undefined);
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("logs Gateway failures without retaining raw secrets", async () => {
+  const harness = createHarness({ gatewayFailure: true });
+  try {
+    await harness.service.reply("gateway-failure", "Привет, как дела?");
+    assert.equal(harness.warnings.length, 2);
+    const fields = harness.warnings[0]?.fields;
+    assert.equal(fields?.gatewayStatus, 400);
+    assert.equal(fields?.gatewayErrorCode, "unsupported_value");
+    assert.equal(fields?.gatewayErrorType, "invalid_request_error");
+    assert.equal(fields?.gatewayRequestId, "req-test");
+    assert.doesNotMatch(String(fields?.gatewayErrorMessage), /test-key/u);
+    assert.equal(Object.hasOwn(fields ?? {}, "gatewayError"), false);
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
