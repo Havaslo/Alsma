@@ -45,6 +45,36 @@ test("keeps the transfer tool contract aligned with the prompt", () => {
   assert.doesNotMatch(transferTool.description, /Проверяю возможность/u);
 });
 
+test("uses GPT-6 Luna for voice-agent text answers", async () => {
+  const models: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    const body = JSON.parse(String(init?.body)) as { model?: string };
+    if (body.model) models.push(body.model);
+    return {
+      json: async () => ({ choices: [{ message: { content: "Ответ" } }] }),
+      ok: true,
+    } as Response;
+  };
+  const service = createVoiceAgentService(
+    {
+      getAgentSettings: async () => null,
+      getKnowledgeContext: async () => "",
+    } as unknown as VoiceAgentRepository,
+    {} as Database,
+    "test-key",
+    "https://gateway.test/v1",
+  );
+
+  try {
+    const result = await service.answer("Какой вопрос?");
+    assert.equal(result.answer, "Ответ");
+    assert.deepEqual(models, ["gpt-6-luna"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("exposes only read-only Eptera tools to voice", async () => {
   const toolNames: readonly string[] = voiceAgentTools.map((tool) => tool.name);
   assert.equal(toolNames.includes("check_availability"), true);

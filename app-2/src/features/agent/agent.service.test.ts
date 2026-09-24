@@ -34,6 +34,7 @@ const createHarness = (
   const published: Array<{ text: string; bookingUrl?: string }> = [];
   const bookingSearches: unknown[] = [];
   const knowledgeQueries: string[] = [];
+  const models: string[] = [];
   const reservations: unknown[] = [];
   const prompts: string[] = [];
   const settings = {
@@ -117,8 +118,10 @@ const createHarness = (
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_input, init) => {
     const body = JSON.parse(String(init?.body)) as {
+      model?: string;
       messages?: Array<{ content?: string }>;
     };
+    if (body.model) models.push(body.model);
     const prompt = body.messages?.[0]?.content ?? "";
     prompts.push(prompt);
     const guestMessage = prompt.match(/Сообщение гостя:\s*(.*)$/u)?.[1] ?? "";
@@ -193,6 +196,7 @@ const createHarness = (
     bookingSearches,
     details: () => details,
     knowledgeQueries,
+    models,
     originalFetch,
     prompts,
     published,
@@ -233,6 +237,7 @@ test("searches Eptera availability and exposes offers for comparison", async () 
       roomCount: 1,
     });
     assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
+    assert.equal(harness.models[0], "gpt-6-luna");
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
   } finally {
     globalThis.fetch = harness.originalFetch;

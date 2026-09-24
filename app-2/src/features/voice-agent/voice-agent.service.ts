@@ -75,7 +75,7 @@ export const createVoiceAgentService = (
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-5.6-luna",
+          model: "gpt-6-luna",
           temperature: 0.2,
           response_format: json ? { type: "json_object" } : undefined,
           messages: [
