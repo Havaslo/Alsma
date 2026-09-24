@@ -672,6 +672,7 @@ test("shows only approved rates and board combinations per room category", async
       "cottage-all-inclusive",
       "cottage-autumn-standard",
       "cottage-free-no-meal",
+      "cottage-autumn-no-standard",
     ],
   );
 });

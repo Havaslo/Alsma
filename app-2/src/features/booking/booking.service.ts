@@ -477,6 +477,7 @@ const STANDARD_FULL_BOARD_RATES = new Set([
 ]);
 const BATH_COTTAGE_FULL_BOARD_RATES = new Set([
   "все включено",
+  "осенний хит",
   "осенний хит стандарт",
 ]);
 const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
