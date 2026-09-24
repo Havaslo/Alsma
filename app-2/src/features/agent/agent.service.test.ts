@@ -31,7 +31,11 @@ const createHarness = (
 ) => {
   let details: Record<string, unknown> = {};
   let emptyOffersRemaining = options.emptyOffersFirst ? 1 : 0;
-  const published: Array<{ text: string; bookingUrl?: string }> = [];
+  const published: Array<{
+    author: string;
+    text: string;
+    bookingUrl?: string;
+  }> = [];
   const bookingSearches: unknown[] = [];
   const knowledgeQueries: string[] = [];
   const models: string[] = [];
@@ -87,14 +91,14 @@ const createHarness = (
     },
   };
   const chat = {
-    list: async () => [],
+    list: async () => published,
     publish: async (
       _conversationId: string,
-      _author: string,
+      author: string,
       text: string,
       bookingUrl?: string,
     ) => {
-      published.push({ bookingUrl, text });
+      published.push({ author, bookingUrl, text });
       return { text };
     },
     publishStatus: () => undefined,
@@ -156,22 +160,27 @@ const createHarness = (
           confirmed: true,
           offerId: "offer-1",
         }
-      : guestMessage.includes("Беру вариант 1")
+      : /^(?:привет|здравствуйте|добрый день)[,!\s]/iu.test(guestMessage)
         ? {
             action: "answer",
-            answer: "Хорошо, для оформления нужны контакты.",
-            offerId: "offer-1",
+            answer: "Привет! Спасибо, всё хорошо 🙂 Чем могу помочь?",
           }
-        : /погода на Марсе/iu.test(guestMessage)
+        : guestMessage.includes("Беру вариант 1")
           ? {
               action: "answer",
-              answer:
-                "Точной информации по этому вопросу в базе знаний сейчас нет. Передайте вопрос менеджеру, чтобы получить подтверждённый ответ.",
+              answer: "Хорошо, для оформления нужны контакты.",
+              offerId: "offer-1",
             }
-          : {
-              action: "answer",
-              answer: "Сейчас подтверждённых вариантов по этим датам нет.",
-            };
+          : /погода на Марсе/iu.test(guestMessage)
+            ? {
+                action: "answer",
+                answer:
+                  "Не могу подсказать погоду на Марсе, но могу помочь с отдыхом в АЛСМА или подобрать даты поездки.",
+              }
+            : {
+                action: "answer",
+                answer: "Сейчас подтверждённых вариантов по этим датам нет.",
+              };
     return {
       ok: true,
       status: 200,
@@ -496,7 +505,34 @@ test("creates a booking from saved state when the model repeats malformed bookin
   }
 });
 
-test("keeps the knowledge-base fallback for an unrelated unknown question", async () => {
+test("responds naturally to a greeting without treating it as a knowledge query", async () => {
+  const harness = createHarness();
+  try {
+    await harness.service.reply(
+      "conversation-greeting",
+      "Какая погода на Марсе?",
+    );
+    await harness.service.reply("conversation-greeting", "Привет, как дела?");
+    assert.equal(
+      harness.published.at(-1)?.text,
+      "Привет! Спасибо, всё хорошо 🙂 Чем могу помочь?",
+    );
+    assert.match(
+      harness.prompts.at(-1) ?? "",
+      /AI-ассистент: Не могу подсказать погоду на Марсе/u,
+    );
+    assert.match(harness.prompts[0] ?? "", /обычное приветствие/u);
+    assert.match(harness.prompts[0] ?? "", /не повторяй прошлый ответ/u);
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /база знаний|менеджер/u,
+    );
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("acknowledges an unknown fact without repeating a canned handoff", async () => {
   const harness = createHarness();
   try {
     await harness.service.reply(
@@ -505,7 +541,11 @@ test("keeps the knowledge-base fallback for an unrelated unknown question", asyn
     );
     assert.match(
       harness.published.at(-1)?.text ?? "",
-      /Точной информации по этому вопросу в базе знаний/u,
+      /не могу подсказать погоду на Марсе/iu,
+    );
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /передам вопрос менеджеру/u,
     );
   } finally {
     globalThis.fetch = harness.originalFetch;
