@@ -32,6 +32,7 @@ const createHarness = (
     gatewayFailure?: boolean;
     initialDetails?: Record<string, unknown>;
     initialContact?: string;
+    initialRequester?: string;
     malformedConfirmation?: boolean;
   } = {},
 ) => {
@@ -80,6 +81,7 @@ const createHarness = (
       findUnique: async () => ({
         contact: options.initialContact ?? null,
         details,
+        requester: options.initialRequester ?? null,
       }),
       update: async ({ data }: { data: { details: unknown } }) => {
         details = data.details as Record<string, unknown>;
@@ -605,38 +607,130 @@ test("does not expose technical test tariffs to the booking agent", () => {
   );
 });
 
-test("requires a guest-provided email and uses it for the booking", async () => {
-  const harness = createHarness({ initialContact: "89525012159" });
+test("collects all missing contacts together and books the selected board after confirmation", async () => {
+  const fullBoardOffer = {
+    ...offer,
+    boardType: "FB",
+    discountedPrice: 21_679,
+    id: "standard-fb",
+    price: 21_679,
+    rateType: "Выгодное бронирование",
+    roomType: "Стандарт",
+  };
+  const allInclusiveOffer = {
+    ...fullBoardOffer,
+    boardType: "Все включено",
+    id: "standard-all-inclusive",
+  };
+  const harness = createHarness({
+    initialContact: "89525012159",
+    initialDetails: {
+      availabilityOffers: [fullBoardOffer, allInclusiveOffer],
+      bookingContext: {
+        adults: 2,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-22",
+        childAges: [],
+        offerId: fullBoardOffer.id,
+        roomCount: 1,
+      },
+    },
+  });
   try {
     await harness.service.reply(
-      "conversation-2",
-      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
+      "conversation-complete-contact",
+      "Давайте всё включено",
     );
-    await harness.service.reply("conversation-2", "Беру вариант 1");
-    await harness.service.reply("conversation-2", "Да, бронируйте вариант 1");
     assert.equal(harness.reservations.length, 0);
-    assert.match(harness.published.at(-1)?.text ?? "", /сообщите ваш email/u);
+    assert.match(harness.published.at(-1)?.text ?? "", /имя и фамилию, email/u);
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /номер телефона/u,
+    );
     assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
       /ссылка на оплату/u,
     );
 
     await harness.service.reply(
-      "conversation-2",
-      "Имя: Иван, Фамилия: Иванов, email d.naymow13@gmail.com",
+      "conversation-complete-contact",
+      "d.naymow13@gmail.com",
     );
-    await harness.service.reply("conversation-2", "Да, бронируйте вариант 1");
+    assert.equal(harness.reservations.length, 0);
+    assert.match(harness.published.at(-1)?.text ?? "", /имя и фамилию/u);
+
+    await harness.service.reply(
+      "conversation-complete-contact",
+      "Дмитрий Наумов",
+    );
+    assert.equal(harness.reservations.length, 0);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /питание «Все включено»/u,
+    );
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /Подтверждаете создание брони/u,
+    );
+
+    await harness.service.reply("conversation-complete-contact", "подтверждаю");
     assert.equal(harness.reservations.length, 1);
     const reservation = harness.reservations[0] as {
-      contact: { email: string; phone: string };
+      contact: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone: string;
+      };
+      offerId: string;
     };
     assert.equal(reservation.contact.email, "d.naymow13@gmail.com");
     assert.equal(reservation.contact.phone, "89525012159");
+    assert.equal(reservation.contact.firstName, "Дмитрий");
+    assert.equal(reservation.contact.lastName, "Наумов");
+    assert.equal(reservation.offerId, "standard-all-inclusive");
     assert.equal(
       (harness.published.at(-1) as { bookingUrl?: string }).bookingUrl,
       "https://yookassa.test/payment-1",
     );
     assert.match(harness.published.at(-1)?.text ?? "", /30 минут/u);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("does not accept contact details invented by the model", async () => {
+  const harness = createHarness({
+    initialDetails: {
+      availabilityOffers: [offer],
+      bookingContext: {
+        adults: 1,
+        checkInDate: "2026-10-13",
+        checkOutDate: "2026-10-15",
+        childAges: [],
+        offerId: offer.id,
+        roomCount: 1,
+      },
+    },
+  });
+  try {
+    await harness.service.reply(
+      "conversation-unverified-contacts",
+      "Подтверждаю",
+    );
+
+    assert.equal(harness.reservations.length, 0);
+    assert.match(
+      harness.published.at(-1)?.text ?? "",
+      /имя и фамилию, номер телефона, email/u,
+    );
+    assert.doesNotMatch(
+      harness.published.at(-1)?.text ?? "",
+      /ссылка на оплату/u,
+    );
+    const savedContact = harness.details().bookingContact as
+      Record<string, unknown> | undefined;
+    assert.deepEqual(savedContact, {});
   } finally {
     globalThis.fetch = harness.originalFetch;
   }
@@ -650,6 +744,7 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
       "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     await harness.service.reply("conversation-contacts", "Беру вариант 1");
+    assert.equal(harness.details().bookingPreparation, "collecting_contacts");
     const knowledgeQueriesBeforeContacts = harness.knowledgeQueries.length;
     const contactMessage = "Дима Наумов, телефон 89525012159";
     await harness.service.reply("conversation-contacts", contactMessage);
@@ -657,10 +752,7 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
       harness.knowledgeQueries.length,
       knowledgeQueriesBeforeContacts,
     );
-    assert.match(
-      harness.published.at(-1)?.text ?? "",
-      /осталось сообщить email/u,
-    );
+    assert.match(harness.published.at(-1)?.text ?? "", /email/u);
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
 
     await harness.service.reply(
@@ -673,7 +765,7 @@ test("keeps booking contacts, asks for confirmation, and accepts natural confirm
     );
     assert.match(
       harness.published.at(-1)?.text ?? "",
-      /Подтвердите, пожалуйста, создание брони/u,
+      /Подтверждаете создание брони/u,
     );
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /укажите имя/u);
 
@@ -703,10 +795,7 @@ test("extracts names from natural and labeled messages in the booking flow", asy
       "conversation-screenshot-flow",
       "Дима Наумов, телефон 89525012159",
     );
-    assert.match(
-      harness.published.at(-1)?.text ?? "",
-      /осталось сообщить email/u,
-    );
+    assert.match(harness.published.at(-1)?.text ?? "", /email/u);
     assert.doesNotMatch(harness.published.at(-1)?.text ?? "", /имя|фамилию/u);
 
     await harness.service.reply(
@@ -716,7 +805,7 @@ test("extracts names from natural and labeled messages in the booking flow", asy
     const knowledgeQueriesBeforeConfirmation = harness.knowledgeQueries.length;
     assert.match(
       harness.published.at(-1)?.text ?? "",
-      /Подтвердите, пожалуйста, создание брони/u,
+      /Подтверждаете создание брони/u,
     );
     assert.doesNotMatch(
       harness.published.at(-1)?.text ?? "",
