@@ -25,9 +25,9 @@ const offer: EpteraOffer = {
   roomTypeId: 11,
   roomType: "Standard",
   boardTypeId: 22,
-  boardType: "Breakfast",
+  boardType: "FB",
   rateTypeId: 33,
-  rateType: "Flexible",
+  rateType: "Все включено",
   rateCodeId: 44,
   priceAgencyId: 55,
   roomId: 77,
@@ -591,25 +591,63 @@ test("keeps count-only searches free of invented child ages", async () => {
   assert.equal(query.roomCount, 2);
 });
 
-test("keeps only meal plans except for the Russian bath cottage", async () => {
+test("shows only approved rates and board combinations per room category", async () => {
+  const makeRate = (
+    id: string,
+    rateType: string,
+    boardType: string,
+    roomType = "Стандарт",
+  ) => ({ ...offer, boardType, id, rateType, roomType });
   const service = createBookingService(
     {} as BookingRepository,
     {
       getOffers: async () => [
-        { ...offer, id: "standard-meal", boardType: "FB" },
-        { ...offer, id: "standard-no-meal", boardType: "Без питания" },
-        {
-          ...offer,
-          id: "bath-cottage-meal",
-          boardType: "Все включено",
-          roomType: "Коттедж Русская баня",
-        },
-        {
-          ...offer,
-          id: "bath-cottage-no-meal",
-          boardType: "Без питания",
-          roomType: "Коттедж Русская баня",
-        },
+        makeRate("room-all-inclusive", "Все включено", "FB"),
+        makeRate("room-autumn-hit", "Осенний хит", "Полный пансион"),
+        makeRate("room-profitable-booking", "Выгодное бронирование", "FB"),
+        makeRate("room-other-rate", "Свободный", "FB"),
+        makeRate("room-no-meal", "Выгодное бронирование", "Без питания"),
+        makeRate(
+          "room-all-inclusive-board",
+          "Выгодное бронирование",
+          "Все включено",
+        ),
+        makeRate(
+          "cottage-all-inclusive",
+          "Все включено",
+          "FB",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-autumn-standard",
+          "Осенний хит - стандарт",
+          "FB",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-free-no-meal",
+          "Свободный",
+          "Без питания",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-autumn-no-standard",
+          "Осенний хит",
+          "FB",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-free-with-meal",
+          "Свободный",
+          "FB",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-other-rate",
+          "Выгодное бронирование",
+          "FB",
+          "Коттедж Русская баня",
+        ),
       ],
     } as unknown as EpteraClient,
     {} as YooKassaClient,
@@ -627,8 +665,29 @@ test("keeps only meal plans except for the Russian bath cottage", async () => {
 
   assert.deepEqual(
     result.offers.map((item) => item.id),
-    ["standard-meal", "bath-cottage-meal", "bath-cottage-no-meal"],
+    [
+      "room-all-inclusive",
+      "room-autumn-hit",
+      "room-profitable-booking",
+      "cottage-all-inclusive",
+      "cottage-autumn-standard",
+      "cottage-free-no-meal",
+    ],
   );
+});
+
+test("rejects server-side booking of a tariff hidden by the display filter", async () => {
+  const harness = createHarness({
+    ...offer,
+    boardType: "Все включено",
+    rateType: "Выгодное бронирование",
+  });
+
+  await assert.rejects(harness.createReservation(reservationInput()), {
+    code: "OFFER_UNAVAILABLE",
+  });
+  assert.equal(harness.createReservationCalled, false);
+  assert.equal(harness.findOrCreateGuestCalled, false);
 });
 
 test("rejects an offer with fewer rooms to sell than requested", async () => {

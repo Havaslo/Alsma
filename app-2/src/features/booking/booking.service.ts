@@ -446,6 +446,11 @@ const normalizeProviderText = (value: string): string =>
     .replaceAll("ё", "е")
     .replace(/\s+/gu, " ")
     .trim();
+const normalizeRateType = (value: string): string =>
+  normalizeProviderText(value)
+    .replace(/[‐‑‒–—-]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
 const isRussianBathCottage = (roomType: string): boolean =>
   normalizeProviderText(roomType).includes("русская баня");
 const isNoMealBoard = (boardType: string): boolean => {
@@ -457,11 +462,36 @@ const isNoMealBoard = (boardType: string): boolean => {
     normalized.includes("room only")
   );
 };
-const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
-  offers.filter(
-    (offer) =>
-      isRussianBathCottage(offer.roomType) || !isNoMealBoard(offer.boardType),
+const isFullBoard = (boardType: string): boolean => {
+  const normalized = normalizeProviderText(boardType);
+  return (
+    normalized === "fb" ||
+    normalized === "full board" ||
+    normalized.includes("полный пансион")
   );
+};
+const STANDARD_FULL_BOARD_RATES = new Set([
+  "все включено",
+  "осенний хит",
+  "выгодное бронирование",
+]);
+const BATH_COTTAGE_FULL_BOARD_RATES = new Set([
+  "все включено",
+  "осенний хит стандарт",
+]);
+const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
+  offers.filter((offer) => {
+    const rateType = normalizeRateType(offer.rateType);
+    if (isRussianBathCottage(offer.roomType))
+      return (
+        (isFullBoard(offer.boardType) &&
+          BATH_COTTAGE_FULL_BOARD_RATES.has(rateType)) ||
+        (rateType === "свободный" && isNoMealBoard(offer.boardType))
+      );
+    return (
+      isFullBoard(offer.boardType) && STANDARD_FULL_BOARD_RATES.has(rateType)
+    );
+  });
 
 export const createBookingService = (
   repository: BookingRepository,
