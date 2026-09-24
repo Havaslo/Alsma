@@ -275,6 +275,35 @@ test("searches Eptera availability and exposes offers for comparison", async () 
     assert.match(harness.prompts[0] ?? "", /offerId: offer-1/u);
     assert.match(harness.prompts[0] ?? "", /тепло и доброжелательно/u);
     assert.match(harness.prompts[0] ?? "", /не более одного уместного эмодзи/u);
+    assert.match(harness.prompts[0] ?? "", /Не превращай беседу в опрос/u);
+    assert.match(
+      harness.prompts[0] ?? "",
+      /не задавай вопросы о предпочтениях/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Если гость выбрал направление или попросил подробности, сразу раскрой именно эту тему/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /не задавай следующий вопрос только ради продолжения беседы/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Не спрашивай «какую именно\?» до того, как показал варианты/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /дай подробный ответ по ней, не задавая новый вопрос/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /Не спрашивай «какую именно\?» до того, как показал варианты/u,
+    );
+    assert.match(
+      harness.prompts[0] ?? "",
+      /дай подробный ответ по ней, не задавая новый вопрос/u,
+    );
     assert.equal(harness.models[0], "gpt-6-luna");
     assert.equal(harness.requestBodies[0]?.temperature, undefined);
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
