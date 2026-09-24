@@ -13,6 +13,11 @@ import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
 export const CelebrationsPage = () => {
   const [requestOpen, setRequestOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const openEventRequest = (eventTitle: string) => {
+    setSelectedEvent(eventTitle);
+    setRequestOpen(true);
+  };
   const page = PUBLIC_PAGES.celebrations;
   const content = usePublishedSiteContent("celebrations");
   const hero = content.data?.items?.find(
@@ -55,12 +60,12 @@ export const CelebrationsPage = () => {
         <div className="mt-12 grid gap-7 lg:grid-cols-3">
           {EVENT_FORMATS.map((event) => (
             <article
-              className="overflow-hidden rounded-4xl border border-line bg-page"
+              className="group relative w-full cursor-pointer overflow-hidden rounded-4xl border border-line bg-page text-left transition hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg"
               key={event.title}
             >
               <img
                 alt={event.title}
-                className="h-64 w-full object-cover"
+                className="h-64 w-full object-cover transition-transform group-hover:scale-[1.02]"
                 src={resolveMediaUrl(event.image)}
               />
               <div className="p-7">
@@ -84,6 +89,12 @@ export const CelebrationsPage = () => {
                   ))}
                 </div>
               </div>
+              <button
+                aria-label={`Обсудить формат: ${event.title}`}
+                className="absolute inset-0 cursor-pointer rounded-4xl focus-visible:ring-4 focus-visible:ring-focus/50 focus-visible:outline-none"
+                onClick={() => openEventRequest(event.title)}
+                type="button"
+              />
             </article>
           ))}
         </div>
@@ -112,7 +123,10 @@ export const CelebrationsPage = () => {
             </p>
             <button
               className="mt-8 rounded-full bg-brand px-8 py-4 font-semibold text-brand-foreground"
-              onClick={() => setRequestOpen(true)}
+              onClick={() => {
+                setSelectedEvent(null);
+                setRequestOpen(true);
+              }}
               type="button"
             >
               Подробнее
@@ -160,14 +174,30 @@ export const CelebrationsPage = () => {
         </div>
       </section>
       <LeadRequestModal
-        commentPlaceholder="Напишите, какой корпоративный отдых вы планируете"
-        description="Оставьте контакты, и мы свяжемся с вами, чтобы обсудить корпоративный отдых, количество гостей, формат программы и подобрать подходящее решение."
+        commentPlaceholder="Напишите желаемую дату, количество гостей и ваши пожелания"
+        contextText={selectedEvent ? `Вы выбрали: ${selectedEvent}` : undefined}
+        description={
+          selectedEvent
+            ? `Оставьте контакты, и мы свяжемся с вами, чтобы обсудить формат «${selectedEvent}», желаемую дату и количество гостей, а также помочь с организацией.`
+            : "Оставьте контакты, и мы свяжемся с вами, чтобы обсудить корпоративный отдых, количество гостей, формат программы и подобрать подходящее решение."
+        }
         emailRequired
-        eyebrow="Заявка на корпоративный отдых"
+        eyebrow={
+          selectedEvent
+            ? "Обсуждение мероприятия"
+            : "Заявка на корпоративный отдых"
+        }
         formCode="celebrations-request"
-        formTitle="Заявка на корпоративный отдых"
+        formTitle={
+          selectedEvent
+            ? `Заявка: ${selectedEvent}`
+            : "Заявка на корпоративный отдых"
+        }
         nameRequired
-        onClose={() => setRequestOpen(false)}
+        onClose={() => {
+          setRequestOpen(false);
+          setSelectedEvent(null);
+        }}
         open={requestOpen}
         sourcePage="celebrations"
         title="Обсудим ваш визит"
