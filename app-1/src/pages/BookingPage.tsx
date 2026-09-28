@@ -45,6 +45,13 @@ const money = (value: number, currency: string) =>
     maximumFractionDigits: 0,
     style: "currency",
   }).format(value);
+const offerPrice = (offer: BookingOffer) =>
+  offer.discountedPrice > 0 ? offer.discountedPrice : offer.price;
+const offerDiscountPercent = (offer: BookingOffer) => {
+  const currentPrice = offerPrice(offer);
+  if (offer.price <= 0 || currentPrice >= offer.price) return null;
+  return Math.round(((offer.price - currentPrice) / offer.price) * 100);
+};
 const dateText = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
     new Date(`${value}T12:00:00`),
@@ -698,11 +705,18 @@ export const BookingPage = () => {
                             <p className="text-sm text-muted-ui-foreground">
                               от
                             </p>
+                            {offerDiscountPercent(item) !== null && (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-sm text-muted-ui-foreground line-through">
+                                  {money(item.price, item.currency)}
+                                </span>
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                  −{offerDiscountPercent(item)}%
+                                </span>
+                              </div>
+                            )}
                             <p className="text-xl font-semibold">
-                              {money(
-                                item.discountedPrice || item.price,
-                                item.currency,
-                              )}
+                              {money(offerPrice(item), item.currency)}
                             </p>
                             <button
                               className="mt-3 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground"
@@ -776,17 +790,24 @@ export const BookingPage = () => {
                                 <ChevronDown className="size-4 group-open:hidden" />
                                 <ChevronUp className="hidden size-4 group-open:block" />
                               </summary>
-                              <p className="mt-3 text-sm leading-6 text-muted-ui-foreground">
-                                {item.rateDescription || cancellationText(item)}
+                              <p className="mt-3 text-sm leading-6 whitespace-pre-line text-muted-ui-foreground">
+                                {rateDetails(item)}
                               </p>
                             </details>
                           </div>
                           <div className="shrink-0 sm:text-right">
+                            {offerDiscountPercent(item) !== null && (
+                              <div className="flex items-center gap-2 sm:justify-end">
+                                <span className="text-sm text-muted-ui-foreground line-through">
+                                  {money(item.price, item.currency)}
+                                </span>
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                  −{offerDiscountPercent(item)}%
+                                </span>
+                              </div>
+                            )}
                             <p className="text-2xl font-semibold">
-                              {money(
-                                item.discountedPrice || item.price,
-                                item.currency,
-                              )}
+                              {money(offerPrice(item), item.currency)}
                             </p>
                             <p className="text-sm text-muted-ui-foreground">
                               за номер
@@ -1410,6 +1431,8 @@ const rateBenefits = (offer: BookingOffer) => {
 const cancellationText = (offer: BookingOffer) => {
   const policy = offer.cancellationPenalty;
   if (!policy) return "Условия отмены уточняются";
+  const description = policy.description?.trim();
+  if (description) return description;
   const days = policy["period-in-days"] ?? policy.periodInDays;
   return policy["is-refundable"] || policy.isRefundable
     ? "Бесплатная отмена"
@@ -1417,6 +1440,14 @@ const cancellationText = (offer: BookingOffer) => {
       ? `Отмена возможна не позднее чем за ${days} дн.`
       : "Невозвратный тариф";
 };
+const rateDetails = (offer: BookingOffer) =>
+  Array.from(
+    new Set(
+      [offer.rateDescription?.trim(), cancellationText(offer)].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  ).join("\n\n");
 const EmptyState = () => (
   <div className="rounded-3xl border border-dashed border-line bg-page p-10 text-center">
     <CalendarDays className="mx-auto size-8 text-brand" />
