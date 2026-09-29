@@ -5,6 +5,7 @@ import type { Database } from "../../lib/database/database.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import {
   getVoiceStayDateInstruction,
+  getVoiceToolFailureInstructions,
   voiceAgentCommunicationInstruction,
   voiceTransferInstruction,
 } from "./voice-agent.prompt.js";
@@ -190,4 +191,21 @@ test("uses the current Moscow year without asking guests to confirm it", () => {
   );
   assert.match(instruction, /не спрашивай год/u);
   assert.match(instruction, /если дата этого года уже прошла/iu);
+});
+
+test("uses a short Russian fallback when Eptera availability is unavailable", () => {
+  const instructions = getVoiceToolFailureInstructions({
+    available: false,
+    reason: "eptera_temporarily_unavailable",
+  });
+  assert.match(instructions ?? "", /только по-русски/u);
+  assert.match(
+    instructions ?? "",
+    /не получается проверить актуальное наличие/u,
+  );
+  assert.match(instructions ?? "", /не произноси английские слова/iu);
+  assert.equal(
+    getVoiceToolFailureInstructions({ available: false }),
+    undefined,
+  );
 });

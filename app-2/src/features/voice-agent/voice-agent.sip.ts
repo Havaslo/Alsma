@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from "express";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import WebSocket from "ws";
 
+import { getVoiceToolFailureInstructions } from "./voice-agent.prompt.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
 type RawRequest = Request & { readonly rawBody?: Buffer };
@@ -278,7 +279,20 @@ export const createOpenAiSipHandler =
         ) {
           failureHangupTimer = setTimeout(hangup, 15_000);
         }
-        realtime.send(JSON.stringify({ type: "response.create" }));
+        const failureInstructions = getVoiceToolFailureInstructions(result);
+        realtime.send(
+          JSON.stringify({
+            type: "response.create",
+            ...(failureInstructions
+              ? {
+                  response: {
+                    instructions: failureInstructions,
+                    tool_choice: "none",
+                  },
+                }
+              : {}),
+          }),
+        );
       })().catch(() => {
         if (realtime.readyState === WebSocket.OPEN)
           realtime.send(

@@ -6,6 +6,7 @@ import {
   voiceAgentDiagnosticMaxBytes,
   voiceAgentPcmBytesPerMillisecond,
 } from "./voice-agent.audio-diagnostic.js";
+import { getVoiceToolFailureInstructions } from "./voice-agent.prompt.js";
 import type { VoiceAgentService } from "./voice-agent.service.js";
 
 type RelayEvent = {
@@ -124,6 +125,7 @@ export const createAmaziEventRelay = ({
     callId: string,
     result: unknown,
     requestResponse = true,
+    responseInstructions?: string,
   ) => {
     if (
       session.retryDisabled ||
@@ -142,7 +144,19 @@ export const createAmaziEventRelay = ({
       }),
     );
     if (requestResponse)
-      session.socket.send(JSON.stringify({ type: "response.create" }));
+      session.socket.send(
+        JSON.stringify({
+          type: "response.create",
+          ...(responseInstructions
+            ? {
+                response: {
+                  instructions: responseInstructions,
+                  tool_choice: "none",
+                },
+              }
+            : {}),
+        }),
+      );
   };
 
   const executeToolCall = async (
@@ -161,7 +175,13 @@ export const createAmaziEventRelay = ({
       event.name,
       args,
     );
-    sendToolOutput(session, event.call_id, result);
+    sendToolOutput(
+      session,
+      event.call_id,
+      result,
+      true,
+      getVoiceToolFailureInstructions(result),
+    );
   };
 
   const cancelPendingTransfers = (session: RelaySession, reason: string) => {

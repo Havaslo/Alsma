@@ -23,6 +23,22 @@ export const getVoiceStayDateInstruction = (now = new Date()) => {
   return `Текущий год по Москве для дат проживания — ${currentYear}. Если гость назвал даты без года, используй этот год и не спрашивай год: гость сам уточнит, если имеет в виду другой. Если дата этого года уже прошла, коротко уточни актуальные даты, не спрашивая отдельно год.`;
 };
 
+export const getVoiceToolFailureInstructions = (
+  result: unknown,
+): string | undefined => {
+  if (!result || typeof result !== "object") return undefined;
+  const reason = (result as { reason?: unknown }).reason;
+  const responseByReason: Record<string, string> = {
+    eptera_not_configured:
+      "Скажи гостю только по-русски: «Сейчас не получается проверить наличие номеров. Могу соединить вас с менеджером». Не произноси английские слова или технические коды и не запускай перевод без согласия гостя.",
+    eptera_temporarily_unavailable:
+      "Скажи гостю только по-русски: «Сейчас не получается проверить актуальное наличие номеров. Попробуйте, пожалуйста, ещё раз немного позже». Не произноси английские слова или технические коды и не утверждай, что номеров нет.",
+    events_temporarily_unavailable:
+      "Скажи гостю только по-русски: «Сейчас не получается проверить календарь мероприятий. Попробуйте, пожалуйста, ещё раз немного позже». Не произноси английские слова или технические коды.",
+  };
+  return typeof reason === "string" ? responseByReason[reason] : undefined;
+};
+
 /**
  * All business-facing voice instructions come from enabled Voice Agent
  * scenarios and transfer rules. The remaining text is current read-only data.

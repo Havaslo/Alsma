@@ -268,6 +268,62 @@ test("executes an Amazi relay tool once and returns function output on the same 
   relay.close("session-1");
 });
 
+test("gives a short Russian spoken fallback when Eptera is unavailable", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const relay = createAmaziEventRelay({
+    transferPlaybackFallbackMs: 0,
+    transferPlaybackGraceMs: 0,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        available: false,
+        readOnly: true,
+        reason: "eptera_temporarily_unavailable",
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:eptera-unavailable",
+    sessionId: "eptera-unavailable",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  socket.emit("open");
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        type: "response.function_call_arguments.done",
+        call_id: "availability-check-1",
+        name: "check_availability",
+        arguments: JSON.stringify({
+          checkIn: "2026-10-13",
+          checkOut: "2026-10-15",
+          adults: 1,
+        }),
+      }),
+    ),
+    false,
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  const response = socket.sent
+    .map((message) => JSON.parse(message) as Record<string, unknown>)
+    .find((message) => message.type === "response.create");
+  assert.ok(response);
+  const responseConfig = response.response as {
+    instructions?: string;
+    tool_choice?: string;
+  };
+  assert.equal(responseConfig.tool_choice, "none");
+  assert.match(responseConfig.instructions ?? "", /только по-русски/u);
+  assert.match(
+    responseConfig.instructions ?? "",
+    /не получается проверить актуальное наличие/u,
+  );
+  relay.close("eptera-unavailable");
+});
+
 test("waits for generated announcement audio before starting the transfer", async () => {
   FakeRelaySocket.instances.length = 0;
   const toolCalls: string[] = [];
