@@ -141,6 +141,7 @@ export const attachVoiceAgentRealtime = (
                           turn_detection: {
                             create_response: true,
                             interrupt_response: true,
+                            threshold: 0.5,
                             type: "server_vad",
                           },
                         },

@@ -91,8 +91,13 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     );
     assert.match(
       voiceAgentCommunicationInstruction,
-      /естественным современным русским произношением/u,
+      /нейтральном литературном русском/u,
     );
+    assert.match(voiceAgentCommunicationInstruction, /немного медленнее/u);
+    assert.match(voiceAgentCommunicationInstruction, /чётко произноси/iu);
+    assert.match(voiceAgentCommunicationInstruction, /АЛСМА/u);
+    assert.match(voiceAgentCommunicationInstruction, /криолиполиз/u);
+    assert.match(voiceAgentCommunicationInstruction, /Васильково/u);
     assert.match(
       voiceAgentCommunicationInstruction,
       /не переходи на английский/iu,

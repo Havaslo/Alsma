@@ -3,8 +3,10 @@ import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import { createAmaziEventRelay } from "./voice-agent.amazi.relay.js";
+import { pcm16Mono24kToWav } from "./voice-agent.audio-diagnostic.js";
 import {
   createVoiceConfigurationHandler,
   voiceTestCompletedHandler,
@@ -55,6 +57,7 @@ export const createVoiceAgentRouter = (
   },
   voiceConfigurationSecret?: string,
   logger?: Logger,
+  managedStorage?: ManagedStorage,
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -72,6 +75,24 @@ export const createVoiceAgentRouter = (
   const amaziRelay = createAmaziEventRelay({
     authorizationToken: apiKey,
     logger,
+    persistOutputAudio: managedStorage
+      ? async ({ pcm, providerCallId, truncated }) => {
+          const upload = await managedStorage.upload({
+            content: pcm16Mono24kToWav(pcm),
+            contentType: "audio/wav",
+            name: `voice-agent-clean-${providerCallId.replace(/[^a-zA-Z0-9_-]/gu, "-")}.wav`,
+          });
+          const saved = await service.saveAgentAudioByProvider(providerCallId, {
+            durationMs: Math.round(pcm.byteLength / 48),
+            objectId: upload.objectId,
+            truncated,
+          });
+          if (!saved)
+            await managedStorage
+              .deleteObject(upload.objectId)
+              .catch(() => undefined);
+        }
+      : undefined,
     service,
   });
   const sipReady = Boolean(openaiSip?.apiKey && openaiSip.webhookSecret);

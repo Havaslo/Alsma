@@ -683,6 +683,9 @@ model VoiceCall {
   recordingObjectId      String?       @map("recording_object_id")
   providerRecordingId    String?       @map("provider_recording_id")
   recordingStatus        String?       @map("recording_status")
+  agentAudioObjectId     String?       @map("agent_audio_object_id")
+  agentAudioDurationMs   Int?          @map("agent_audio_duration_ms")
+  agentAudioTruncated    Boolean       @default(false) @map("agent_audio_truncated")
   transferCommandId      String?       @map("transfer_command_id")
   transferState          String?       @map("transfer_state")
   adminRequestId         String?       @unique @map("admin_request_id") @db.Uuid

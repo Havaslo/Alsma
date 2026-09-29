@@ -128,7 +128,27 @@ export const AdminVoiceCallDetail = ({
               <Meta label="Результат" value={call.outcome ?? "—"} />
               <Meta label="Намерение" value={call.intent ?? "—"} />
             </dl>
-            {call.hasRecording && <AdminVoiceCallPlayer callId={callId} />}
+            {call.hasAgentAudio && (
+              <AdminVoiceCallPlayer
+                callId={callId}
+                source="agent-audio"
+                title="Чистый голос агента — до Mango"
+              />
+            )}
+            {call.hasAgentAudio && (
+              <p className="mt-2 text-xs leading-5 text-muted-ui-foreground">
+                Сравните этот звук с записью Mango ниже: так можно отделить
+                произношение модели от искажений телефонного тракта.
+                {call.agentAudioTruncated &&
+                  " Диагностическая запись ограничена первыми 10 минутами речи агента."}
+              </p>
+            )}
+            {call.hasRecording && (
+              <AdminVoiceCallPlayer
+                callId={callId}
+                title="Запись Mango — после телефонного тракта"
+              />
+            )}
             {call.hasRecording && call.providerRecordingId && (
               <div className="mt-4">
                 <button
@@ -186,6 +206,10 @@ export const AdminVoiceCallDetail = ({
               <Meta
                 label="Запись"
                 value={call.hasRecording ? "Доступна" : "Не поступила"}
+              />
+              <Meta
+                label="Чистый голос агента"
+                value={call.hasAgentAudio ? "Доступен" : "Не сохранён"}
               />
               <Meta
                 label="Транскрибация"

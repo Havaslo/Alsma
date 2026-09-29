@@ -2,6 +2,10 @@ import type { Logger } from "pino";
 import WebSocket from "ws";
 
 import { createLogger } from "../../lib/logger.js";
+import {
+  voiceAgentDiagnosticMaxBytes,
+  voiceAgentPcmBytesPerMillisecond,
+} from "./voice-agent.audio-diagnostic.js";
 import type { VoiceAgentService } from "./voice-agent.service.js";
 
 type RelayEvent = {
@@ -32,6 +36,11 @@ type AmaziRelayOptions = {
   readonly WebSocketClass?: RelaySocketConstructor;
   readonly transferPlaybackFallbackMs?: number;
   readonly transferPlaybackGraceMs?: number;
+  readonly persistOutputAudio?: (input: {
+    readonly pcm: Uint8Array;
+    readonly providerCallId: string;
+    readonly truncated: boolean;
+  }) => Promise<void>;
 };
 
 type RelaySession = {
@@ -48,6 +57,9 @@ type RelaySession = {
   greetingPending: boolean;
   greetingSent: boolean;
   responseAudioDurationMs: number;
+  readonly outputAudioChunks: Buffer[];
+  outputAudioBytes: number;
+  outputAudioTruncated: boolean;
   transferTimer?: NodeJS.Timeout;
 };
 
@@ -80,6 +92,7 @@ export const createAmaziEventRelay = ({
   WebSocketClass = WebSocket,
   transferPlaybackFallbackMs = 1_200,
   transferPlaybackGraceMs = 400,
+  persistOutputAudio,
 }: AmaziRelayOptions) => {
   const sessions = new Map<string, RelaySession>();
 
@@ -180,7 +193,10 @@ export const createAmaziEventRelay = ({
     await executeToolCall(session, event);
   };
 
-  const finishAssistantResponse = (session: RelaySession, event: RelayEvent) => {
+  const finishAssistantResponse = (
+    session: RelaySession,
+    event: RelayEvent,
+  ) => {
     if (session.pendingTransferCalls.length === 0) return;
     const status = event.response?.status;
     if (status && status !== "completed") {
@@ -279,8 +295,17 @@ export const createAmaziEventRelay = ({
         event.type === "response.audio.delta" ||
         event.type === "response.output_audio.delta"
       ) {
+        const chunk = Buffer.from(event.delta ?? "", "base64");
         session.responseAudioDurationMs +=
-          Buffer.from(event.delta ?? "", "base64").byteLength / 48;
+          chunk.byteLength / voiceAgentPcmBytesPerMillisecond;
+        const remaining =
+          voiceAgentDiagnosticMaxBytes - session.outputAudioBytes;
+        if (remaining > 0 && chunk.byteLength > 0) {
+          const captured = chunk.subarray(0, remaining);
+          session.outputAudioChunks.push(captured);
+          session.outputAudioBytes += captured.byteLength;
+        }
+        if (chunk.byteLength > remaining) session.outputAudioTruncated = true;
       }
       // Never interrupt an already-started conversation with a late greeting.
       if (
@@ -433,6 +458,9 @@ export const createAmaziEventRelay = ({
       greetingPending: false,
       greetingSent: false,
       responseAudioDurationMs: 0,
+      outputAudioChunks: [],
+      outputAudioBytes: 0,
+      outputAudioTruncated: false,
     } satisfies RelaySession;
     sessions.set(sessionId, session);
     openSocket(session);
@@ -452,6 +480,25 @@ export const createAmaziEventRelay = ({
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
       cancelPendingTransfers(session, "transfer_session_closed");
       sessions.delete(sessionId);
+      if (persistOutputAudio && session.outputAudioBytes > 0) {
+        const pcm = Buffer.concat(
+          session.outputAudioChunks,
+          session.outputAudioBytes,
+        );
+        void persistOutputAudio({
+          pcm,
+          providerCallId: session.providerCallId,
+          truncated: session.outputAudioTruncated,
+        }).catch((error: unknown) => {
+          logger.warn(
+            {
+              error: error instanceof Error ? error.message : "unknown",
+              stage: "amazi_relay_audio_persistence",
+            },
+            "Clean voice agent audio persistence failed",
+          );
+        });
+      }
       if (
         session.socket?.readyState === WebSocket.OPEN ||
         session.socket?.readyState === WebSocket.CONNECTING

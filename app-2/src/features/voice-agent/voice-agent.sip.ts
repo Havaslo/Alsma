@@ -70,6 +70,7 @@ export const buildSipAcceptPayload = (instructions: string) => ({
     input: {
       turn_detection: {
         type: "server_vad",
+        threshold: 0.5,
         create_response: true,
         interrupt_response: true,
       },

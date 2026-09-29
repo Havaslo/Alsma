@@ -82,12 +82,16 @@ const start = async (): Promise<void> => {
       const cutoff = new Date(Date.now() - voiceRetentionMilliseconds);
       const expired = await database.client.voiceCall.findMany({
         where: { createdAt: { lt: cutoff } },
-        select: { recordingObjectId: true },
+        select: { agentAudioObjectId: true, recordingObjectId: true },
       });
       for (const call of expired) {
         if (call.recordingObjectId)
           await managedStorage
             .deleteObject(call.recordingObjectId)
+            .catch(() => undefined);
+        if (call.agentAudioObjectId)
+          await managedStorage
+            .deleteObject(call.agentAudioObjectId)
             .catch(() => undefined);
       }
       await database.client.voiceCall.deleteMany({

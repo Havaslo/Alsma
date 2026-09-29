@@ -308,6 +308,22 @@ export const createAdminOperationsRouter = (
     },
   );
   router.get(
+    "/voice-calls/:recordId/agent-audio",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ params: recordParamsSchema }),
+    async (_request, response) => {
+      const call = await database.client.voiceCall.findUnique({
+        where: { id: response.locals.input.params.recordId },
+        select: { agentAudioObjectId: true },
+      });
+      if (!call?.agentAudioObjectId || !managedStorage) {
+        response.status(404).json({ error: { code: "AGENT_AUDIO_NOT_FOUND" } });
+        return;
+      }
+      response.json(await managedStorage.getDownload(call.agentAudioObjectId));
+    },
+  );
+  router.get(
     "/voice-calls/:recordId",
     createRequireAdminPermission("voice.calls.access", "requests.access"),
     validateRequest({ params: recordParamsSchema }),

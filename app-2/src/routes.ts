@@ -265,6 +265,7 @@ export const createApiRouter = ({
       openaiSip,
       voiceConfigurationSecret,
       logger,
+      managedStorage,
     ),
   );
   return router;

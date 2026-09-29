@@ -343,6 +343,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
           hasRecording: Boolean(
             call.recordingObjectId || _recordingUrl || call.providerRecordingId,
           ),
+          hasAgentAudio: Boolean(call.agentAudioObjectId),
           hasTranscript:
             Array.isArray(call.transcript) && call.transcript.length > 0,
         };
@@ -361,6 +362,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
       hasRecording: Boolean(
         call.recordingObjectId || _recordingUrl || call.providerRecordingId,
       ),
+      hasAgentAudio: Boolean(call.agentAudioObjectId),
       hasTranscript:
         Array.isArray(call.transcript) && call.transcript.length > 0,
     };

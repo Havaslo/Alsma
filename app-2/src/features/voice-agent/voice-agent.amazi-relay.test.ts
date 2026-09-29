@@ -334,6 +334,55 @@ test("waits for generated announcement audio before starting the transfer", asyn
   relay.close("session-audio-delay");
 });
 
+test("persists clean output audio when the relay closes", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const persisted: Array<{
+    pcm: Uint8Array;
+    providerCallId: string;
+    truncated: boolean;
+  }> = [];
+  const relay = createAmaziEventRelay({
+    persistOutputAudio: async (input) => {
+      persisted.push(input);
+    },
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: true,
+        state: "accepted" as const,
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-clean-audio",
+    sessionId: "session-clean-audio",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        delta: Buffer.from([1, 2, 3, 4]).toString("base64"),
+        type: "response.output_audio.delta",
+      }),
+    ),
+    false,
+  );
+
+  relay.close("session-clean-audio");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(persisted.length, 1);
+  assert.equal(persisted[0]?.providerCallId, "amazi:session-clean-audio");
+  assert.equal(persisted[0]?.truncated, false);
+  assert.deepEqual(
+    Buffer.from(persisted[0]?.pcm ?? []),
+    Buffer.from([1, 2, 3, 4]),
+  );
+});
+
 test("cancels a queued transfer if the guest interrupts the announcement", async () => {
   FakeRelaySocket.instances.length = 0;
   const toolCalls: string[] = [];

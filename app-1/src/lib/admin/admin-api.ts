@@ -140,6 +140,9 @@ export type AdminVoiceCall = {
   readonly providerRecordingId?: string | null;
   readonly recordingStatus?: string | null;
   readonly hasRecording: boolean;
+  readonly agentAudioDurationMs: number | null;
+  readonly agentAudioTruncated: boolean;
+  readonly hasAgentAudio: boolean;
   readonly hasTranscript: boolean;
 };
 export type AdminNotification = {

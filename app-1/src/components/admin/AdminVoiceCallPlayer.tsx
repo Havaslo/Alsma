@@ -15,8 +15,12 @@ type PlayerState = "idle" | "loading" | "ready" | "playing" | "error";
 
 export const AdminVoiceCallPlayer = ({
   callId,
+  source = "recording",
+  title = "Запись Mango",
 }: {
   readonly callId: string;
+  readonly source?: "agent-audio" | "recording";
+  readonly title?: string;
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -38,7 +42,7 @@ export const AdminVoiceCallPlayer = ({
     setError(null);
     try {
       const response = await apiClient.get<Blob>(
-        `/admin/voice-calls/${callId}/recording`,
+        `/admin/voice-calls/${callId}/${source}`,
         {
           headers: { Authorization: `Bearer ${readAdminSession() ?? ""}` },
           responseType: "blob",
@@ -79,7 +83,9 @@ export const AdminVoiceCallPlayer = ({
     } catch {
       setState("error");
       setError(
-        "Запись пока недоступна. Проверьте, что она сохранилась в Mango, и повторите позже.",
+        source === "agent-audio"
+          ? "Чистый звук агента пока недоступен. Попробуйте повторить позже."
+          : "Запись пока недоступна. Проверьте, что она сохранилась в Mango, и повторите позже.",
       );
     }
   };
@@ -118,6 +124,9 @@ export const AdminVoiceCallPlayer = ({
 
   return (
     <div className="mt-5 rounded-2xl border border-line bg-page/60 p-4">
+      <p className="mb-3 text-xs font-semibold text-muted-ui-foreground">
+        {title}
+      </p>
       <div className="flex items-center gap-3">
         <Button
           aria-label={

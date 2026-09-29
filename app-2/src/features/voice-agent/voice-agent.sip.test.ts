@@ -12,7 +12,7 @@ test("SIP acceptance enables an audio response and the transfer tool", () => {
   assert.equal(payload.type, "realtime");
   assert.deepEqual(payload.output_modalities, ["audio"]);
   assert.equal(payload.audio.input.turn_detection.create_response, true);
-  assert.equal("threshold" in payload.audio.input.turn_detection, false);
+  assert.equal(payload.audio.input.turn_detection.threshold, 0.5);
   assert.equal(payload.audio.input.turn_detection.interrupt_response, true);
   assert.equal(payload.audio.output.voice, "marin");
   assert.equal(

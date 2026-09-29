@@ -406,6 +406,23 @@ export const createVoiceAgentService = (
       const call = await repository.findByProviderCallId(providerCallId);
       return call ? repository.appendTranscript(call.id, segment) : null;
     },
+    saveAgentAudioByProvider: async (
+      providerCallId: string,
+      input: {
+        readonly objectId: string;
+        readonly durationMs: number;
+        readonly truncated: boolean;
+      },
+    ) => {
+      const call = await repository.findByProviderCallId(providerCallId);
+      return call
+        ? repository.updateCall(call.id, {
+            agentAudioDurationMs: input.durationMs,
+            agentAudioObjectId: input.objectId,
+            agentAudioTruncated: input.truncated,
+          })
+        : null;
+    },
     completeCallByProvider: async (
       providerCallId: string,
       outcome?: string,
