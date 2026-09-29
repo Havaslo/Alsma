@@ -308,6 +308,49 @@ test("uses the same time-safe Amazi fallback for a Mango summary", async () => {
   assert.equal(completedId, "amazi-call");
 });
 
+test("preserves a failed transfer result when the Mango summary arrives", async () => {
+  const call = {
+    id: "amazi-call",
+    outcome: "mango_transfer_result_4100",
+    provider: "amazi",
+    providerEntryId: "entry-1",
+    providerSequence: null,
+    status: "completed",
+    transferState: "failed",
+  };
+  let update: Record<string, unknown> | undefined;
+  let completedOutcome: string | undefined;
+  const repository = {
+    findByProviderEntryId: async () => call,
+    findBySipCallId: async () => null,
+    updateCall: async (_id: string, data: Record<string, unknown>) => {
+      update = data;
+      return call;
+    },
+  } as unknown as VoiceAgentRepository;
+  const handler = createMangoEventHandler({
+    completeCall: async (_id, outcome) => {
+      completedOutcome = outcome;
+    },
+    repository,
+  });
+
+  await handler.handle({
+    kind: "summary",
+    eventKey: "mango:summary:entry-1:1705313561",
+    event: {
+      call_direction: 1,
+      create_time: 1_700_000_000,
+      end_time: 1_700_000_020,
+      entry_id: "entry-1",
+      entry_result: 1,
+    },
+  });
+
+  assert.equal(update?.outcome, "mango_transfer_result_4100");
+  assert.equal(completedOutcome, "mango_transfer_result_4100");
+});
+
 test("does not merge an Amazi call when the time candidate is ambiguous or absent", async () => {
   const amaziCall = {
     id: "amazi-call",

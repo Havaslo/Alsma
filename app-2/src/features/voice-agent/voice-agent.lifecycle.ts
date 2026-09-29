@@ -1,5 +1,6 @@
 import { createLogger } from "../../lib/logger.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
+import { preserveTransferDiagnostic } from "./voice-agent.outcomes.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 
 type CompleteCall = (
@@ -145,6 +146,12 @@ export const createMangoEventHandler = ({
       return call;
     const state = event.call_state.toLowerCase();
     const disconnected = state === "disconnected";
+    const outcome = preserveTransferDiagnostic(
+      call,
+      event.disconnect_reason === undefined
+        ? undefined
+        : `disconnect_reason:${String(event.disconnect_reason)}`,
+    );
     return repository.updateCall(call.id, {
       callerPhone: event.from?.number,
       sipCallId: event.sip_call_id,
@@ -166,9 +173,7 @@ export const createMangoEventHandler = ({
         : state === "onhold"
           ? "on_hold"
           : "active",
-      ...(event.disconnect_reason === undefined
-        ? {}
-        : { outcome: `disconnect_reason:${String(event.disconnect_reason)}` }),
+      ...(outcome === undefined ? {} : { outcome }),
     });
   };
 
@@ -204,16 +209,19 @@ export const createMangoEventHandler = ({
         providerCallId: `mango:entry:${event.entry_id}`,
         providerEntryId: event.entry_id,
       }));
+    const transferDiagnostic = preserveTransferDiagnostic(target);
     await repository.updateCall(target.id, {
       callerPhone: event.from?.number,
       durationSec: Math.max(0, event.end_time - event.create_time),
       endedAt: new Date(event.end_time * 1_000),
-      outcome: event.entry_result === 1 ? "completed" : "missed",
+      outcome:
+        transferDiagnostic ??
+        (event.entry_result === 1 ? "completed" : "missed"),
       providerEntryId: event.entry_id,
       startedAt: new Date(event.create_time * 1_000),
       status: "completed",
     });
-    return completeCall(target.id, "summary");
+    return completeCall(target.id, transferDiagnostic ?? "summary");
   };
 
   const handleRecording = async (event: MangoRecordingEvent) => {

@@ -8,6 +8,7 @@ import { createAmaziLifecycle } from "./voice-agent.amazi.lifecycle.js";
 import { createVoiceTestAudioTurn } from "./voice-agent.audio.js";
 import { createMangoEventHandler } from "./voice-agent.lifecycle.js";
 import type { MangoProviderEvent } from "./voice-agent.mango.js";
+import { preserveTransferDiagnostic } from "./voice-agent.outcomes.js";
 import { voiceAgentCommunicationInstruction } from "./voice-agent.prompt.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import type {
@@ -108,12 +109,13 @@ export const createVoiceAgentService = (
   ) => {
     const call = await repository.findCall(id);
     if (!call) return null;
+    const completionOutcome = preserveTransferDiagnostic(call, outcome);
     const transcriptItems = Array.isArray(call.transcript)
       ? call.transcript
       : [];
     if (transcriptItems.length === 0)
       return repository.completeCall(id, {
-        outcome,
+        outcome: completionOutcome,
         recordingUrl,
         recordingObjectId,
         extracted: {},
@@ -126,7 +128,7 @@ export const createVoiceAgentService = (
       ),
     );
     return repository.completeCall(id, {
-      outcome,
+      outcome: completionOutcome,
       recordingUrl,
       recordingObjectId,
       summary: result.summary ?? "Резюме не сформировано.",
