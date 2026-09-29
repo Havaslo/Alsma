@@ -69,12 +69,13 @@ export const buildSipAcceptPayload = (instructions: string) => ({
   audio: {
     input: {
       turn_detection: {
+        threshold: 0.55,
         type: "server_vad",
         create_response: true,
         interrupt_response: true,
       },
     },
-    output: { voice: "coral" },
+    output: { voice: "sage" },
   },
   type: "realtime",
   model: "gpt-realtime-2.1",
@@ -209,6 +210,7 @@ export const createOpenAiSipHandler =
           session: {
             input_audio_transcription: { model: "gpt-4o-mini-transcribe" },
             turn_detection: {
+              threshold: 0.55,
               type: "server_vad",
               create_response: true,
               interrupt_response: true,
