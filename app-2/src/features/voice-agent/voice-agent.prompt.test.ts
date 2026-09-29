@@ -4,6 +4,7 @@ import test from "node:test";
 import type { Database } from "../../lib/database/database.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import {
+  getVoiceStayDateInstruction,
   voiceAgentCommunicationInstruction,
   voiceTransferInstruction,
 } from "./voice-agent.prompt.js";
@@ -110,6 +111,14 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
       voiceAgentCommunicationInstruction,
       /даже если гость произнёс фразу на этом языке/u,
     );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /не повторяй вопрос гостя своими словами/iu,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /вызови его молча, затем сообщи результат/u,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -169,4 +178,16 @@ test("exposes only read-only Eptera tools to voice", async () => {
   });
   assert.equal((result as { readOnly?: boolean }).readOnly, true);
   assert.equal((result as { available?: boolean }).available, true);
+});
+
+test("uses the current Moscow year without asking guests to confirm it", () => {
+  const instruction = getVoiceStayDateInstruction(
+    new Date("2026-09-29T12:00:00.000Z"),
+  );
+  assert.match(
+    instruction,
+    /текущий год по Москве для дат проживания — 2026/iu,
+  );
+  assert.match(instruction, /не спрашивай год/u);
+  assert.match(instruction, /если дата этого года уже прошла/iu);
 });
