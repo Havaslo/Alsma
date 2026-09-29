@@ -87,7 +87,7 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     );
     assert.match(
       voiceAgentCommunicationInstruction,
-      /по умолчанию отвечай только по-русски/iu,
+      /по умолчанию всегда отвечай только по-русски/iu,
     );
     assert.match(
       voiceAgentCommunicationInstruction,
@@ -101,6 +101,14 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     assert.match(
       voiceAgentCommunicationInstruction,
       /не переходи на английский/iu,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /только после прямой и недвусмысленной просьбы гостя/u,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /даже если гость произнёс фразу на этом языке/u,
     );
   } finally {
     globalThis.fetch = originalFetch;
