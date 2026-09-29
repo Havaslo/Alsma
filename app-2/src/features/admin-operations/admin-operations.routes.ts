@@ -124,6 +124,12 @@ export const createAdminOperationsRouter = (
                 requestId: error.requestId,
               }
             : { stage: "unknown" as const };
+        const providerCode = diagnostic.providerCode
+          ?.replace(/[^A-Za-z0-9_.:,-]/gu, "")
+          .slice(0, 300);
+        const requestId = diagnostic.requestId
+          ?.replace(/[^A-Za-z0-9_.:-]/gu, "")
+          .slice(0, 100);
         logger.error(
           {
             callId: call.id,
@@ -136,8 +142,11 @@ export const createAdminOperationsRouter = (
           error: {
             code: "RETRANSCRIPTION_FAILED",
             diagnosticCode: `RETRANSCRIPTION_${diagnostic.stage.toUpperCase()}`,
-            message:
-              "Не удалось повторить транскрибацию. Проверьте доступность записи и AI-шлюза.",
+            ...(providerCode ? { providerCode } : {}),
+            ...(requestId ? { requestId } : {}),
+            message: providerCode
+              ? `Сбой транскрибации (${providerCode})${requestId ? `. ID запроса: ${requestId}` : ""}.`
+              : `Не удалось повторить транскрибацию. Этап: ${diagnostic.stage}.`,
           },
         });
       }

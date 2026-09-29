@@ -208,6 +208,8 @@ test("executes an Amazi relay tool once and returns function output on the same 
   FakeRelaySocket.instances.length = 0;
   const toolCalls: Array<{ providerCallId: string; name: string }> = [];
   const relay = createAmaziEventRelay({
+    transferPlaybackFallbackMs: 0,
+    transferPlaybackGraceMs: 0,
     service: {
       appendTranscriptByProvider: async () => null,
       toolForProviderCall: async (providerCallId, name) => {
@@ -243,6 +245,19 @@ test("executes an Amazi relay tool once and returns function output on the same 
     false,
   );
   await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(toolCalls, []);
+
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        response: { status: "completed" },
+        type: "response.done",
+      }),
+    ),
+    false,
+  );
+  await wait(10);
 
   assert.equal(FakeRelaySocket.instances.length, 1);
   assert.deepEqual(toolCalls, [
@@ -251,4 +266,124 @@ test("executes an Amazi relay tool once and returns function output on the same 
   assert.match(socket.sent[0] ?? "", /function_call_output/u);
   assert.match(socket.sent[1] ?? "", /response\.create/u);
   relay.close("session-1");
+});
+
+test("waits for generated announcement audio before starting the transfer", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const toolCalls: string[] = [];
+  const relay = createAmaziEventRelay({
+    transferPlaybackFallbackMs: 0,
+    transferPlaybackGraceMs: 40,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async (_providerCallId, name) => {
+        toolCalls.push(name);
+        return { accepted: true, state: "accepted" };
+      },
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-audio-delay",
+    sessionId: "session-audio-delay",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  socket.emit(
+    "message",
+    Buffer.from(JSON.stringify({ type: "response.created" })),
+    false,
+  );
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        delta: Buffer.alloc(48_000).toString("base64"),
+        type: "response.output_audio.delta",
+      }),
+    ),
+    false,
+  );
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        type: "response.function_call_arguments.done",
+        call_id: "transfer-call-audio-delay",
+        name: "transfer_to_manager",
+        arguments: "{}",
+      }),
+    ),
+    false,
+  );
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        response: { status: "completed" },
+        type: "response.done",
+      }),
+    ),
+    false,
+  );
+
+  await wait(1_020);
+  assert.deepEqual(toolCalls, []);
+  await wait(100);
+  assert.deepEqual(toolCalls, ["transfer_to_manager"]);
+  relay.close("session-audio-delay");
+});
+
+test("cancels a queued transfer if the guest interrupts the announcement", async () => {
+  FakeRelaySocket.instances.length = 0;
+  const toolCalls: string[] = [];
+  const relay = createAmaziEventRelay({
+    transferPlaybackFallbackMs: 0,
+    transferPlaybackGraceMs: 100,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async (_providerCallId, name) => {
+        toolCalls.push(name);
+        return { accepted: true, state: "accepted" };
+      },
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:session-transfer-interrupt",
+    sessionId: "session-transfer-interrupt",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        type: "response.function_call_arguments.done",
+        call_id: "transfer-call-interrupted",
+        name: "transfer_to_manager",
+        arguments: "{}",
+      }),
+    ),
+    false,
+  );
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        response: { status: "completed" },
+        type: "response.done",
+      }),
+    ),
+    false,
+  );
+  socket.emit(
+    "message",
+    Buffer.from(JSON.stringify({ type: "input_audio_buffer.speech_started" })),
+    false,
+  );
+
+  await wait(150);
+  assert.deepEqual(toolCalls, []);
+  relay.close("session-transfer-interrupt");
 });

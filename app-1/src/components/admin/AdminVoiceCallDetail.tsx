@@ -6,6 +6,7 @@ import {
   useAdminVoiceCall,
   useReprocessAdminVoiceCall,
 } from "@/lib/admin/useAdmin";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import { ROUTES } from "@/route-constants";
 
 const roleLabel = (role?: string) =>
@@ -147,8 +148,10 @@ export const AdminVoiceCallDetail = ({
                 )}
                 {reprocess.isError && (
                   <p className="mt-2 text-xs leading-5 text-destructive">
-                    Не удалось повторить транскрибацию. Запись в Mango есть;
-                    проверьте доступность AI-шлюза и попробуйте ещё раз.
+                    {getApiErrorMessage(
+                      reprocess.error,
+                      "Не удалось повторить транскрибацию. Запись в Mango есть; проверьте доступность AI-шлюза и попробуйте ещё раз.",
+                    )}
                   </p>
                 )}
               </div>

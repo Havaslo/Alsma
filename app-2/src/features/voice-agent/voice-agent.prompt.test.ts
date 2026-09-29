@@ -16,18 +16,14 @@ const transferTool = voiceAgentTools.find(
 );
 
 test("keeps the voice transfer instruction single and explicit", () => {
-  assert.match(
-    voiceTransferInstruction,
-    /менеджера, сотрудника или оператора/u,
-  );
+  assert.match(voiceTransferInstruction, /явной просьбы гостя/u);
   assert.match(
     voiceTransferInstruction,
     /Одну секунду, соединяю вас с менеджером/u,
   );
-  assert.match(
-    voiceTransferInstruction,
-    /немедленно вызови transfer_to_manager/u,
-  );
+  assert.match(voiceTransferInstruction, /только после явной просьбы гостя/u);
+  assert.match(voiceTransferInstruction, /дождись его ответа/u);
+  assert.match(voiceTransferInstruction, /полностью закончи фразу/u);
   assert.match(voiceTransferInstruction, /accepted=true/u);
   assert.match(voiceTransferInstruction, /accepted=false/u);
   assert.doesNotMatch(voiceTransferInstruction, /Проверяю возможность/u);
@@ -35,14 +31,13 @@ test("keeps the voice transfer instruction single and explicit", () => {
 
 test("keeps the transfer tool contract aligned with the prompt", () => {
   assert.ok(transferTool);
-  assert.match(
-    transferTool.description,
-    /менеджера, сотрудника или оператора/u,
-  );
+  assert.match(transferTool.description, /явной просьбы гостя/u);
   assert.match(
     transferTool.description,
     /Одну секунду, соединяю вас с менеджером/u,
   );
+  assert.match(transferTool.description, /явного согласия/u);
+  assert.match(transferTool.description, /дождись ответа/u);
   assert.match(transferTool.description, /accepted=true/u);
   assert.match(transferTool.description, /accepted=false/u);
   assert.doesNotMatch(transferTool.description, /Проверяю возможность/u);
@@ -89,6 +84,18 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     assert.match(
       voiceAgentCommunicationInstruction,
       /тепло, приветливо и уважительно/u,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /по умолчанию отвечай только по-русски/iu,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /естественным современным русским произношением/u,
+    );
+    assert.match(
+      voiceAgentCommunicationInstruction,
+      /не переходи на английский/iu,
     );
   } finally {
     globalThis.fetch = originalFetch;
