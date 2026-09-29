@@ -144,7 +144,7 @@ export const attachVoiceAgentRealtime = (
                             type: "server_vad",
                           },
                         },
-                        output: { voice: "marin" },
+                        output: { voice: "coral" },
                       },
                       instructions,
                       output_modalities: ["audio"],
