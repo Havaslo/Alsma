@@ -41,7 +41,7 @@ const getConfiguration = async (database: Database) => {
       },
       output: {
         format: { type: "audio/pcm", rate: 24_000 },
-        voice: "cedar",
+        voice: "shimmer",
       },
     },
     tools: voiceAgentTools,

@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Eye, Headphones, PhoneCall, ScrollText } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import type { AdminVoiceCall } from "@/lib/admin/admin-api";
 import { useAdminVoiceCalls } from "@/lib/admin/useAdmin";
 import { buildRoute } from "@/lib/navigation";
 import { ROUTES } from "@/route-constants";
@@ -19,9 +20,52 @@ const durationLabel = (seconds: number | null) => {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 };
 
+const callDetailScore = (call: AdminVoiceCall) =>
+  (call.hasTranscript ? 8 : 0) +
+  (call.hasRecording ? 4 : 0) +
+  (call.summary ? 2 : 0) +
+  (call.durationSec !== null ? 1 : 0) +
+  (call.provider === "amazi" ? 1 : 0);
+
+const recordCountLabel = (count: number) => {
+  const lastTwo = count % 100;
+  const lastDigit = count % 10;
+  if (lastDigit === 1 && lastTwo !== 11) return "запись";
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14))
+    return "записи";
+  return "записей";
+};
+
+const groupRelatedCalls = (items: readonly AdminVoiceCall[]) => {
+  const groups = new Map<
+    string,
+    { call: AdminVoiceCall; recordCount: number }
+  >();
+
+  for (const call of items) {
+    const key = call.providerEntryId
+      ? `entry:${call.providerEntryId}`
+      : `call:${call.id}`;
+    const group = groups.get(key);
+    if (!group) {
+      groups.set(key, { call, recordCount: 1 });
+      continue;
+    }
+
+    groups.set(key, {
+      call:
+        callDetailScore(call) > callDetailScore(group.call) ? call : group.call,
+      recordCount: group.recordCount + 1,
+    });
+  }
+
+  return [...groups.values()];
+};
+
 export const AdminVoiceCallsPanel = () => {
   const calls = useAdminVoiceCalls();
   const navigate = useNavigate();
+  const callGroups = groupRelatedCalls(calls.data?.items ?? []);
 
   return (
     <div className="space-y-5">
@@ -51,7 +95,7 @@ export const AdminVoiceCallsPanel = () => {
               </tr>
             </thead>
             <tbody>
-              {(calls.data?.items ?? []).map((call) => (
+              {callGroups.map(({ call, recordCount }) => (
                 <tr className="border-t border-line align-top" key={call.id}>
                   <td className="px-5 py-4">
                     <strong className="block">
@@ -65,6 +109,12 @@ export const AdminVoiceCallsPanel = () => {
                     <strong className="mt-1 block">
                       {durationLabel(call.durationSec)}
                     </strong>
+                    {recordCount > 1 && (
+                      <span className="mt-1 block text-xs text-muted-ui-foreground">
+                        {recordCount} {recordCountLabel(recordCount)} одного
+                        звонка
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <strong className="block">
@@ -128,7 +178,7 @@ export const AdminVoiceCallsPanel = () => {
             Загружаем звонки…
           </p>
         )}
-        {!calls.isLoading && !calls.data?.items.length && (
+        {!calls.isLoading && !callGroups.length && (
           <p className="p-12 text-center text-muted-ui-foreground">
             <PhoneCall className="mx-auto mb-3 size-6 text-brand" />
             Входящих звонков пока нет.

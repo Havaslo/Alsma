@@ -51,7 +51,7 @@ export const createVoiceTestAudioTurn =
           input: answer,
           model: "gpt-4o-mini-tts",
           response_format: "mp3",
-          voice: "cedar",
+          voice: "shimmer",
         }),
         signal: AbortSignal.timeout(30_000),
       },

@@ -145,7 +145,7 @@ export const attachVoiceAgentRealtime = (
                             type: "server_vad",
                           },
                         },
-                        output: { voice: "cedar" },
+                        output: { voice: "shimmer" },
                       },
                       instructions,
                       output_modalities: ["audio"],

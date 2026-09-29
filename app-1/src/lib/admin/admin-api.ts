@@ -121,6 +121,8 @@ export type AdminRequest = {
 };
 export type AdminVoiceCall = {
   readonly id: string;
+  readonly provider?: string;
+  readonly providerEntryId?: string | null;
   readonly callerPhone: string | null;
   readonly status: string;
   readonly outcome: string | null;
