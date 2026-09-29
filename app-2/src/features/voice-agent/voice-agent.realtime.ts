@@ -139,13 +139,12 @@ export const attachVoiceAgentRealtime = (
                       audio: {
                         input: {
                           turn_detection: {
-                            threshold: 0.55,
                             create_response: true,
                             interrupt_response: true,
                             type: "server_vad",
                           },
                         },
-                        output: { voice: "sage" },
+                        output: { voice: "marin" },
                       },
                       instructions,
                       output_modalities: ["audio"],

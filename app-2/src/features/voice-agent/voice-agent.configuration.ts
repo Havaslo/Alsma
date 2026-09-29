@@ -33,7 +33,6 @@ const getConfiguration = async (database: Database) => {
       input: {
         format: { type: "audio/pcm", rate: 24_000 },
         turn_detection: {
-          threshold: 0.55,
           type: "server_vad",
           create_response: true,
           interrupt_response: true,
@@ -41,7 +40,7 @@ const getConfiguration = async (database: Database) => {
       },
       output: {
         format: { type: "audio/pcm", rate: 24_000 },
-        voice: "sage",
+        voice: "marin",
       },
     },
     tools: voiceAgentTools,
