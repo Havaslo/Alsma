@@ -75,7 +75,7 @@ export const buildSipAcceptPayload = (instructions: string) => ({
         interrupt_response: true,
       },
     },
-    output: { voice: "marin" },
+    output: { voice: "cedar" },
   },
   type: "realtime",
   model: "gpt-realtime-2.1",
