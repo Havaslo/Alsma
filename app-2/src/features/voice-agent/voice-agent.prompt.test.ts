@@ -7,6 +7,7 @@ import {
   getVoiceStayDateInstruction,
   getVoiceToolFailureInstructions,
   voiceAgentCommunicationInstruction,
+  voiceBookingInstruction,
   voiceTransferInstruction,
 } from "./voice-agent.prompt.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
@@ -18,13 +19,13 @@ const transferTool = voiceAgentTools.find(
 );
 
 test("keeps the voice transfer instruction single and explicit", () => {
-  assert.match(voiceTransferInstruction, /явной просьбы гостя/u);
+  assert.match(voiceTransferInstruction, /просьбе гостя забронировать/u);
   assert.match(
     voiceTransferInstruction,
-    /Одну секунду, соединяю вас с менеджером/u,
+    /Для оформления соединяю вас с менеджером/u,
   );
-  assert.match(voiceTransferInstruction, /только после явной просьбы гостя/u);
-  assert.match(voiceTransferInstruction, /дождись его ответа/u);
+  assert.match(voiceTransferInstruction, /не спрашивай отдельное согласие/u);
+  assert.match(voiceTransferInstruction, /дождись ответа гостя/u);
   assert.match(voiceTransferInstruction, /полностью закончи фразу/u);
   assert.match(voiceTransferInstruction, /accepted=true/u);
   assert.match(voiceTransferInstruction, /accepted=false/u);
@@ -33,16 +34,31 @@ test("keeps the voice transfer instruction single and explicit", () => {
 
 test("keeps the transfer tool contract aligned with the prompt", () => {
   assert.ok(transferTool);
-  assert.match(transferTool.description, /явной просьбы гостя/u);
+  assert.match(transferTool.description, /просьбе гостя забронировать/u);
   assert.match(
     transferTool.description,
-    /Одну секунду, соединяю вас с менеджером/u,
+    /Для оформления соединяю вас с менеджером/u,
   );
-  assert.match(transferTool.description, /явного согласия/u);
+  assert.match(transferTool.description, /не спрашивай отдельного согласия/u);
   assert.match(transferTool.description, /дождись ответа/u);
   assert.match(transferTool.description, /accepted=true/u);
   assert.match(transferTool.description, /accepted=false/u);
   assert.doesNotMatch(transferTool.description, /Проверяю возможность/u);
+});
+
+test("routes a spoken booking request to the manager without a filler or search", () => {
+  assert.match(voiceBookingInstruction, /Сразу скажи/u);
+  assert.match(voiceBookingInstruction, /вызови transfer_to_manager/u);
+  assert.match(voiceBookingInstruction, /Не вызывай check_availability/u);
+  assert.match(voiceBookingInstruction, /не проси отдельного согласия/u);
+  assert.match(
+    voiceBookingInstruction,
+    /не озвучивай внутренние размышления/iu,
+  );
+  assert.match(
+    voiceBookingInstruction,
+    /только спрашивает, есть ли свободные номера/u,
+  );
 });
 
 test("uses GPT-6 Luna for voice-agent text answers", async () => {
@@ -125,11 +141,13 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
   }
 });
 
-test("exposes only read-only Eptera tools to voice", async () => {
+test("exposes only read-only lodging tools and manager transfer to voice", async () => {
   const toolNames: readonly string[] = voiceAgentTools.map((tool) => tool.name);
   assert.equal(toolNames.includes("check_availability"), true);
   assert.equal(toolNames.includes("compare_rooms"), true);
   assert.equal(toolNames.includes("create_booking"), false);
+  assert.equal(toolNames.includes("create_booking_request"), false);
+  assert.equal(toolNames.includes("transfer_to_manager"), true);
   assert.equal(toolNames.includes("create_payment"), false);
   const service = createVoiceAgentService(
     {} as VoiceAgentRepository,

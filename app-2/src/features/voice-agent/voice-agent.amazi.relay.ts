@@ -18,7 +18,21 @@ type RelayEvent = {
   readonly transcript?: string;
   readonly item_id?: string;
   readonly delta?: string;
-  readonly response?: { readonly status?: string };
+  readonly response?: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly status_details?: {
+      readonly error?: { readonly code?: string; readonly type?: string };
+    };
+  };
+  readonly error?: {
+    readonly code?: string;
+    readonly event_id?: string;
+    readonly requestId?: string;
+    readonly retryable?: boolean;
+    readonly stage?: string;
+    readonly type?: string;
+  };
 };
 
 type RelaySocket = WebSocket;
@@ -55,6 +69,7 @@ type RelaySession = {
   reconnectTimer?: NodeJS.Timeout;
   closing: boolean;
   retryDisabled: boolean;
+  failureFallbackSent: boolean;
   greetingPending: boolean;
   greetingSent: boolean;
   responseAudioDurationMs: number;
@@ -96,6 +111,56 @@ export const createAmaziEventRelay = ({
   persistOutputAudio,
 }: AmaziRelayOptions) => {
   const sessions = new Map<string, RelaySession>();
+
+  const sendFailureFallback = (
+    session: RelaySession,
+    details: {
+      readonly errorCode?: string;
+      readonly errorType?: string;
+      readonly eventId?: string;
+      readonly requestId?: string;
+      readonly responseId?: string;
+      readonly stage: "provider_error" | "response_failed";
+    },
+  ) => {
+    if (session.failureFallbackSent) return;
+    session.failureFallbackSent = true;
+    logger.warn(
+      {
+        ...details,
+        stage: `amazi_relay_${details.stage}`,
+      },
+      "Amazi Realtime response failed; Russian fallback attempted",
+    );
+    if (
+      session.closing ||
+      session.retryDisabled ||
+      session.socket.readyState !== WebSocket.OPEN ||
+      sessions.get(session.sessionId) !== session
+    )
+      return;
+    try {
+      session.socket.send(
+        JSON.stringify({
+          type: "response.create",
+          response: {
+            output_modalities: ["audio"],
+            tool_choice: "none",
+            instructions:
+              "Скажи только по-русски одну короткую фразу: «Извините, сейчас не получается обработать ваш запрос. Пожалуйста, перезвоните позже или обратитесь к администратору». Не произноси технические коды, не утверждай, что бронь оформлена, и не используй инструменты.",
+          },
+        }),
+      );
+    } catch (error) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.name : "unknown",
+          stage: "amazi_relay_failure_fallback_send",
+        },
+        "Amazi Realtime Russian fallback could not be sent",
+      );
+    }
+  };
 
   const sendGreeting = (session: RelaySession) => {
     if (
@@ -371,8 +436,49 @@ export const createAmaziEventRelay = ({
               reason: "tool_failed",
             });
         });
-      if (event.type === "response.done")
+      if (event.type === "error" || event.type === "amazi.gateway.error") {
+        const errorType = event.error?.type;
+        const errorCode = event.error?.code;
+        logger.warn(
+          {
+            errorCode,
+            errorType,
+            eventId: event.event_id,
+            relatedEventId: event.error?.event_id,
+            requestId: event.error?.requestId,
+            retryable: event.error?.retryable,
+            stage: "amazi_relay_provider_error",
+            providerStage: event.error?.stage,
+          },
+          "Amazi Realtime provider reported an error",
+        );
+        if (
+          (event.type === "error" &&
+            (errorType === "server_error" ||
+              errorCode === "server_error" ||
+              errorCode === "rate_limit_exceeded")) ||
+          (event.type === "amazi.gateway.error" &&
+            event.error?.retryable === true)
+        )
+          sendFailureFallback(session, {
+            errorCode,
+            errorType,
+            eventId: event.event_id,
+            requestId: event.error?.requestId,
+            stage: "provider_error",
+          });
+      }
+      if (event.type === "response.done") {
         finishAssistantResponse(session, event);
+        if (event.response?.status === "failed")
+          sendFailureFallback(session, {
+            errorCode: event.response.status_details?.error?.code,
+            errorType: event.response.status_details?.error?.type,
+            eventId: event.event_id,
+            responseId: event.response.id,
+            stage: "response_failed",
+          });
+      }
     });
     socket.on("error", (error) => {
       logger.warn(
@@ -475,6 +581,7 @@ export const createAmaziEventRelay = ({
       pendingTransferCalls: [],
       closing: false,
       retryDisabled: false,
+      failureFallbackSent: false,
       greetingPending: false,
       greetingSent: false,
       responseAudioDurationMs: 0,

@@ -492,3 +492,132 @@ test("cancels a queued transfer if the guest interrupts the announcement", async
   assert.deepEqual(toolCalls, []);
   relay.close("session-transfer-interrupt");
 });
+
+test("attempts one safe Russian fallback after a Realtime response failure", () => {
+  FakeRelaySocket.instances.length = 0;
+  const warnings: unknown[] = [];
+  const relay = createAmaziEventRelay({
+    logger: {
+      error: (...args: unknown[]) => warnings.push(args),
+      warn: (...args: unknown[]) => warnings.push(args),
+    } as never,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: true,
+        state: "accepted" as const,
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:response-failure",
+    sessionId: "response-failure",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  const failedEvent = JSON.stringify({
+    event_id: "event-failed",
+    response: {
+      id: "response-failed",
+      status: "failed",
+      status_details: {
+        error: {
+          code: "server_error",
+          message: "sensitive-provider-detail",
+          type: "server_error",
+        },
+      },
+    },
+    type: "response.done",
+  });
+  socket.emit("message", Buffer.from(failedEvent), false);
+  socket.emit("message", Buffer.from(failedEvent), false);
+
+  const responses = socket.sent
+    .map((message) => JSON.parse(message) as Record<string, unknown>)
+    .filter((message) => message.type === "response.create");
+  assert.equal(responses.length, 1);
+  const fallback = responses[0]?.response as {
+    instructions?: string;
+    output_modalities?: string[];
+    tool_choice?: string;
+  };
+  assert.deepEqual(fallback.output_modalities, ["audio"]);
+  assert.equal(fallback.tool_choice, "none");
+  assert.match(fallback.instructions ?? "", /только по-русски/u);
+  assert.match(fallback.instructions ?? "", /перезвоните позже/u);
+  assert.doesNotMatch(JSON.stringify(warnings), /sensitive-provider-detail/u);
+  assert.match(JSON.stringify(warnings), /server_error/u);
+  relay.close("response-failure");
+});
+
+test("uses a safe Russian fallback for a retryable Gateway error", () => {
+  FakeRelaySocket.instances.length = 0;
+  const warnings: unknown[] = [];
+  const relay = createAmaziEventRelay({
+    logger: {
+      error: (...args: unknown[]) => warnings.push(args),
+      warn: (...args: unknown[]) => warnings.push(args),
+    } as never,
+    service: {
+      appendTranscriptByProvider: async () => null,
+      toolForProviderCall: async () => ({
+        accepted: true,
+        state: "accepted" as const,
+      }),
+    },
+    WebSocketClass: FakeRelaySocket as never,
+  });
+  relay.connect({
+    eventRelayUrl: "wss://relay.example/session",
+    providerCallId: "amazi:gateway-failure",
+    sessionId: "gateway-failure",
+  });
+  const socket = FakeRelaySocket.instances[0]!;
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        type: "amazi.gateway.error",
+        error: {
+          code: "gateway_unavailable",
+          message: "sensitive-provider-detail",
+          requestId: "request-123",
+          retryable: true,
+          stage: "provider",
+        },
+      }),
+    ),
+    false,
+  );
+
+  const responses = socket.sent
+    .map((message) => JSON.parse(message) as Record<string, unknown>)
+    .filter((message) => message.type === "response.create");
+  assert.equal(responses.length, 1);
+  const fallback = responses[0]?.response as { instructions?: string };
+  assert.match(fallback.instructions ?? "", /только по-русски/u);
+  assert.match(fallback.instructions ?? "", /обратитесь к администратору/u);
+  assert.match(JSON.stringify(warnings), /gateway_unavailable/u);
+  assert.match(JSON.stringify(warnings), /request-123/u);
+  assert.match(JSON.stringify(warnings), /provider/u);
+  assert.doesNotMatch(JSON.stringify(warnings), /sensitive-provider-detail/u);
+  relay.close("gateway-failure");
+});
+
+test("does not speak a failure fallback for a cancelled response", () => {
+  const { relay, socket } = setupGreetingRelay();
+  socket.emit(
+    "message",
+    Buffer.from(
+      JSON.stringify({
+        response: { status: "cancelled" },
+        type: "response.done",
+      }),
+    ),
+    false,
+  );
+  assert.deepEqual(socket.sent, []);
+  relay.close("greeting");
+});
