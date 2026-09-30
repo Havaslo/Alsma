@@ -18,46 +18,61 @@ const transferTool = voiceAgentTools.find(
   (tool) => tool.name === "transfer_to_manager",
 );
 
-test("keeps the voice transfer instruction single and explicit", () => {
-  assert.match(voiceTransferInstruction, /просьбе гостя забронировать/u);
-  assert.match(
-    voiceTransferInstruction,
-    /Для оформления соединяю вас с менеджером/u,
-  );
-  assert.match(voiceTransferInstruction, /не спрашивай отдельное согласие/u);
-  assert.match(voiceTransferInstruction, /дождись ответа гостя/u);
+test("requires explicit consent before a voice transfer", () => {
+  assert.match(voiceTransferInstruction, /только если гость/u);
+  assert.match(voiceTransferInstruction, /не означает согласие/u);
+  assert.match(voiceTransferInstruction, /дождись однозначного согласия/u);
+  assert.match(voiceTransferInstruction, /вызови transfer_to_manager/u);
   assert.match(voiceTransferInstruction, /полностью закончи фразу/u);
   assert.match(voiceTransferInstruction, /accepted=true/u);
   assert.match(voiceTransferInstruction, /accepted=false/u);
-  assert.doesNotMatch(voiceTransferInstruction, /Проверяю возможность/u);
+  assert.match(
+    voiceTransferInstruction,
+    /забронировать номер не означает согласие/u,
+  );
 });
 
 test("keeps the transfer tool contract aligned with the prompt", () => {
   assert.ok(transferTool);
-  assert.match(transferTool.description, /просьбе гостя забронировать/u);
-  assert.match(
-    transferTool.description,
-    /Для оформления соединяю вас с менеджером/u,
-  );
-  assert.match(transferTool.description, /не спрашивай отдельного согласия/u);
-  assert.match(transferTool.description, /дождись ответа/u);
+  assert.match(transferTool.description, /только если гость/u);
+  assert.match(transferTool.description, /не означает согласие/u);
+  assert.match(transferTool.description, /дождись явного согласия/u);
   assert.match(transferTool.description, /accepted=true/u);
   assert.match(transferTool.description, /accepted=false/u);
-  assert.doesNotMatch(transferTool.description, /Проверяю возможность/u);
+  assert.doesNotMatch(transferTool.description, /Eptera/iu);
 });
 
-test("routes a spoken booking request to the manager without a filler or search", () => {
-  assert.match(voiceBookingInstruction, /Сразу скажи/u);
-  assert.match(voiceBookingInstruction, /вызови transfer_to_manager/u);
-  assert.match(voiceBookingInstruction, /Не вызывай check_availability/u);
-  assert.match(voiceBookingInstruction, /не проси отдельного согласия/u);
+test("checks room availability before offering manager assistance for booking", () => {
+  assert.match(voiceBookingInstruction, /помоги проверить наличие/u);
+  assert.match(voiceBookingInstruction, /молча вызови check_availability/u);
+  assert.match(voiceBookingInstruction, /подтверждённый результат/u);
+  assert.match(voiceBookingInstruction, /дождись согласия/u);
+  assert.match(voiceBookingInstruction, /не переводи автоматически/u);
   assert.match(
     voiceBookingInstruction,
-    /не озвучивай внутренние размышления/iu,
+    /распределение гостей по нескольким номерам/u,
   );
+  assert.match(voiceBookingInstruction, /предложи уточнить у менеджера/u);
+  assert.doesNotMatch(voiceBookingInstruction, /Eptera/iu);
+});
+
+test("keeps spoken replies concise, Russian, and free of internal provider names", () => {
+  assert.match(voiceAgentCommunicationInstruction, /голосовой помощник Алсмы/u);
+  assert.match(voiceAgentCommunicationInstruction, /коротким приветствием/u);
+  assert.match(voiceAgentCommunicationInstruction, /только по-русски/u);
+  assert.match(voiceAgentCommunicationInstruction, /русской интонацией/u);
   assert.match(
-    voiceBookingInstruction,
-    /только спрашивает, есть ли свободные номера/u,
+    voiceAgentCommunicationInstruction,
+    /не произноси внутренние действия/iu,
+  );
+  assert.match(voiceAgentCommunicationInstruction, /интеграций/u);
+  assert.match(
+    voiceAgentCommunicationInstruction,
+    /не повторяй ограничения про оформление брони/u,
+  );
+  assert.doesNotMatch(
+    `${voiceAgentCommunicationInstruction}\n${voiceBookingInstruction}`,
+    /Eptera/iu,
   );
 });
 
@@ -94,23 +109,11 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     const result = await service.answer("Какой вопрос?");
     assert.equal(result.answer, "Ответ");
     assert.deepEqual(models, ["gpt-6-luna"]);
-    assert.match(
-      systemInstructions[0] ?? "",
-      /тепло, приветливо и уважительно/u,
-    );
-    assert.match(systemInstructions[0] ?? "", /не используй эмодзи/u);
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /тепло, приветливо и уважительно/u,
-    );
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /по умолчанию всегда отвечай только по-русски/iu,
-    );
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /нейтральном литературном русском/u,
-    );
+    assert.match(systemInstructions[0] ?? "", /вежливо и дружелюбно/u);
+    assert.match(systemInstructions[0] ?? "", /без эмодзи/u);
+    assert.match(voiceAgentCommunicationInstruction, /вежливо и дружелюбно/u);
+    assert.match(voiceAgentCommunicationInstruction, /только по-русски/u);
+    assert.match(voiceAgentCommunicationInstruction, /русской интонацией/u);
     assert.match(voiceAgentCommunicationInstruction, /немного медленнее/u);
     assert.match(voiceAgentCommunicationInstruction, /чётко произноси/iu);
     assert.match(voiceAgentCommunicationInstruction, /АЛСМА/u);
@@ -118,23 +121,11 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     assert.match(voiceAgentCommunicationInstruction, /Васильково/u);
     assert.match(
       voiceAgentCommunicationInstruction,
-      /не переходи на английский/iu,
+      /не повторяй вопрос гостя/iu,
     );
     assert.match(
       voiceAgentCommunicationInstruction,
-      /только после прямой и недвусмысленной просьбы гостя/u,
-    );
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /даже если гость произнёс фразу на этом языке/u,
-    );
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /не повторяй вопрос гостя своими словами/iu,
-    );
-    assert.match(
-      voiceAgentCommunicationInstruction,
-      /вызови его молча, затем сообщи результат/u,
+      /вызови его молча, затем дай полезный ответ/u,
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -211,17 +202,16 @@ test("uses the current Moscow year without asking guests to confirm it", () => {
   assert.match(instruction, /если дата этого года уже прошла/iu);
 });
 
-test("uses a short Russian fallback when Eptera availability is unavailable", () => {
+test("offers manager help with consent when availability cannot be checked", () => {
   const instructions = getVoiceToolFailureInstructions({
     available: false,
     reason: "eptera_temporarily_unavailable",
   });
   assert.match(instructions ?? "", /только по-русски/u);
-  assert.match(
-    instructions ?? "",
-    /не получается проверить актуальное наличие/u,
-  );
-  assert.match(instructions ?? "", /не произноси английские слова/iu);
+  assert.match(instructions ?? "", /не получается проверить наличие/u);
+  assert.match(instructions ?? "", /Хотите, соединю вас с менеджером/iu);
+  assert.match(instructions ?? "", /не запускай перевод без согласия/u);
+  assert.doesNotMatch(instructions ?? "", /Eptera/iu);
   assert.equal(
     getVoiceToolFailureInstructions({ available: false }),
     undefined,

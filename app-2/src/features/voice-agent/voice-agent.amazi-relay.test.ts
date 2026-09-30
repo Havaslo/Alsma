@@ -319,7 +319,7 @@ test("gives a short Russian spoken fallback when Eptera is unavailable", async (
   assert.match(responseConfig.instructions ?? "", /только по-русски/u);
   assert.match(
     responseConfig.instructions ?? "",
-    /не получается проверить актуальное наличие/u,
+    /не получается проверить наличие номеров/u,
   );
   relay.close("eptera-unavailable");
 });

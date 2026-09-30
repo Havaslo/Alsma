@@ -27,6 +27,16 @@ test("refreshes only unchanged conversational defaults and preserves admin edits
       },
     ],
     [
+      "Голос: проверка наличия и вместимости",
+      {
+        action: "answer",
+        id: "voice-booking-default",
+        page: null,
+        response:
+          "Для запроса о проживании уточни только недостающие необходимые данные и не повторяй то, что гость уже сообщил. Если год не назван, используй текущий год согласно основной инструкции и не переспрашивай. Число детей и номеров спрашивай только если гость сам их упомянул или без этого нельзя ответить точно. Как только данных достаточно, молча вызови check_availability, не проговаривая «сейчас проверю/запрошу», и сразу сообщи результат. Для сравнения используй compare_rooms. Если гость хочет оформить бронь, объясни, что голосовой канал только консультирует, и предложи перевод менеджеру.",
+      },
+    ],
+    [
       "Голос: честный ответ при неопределённости",
       {
         action: "answer",
@@ -43,6 +53,14 @@ test("refreshes only unchanged conversational defaults and preserves admin edits
         condition:
           "Ответ нельзя проверить по опубликованной базе знаний, актуальным тарифам или наличию.",
         id: "text-transfer",
+      },
+    ],
+    [
+      "Голос: перевод по запросу или при неуверенности",
+      {
+        condition:
+          "Гость прямо просит сотрудника, менеджера или оператора либо вопрос требует обязательной ручной обработки. Если факт нельзя подтвердить, сначала сообщи об этом и предложи перевод как выбор, не переключай разговор автоматически.",
+        id: "voice-transfer",
       },
     ],
   ]);
@@ -84,7 +102,10 @@ test("refreshes only unchanged conversational defaults and preserves admin edits
 
   await ensureDefaultAgentPlaybook(database);
 
-  assert.deepEqual(scenarioUpdates.map(({ id }) => id).sort(), ["voice-base"]);
+  assert.deepEqual(scenarioUpdates.map(({ id }) => id).sort(), [
+    "voice-base",
+    "voice-booking-default",
+  ]);
   assert.ok(scenarioUpdates.every(({ data }) => Boolean(data.response)));
   assert.ok(
     scenarioUpdates.every(
@@ -96,10 +117,22 @@ test("refreshes only unchanged conversational defaults and preserves admin edits
     scenarios.get("Голос: честный ответ при неопределённости")?.response,
     "Настройка, изменённая администратором.",
   );
-  assert.equal(transferRuleUpdates.length, 1);
-  assert.equal(transferRuleUpdates[0]?.id, "text-transfer");
+  assert.deepEqual(transferRuleUpdates.map(({ id }) => id).sort(), [
+    "text-transfer",
+    "voice-transfer",
+  ]);
   assert.match(
-    String(transferRuleUpdates[0]?.data.condition),
+    String(
+      transferRuleUpdates.find(({ id }) => id === "text-transfer")?.data
+        .condition,
+    ),
     /не переводи диалог автоматически только из-за отсутствия статьи/iu,
+  );
+  assert.match(
+    String(
+      transferRuleUpdates.find(({ id }) => id === "voice-transfer")?.data
+        .condition,
+    ),
+    /Сам запрос о наличии номера не является согласием на перевод/u,
   );
 });
