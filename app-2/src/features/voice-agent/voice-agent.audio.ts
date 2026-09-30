@@ -1,3 +1,5 @@
+import { voiceResponseSpeed } from "./voice-agent.settings.js";
+
 export const createVoiceTestAudioTurn =
   ({
     apiKey,
@@ -51,6 +53,7 @@ export const createVoiceTestAudioTurn =
           input: answer,
           model: "gpt-4o-mini-tts",
           response_format: "mp3",
+          speed: voiceResponseSpeed,
           voice: "shimmer",
         }),
         signal: AbortSignal.timeout(30_000),

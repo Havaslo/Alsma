@@ -8,6 +8,7 @@ import {
   parseAmaziRelayUrl,
 } from "./voice-agent.amazi.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
+import { voiceResponseSpeed } from "./voice-agent.settings.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
 const realtimeModel = "gpt-realtime-2.1";
@@ -22,30 +23,33 @@ const hasValidBearer = (authorization: string | undefined, secret: string) => {
   );
 };
 
-const getConfiguration = async (database: Database) => {
-  const instructions = await getVoiceInstructions(database);
-  return {
-    type: "realtime",
-    model: realtimeModel,
-    instructions,
-    output_modalities: ["audio"],
-    audio: {
-      input: {
-        format: { type: "audio/pcm", rate: 24_000 },
-        turn_detection: {
-          type: "server_vad",
-          threshold: 0.5,
-          create_response: true,
-          interrupt_response: true,
-        },
-      },
-      output: {
-        format: { type: "audio/pcm", rate: 24_000 },
-        voice: "shimmer",
+export const buildVoiceAgentConfiguration = (instructions: string) => ({
+  type: "realtime",
+  model: realtimeModel,
+  instructions,
+  output_modalities: ["audio"],
+  audio: {
+    input: {
+      format: { type: "audio/pcm", rate: 24_000 },
+      turn_detection: {
+        type: "server_vad",
+        threshold: 0.5,
+        create_response: true,
+        interrupt_response: true,
       },
     },
-    tools: voiceAgentTools,
-  };
+    output: {
+      format: { type: "audio/pcm", rate: 24_000 },
+      speed: voiceResponseSpeed,
+      voice: "shimmer",
+    },
+  },
+  tools: voiceAgentTools,
+});
+
+const getConfiguration = async (database: Database) => {
+  const instructions = await getVoiceInstructions(database);
+  return buildVoiceAgentConfiguration(instructions);
 };
 
 export const createVoiceConfigurationHandler =

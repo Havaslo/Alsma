@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { voiceResponseSpeed } from "./voice-agent.settings.js";
 import {
   buildSipAcceptPayload,
   isRealtimeReadyEvent,
@@ -15,6 +16,7 @@ test("SIP acceptance enables an audio response and the transfer tool", () => {
   assert.equal(payload.audio.input.turn_detection.threshold, 0.5);
   assert.equal(payload.audio.input.turn_detection.interrupt_response, true);
   assert.equal(payload.audio.output.voice, "shimmer");
+  assert.equal(payload.audio.output.speed, voiceResponseSpeed);
   assert.equal(
     payload.tools.some((tool) => tool.name === "transfer_to_manager"),
     true,

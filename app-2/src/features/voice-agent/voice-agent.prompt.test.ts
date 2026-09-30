@@ -48,6 +48,9 @@ test("checks room availability before offering manager assistance for booking", 
   assert.match(voiceBookingInstruction, /подтверждённый результат/u);
   assert.match(voiceBookingInstruction, /дождись согласия/u);
   assert.match(voiceBookingInstruction, /не переводи автоматически/u);
+  assert.match(voiceBookingInstruction, /перед вызовом не произноси/iu);
+  assert.match(voiceBookingInstruction, /говори только после результата/u);
+  assert.match(voiceBookingInstruction, /не говори, что проверяешь наличие/u);
   assert.match(
     voiceBookingInstruction,
     /распределение гостей по нескольким номерам/u,
@@ -66,6 +69,8 @@ test("keeps spoken replies concise, Russian, and free of internal provider names
     /не произноси внутренние действия/iu,
   );
   assert.match(voiceAgentCommunicationInstruction, /интеграций/u);
+  assert.match(voiceAgentCommunicationInstruction, /вызови инструмент молча/u);
+  assert.match(voiceAgentCommunicationInstruction, /говори немного быстрее/u);
   assert.match(
     voiceAgentCommunicationInstruction,
     /не повторяй ограничения про оформление брони/u,
@@ -114,7 +119,7 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     assert.match(voiceAgentCommunicationInstruction, /вежливо и дружелюбно/u);
     assert.match(voiceAgentCommunicationInstruction, /только по-русски/u);
     assert.match(voiceAgentCommunicationInstruction, /русской интонацией/u);
-    assert.match(voiceAgentCommunicationInstruction, /немного медленнее/u);
+    assert.match(voiceAgentCommunicationInstruction, /немного быстрее/u);
     assert.match(voiceAgentCommunicationInstruction, /чётко произноси/iu);
     assert.match(voiceAgentCommunicationInstruction, /АЛСМА/u);
     assert.match(voiceAgentCommunicationInstruction, /криолиполиз/u);
@@ -125,7 +130,7 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
     );
     assert.match(
       voiceAgentCommunicationInstruction,
-      /вызови его молча, затем дай полезный ответ/u,
+      /сразу вызови инструмент молча и говори только после результата/u,
     );
   } finally {
     globalThis.fetch = originalFetch;
