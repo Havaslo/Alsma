@@ -8,6 +8,17 @@ import type {
   UpdateRequestStatusBody,
 } from "./admin-operations.schemas.js";
 
+export const hasPlayableVoiceCallRecording = (call: {
+  readonly recordingObjectId: string | null;
+  readonly providerRecordingId: string | null;
+  readonly recordingStatus: string | null;
+}) =>
+  Boolean(
+    call.recordingObjectId ||
+    (call.providerRecordingId &&
+      ["available", "completed"].includes(call.recordingStatus ?? "")),
+  );
+
 export const createAdminOperationsRepository = (database: Database) => ({
   getAnalytics: async (start: Date, end: Date) => {
     const range = { gte: start, lt: end } as const;
@@ -336,13 +347,12 @@ export const createAdminOperationsRepository = (database: Database) => ({
     return {
       items: items.map((call) => {
         const { recordingUrl: _recordingUrl, ...publicCall } = call;
+        void _recordingUrl;
         return {
           ...publicCall,
-          // Mango recordings can be fetched on demand before they are copied to
-          // managed storage. Do not hide those calls from the journal.
-          hasRecording: Boolean(
-            call.recordingObjectId || _recordingUrl || call.providerRecordingId,
-          ),
+          // A Mango ID is only a reference, not proof that the audio exists.
+          // Show the player after a successful fetch or with a durable copy.
+          hasRecording: hasPlayableVoiceCallRecording(call),
           hasAgentAudio: Boolean(call.agentAudioObjectId),
           hasTranscript:
             Array.isArray(call.transcript) && call.transcript.length > 0,
@@ -357,11 +367,10 @@ export const createAdminOperationsRepository = (database: Database) => ({
     });
     if (!call) return null;
     const { recordingUrl: _recordingUrl, ...publicCall } = call;
+    void _recordingUrl;
     return {
       ...publicCall,
-      hasRecording: Boolean(
-        call.recordingObjectId || _recordingUrl || call.providerRecordingId,
-      ),
+      hasRecording: hasPlayableVoiceCallRecording(call),
       hasAgentAudio: Boolean(call.agentAudioObjectId),
       hasTranscript:
         Array.isArray(call.transcript) && call.transcript.length > 0,

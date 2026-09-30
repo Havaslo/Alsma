@@ -149,7 +149,7 @@ export const AdminVoiceCallDetail = ({
                 title="Запись Mango — после телефонного тракта"
               />
             )}
-            {call.hasRecording && call.providerRecordingId && (
+            {call.providerRecordingId && (
               <div className="mt-4">
                 <button
                   className="min-h-10 w-full rounded-xl border border-line px-3 text-sm font-semibold text-brand transition hover:bg-page disabled:cursor-wait disabled:opacity-60"
@@ -176,15 +176,11 @@ export const AdminVoiceCallDetail = ({
                 )}
               </div>
             )}
-            {call.recordingStatus === "pending" && (
-              <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-                Запись найдена в Mango и будет запрошена при прослушивании.
-              </p>
-            )}
             {!call.hasRecording && (
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-                Запись для этого звонка ещё не доступна. Карточка звонка
-                продолжает отображать остальные данные.
+                {call.providerRecordingId
+                  ? "От Mango получен только идентификатор записи. Сам аудиофайл ещё не подтверждён, поэтому плеер пока скрыт."
+                  : "Запись для этого звонка не поступила. Карточка продолжает отображать остальные данные."}
               </p>
             )}
           </section>

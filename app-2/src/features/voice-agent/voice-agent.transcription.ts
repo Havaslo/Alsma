@@ -104,6 +104,22 @@ export const transcribeMangoRecording = async ({
   readonly salt: string;
   readonly fetchImpl?: typeof fetch;
 }) => {
+  const setRecordingStatus = async (recordingStatus: string) => {
+    if (typeof repository.updateCall !== "function") return;
+    try {
+      await repository.updateCall(callId, { recordingStatus });
+    } catch (error) {
+      logger.warn(
+        {
+          callId,
+          recordingStatus,
+          error: error instanceof Error ? error.message : "unknown",
+        },
+        "Could not update recording availability",
+      );
+    }
+  };
+
   let recording: Response;
   try {
     recording = await fetchMangoRecording({
@@ -113,6 +129,7 @@ export const transcribeMangoRecording = async ({
       salt,
     });
   } catch (error) {
+    await setRecordingStatus("unavailable");
     logger.warn(
       {
         callId,
@@ -130,6 +147,7 @@ export const transcribeMangoRecording = async ({
   try {
     audio = Buffer.from(await recording.arrayBuffer());
   } catch (error) {
+    await setRecordingStatus("unavailable");
     logger.warn(
       {
         callId,
@@ -143,6 +161,9 @@ export const transcribeMangoRecording = async ({
       "mango_recording",
     );
   }
+  // A Mango recording ID alone does not prove the audio file is accessible.
+  // Keep audio availability separate from later AI/Gateway transcription errors.
+  await setRecordingStatus("available");
   const contentType =
     recording.headers.get("content-type")?.split(";", 1)[0] ?? "audio/mpeg";
   const extension =

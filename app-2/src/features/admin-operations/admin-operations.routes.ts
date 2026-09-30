@@ -112,9 +112,15 @@ export const createAdminOperationsRouter = (
         });
         response.json({ ok: true });
       } catch (error) {
+        const recordingStatus =
+          error instanceof MangoTranscriptionError
+            ? error.stage === "mango_recording"
+              ? "unavailable"
+              : "available"
+            : "error";
         await database.client.voiceCall.update({
           where: { id: call.id },
-          data: { recordingStatus: "error" },
+          data: { recordingStatus },
         });
         const diagnostic =
           error instanceof MangoTranscriptionError
