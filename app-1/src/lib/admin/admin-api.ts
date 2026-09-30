@@ -266,7 +266,9 @@ export const reprocessAdminVoiceCall = (recordId: string) =>
   apiClient.post<{ ok: boolean }>(
     `/admin/voice-calls/${recordId}/transcription`,
     {},
-    { headers: headers() },
+    // The backend can spend up to 60 seconds per STT model and may try four
+    // models in sequence, in addition to fetching the Mango recording.
+    { headers: headers(), timeout: 300_000 },
   );
 export const loadAdminAnalytics = (
   start: string,
