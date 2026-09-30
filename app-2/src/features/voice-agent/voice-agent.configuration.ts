@@ -8,7 +8,10 @@ import {
   parseAmaziRelayUrl,
 } from "./voice-agent.amazi.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
-import { voiceResponseSpeed } from "./voice-agent.settings.js";
+import {
+  voiceResponseName,
+  voiceResponseSpeed,
+} from "./voice-agent.settings.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
 const realtimeModel = "gpt-realtime-2.1";
@@ -41,7 +44,7 @@ export const buildVoiceAgentConfiguration = (instructions: string) => ({
     output: {
       format: { type: "audio/pcm", rate: 24_000 },
       speed: voiceResponseSpeed,
-      voice: "shimmer",
+      voice: voiceResponseName,
     },
   },
   tools: voiceAgentTools,

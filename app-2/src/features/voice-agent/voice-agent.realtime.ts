@@ -7,7 +7,10 @@ import type { Database } from "../../lib/database/database.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
-import { voiceResponseSpeed } from "./voice-agent.settings.js";
+import {
+  voiceResponseName,
+  voiceResponseSpeed,
+} from "./voice-agent.settings.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
 const realtimePath = "/api/voice-agent/realtime";
@@ -148,7 +151,7 @@ export const attachVoiceAgentRealtime = (
                         },
                         output: {
                           speed: voiceResponseSpeed,
-                          voice: "shimmer",
+                          voice: voiceResponseName,
                         },
                       },
                       instructions,

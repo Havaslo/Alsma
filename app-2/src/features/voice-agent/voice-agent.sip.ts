@@ -3,7 +3,10 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import WebSocket from "ws";
 
 import { getVoiceToolFailureInstructions } from "./voice-agent.prompt.js";
-import { voiceResponseSpeed } from "./voice-agent.settings.js";
+import {
+  voiceResponseName,
+  voiceResponseSpeed,
+} from "./voice-agent.settings.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
 type RawRequest = Request & { readonly rawBody?: Buffer };
@@ -77,7 +80,7 @@ export const buildSipAcceptPayload = (instructions: string) => ({
         interrupt_response: true,
       },
     },
-    output: { speed: voiceResponseSpeed, voice: "shimmer" },
+    output: { speed: voiceResponseSpeed, voice: voiceResponseName },
   },
   type: "realtime",
   model: "gpt-realtime-2.1",
