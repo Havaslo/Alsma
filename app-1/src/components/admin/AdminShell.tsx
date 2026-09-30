@@ -5,12 +5,10 @@ import { Link } from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
-  Cable,
   CalendarCheck,
   CalendarDays,
   Gauge,
   LogOut,
-  MessageCircle,
   MessagesSquare,
   PanelTop,
   PhoneCall,
@@ -43,12 +41,6 @@ const navigation = [
     icon: CalendarDays,
     label: "Календарь записей",
     to: ROUTES.adminServiceCalendar,
-  },
-  {
-    active: (path: string) => path === ROUTES.adminVoiceAgentTest,
-    icon: MessageCircle,
-    label: "Тест realtime-агента",
-    to: ROUTES.adminVoiceAgentTest,
   },
   {
     active: (path: string) => path.startsWith(ROUTES.adminVoiceCalls),
@@ -110,12 +102,6 @@ const navigation = [
     icon: Settings,
     label: "Настройки",
     to: ROUTES.adminSettings,
-  },
-  {
-    active: (path: string) => path === ROUTES.adminIntegrations,
-    icon: Cable,
-    label: "Интеграции",
-    to: ROUTES.adminIntegrations,
   },
 ] as const;
 
