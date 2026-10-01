@@ -15,11 +15,32 @@ export const createRequireAdmin =
   async (request, response, next) => {
     try {
       const authorization = request.headers.authorization ?? "";
-      const token =
-        cookieToken(request.headers.cookie) ??
-        (authorization.startsWith("Bearer ") ? authorization.slice(7) : "");
-      response.locals.admin = await service.me(token);
-      next();
+      const bearerToken = authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : null;
+      const tokens = [cookieToken(request.headers.cookie), bearerToken].filter(
+        (token, index, all): token is string =>
+          Boolean(token) && all.indexOf(token) === index,
+      );
+      let invalidSession: HttpError | null = null;
+
+      for (const token of tokens.length ? tokens : [""]) {
+        try {
+          response.locals.admin = await service.me(token);
+          next();
+          return;
+        } catch (error) {
+          if (
+            !(error instanceof HttpError) ||
+            error.code !== "ADMIN_SESSION_INVALID"
+          ) {
+            throw error;
+          }
+          invalidSession = error;
+        }
+      }
+
+      next(invalidSession);
     } catch (error) {
       next(error);
     }

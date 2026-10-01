@@ -174,6 +174,10 @@ export const AdminShell = ({
     readNotificationIds(user.id),
   );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileNotificationsTop, setMobileNotificationsTop] = useState<
+    number | null
+  >(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const knownNotificationIds = useRef(new Set<string>());
   const unreadCount = useMemo(
     () => notifications.filter((item) => !readIds.has(item.id)).length,
@@ -244,6 +248,21 @@ export const AdminShell = ({
       notificationReadKey(user.id),
       JSON.stringify([...next]),
     );
+  };
+  const toggleNotifications = () => {
+    if (notificationsOpen) {
+      setNotificationsOpen(false);
+      setMobileNotificationsTop(null);
+      return;
+    }
+
+    const button = notificationButtonRef.current;
+    if (button && window.matchMedia("(max-width: 639px)").matches) {
+      setMobileNotificationsTop(button.getBoundingClientRect().bottom + 8);
+    } else {
+      setMobileNotificationsTop(null);
+    }
+    setNotificationsOpen(true);
   };
 
   return (
@@ -335,7 +354,8 @@ export const AdminShell = ({
                 aria-expanded={notificationsOpen}
                 aria-label={`Уведомления${unreadCount ? `: ${unreadCount} новых` : ""}`}
                 className="relative grid size-11 place-items-center rounded-full border border-line bg-brand-foreground text-brand transition hover:bg-muted-ui/30"
-                onClick={() => setNotificationsOpen((current) => !current)}
+                onClick={toggleNotifications}
+                ref={notificationButtonRef}
                 type="button"
               >
                 <Bell className="size-5" />
@@ -346,7 +366,28 @@ export const AdminShell = ({
                 )}
               </button>
               {notificationsOpen && (
-                <div className="absolute top-14 right-0 z-50 w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-2xl">
+                <div
+                  className={cn(
+                    "z-50 flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-2xl",
+                    mobileNotificationsTop === null
+                      ? "absolute top-14 right-0 w-[min(25rem,calc(100vw-2rem))]"
+                      : "fixed inset-x-2",
+                  )}
+                  style={
+                    mobileNotificationsTop === null
+                      ? undefined
+                      : {
+                          maxHeight: `${Math.max(
+                            120,
+                            (window.visualViewport?.height ??
+                              window.innerHeight) -
+                              mobileNotificationsTop -
+                              8,
+                          )}px`,
+                          top: `${mobileNotificationsTop}px`,
+                        }
+                  }
+                >
                   <div className="flex items-center justify-between border-b border-line px-4 py-3">
                     <strong className="text-sm text-brand">Уведомления</strong>
                     <button
@@ -358,7 +399,7 @@ export const AdminShell = ({
                     </button>
                   </div>
                   {canAccessNotifications && <AdminPushControl />}
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="max-h-96 min-h-0 flex-1 overflow-y-auto">
                     {!notifications.length && (
                       <p className="p-5 text-sm text-muted-ui-foreground">
                         Новых событий нет.

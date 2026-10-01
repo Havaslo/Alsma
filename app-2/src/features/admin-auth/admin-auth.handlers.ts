@@ -23,12 +23,12 @@ export const createAdminLoginHandler =
     const result = await service.login(
       response.locals.input.body as AdminCredentials,
     );
+    response.setHeader("Cache-Control", "no-store");
     response.setHeader(
       "Set-Cookie",
       `alsma_admin_session=${result.token}; Max-Age=43200; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`,
     );
-    const { token: _token, ...safeResult } = result;
-    response.json(safeResult);
+    response.json(result);
   };
 export const createAdminMeHandler =
   (service: AdminAuthService): RequestHandler =>

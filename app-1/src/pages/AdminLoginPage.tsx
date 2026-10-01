@@ -23,7 +23,7 @@ export const AdminLoginPage = () => {
     onError: (error) =>
       toast.error(getApiErrorMessage(error, "Не удалось войти.")),
     onSuccess: ({ data }) => {
-      writeAdminSession(null);
+      writeAdminSession(data.token);
       navigate({ to: ROUTES.adminDashboard });
     },
   });
