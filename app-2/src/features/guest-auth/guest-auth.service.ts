@@ -271,7 +271,6 @@ export const createGuestAuthService = (
     let user = await repository.findUserByEmail(email);
     user ??= await repository.findUserByPhone(technicalPhone);
     user ??= await repository.createUser({ email, phone: technicalPhone });
-    user = (await repository.provisionDemoProfile(user.id)) ?? user;
     const token = randomBytes(32).toString("base64url");
     await repository.createSession({
       sessionHash: hash(token),

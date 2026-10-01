@@ -87,45 +87,6 @@ export const createGuestAuthRepository = (database: Database) => ({
     }),
   createUser: (input: { email?: string; phone: string }) =>
     database.client.guestUser.create({ data: input }),
-  provisionDemoProfile: (userId: string) =>
-    database.client.$transaction(async (transaction) => {
-      const user = await transaction.guestUser.findUnique({
-        include: guestInclude,
-        where: { id: userId },
-      });
-      if (!user) return null;
-      if (user.fullName?.trim() || user.bonusProgram || user.bookings.length)
-        return user;
-      return transaction.guestUser.update({
-        data: {
-          bonusProgram: {
-            create: { balance: 2_400, level: "Silver" },
-          },
-          bookings: {
-            create: [
-              {
-                checkInDate: new Date("2025-09-12"),
-                checkOutDate: new Date("2025-09-15"),
-                guestsCount: 2,
-                roomName: "SPA-weekend в лесном корпусе",
-                status: "Подтверждено",
-                totalAmount: 84_000,
-              },
-              {
-                checkInDate: new Date("2025-01-03"),
-                checkOutDate: new Date("2025-01-07"),
-                guestsCount: 3,
-                roomName: "Семейный заезд с all inclusive",
-                status: "Завершено",
-                totalAmount: 126_500,
-              },
-            ],
-          },
-        },
-        include: guestInclude,
-        where: { id: userId },
-      });
-    }),
   findSession: (tokenHash: string) =>
     database.client.guestLoginCode.findFirst({
       include: { user: { include: guestInclude } },
