@@ -18,6 +18,7 @@ import { Form } from "@/components/Form";
 import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 import { HOTEL_COORDINATES } from "@/lib/site/about";
 import { resolveMediaUrl } from "@/lib/site/media-url";
@@ -511,10 +512,8 @@ const HomeInquiryModal = ({
       >
         <label className="block text-sm font-medium">
           <span className="mb-3 block">Номер</span>
-          <input
+          <PhoneInput
             className={inputClassName}
-            placeholder="+7 (___) ___-__-__"
-            type="tel"
             {...form.register("phone", { required: true })}
           />
         </label>

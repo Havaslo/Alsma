@@ -3,9 +3,11 @@ import type { FormEvent } from "react";
 
 import { MessageCircle, Send, X } from "lucide-react";
 
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { apiUrl } from "@/lib/api/api-base-url";
 import { apiClient } from "@/lib/api/api-client";
 import { cn } from "@/lib/cn";
+import { isRussianPhoneComplete } from "@/lib/phone-format";
 
 export type ChatMessage = {
   type: "message";
@@ -70,6 +72,7 @@ export const ChatWidget = () => {
   );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [identityError, setIdentityError] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const conversationId = useMemo(() => getConversationId(), []);
   const openRef = useRef(false);
@@ -188,7 +191,14 @@ export const ChatWidget = () => {
   const saveIdentity = (event: FormEvent) => {
     event.preventDefault();
     const next = { requester: name.trim(), contact: phone.trim() };
-    if (next.requester.length < 2 || next.contact.length < 3) return;
+    if (next.requester.length < 2) {
+      setIdentityError("Укажите имя — не менее двух символов.");
+      return;
+    }
+    if (!isRussianPhoneComplete(next.contact)) {
+      setIdentityError("Введите полный номер телефона в формате +7.");
+      return;
+    }
     localStorage.setItem(IDENTITY_KEY, JSON.stringify(next));
     setIdentity(next);
   };
@@ -265,12 +275,21 @@ export const ChatWidget = () => {
                 placeholder="Ваше имя"
                 value={name}
               />
-              <input
+              <PhoneInput
+                aria-label="Телефон"
+                aria-invalid={Boolean(identityError)}
                 className="field-control"
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="Телефон"
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                  setIdentityError("");
+                }}
                 value={phone}
               />
+              {identityError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {identityError}
+                </p>
+              )}
               <button
                 className="rounded-xl bg-brand px-4 py-3 font-semibold text-brand-foreground"
                 type="submit"

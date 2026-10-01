@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { useMutation } from "@tanstack/react-query";
 
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import {
   type ServiceManager,
   createManualServiceBooking,
@@ -91,7 +92,7 @@ export const AdminManualBookingModal = ({
           </label>
           <label className="grid gap-1 text-sm font-medium">
             Телефон
-            <input
+            <PhoneInput
               required
               className="box-border w-full min-w-0 rounded-xl border border-line px-3 py-2"
               onChange={(event) => setPhone(event.target.value)}

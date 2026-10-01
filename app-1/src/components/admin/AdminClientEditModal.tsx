@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
 import { Modal } from "@/components/ui/Modal";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import type { AdminClientDetail } from "@/lib/admin/admin-api";
 import { useUpdateAdminClient } from "@/lib/admin/useAdmin";
 
@@ -65,12 +66,16 @@ export const AdminClientEditModal = ({
           placeholder="..."
           value={fullName}
         />
-        <TextField
-          label="Телефон"
-          onChange={(event) => setPhone(event.target.value)}
-          placeholder="..."
-          value={phone}
-        />
+        <label className="block text-sm font-medium text-panel-foreground">
+          Телефон
+          <span className="mt-2 block">
+            <PhoneInput
+              className="field-control"
+              onChange={(event) => setPhone(event.target.value)}
+              value={phone}
+            />
+          </span>
+        </label>
         <TextField
           label="Почта"
           onChange={(event) => setEmail(event.target.value)}

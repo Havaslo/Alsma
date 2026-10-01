@@ -4,6 +4,7 @@ import { Send } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
 const fieldClassName =
@@ -60,10 +61,8 @@ export const TransferRequestForm = () => {
       </label>
       <label className={labelClassName}>
         Телефон *
-        <input
+        <PhoneInput
           className={fieldClassName}
-          placeholder="+7 (___) ___-__-__"
-          type="tel"
           {...form.register("phone", { required: true })}
         />
       </label>

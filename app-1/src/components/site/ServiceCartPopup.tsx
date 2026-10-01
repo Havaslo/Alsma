@@ -4,6 +4,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { ShoppingCart } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { isRussianPhoneComplete } from "@/lib/phone-format";
 import { useServiceCart } from "@/lib/services/service-cart";
 import { createServiceOrder } from "@/lib/services/services-api";
 import { ROUTES } from "@/route-constants";
@@ -25,6 +27,10 @@ export const ServiceCartPopup = ({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    if (!isRussianPhoneComplete(form.phone)) {
+      setError("Введите полный номер телефона в формате +7.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const returnUrl = new URL(window.location.href);
@@ -117,15 +123,14 @@ export const ServiceCartPopup = ({
               </label>
               <label className="block text-sm font-medium text-page-foreground">
                 Телефон
-                <input
+                <PhoneInput
                   className="mt-2 w-full rounded-2xl border border-line bg-page px-5 py-4 outline-none focus:border-focus"
-                  placeholder="+7 (___) ___-__-__"
                   required
-                  type="tel"
                   value={form.phone}
-                  onChange={(event) =>
-                    setForm({ ...form, phone: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setForm({ ...form, phone: event.target.value });
+                    setError("");
+                  }}
                 />
               </label>
             </div>

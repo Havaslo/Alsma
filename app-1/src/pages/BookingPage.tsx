@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Modal } from "@/components/ui/Modal";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import {
   type BookingOffer,
@@ -30,6 +31,7 @@ import {
   loadBookingPaymentStatus,
 } from "@/lib/booking/booking-api";
 import { cn } from "@/lib/cn";
+import { isRussianPhoneComplete } from "@/lib/phone-format";
 import { useApiQuery } from "@/lib/query/use-api-query";
 import { ROUTES } from "@/route-constants";
 
@@ -71,6 +73,8 @@ type RoomGuests = {
   adults: number;
   children: RoomChild[];
 };
+type ContactField = "firstName" | "lastName" | "phone" | "email";
+type ContactErrors = Partial<Record<ContactField, string>>;
 let childIdSequence = 0;
 const createChildId = () => `booking-child-${childIdSequence++}`;
 let roomIdSequence = 0;
@@ -179,6 +183,7 @@ export const BookingPage = () => {
     notes: "",
     phone: "",
   });
+  const [contactErrors, setContactErrors] = useState<ContactErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"full" | "first_night">(
     "full",
@@ -337,13 +342,20 @@ export const BookingPage = () => {
     ) {
       return toast.error("Укажите дату рождения каждого ребёнка.");
     }
-    if (
-      !contact.firstName ||
-      !contact.lastName ||
-      !contact.email ||
-      !contact.phone
-    )
-      return toast.error("Заполните контактные данные.");
+    const errors: ContactErrors = {};
+    if (!contact.firstName.trim()) errors.firstName = "Укажите имя.";
+    if (!contact.lastName.trim()) errors.lastName = "Укажите фамилию.";
+    if (!isRussianPhoneComplete(contact.phone))
+      errors.phone = "Введите полный номер телефона в формате +7.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(contact.email.trim()))
+      errors.email = "Введите корректный email.";
+    setContactErrors(errors);
+    if (Object.keys(errors).length) {
+      toast.error(
+        "Проверьте контактные данные: есть незаполненные или неверные поля.",
+      );
+      return;
+    }
     let childNumber = 0;
     const rooms = roomGuests.map((room, roomIndex) => ({
       adults: room.adults,
@@ -867,6 +879,14 @@ export const BookingPage = () => {
                   <p className="mt-2 text-muted-ui-foreground">
                     На эти контакты придёт подтверждение бронирования.
                   </p>
+                  {Object.values(contactErrors).some(Boolean) && (
+                    <p
+                      className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                      role="alert"
+                    >
+                      Исправьте поля, отмеченные ниже, чтобы продолжить.
+                    </p>
+                  )}
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {(
                       [
@@ -881,18 +901,67 @@ export const BookingPage = () => {
                         key={field}
                       >
                         {label}
-                        <input
-                          className="field-control"
-                          onChange={(event) =>
-                            setContact((value) => ({
-                              ...value,
-                              [field]: event.target.value,
-                            }))
-                          }
-                          placeholder={label}
-                          type={field === "email" ? "email" : "text"}
-                          value={contact[field]}
-                        />
+                        {field === "phone" ? (
+                          <PhoneInput
+                            aria-describedby={
+                              contactErrors[field]
+                                ? `${field}-error`
+                                : undefined
+                            }
+                            aria-invalid={Boolean(contactErrors[field])}
+                            className={cn(
+                              "field-control",
+                              contactErrors[field] &&
+                                "border-destructive focus:border-destructive",
+                            )}
+                            onChange={(event) => {
+                              setContact((value) => ({
+                                ...value,
+                                phone: event.target.value,
+                              }));
+                              setContactErrors((value) => ({
+                                ...value,
+                                phone: undefined,
+                              }));
+                            }}
+                            value={contact.phone}
+                          />
+                        ) : (
+                          <input
+                            aria-describedby={
+                              contactErrors[field]
+                                ? `${field}-error`
+                                : undefined
+                            }
+                            aria-invalid={Boolean(contactErrors[field])}
+                            className={cn(
+                              "field-control",
+                              contactErrors[field] &&
+                                "border-destructive focus:border-destructive",
+                            )}
+                            onChange={(event) => {
+                              setContact((value) => ({
+                                ...value,
+                                [field]: event.target.value,
+                              }));
+                              setContactErrors((value) => ({
+                                ...value,
+                                [field]: undefined,
+                              }));
+                            }}
+                            placeholder={label}
+                            type={field === "email" ? "email" : "text"}
+                            value={contact[field]}
+                          />
+                        )}
+                        {contactErrors[field] && (
+                          <span
+                            className="text-xs font-normal text-destructive"
+                            id={`${field}-error`}
+                          >
+                            {contactErrors[field]}
+                          </span>
+                        )}
                       </label>
                     ))}
                   </div>

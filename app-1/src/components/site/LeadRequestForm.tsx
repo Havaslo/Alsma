@@ -4,6 +4,7 @@ import { Send } from "lucide-react";
 
 import { Form } from "@/components/Form";
 import { Loader } from "@/components/ui/Loader";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
 
 type LeadRequestFormProps = {
@@ -68,10 +69,8 @@ export const LeadRequestForm = ({
         placeholder="Ваше имя"
         {...form.register("name", { required: true })}
       />
-      <input
+      <PhoneInput
         className={fieldClassName}
-        placeholder="Телефон"
-        type="tel"
         {...form.register("phone", { required: true })}
       />
       {showDetails && (
