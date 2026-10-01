@@ -3,6 +3,7 @@ import helmet from "helmet";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 
+import type { AdminPushConfiguration } from "./features/admin-push/admin-push.types.js";
 import type { Database } from "./lib/database/database.js";
 import { publicCorsMiddleware } from "./lib/http/cors.js";
 import { errorHandler } from "./lib/http/error-handler.js";
@@ -24,6 +25,7 @@ type CreateAppOptions = {
     readonly webhookSecret?: string;
   };
   readonly voiceConfigurationSecret?: string;
+  readonly adminPush: AdminPushConfiguration;
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -78,6 +80,7 @@ export const createApp = ({
   openaiBaseUrl,
   openaiSip,
   voiceConfigurationSecret,
+  adminPush,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -125,6 +128,7 @@ export const createApp = ({
     openaiBaseUrl,
     openaiSip,
     voiceConfigurationSecret,
+    adminPush,
     maxBot,
     vk,
     yooKassaSecretKey,

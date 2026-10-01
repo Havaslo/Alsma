@@ -27,6 +27,7 @@ test(
       vk: {},
       managedStorage: {} as never,
       openaiSip: { baseUrl: "https://unused.invalid" },
+      adminPush: { environment: "development", subject: "https://alsma.ru" },
       voiceIntegration: {
         mangoApiKey: apiKey,
         mangoApiSalt: salt,

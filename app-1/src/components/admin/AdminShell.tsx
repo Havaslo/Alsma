@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import logoWhite from "@/assets/alsma/logo-white.svg";
+import { AdminPushControl } from "@/components/admin/AdminPushControl";
 import { AdminSiteNavigationMenu } from "@/components/admin/AdminSiteNavigationMenu";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
 import {
@@ -163,6 +164,11 @@ export const AdminShell = ({
   readonly user: AdminUser;
 }) => {
   const title = adminPageTitle(path);
+  const canAccessNotifications =
+    user.permissions.includes("*") ||
+    ["leads.access", "requests.access", "dashboard.access"].some((permission) =>
+      user.permissions.includes(permission),
+    );
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(() =>
     readNotificationIds(user.id),
@@ -351,6 +357,7 @@ export const AdminShell = ({
                       Прочитать все
                     </button>
                   </div>
+                  {canAccessNotifications && <AdminPushControl />}
                   <div className="max-h-96 overflow-y-auto">
                     {!notifications.length && (
                       <p className="p-5 text-sm text-muted-ui-foreground">

@@ -1,4 +1,6 @@
 import { createApp } from "./app.js";
+import { createAdminPushRepository } from "./features/admin-push/admin-push.repository.js";
+import { createAdminPushService } from "./features/admin-push/admin-push.service.js";
 import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
 import { readConfig } from "./lib/config.js";
@@ -33,6 +35,7 @@ const start = async (): Promise<void> => {
     openaiBaseUrl: config.openaiBaseUrl,
     openaiSip: config.openaiSip,
     voiceConfigurationSecret: config.voiceConfigurationSecret,
+    adminPush: config.adminPush,
     maxBot: config.maxBot,
     vk: config.vk,
     yooKassaSecretKey: config.yooKassaSecretKey,
@@ -43,6 +46,12 @@ const start = async (): Promise<void> => {
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");
   });
+  const adminPush = createAdminPushService(
+    createAdminPushRepository(database),
+    config.adminPush,
+    logger,
+  );
+  let stopAdminPush: () => void = () => undefined;
   attachVoiceAgentRealtime(server, {
     apiKey: config.openaiApiKey,
     database,
@@ -64,6 +73,7 @@ const start = async (): Promise<void> => {
       try {
         await runDatabaseMigrations(database);
         logger.info("Managed database is ready and migrations are applied");
+        stopAdminPush = adminPush.start();
         return;
       } catch (error) {
         logger.error(
@@ -114,6 +124,7 @@ const start = async (): Promise<void> => {
     if (isShuttingDown) return;
     isShuttingDown = true;
     clearInterval(retentionTimer);
+    stopAdminPush();
     logger.info({ signal }, "Backend server stopping");
     server.close((serverError) => {
       void database

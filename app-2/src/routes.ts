@@ -4,6 +4,8 @@ import type { Logger } from "pino";
 import { createAdminAuthRouter } from "./features/admin-auth/admin-auth.routes.js";
 import { createAdminLeadsRouter } from "./features/admin-leads/admin-leads.routes.js";
 import { createAdminOperationsRouter } from "./features/admin-operations/admin-operations.routes.js";
+import { createAdminPushRouter } from "./features/admin-push/admin-push.routes.js";
+import type { AdminPushConfiguration } from "./features/admin-push/admin-push.types.js";
 import {
   createAdminIntegrationsStatusRouter,
   createAdminSettingsRouter,
@@ -51,6 +53,7 @@ type CreateApiRouterOptions = {
     readonly webhookSecret?: string;
   };
   readonly voiceConfigurationSecret?: string;
+  readonly adminPush: AdminPushConfiguration;
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -92,6 +95,7 @@ export const createApiRouter = ({
   openaiBaseUrl,
   openaiSip,
   voiceConfigurationSecret,
+  adminPush,
   maxBot,
   vk,
   yooKassaSecretKey,
@@ -135,6 +139,7 @@ export const createApiRouter = ({
   });
   router.use(createSystemRouter({ database }));
   router.use("/admin/auth", createAdminAuthRouter(database));
+  router.use("/admin/push", createAdminPushRouter(database, adminPush, logger));
   router.use("/admin/site-leads", createAdminLeadsRouter(database));
   router.use(
     "/admin",

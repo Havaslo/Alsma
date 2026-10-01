@@ -1,0 +1,23 @@
+{
+  "id": "/admin",
+  "name": "АЛСМА — админ-панель",
+  "short_name": "АЛСМА",
+  "description": "Админ-панель загородного отеля АЛСМА",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ee",
+  "theme_color": "#1b5537",
+  "icons": [
+    {
+      "src": "/icons/admin-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/admin-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

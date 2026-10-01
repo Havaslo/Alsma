@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { z } from "zod";
 
+import type { AdminPushEnvironment } from "../features/admin-push/admin-push.types.js";
+
 const GENERATED_ENV_PATH = "AMAZI_ENV_GENERATED.env";
 
 if (existsSync(GENERATED_ENV_PATH)) loadEnvFile(GENERATED_ENV_PATH);
@@ -14,46 +16,58 @@ const databaseUrlSchema = z
     return protocol === "postgres:" || protocol === "postgresql:";
   }, "DATABASE_URL must use the postgres or postgresql protocol.");
 
-const environmentSchema = z.object({
-  AMAZI_STORAGE_API_URL: z.string().url(),
-  AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
-  CORS_ALLOWED_ORIGINS: z.string().min(1),
-  DATABASE_URL: databaseUrlSchema,
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
-  PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
-  EPTERA_API_KEY: z.string().min(1).optional(),
-  EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
-  EPTERA_PAYMENT_LOGIN_TOKEN: z.string().min(1).optional(),
-  EPTERA_RESERVATION_LOGIN_TOKEN: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional(),
-  AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
-  AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
-  OPENAI_SIP_API_KEY: z.string().min(1).optional(),
-  OPENAI_SIP_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
-  OPENAI_SIP_WEBHOOK_SECRET: z.string().min(1).optional(),
-  AMAZI_VOICE_CONFIGURATION_SECRET: z.string().min(1).optional(),
-  YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
-  YOOKASSA_SHOP_ID: z.string().min(1).optional(),
-  MANGO_API_BASE_URL: z.string().url().optional(),
-  MANGO_API_KEY: z.string().min(1).optional(),
-  MANGO_API_SECRET: z.string().min(1).optional(),
-  MANGO_VPBX_API_KEY: z.string().min(1).optional(),
-  MANGO_VPBX_API_SALT: z.string().min(1).optional(),
-  T2_TRANSFER_NUMBER: z.string().min(3).optional(),
-  VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
-  MAX_BOT_TOKEN: z.string().min(1).optional(),
-  MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
-  MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
-  MAX_BOT_SITE_URL: z.string().url().optional(),
-  VK_ACCESS_TOKEN: z.string().min(1).optional(),
-  VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
-  VK_CALLBACK_SECRET: z.string().min(1).optional(),
-  VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
-  MAIL_RU_EMAIL: z.string().email().optional(),
-  MAIL_RU_APP_PASSWORD: z.string().min(1).optional(),
-});
+const environmentSchema = z
+  .object({
+    AMAZI_STORAGE_API_URL: z.string().url(),
+    AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
+    CORS_ALLOWED_ORIGINS: z.string().min(1),
+    DATABASE_URL: databaseUrlSchema,
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
+    PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+    EPTERA_API_KEY: z.string().min(1).optional(),
+    EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
+    EPTERA_PAYMENT_LOGIN_TOKEN: z.string().min(1).optional(),
+    EPTERA_RESERVATION_LOGIN_TOKEN: z.string().min(1).optional(),
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    AMAZI_AI_GATEWAY_OPENAI_API_KEY: z.string().min(1).optional(),
+    AMAZI_AI_GATEWAY_OPENAI_BASE_URL: z.string().url().optional(),
+    OPENAI_SIP_API_KEY: z.string().min(1).optional(),
+    OPENAI_SIP_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+    OPENAI_SIP_WEBHOOK_SECRET: z.string().min(1).optional(),
+    AMAZI_VOICE_CONFIGURATION_SECRET: z.string().min(1).optional(),
+    ADMIN_WEB_PUSH_VAPID_PUBLIC_KEY: z.string().min(32).optional(),
+    ADMIN_WEB_PUSH_VAPID_PRIVATE_KEY: z.string().min(32).optional(),
+    YOOKASSA_SECRET_KEY: z.string().min(1).optional(),
+    YOOKASSA_SHOP_ID: z.string().min(1).optional(),
+    MANGO_API_BASE_URL: z.string().url().optional(),
+    MANGO_API_KEY: z.string().min(1).optional(),
+    MANGO_API_SECRET: z.string().min(1).optional(),
+    MANGO_VPBX_API_KEY: z.string().min(1).optional(),
+    MANGO_VPBX_API_SALT: z.string().min(1).optional(),
+    T2_TRANSFER_NUMBER: z.string().min(3).optional(),
+    VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
+    MAX_BOT_TOKEN: z.string().min(1).optional(),
+    MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
+    MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
+    MAX_BOT_SITE_URL: z.string().url().optional(),
+    VK_ACCESS_TOKEN: z.string().min(1).optional(),
+    VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
+    VK_CALLBACK_SECRET: z.string().min(1).optional(),
+    VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
+    MAIL_RU_EMAIL: z.string().email().optional(),
+    MAIL_RU_APP_PASSWORD: z.string().min(1).optional(),
+  })
+  .refine(
+    (environment) =>
+      Boolean(environment.ADMIN_WEB_PUSH_VAPID_PUBLIC_KEY) ===
+      Boolean(environment.ADMIN_WEB_PUSH_VAPID_PRIVATE_KEY),
+    {
+      message:
+        "ADMIN_WEB_PUSH_VAPID_PUBLIC_KEY and ADMIN_WEB_PUSH_VAPID_PRIVATE_KEY must be configured together.",
+    },
+  );
 
 export type AppConfig = {
   readonly databaseUrl: string;
@@ -76,6 +90,12 @@ export type AppConfig = {
     readonly webhookSecret?: string;
   };
   readonly voiceConfigurationSecret?: string;
+  readonly adminPush: {
+    readonly environment: AdminPushEnvironment;
+    readonly privateKey?: string;
+    readonly publicKey?: string;
+    readonly subject: string;
+  };
   readonly maxBot: {
     readonly token?: string;
     readonly webhookSecret?: string;
@@ -130,6 +150,13 @@ export const readConfig = (
       webhookSecret: parsed.OPENAI_SIP_WEBHOOK_SECRET,
     },
     voiceConfigurationSecret: parsed.AMAZI_VOICE_CONFIGURATION_SECRET,
+    adminPush: {
+      environment:
+        parsed.NODE_ENV === "production" ? "production" : "development",
+      privateKey: parsed.ADMIN_WEB_PUSH_VAPID_PRIVATE_KEY,
+      publicKey: parsed.ADMIN_WEB_PUSH_VAPID_PUBLIC_KEY,
+      subject: "https://alsma.ru",
+    },
     maxBot: {
       token: parsed.MAX_BOT_TOKEN,
       webhookSecret: parsed.MAX_WEBHOOK_SECRET,

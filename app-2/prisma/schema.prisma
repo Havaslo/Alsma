@@ -25,6 +25,17 @@ enum ContentStatus {
   archived
 }
 
+enum AdminPushEventType {
+  lead
+  request
+  booking
+}
+
+enum AdminPushEnvironment {
+  development
+  production
+}
+
 model AppSetting {
   key       String   @id
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -46,20 +57,21 @@ model AdminRole {
 }
 
 model AdminUser {
-  id                     String           @id @default(uuid()) @db.Uuid
-  email                  String           @unique
-  displayName            String           @map("display_name")
-  passwordHash           String           @map("password_hash")
-  status                 UserStatus       @default(active)
-  permissionOverrides    Json             @default("{}") @map("permission_overrides")
-  roleId                 String?          @map("role_id") @db.Uuid
-  role                   AdminRole?       @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                     String                  @id @default(uuid()) @db.Uuid
+  email                  String                  @unique
+  displayName            String                  @map("display_name")
+  passwordHash           String                  @map("password_hash")
+  status                 UserStatus              @default(active)
+  permissionOverrides    Json                    @default("{}") @map("permission_overrides")
+  roleId                 String?                 @map("role_id") @db.Uuid
+  role                   AdminRole?              @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions               AdminSession[]
-  tasks                  ManagerTask[]    @relation("TaskAssignee")
-  serviceBookingsCreated ServiceBooking[] @relation("ServiceBookingCreatedByAdmin")
-  serviceBookingsManaged ServiceBooking[] @relation("ServiceBookingResponsibleManager")
+  pushSubscriptions      AdminPushSubscription[]
+  tasks                  ManagerTask[]           @relation("TaskAssignee")
+  serviceBookingsCreated ServiceBooking[]        @relation("ServiceBookingCreatedByAdmin")
+  serviceBookingsManaged ServiceBooking[]        @relation("ServiceBookingResponsibleManager")
 
   @@map("admin_users")
 }
@@ -74,6 +86,35 @@ model AdminSession {
 
   @@index([userId])
   @@map("admin_sessions")
+}
+
+model AdminPushSubscription {
+  id           String               @id @default(uuid()) @db.Uuid
+  userId       String               @map("user_id") @db.Uuid
+  user         AdminUser            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  environment  AdminPushEnvironment
+  endpoint     String               @db.Text
+  endpointHash String               @map("endpoint_hash") @db.Char(64)
+  p256dh       String               @db.Text
+  auth         String               @db.Text
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([environment, endpointHash])
+  @@index([userId, environment])
+  @@map("admin_push_subscriptions")
+}
+
+model AdminPushEvent {
+  id                     String             @id @default(uuid()) @db.Uuid
+  type                   AdminPushEventType
+  entityId               String             @map("entity_id") @db.Uuid
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  deliveredAtDevelopment DateTime?          @map("delivered_at_development") @db.Timestamptz(3)
+  deliveredAtProduction  DateTime?          @map("delivered_at_production") @db.Timestamptz(3)
+
+  @@index([createdAt, id])
+  @@map("admin_push_events")
 }
 
 model GuestUser {
