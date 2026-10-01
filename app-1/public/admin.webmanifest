@@ -1,7 +1,7 @@
 {
   "id": "/admin",
-  "name": "АЛСМА — админ-панель",
-  "short_name": "АЛСМА",
+  "name": "Алсма",
+  "short_name": "Алсма",
   "description": "Админ-панель загородного отеля АЛСМА",
   "start_url": "/admin",
   "scope": "/",
@@ -18,6 +18,12 @@
       "src": "/icons/admin-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/admin-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
