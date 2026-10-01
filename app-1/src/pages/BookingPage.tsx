@@ -30,6 +30,7 @@ import {
   loadBookingOffers,
   loadBookingPaymentStatus,
 } from "@/lib/booking/booking-api";
+import { distributeBookingGuests } from "@/lib/booking/booking-guest-distribution";
 import { cn } from "@/lib/cn";
 import { isRussianPhoneComplete } from "@/lib/phone-format";
 import { useApiQuery } from "@/lib/query/use-api-query";
@@ -111,11 +112,12 @@ const getInitialBooking = () => {
   const params = new URLSearchParams(
     typeof window === "undefined" ? "" : window.location.search,
   );
-  const adults = Math.max(1, Number(params.get("adults")) || 2);
-  const roomCount = Math.min(
+  const adults = Math.min(12, Math.max(1, Number(params.get("adults")) || 2));
+  const requestedRoomCount = Math.min(
     2,
     Math.max(1, Number(params.get("roomCount")) || 1),
   );
+  const roomCount = Math.min(requestedRoomCount, adults);
   const childAgesParam = params.get("childAges");
   const childAgesFromUrl = childAgesParam
     ? childAgesParam
@@ -131,16 +133,14 @@ const getInitialBooking = () => {
       : childAgesFromUrl.length;
   const checkIn = params.get("checkIn") || iso(start);
   const checkOut = params.get("checkOut") || iso(end);
+  const roomGuestCounts = distributeBookingGuests(adults, children, roomCount);
   const rooms = Array.from({ length: roomCount }, (_, index) => ({
     id: createRoomId(),
-    adults: index === 0 ? Math.max(1, adults - (roomCount - 1)) : 1,
-    children:
-      index === 0
-        ? Array.from({ length: children }, () => ({
-            birthDate: "",
-            id: createChildId(),
-          }))
-        : [],
+    adults: roomGuestCounts[index]!.adults,
+    children: Array.from({ length: roomGuestCounts[index]!.children }, () => ({
+      birthDate: "",
+      id: createChildId(),
+    })),
   }));
   return {
     rooms,
@@ -170,11 +170,11 @@ export const BookingPage = () => {
   const [offer, setOffer] = useState<BookingOffer | null>(null);
   const [detailsRoom, setDetailsRoom] = useState<BookingOffer | null>(null);
   const [selectedRoomIndex, setSelectedRoomIndex] = useState(0);
-  const [selectedRooms, setSelectedRooms] = useState<(BookingOffer | null)[]>([
-    null,
-  ]);
+  const [selectedRooms, setSelectedRooms] = useState<(BookingOffer | null)[]>(
+    () => Array.from({ length: initialBooking.search.roomCount }, () => null),
+  );
   const [selectedOffers, setSelectedOffers] = useState<(BookingOffer | null)[]>(
-    [null],
+    () => Array.from({ length: initialBooking.search.roomCount }, () => null),
   );
   const [contact, setContact] = useState({
     email: "",

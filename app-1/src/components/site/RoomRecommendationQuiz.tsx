@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 import { resolveMediaUrl } from "@/lib/site/media-url";
+import { getRecommendedRooms } from "@/lib/site/room-recommendations";
 import type { RoomCategory } from "@/lib/site/rooms";
 import { ROUTES } from "@/route-constants";
 
@@ -79,10 +80,15 @@ const questions = [
 ] as const;
 
 const guestFields = [
-  ["adults", "Взрослый", ""] as const,
-  ["children", "Ребенок", "2–12 лет"] as const,
-  ["infants", "Младенец", "0–2 года"] as const,
+  ["adults", "Взрослые", ""] as const,
+  ["children", "Дети", "2–12 лет"] as const,
+  ["infants", "Младенцы", "0–2 года"] as const,
 ];
+const guestCountLimits: Record<keyof GuestCounts, number> = {
+  adults: 12,
+  children: 8,
+  infants: 8,
+};
 
 export const RoomRecommendationQuiz = ({
   onClose,
@@ -106,34 +112,23 @@ export const RoomRecommendationQuiz = ({
     (total, count) => total + Number(count || 0),
     0,
   );
-  const recommendedRooms = [...rooms]
-    .map((room, index) => {
-      const roomText =
-        `${room.title} ${room.description} ${room.amenities.join(" ")}`.toLocaleLowerCase(
-          "ru",
-        );
-      const capacity = Math.max(
-        ...(room.capacity.match(/\d+/g)?.map(Number) ?? [0]),
-      );
-      const area = Number(room.area.match(/\d+/)?.[0] ?? 0);
-      let score = rooms.length - index;
-
-      if (capacity >= totalGuests) score += 3;
-      if (totalGuests > capacity) score -= 4;
-      if (answers[1] === "family" && capacity >= 4) score += 2;
-      if (answers[1] === "spa" && roomText.includes("spa")) score += 2;
-      if (answers[2] === "view" && /вид|панорам|лес/.test(roomText)) score += 3;
-      if (answers[2] === "panorama" && /панорам|вид|лес/.test(roomText))
-        score += 3;
-      if (answers[2] === "privacy" && /отдельн|уедин|приват/.test(roomText))
-        score += 3;
-      if (answers[2] === "space" && area >= 40) score += 3;
-
-      return { index, room, score };
-    })
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .slice(0, 3)
-    .map(({ room }) => room);
+  const adultCount = Number(guests.adults || 0);
+  const childCount = Number(guests.children || 0);
+  const infantCount = Number(guests.infants || 0);
+  const minorCount = childCount + infantCount;
+  const isGuestSelectionValid =
+    adultCount >= 1 && adultCount <= 12 && minorCount <= 8 && totalGuests <= 20;
+  const recommendedRooms = isGuestSelectionValid
+    ? getRecommendedRooms(rooms, totalGuests, adultCount, answers)
+    : [];
+  const bookingHref = (roomCount: 1 | 2) => {
+    const search = new URLSearchParams({
+      adults: String(adultCount),
+      children: String(minorCount),
+      roomCount: String(roomCount),
+    });
+    return `${ROUTES.booking}?${search.toString()}`;
+  };
 
   const reset = () => {
     setStep(0);
@@ -143,9 +138,10 @@ export const RoomRecommendationQuiz = ({
   };
 
   const updateGuestCount = (field: keyof GuestCounts, value: string) => {
+    const nextCount = Number(value.replace(/\D/g, "").slice(0, 2) || 0);
     setGuests((current) => ({
       ...current,
-      [field]: value.replace(/\D/g, "").slice(0, 2),
+      [field]: String(Math.min(guestCountLimits[field], nextCount)),
     }));
   };
 
@@ -168,7 +164,8 @@ export const RoomRecommendationQuiz = ({
               <span />
             )}
             <button
-              className="min-h-11 rounded-2xl bg-brand px-8 py-3 font-semibold text-brand-foreground"
+              className="min-h-11 rounded-2xl bg-brand px-8 py-3 font-semibold text-brand-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={step === 0 && !isGuestSelectionValid}
               onClick={() =>
                 step === questions.length - 1
                   ? setShowResult(true)
@@ -185,40 +182,70 @@ export const RoomRecommendationQuiz = ({
       open={open}
       title="Подбор идеального номера"
     >
-      {showResult && recommendedRooms.length > 0 ? (
+      {showResult && isGuestSelectionValid ? (
         <div className="py-3">
           <p className="text-sm font-semibold tracking-widest text-brand uppercase">
             Подходящие варианты
           </p>
           <h3 className="mt-4 font-heading text-4xl font-semibold">
-            Мы подобрали номера для вашего отдыха
+            {recommendedRooms.length
+              ? `Варианты для ${totalGuests} ${totalGuests === 1 ? "гостя" : "гостей"}`
+              : "Не нашли подходящий вариант"}
           </h3>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recommendedRooms.map((room) => (
+          {recommendedRooms.length ? (
+            <>
+              <p className="mt-3 text-muted-ui-foreground">
+                Состав гостей и количество номеров перенесены. На экране
+                бронирования проверьте даты, добавьте даты рождения детей и
+                выберите тарифы.
+              </p>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {recommendedRooms.map(({ capacity, room, roomCount }) => (
+                  <a
+                    className="group block overflow-hidden rounded-3xl border border-line bg-page transition hover:-translate-y-1 hover:border-brand focus-visible:ring-4 focus-visible:ring-focus/20 focus-visible:outline-none"
+                    href={bookingHref(roomCount)}
+                    key={room.title}
+                  >
+                    <img
+                      alt={room.title}
+                      className="h-40 w-full object-cover"
+                      src={resolveMediaUrl(room.image)}
+                    />
+                    <div className="p-5">
+                      <h4 className="font-heading text-2xl font-semibold">
+                        {room.title}
+                      </h4>
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-ui-foreground">
+                        {room.description}
+                      </p>
+                      <p className="mt-4 font-semibold text-brand">
+                        {room.price} / ночь
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-brand">
+                        {roomCount === 1
+                          ? `1 номер · вместимость до ${capacity} гостей`
+                          : `Нужно 2 номера · до ${capacity} гостей в каждом`}
+                      </p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-line bg-page p-5">
+              <p className="leading-7 text-muted-ui-foreground">
+                В каталоге не нашлось номера или пары номеров подходящей
+                вместимости для выбранного состава гостей. Можно продолжить на
+                экран бронирования и посмотреть доступные варианты вручную.
+              </p>
               <a
-                className="group block overflow-hidden rounded-3xl border border-line bg-page transition hover:-translate-y-1 hover:border-brand focus-visible:ring-4 focus-visible:ring-focus/20 focus-visible:outline-none"
-                href={`${ROUTES.home}#booking`}
-                key={room.title}
+                className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-3 font-semibold text-brand-foreground"
+                href={bookingHref(adultCount >= 2 ? 2 : 1)}
               >
-                <img
-                  alt={room.title}
-                  className="h-40 w-full object-cover"
-                  src={resolveMediaUrl(room.image)}
-                />
-                <div className="p-5">
-                  <h4 className="font-heading text-2xl font-semibold">
-                    {room.title}
-                  </h4>
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-ui-foreground">
-                    {room.description}
-                  </p>
-                  <p className="mt-4 font-semibold text-brand">
-                    {room.price} / ночь
-                  </p>
-                </div>
+                Перейти к бронированию
               </a>
-            ))}
-          </div>
+            </div>
+          )}
           <button
             className="mt-8 rounded-2xl border border-line px-6 py-4 font-semibold"
             onClick={reset}
@@ -270,6 +297,7 @@ export const RoomRecommendationQuiz = ({
                     aria-label={`Количество: ${label.toLocaleLowerCase("ru")}`}
                     className="h-16 w-28 rounded-full border border-line bg-page px-4 text-center text-lg transition outline-none focus:border-brand focus:ring-4 focus:ring-focus/20"
                     inputMode="numeric"
+                    max={guestCountLimits[field]}
                     min="0"
                     onChange={(event) =>
                       updateGuestCount(field, event.target.value)
@@ -279,6 +307,12 @@ export const RoomRecommendationQuiz = ({
                   />
                 </label>
               ))}
+              {!isGuestSelectionValid && (
+                <p className="text-sm text-destructive" role="status">
+                  Укажите не менее одного взрослого. Для бронирования можно
+                  выбрать до 12 взрослых и до 8 детей и младенцев вместе.
+                </p>
+              )}
             </div>
           ) : (
             <div className="mt-6 space-y-3">
