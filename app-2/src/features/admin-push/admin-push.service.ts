@@ -24,7 +24,7 @@ export const hashPushEndpoint = (endpoint: string): string =>
   createHash("sha256").update(endpoint).digest("hex");
 
 export const buildAdminPushMessage = (
-  event: Pick<AdminPushEvent, "entityId" | "id" | "type">,
+  event: Pick<AdminPushEvent, "entityId" | "eventKind" | "id" | "type">,
 ): AdminPushMessage => {
   if (event.type === "lead") {
     return {
@@ -40,6 +40,14 @@ export const buildAdminPushMessage = (
       tag: `alsma-${event.id}`,
       title: "Новая заявка на бронирование",
       url: "/admin/booking-requests",
+    };
+  }
+  if (event.eventKind === "manager_requested") {
+    return {
+      body: "Нажмите, чтобы открыть чат и ответить гостю.",
+      tag: `alsma-${event.id}`,
+      title: "Гость просит подключить менеджера",
+      url: `/admin/requests/${encodeURIComponent(event.entityId)}`,
     };
   }
   return {

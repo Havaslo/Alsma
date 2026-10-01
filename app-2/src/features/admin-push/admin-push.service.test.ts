@@ -17,6 +17,7 @@ const event = (type: AdminPushEvent["type"]): AdminPushEvent => ({
   deliveredAtDevelopment: null,
   deliveredAtProduction: null,
   entityId: randomUUID(),
+  eventKind: "created",
   id: randomUUID(),
   type,
 });
@@ -31,15 +32,21 @@ const configuration: AdminPushConfiguration = {
 test("notification messages link to the matching admin section without guest details", () => {
   const lead = buildAdminPushMessage(event("lead"));
   const request = buildAdminPushMessage(event("request"));
+  const managerRequest = buildAdminPushMessage({
+    ...event("request"),
+    eventKind: "manager_requested",
+  });
   const booking = buildAdminPushMessage(event("booking"));
 
   assert.equal(lead.title, "Новая заявка с сайта");
   assert.equal(lead.url, "/admin/site-leads");
   assert.equal(request.title, "Новое обращение");
   assert.match(request.url, /^\/admin\/requests\//u);
+  assert.equal(managerRequest.title, "Гость просит подключить менеджера");
+  assert.match(managerRequest.url, /^\/admin\/requests\//u);
   assert.equal(booking.title, "Новая заявка на бронирование");
   assert.equal(booking.url, "/admin/booking-requests");
-  for (const message of [lead, request, booking]) {
+  for (const message of [lead, request, managerRequest, booking]) {
     assert.doesNotMatch(JSON.stringify(message), /phone|email|guestName/iu);
   }
 });

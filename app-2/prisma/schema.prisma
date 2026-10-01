@@ -108,6 +108,7 @@ model AdminPushSubscription {
 model AdminPushEvent {
   id                     String             @id @default(uuid()) @db.Uuid
   type                   AdminPushEventType
+  eventKind              String             @default("created") @map("event_kind")
   entityId               String             @map("entity_id") @db.Uuid
   createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   deliveredAtDevelopment DateTime?          @map("delivered_at_development") @db.Timestamptz(3)
