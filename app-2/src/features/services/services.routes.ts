@@ -317,7 +317,12 @@ export const createServicesRouter = (
         const email = input.email.trim().toLowerCase();
         const user = await database.client.guestUser.upsert({
           where: { phone: `email:${email}` },
-          create: { email, phone: `email:${email}`, fullName: input.name },
+          create: {
+            email,
+            fullName: input.name,
+            fullNameConfirmedAt: new Date(),
+            phone: `email:${email}`,
+          },
           update: { email },
           select: { id: true },
         });
@@ -1258,17 +1263,26 @@ export const createServicesRouter = (
         const user = existingByEmail
           ? await transaction.guestUser.update({
               where: { id: existingByEmail.id },
-              data: { email: email || null, fullName: input.name },
+              data: { email: email || null },
+              select: { fullName: true, id: true },
             })
           : await transaction.guestUser.upsert({
               where: { phone: input.phone },
               create: {
                 email: email || null,
-                phone: input.phone,
                 fullName: input.name,
+                fullNameConfirmedAt: new Date(),
+                phone: input.phone,
               },
-              update: { email: email || null, fullName: input.name },
+              update: { email: email || null },
+              select: { fullName: true, id: true },
             });
+        if (!user.fullName?.trim()) {
+          await transaction.guestUser.updateMany({
+            data: { fullName: input.name },
+            where: { fullName: user.fullName, id: user.id },
+          });
+        }
         return transaction.serviceOrder.create({
           data: {
             name: input.name,

@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "@tanstack/react-router";
 import { LogOut, Mail, Phone } from "lucide-react";
 
 import { AccountBookingsSection } from "@/components/account/AccountBookingsSection";
+import { AccountNameCompletion } from "@/components/account/AccountNameCompletion";
 import { AccountServicesSection } from "@/components/account/AccountServicesSection";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Loader } from "@/components/ui/Loader";
@@ -34,6 +35,15 @@ export const AccountPage = () => {
     queryClient.clear();
     navigate({ to: ROUTES.home });
   };
+  if (guest.requiresNameCompletion || !guest.fullName?.trim()) {
+    return (
+      <AccountNameCompletion
+        email={guest.email}
+        fullName={guest.fullName}
+        onLogout={logout}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-page px-4 pt-24 pb-20 sm:pt-32">

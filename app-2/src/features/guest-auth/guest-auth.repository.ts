@@ -60,10 +60,15 @@ export const createGuestAuthRepository = (database: Database) => ({
       data: { attempts: { increment: 1 } },
     }),
   completeProfile: (userId: string, fullName: string) =>
-    database.client.guestUser.update({
-      data: { fullName },
-      include: guestInclude,
-      where: { id: userId },
+    database.client.$transaction(async (transaction) => {
+      await transaction.guestUser.updateMany({
+        data: { fullName, fullNameConfirmedAt: new Date() },
+        where: { fullNameConfirmedAt: null, id: userId },
+      });
+      return transaction.guestUser.findUniqueOrThrow({
+        include: guestInclude,
+        where: { id: userId },
+      });
     }),
   createSession: (input: {
     phone: string;
@@ -89,7 +94,7 @@ export const createGuestAuthRepository = (database: Database) => ({
         where: { id: userId },
       });
       if (!user) return null;
-      if (user.fullName || user.bonusProgram || user.bookings.length)
+      if (user.fullName?.trim() || user.bonusProgram || user.bookings.length)
         return user;
       return transaction.guestUser.update({
         data: {
@@ -116,7 +121,6 @@ export const createGuestAuthRepository = (database: Database) => ({
               },
             ],
           },
-          fullName: "Гость АЛСМА",
         },
         include: guestInclude,
         where: { id: userId },

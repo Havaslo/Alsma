@@ -90,6 +90,7 @@ const publicUser = (user: {
     paymentAttempts?: Array<{ confirmationUrl: string | null }>;
   }>;
   email: string | null;
+  fullNameConfirmedAt: Date | null;
   fullName: string | null;
   id: string;
   phone: string;
@@ -162,7 +163,7 @@ const publicUser = (user: {
   fullName: user.fullName,
   id: user.id,
   phone: user.phone,
-  requiresNameCompletion: !user.fullName,
+  requiresNameCompletion: !user.fullName?.trim() || !user.fullNameConfirmedAt,
 });
 
 export const createGuestAuthService = (

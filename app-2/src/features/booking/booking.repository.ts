@@ -836,13 +836,16 @@ export const createBookingRepository = (database: Database) => ({
         const phoneOwner = await transaction.guestUser.findUnique({
           where: { phone: input.phone },
         });
-        return transaction.guestUser.update({
+        await transaction.guestUser.updateMany({
           data: {
-            fullName: input.fullName,
+            ...(!byEmail.fullName?.trim() ? { fullName: input.fullName } : {}),
             ...(phoneOwner && phoneOwner.id !== byEmail.id
               ? {}
               : { phone: input.phone }),
           },
+          where: { fullName: byEmail.fullName, id: byEmail.id },
+        });
+        return transaction.guestUser.findUniqueOrThrow({
           where: { id: byEmail.id },
         });
       }
@@ -850,8 +853,14 @@ export const createBookingRepository = (database: Database) => ({
         where: { phone: input.phone },
       });
       if (byPhone && (!byPhone.email || byPhone.email === input.email)) {
-        return transaction.guestUser.update({
-          data: { email: input.email, fullName: input.fullName },
+        await transaction.guestUser.updateMany({
+          data: {
+            email: input.email,
+            ...(!byPhone.fullName?.trim() ? { fullName: input.fullName } : {}),
+          },
+          where: { fullName: byPhone.fullName, id: byPhone.id },
+        });
+        return transaction.guestUser.findUniqueOrThrow({
           where: { id: byPhone.id },
         });
       }
@@ -859,6 +868,7 @@ export const createBookingRepository = (database: Database) => ({
         data: {
           email: input.email,
           fullName: input.fullName,
+          fullNameConfirmedAt: new Date(),
           phone: `email:${input.email}`,
         },
       });
