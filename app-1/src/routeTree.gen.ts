@@ -30,6 +30,7 @@ import { Route as AccountSetupNameRouteImport } from './routes/account/setup-nam
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgentScenariosRouteImport } from './routes/admin/agent-scenarios'
 import { Route as AdminBookingRequestsRouteImport } from './routes/admin/booking-requests'
+import { Route as AdminContentFactoryRouteImport } from './routes/admin/content-factory'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminIntegrationsRouteImport } from './routes/admin/integrations'
 import { Route as AdminKnowledgeBaseRouteImport } from './routes/admin/knowledge-base'
@@ -164,6 +165,11 @@ const AdminAgentScenariosRoute = AdminAgentScenariosRouteImport.update({
 const AdminBookingRequestsRoute = AdminBookingRequestsRouteImport.update({
   id: '/admin/booking-requests',
   path: '/admin/booking-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminContentFactoryRoute = AdminContentFactoryRouteImport.update({
+  id: '/admin/content-factory',
+  path: '/admin/content-factory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -348,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/content-factory': typeof AdminContentFactoryRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/content-factory': typeof AdminContentFactoryRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
@@ -455,6 +463,7 @@ export interface FileRoutesById {
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
+  '/admin/content-factory': typeof AdminContentFactoryRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integrations': typeof AdminIntegrationsRoute
   '/admin/knowledge-base': typeof AdminKnowledgeBaseRoute
@@ -510,6 +519,7 @@ export interface FileRouteTypes {
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
+    | '/admin/content-factory'
     | '/admin/dashboard'
     | '/admin/integrations'
     | '/admin/knowledge-base'
@@ -563,6 +573,7 @@ export interface FileRouteTypes {
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
+    | '/admin/content-factory'
     | '/admin/dashboard'
     | '/admin/integrations'
     | '/admin/knowledge-base'
@@ -616,6 +627,7 @@ export interface FileRouteTypes {
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
+    | '/admin/content-factory'
     | '/admin/dashboard'
     | '/admin/integrations'
     | '/admin/knowledge-base'
@@ -669,6 +681,7 @@ export interface RootRouteChildren {
   SpaRoute: typeof SpaRoute
   AdminAgentScenariosRoute: typeof AdminAgentScenariosRoute
   AdminBookingRequestsRoute: typeof AdminBookingRequestsRoute
+  AdminContentFactoryRoute: typeof AdminContentFactoryRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminIntegrationsRoute: typeof AdminIntegrationsRoute
   AdminKnowledgeBaseRoute: typeof AdminKnowledgeBaseRoute
@@ -848,6 +861,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/booking-requests'
       fullPath: '/admin/booking-requests'
       preLoaderRoute: typeof AdminBookingRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-factory': {
+      id: '/admin/content-factory'
+      path: '/admin/content-factory'
+      fullPath: '/admin/content-factory'
+      preLoaderRoute: typeof AdminContentFactoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -1106,6 +1126,7 @@ const rootRouteChildren: RootRouteChildren = {
   SpaRoute: SpaRoute,
   AdminAgentScenariosRoute: AdminAgentScenariosRoute,
   AdminBookingRequestsRoute: AdminBookingRequestsRoute,
+  AdminContentFactoryRoute: AdminContentFactoryRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminIntegrationsRoute: AdminIntegrationsRoute,
   AdminKnowledgeBaseRoute: AdminKnowledgeBaseRoute,

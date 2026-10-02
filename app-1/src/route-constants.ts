@@ -7,6 +7,7 @@ export const ROUTES = {
   adminBookingRequests: "/admin/booking-requests",
   adminClient: "/admin/clients/:clientId",
   adminClients: "/admin/clients",
+  adminContentFactory: "/admin/content-factory",
   adminDashboard: "/admin/dashboard",
   adminIntegrations: "/admin/integrations",
   adminVoiceCalls: "/admin/voice-calls",
