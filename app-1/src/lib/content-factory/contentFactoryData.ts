@@ -28,7 +28,7 @@ export interface FactoryMediaItem {
   category: string;
   tags: string[];
   image: string;
-  dimensions: string;
+  subtitle: string;
 }
 
 export const MEDIA_ITEMS: FactoryMediaItem[] = [
@@ -38,7 +38,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "SPA",
     tags: ["бассейн", "релакс", "акция"],
     image: spaPool,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "spa-thermal",
@@ -46,7 +46,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "SPA",
     tags: ["пар", "восстановление"],
     image: spaThermal,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "spa-programs",
@@ -54,7 +54,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "SPA",
     tags: ["процедуры", "забота о себе"],
     image: spaPrograms,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "spa-massage",
@@ -62,7 +62,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "SPA",
     tags: ["массаж", "спокойствие"],
     image: spaMassage,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "spa-bath",
@@ -70,7 +70,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Чан",
     tags: ["чан", "на открытом воздухе"],
     image: spaBath,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "river",
@@ -78,7 +78,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Территория",
     tags: ["река", "природа"],
     image: riverBeach,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "restaurant",
@@ -86,7 +86,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Ресторан",
     tags: ["еда", "завтрак"],
     image: restaurant,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "rooms",
@@ -94,7 +94,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Номера",
     tags: ["интерьер", "комфорт"],
     image: rooms,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "events",
@@ -102,7 +102,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Мероприятия",
     tags: ["праздник", "встреча"],
     image: celebrations,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
   {
     id: "winter",
@@ -110,7 +110,7 @@ export const MEDIA_ITEMS: FactoryMediaItem[] = [
     category: "Сезоны",
     tags: ["зима", "отдых"],
     image: winter,
-    dimensions: "1600 × 1067",
+    subtitle: "1600 × 1067",
   },
 ];
 
@@ -267,64 +267,5 @@ export const DEMO_PLAN: PlanPublication[] = [
     channels: ["vk", "zen"],
     status: "Запланировано",
     imageId: "restaurant",
-  },
-];
-
-export interface HistoryPublication {
-  id: string;
-  title: string;
-  date: string;
-  channels: ContentChannel[];
-  imageId: string;
-  reach: string;
-  engagement: string;
-  clicks: string;
-  versions: Partial<Record<ContentChannel, string>>;
-}
-
-export const DEMO_HISTORY: HistoryPublication[] = [
-  {
-    id: "history-1",
-    title: "Сентябрь — время перезагрузки",
-    date: "2026-09-23",
-    channels: ["vk", "telegram", "instagram"],
-    imageId: "spa-pool",
-    reach: "4 820",
-    engagement: "6,8%",
-    clicks: "146",
-    versions: {
-      vk: "Пусть в расписании найдётся место для отдыха. В сентябре — специальные условия на SPA. Подробности при бронировании.",
-      telegram:
-        "Осенний план: выбрать день для себя. 🍂 Подробности о предложении на SPA — при бронировании.",
-      instagram: "Осень — время для мягкой перезагрузки 🍂 #ALSMA #SPA",
-    },
-  },
-  {
-    id: "history-2",
-    title: "Выходные у воды",
-    date: "2026-09-18",
-    channels: ["vk", "max"],
-    imageId: "river",
-    reach: "3 190",
-    engagement: "5,2%",
-    clicks: "82",
-    versions: {
-      vk: "Иногда достаточно прогулки у воды и свободного выходного, чтобы переключиться. Планируйте небольшую паузу вместе с ALSMA.",
-      max: "Свободный день у воды — хороший способ сменить ритм. Ждём вас в ALSMA.",
-    },
-  },
-  {
-    id: "history-3",
-    title: "Знакомство с программами SPA",
-    date: "2026-09-11",
-    channels: ["vk", "zen"],
-    imageId: "spa-programs",
-    reach: "5 460",
-    engagement: "7,1%",
-    clicks: "203",
-    versions: {
-      vk: "Рассказываем, как выбрать программу SPA под настроение и свободное время. Сохраните пост, чтобы вернуться к нему позже.",
-      zen: "Как выбрать программу SPA: на что обратить внимание перед бронированием. Собрали основные ориентиры для спокойного и комфортного визита.",
-    },
   },
 ];

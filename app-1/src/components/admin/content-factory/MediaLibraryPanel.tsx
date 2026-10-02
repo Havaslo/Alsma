@@ -1,32 +1,48 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { Check, ImagePlus, Search, Sparkles } from "lucide-react";
+import { Check, ImagePlus, Search, Sparkles, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { MEDIA_ITEMS } from "@/lib/content-factory/contentFactoryData";
+import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
+import type { FactoryMediaItem } from "@/lib/content-factory/contentFactoryData";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 export const MediaLibraryPanel = ({
+  isLoadingMedia,
+  isUploadingMedia,
+  mediaError,
+  mediaItems,
+  onRefreshMedia,
+  onUploadMedia,
   selectedMediaId,
   onUseMedia,
   onGenerateImage,
 }: {
+  isLoadingMedia: boolean;
+  isUploadingMedia: boolean;
+  mediaError: string;
+  mediaItems: FactoryMediaItem[];
+  onRefreshMedia: () => void;
+  onUploadMedia: (file: File) => Promise<unknown>;
   selectedMediaId: string;
   onUseMedia: (mediaId: string) => void;
   onGenerateImage: () => void;
 }) => {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Все материалы");
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const categories = useMemo(
     () => [
       "Все материалы",
-      ...new Set(MEDIA_ITEMS.map((item) => item.category)),
+      ...new Set(mediaItems.map((item) => item.category)),
     ],
-    [],
+    [mediaItems],
   );
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
-    return MEDIA_ITEMS.filter((item) => {
+    return mediaItems.filter((item) => {
       const matchesCategory =
         category === "Все материалы" || item.category === category;
       const searchable =
@@ -38,7 +54,28 @@ export const MediaLibraryPanel = ({
         (!normalizedQuery || searchable.includes(normalizedQuery))
       );
     });
-  }, [category, query]);
+  }, [category, mediaItems, query]);
+
+  const uploadFile = async (file?: File) => {
+    if (!file) return;
+    setUploadError("");
+    if (file.size > 50 * 1_024 * 1_024) {
+      setUploadError("Размер изображения не должен превышать 50 МБ.");
+      return;
+    }
+    try {
+      await onUploadMedia(file);
+    } catch (error) {
+      setUploadError(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось загрузить изображение. Попробуйте ещё раз.",
+        ),
+      );
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -54,14 +91,53 @@ export const MediaLibraryPanel = ({
             Подборка фотографий по услугам, пространствам и событиям.
           </p>
         </div>
-        <Button
-          className="min-h-11 shrink-0 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
-          onClick={onGenerateImage}
-          type="button"
-        >
-          <Sparkles className="size-4" /> Сгенерировать изображение
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <input
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            onChange={(event) => void uploadFile(event.target.files?.[0])}
+            ref={fileInputRef}
+            tabIndex={-1}
+            type="file"
+          />
+          <Button
+            className="min-h-11 shrink-0 rounded-xl bg-brand text-white hover:bg-brand/90"
+            disabled={isUploadingMedia}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <Upload className="size-4" />
+            {isUploadingMedia ? "Загружаем…" : "Загрузить фото"}
+          </Button>
+          <Button
+            className="min-h-11 shrink-0 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
+            onClick={onGenerateImage}
+            type="button"
+          >
+            <Sparkles className="size-4" /> Сгенерировать изображение
+          </Button>
+        </div>
       </section>
+
+      <div aria-live="polite" className="space-y-2">
+        <p className="text-xs text-muted-ui-foreground">
+          Поддерживаются JPG, PNG, WebP и GIF — до 50 МБ на изображение.
+        </p>
+        {(uploadError || mediaError) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800">
+            <span>{uploadError || mediaError}</span>
+            {mediaError && (
+              <button
+                className="font-semibold underline underline-offset-2"
+                onClick={onRefreshMedia}
+                type="button"
+              >
+                Загрузить список ещё раз
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <section className="rounded-3xl border border-line bg-brand-foreground p-4 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -76,7 +152,9 @@ export const MediaLibraryPanel = ({
             />
           </label>
           <span className="text-xs text-muted-ui-foreground">
-            Найдено: {filteredItems.length} материалов
+            {isLoadingMedia
+              ? "Загружаем библиотеку…"
+              : `Найдено: ${filteredItems.length} материалов`}
           </span>
         </div>
         <div className="mt-4 scrollbar-none flex gap-2 overflow-x-auto pb-1">
@@ -123,7 +201,7 @@ export const MediaLibraryPanel = ({
                   <img
                     alt={item.title}
                     className="size-full object-cover transition duration-500 hover:scale-[1.03]"
-                    src={item.image}
+                    src={resolveMediaUrl(item.image)}
                   />
                   <span className="absolute top-3 left-3 rounded-full bg-brand-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-page-foreground shadow-sm backdrop-blur">
                     {item.category}
@@ -139,7 +217,7 @@ export const MediaLibraryPanel = ({
                     {item.title}
                   </h3>
                   <p className="mt-1 text-xs text-muted-ui-foreground">
-                    {item.dimensions} · {item.category}
+                    {item.subtitle} · {item.category}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {item.tags.map((tag) => (

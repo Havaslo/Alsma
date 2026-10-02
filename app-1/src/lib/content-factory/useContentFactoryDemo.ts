@@ -5,11 +5,14 @@ import {
   type ContentChannel,
   DEMO_VARIANTS,
   type DraftVariant,
+  type FactoryMediaItem,
   MEDIA_ITEMS,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
+  ContentFactoryDraftSnapshot,
   DraftAction,
+  SavedContentFactoryDraft,
   WorkspaceSection,
 } from "@/lib/content-factory/contentFactoryTypes";
 
@@ -21,7 +24,9 @@ const shortenText = (value: string) => {
   return value.split(". ").slice(0, 2).join(". ").trim();
 };
 
-export const useContentFactoryDemo = () => {
+export const useContentFactoryDemo = (
+  mediaItems: FactoryMediaItem[] = MEDIA_ITEMS,
+) => {
   const [activeSection, setActiveSection] =
     useState<WorkspaceSection>("create");
   const [prompt, setPrompt] = useState(DEMO_PROMPT);
@@ -37,6 +42,7 @@ export const useContentFactoryDemo = () => {
   ]);
   const [approved, setApproved] = useState(false);
   const [notice, setNotice] = useState("");
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
   const activeVariant = variants[variantIndex] ?? variants[0];
 
@@ -142,7 +148,7 @@ export const useContentFactoryDemo = () => {
   };
 
   const useMedia = (mediaId: string) => {
-    const media = MEDIA_ITEMS.find((item) => item.id === mediaId);
+    const media = mediaItems.find((item) => item.id === mediaId);
     if (!media) return;
     const targetLabel = mediaTargetChannel
       ? CONTENT_CHANNELS.find((item) => item.id === mediaTargetChannel)?.label
@@ -189,6 +195,7 @@ export const useContentFactoryDemo = () => {
   };
 
   const handleGenerate = () => {
+    setCurrentDraftId(null);
     setNotice(
       "В демо показаны заранее подготовленные варианты. Для генерации по вашему запросу потребуется подключить AI.",
     );
@@ -199,7 +206,7 @@ export const useContentFactoryDemo = () => {
     setPrompt(post.title);
     setSelectedChannels(post.channels);
     setActiveChannel(post.channels[0] ?? "vk");
-    const image = MEDIA_ITEMS.find((item) => item.id === post.imageId);
+    const image = mediaItems.find((item) => item.id === post.imageId);
     if (image) {
       const channelImageIds: Record<ContentChannel, string> = {
         vk: image.id,
@@ -217,17 +224,34 @@ export const useContentFactoryDemo = () => {
       );
     }
     setApproved(false);
+    setCurrentDraftId(null);
     setNotice(`Открыт материал «${post.title}» для редактирования.`);
     setActiveSection("create");
   };
 
+  const openDraft = (draft: SavedContentFactoryDraft) => {
+    setCurrentDraftId(draft.id);
+    setPrompt(draft.snapshot.prompt);
+    setSelectedChannels(draft.snapshot.selectedChannels);
+    setVariants(draft.snapshot.variants);
+    setVariantIndex(
+      Math.min(draft.snapshot.variantIndex, draft.snapshot.variants.length - 1),
+    );
+    setApproved(false);
+    setNotice(`Открыт черновик «${draft.title}».`);
+    setActiveSection("create");
+  };
+
+  const getDraftSnapshot = (): ContentFactoryDraftSnapshot => ({
+    prompt,
+    selectedChannels,
+    variantIndex,
+    variants,
+  });
+
   const publishDemo = () =>
     setNotice(
       "Демо-режим: публикация не отправлена. Для реальной отправки нужно подключить каналы и серверную интеграцию.",
-    );
-  const saveDraftDemo = () =>
-    setNotice(
-      "Материал оставлен в черновике этого демо-сеанса; постоянное сохранение ещё не подключено.",
     );
   const approveDraft = () => {
     setApproved(true);
@@ -251,16 +275,19 @@ export const useContentFactoryDemo = () => {
     approved,
     browseChannelImage,
     browseMainImage,
+    currentDraftId,
     explainImageGeneration,
+    getDraftSnapshot,
     handleGenerate,
     notice,
+    openDraft,
     openPlanPost,
     prompt,
     publishDemo,
-    saveDraftDemo,
     selectVariant,
     selectedChannels,
     mediaTargetChannel,
+    setCurrentDraftId,
     setActiveChannel,
     setActiveSection,
     setNotice,

@@ -13,6 +13,7 @@ export const ContentApprovalActions = ({
   onPublish,
   onSaveDraft,
   onSchedule,
+  isSavingDraft,
 }: {
   approved: boolean;
   selectedCount: number;
@@ -20,6 +21,7 @@ export const ContentApprovalActions = ({
   onPublish: () => void;
   onSaveDraft: () => void;
   onSchedule: (date: string, time: string) => void;
+  isSavingDraft: boolean;
 }) => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [date, setDate] = useState("2026-11-06");
@@ -59,14 +61,20 @@ export const ContentApprovalActions = ({
         </div>
 
         {!approved ? (
-          <Button
-            className="min-h-12 rounded-xl bg-brand px-6 text-white shadow-md shadow-emerald-900/10 hover:bg-brand/90"
-            disabled={selectedCount === 0}
-            onClick={onApprove}
-            type="button"
-          >
-            <Check className="size-4" /> Согласовать
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
+              <Save className="size-4" />
+              {isSavingDraft ? "Сохраняем…" : "Сохранить черновик"}
+            </QuietButton>
+            <Button
+              className="min-h-12 rounded-xl bg-brand px-6 text-white shadow-md shadow-emerald-900/10 hover:bg-brand/90"
+              disabled={selectedCount === 0}
+              onClick={onApprove}
+              type="button"
+            >
+              <Check className="size-4" /> Согласовать
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -79,8 +87,9 @@ export const ContentApprovalActions = ({
             <QuietButton onClick={() => setScheduleOpen(true)}>
               <CalendarClock className="size-4" /> Запланировать
             </QuietButton>
-            <QuietButton onClick={onSaveDraft}>
-              <Save className="size-4" /> Сохранить в черновики
+            <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
+              <Save className="size-4" />
+              {isSavingDraft ? "Сохраняем…" : "Сохранить черновик"}
             </QuietButton>
           </div>
         )}

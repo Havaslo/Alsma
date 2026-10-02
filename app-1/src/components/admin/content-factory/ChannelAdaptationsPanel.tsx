@@ -5,8 +5,9 @@ import {
   CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
-  MEDIA_ITEMS,
+  type FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { ChannelBadge, QuietButton } from "./ContentFactoryPrimitives";
 
@@ -27,8 +28,10 @@ export const ChannelAdaptationsPanel = ({
   onTextChange,
   onAdaptAction,
   onMediaBrowse,
+  mediaItems,
 }: {
   variant: DraftVariant;
+  mediaItems: FactoryMediaItem[];
   activeChannel: ContentChannel;
   selectedChannels: ContentChannel[];
   onActiveChannelChange: (channel: ContentChannel) => void;
@@ -42,9 +45,9 @@ export const ChannelAdaptationsPanel = ({
 }) => {
   const active = selectedChannels.includes(activeChannel);
   const image =
-    MEDIA_ITEMS.find(
+    mediaItems.find(
       (item) => item.id === variant.channelImageIds[activeChannel],
-    ) ?? MEDIA_ITEMS.find((item) => item.id === variant.imageId);
+    ) ?? mediaItems.find((item) => item.id === variant.imageId);
 
   return (
     <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
@@ -217,7 +220,7 @@ export const ChannelAdaptationsPanel = ({
               <img
                 alt={image.title}
                 className="aspect-[16/9] w-full object-cover"
-                src={image.image}
+                src={resolveMediaUrl(image.image)}
               />
             )}
             <div className="p-4">

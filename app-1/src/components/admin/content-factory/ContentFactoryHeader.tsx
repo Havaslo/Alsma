@@ -17,7 +17,7 @@ const workspaceTabs: {
   { id: "create", label: "Создание", icon: WandSparkles },
   { id: "plan", label: "Контент-план", icon: CalendarDays },
   { id: "media", label: "Медиатека", icon: ImageIcon },
-  { id: "history", label: "История публикаций", icon: History },
+  { id: "history", label: "История и черновики", icon: History },
 ];
 
 export const ContentFactoryHeader = ({

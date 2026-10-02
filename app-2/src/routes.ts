@@ -20,6 +20,7 @@ import { createGuestBookingSyncService } from "./features/booking/guest-booking-
 import { createYooKassaClient } from "./features/booking/yookassa.client.js";
 import { createChatRouter } from "./features/chat/chat.routes.js";
 import { createChatService } from "./features/chat/chat.service.js";
+import { createContentFactoryRouter } from "./features/content-factory/content-factory.routes.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
@@ -230,6 +231,10 @@ export const createApiRouter = ({
   router.use(
     "/services",
     createServicesRouter(database, yookassa, corsAllowedOrigins),
+  );
+  router.use(
+    "/admin/content-factory",
+    createContentFactoryRouter(database, managedStorage),
   );
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));

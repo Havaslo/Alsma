@@ -6,6 +6,7 @@ import { ChannelAdaptationsPanel } from "@/components/admin/content-factory/Chan
 import { ContentApprovalActions } from "@/components/admin/content-factory/ContentApprovalActions";
 import { ContentBriefPanel } from "@/components/admin/content-factory/ContentBriefPanel";
 import { ContentDraftPanel } from "@/components/admin/content-factory/ContentDraftPanel";
+import { ContentFactoryDraftHistoryPanel } from "@/components/admin/content-factory/ContentFactoryDraftHistoryPanel";
 import { ContentFactoryHeader } from "@/components/admin/content-factory/ContentFactoryHeader";
 import {
   ChannelBadge,
@@ -13,14 +14,43 @@ import {
 } from "@/components/admin/content-factory/ContentFactoryPrimitives";
 import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlanPanel";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
-import { PublicationHistoryPanel } from "@/components/admin/content-factory/PublicationHistoryPanel";
+import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import { useContentFactoryDemo } from "@/lib/content-factory/useContentFactoryDemo";
+import { useContentFactoryPersistence } from "@/lib/content-factory/useContentFactoryPersistence";
 import { useContentFactoryPlanDemo } from "@/lib/content-factory/useContentFactoryPlanDemo";
 
 export const ContentFactoryWorkspace = () => {
-  const factory = useContentFactoryDemo();
+  const persistence = useContentFactoryPersistence();
+  const factory = useContentFactoryDemo(persistence.mediaItems);
   const plan = useContentFactoryPlanDemo();
   const [adaptationsOpen, setAdaptationsOpen] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+  const saveDraft = async () => {
+    setIsSavingDraft(true);
+    try {
+      const saved = await persistence.saveDraft(factory.currentDraftId, {
+        snapshot: factory.getDraftSnapshot(),
+        title:
+          factory.activeVariant.title.trim() ||
+          factory.prompt.trim().slice(0, 255) ||
+          "Черновик без названия",
+      });
+      factory.setCurrentDraftId(saved.id);
+      factory.setNotice(
+        "Черновик сохранён. Его можно открыть во вкладке «История и черновики».",
+      );
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось сохранить черновик. Попробуйте ещё раз.",
+        ),
+      );
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
   const handleSchedule = (date: string, time: string) => {
     plan.schedulePublication(
@@ -46,7 +76,10 @@ export const ContentFactoryWorkspace = () => {
     <div className="mx-auto max-w-[1540px] space-y-5">
       <ContentFactoryHeader
         activeSection={factory.activeSection}
-        onSectionChange={factory.setActiveSection}
+        onSectionChange={(section) => {
+          factory.setActiveSection(section);
+          if (section === "history") void persistence.refreshDrafts();
+        }}
       />
 
       <div className="space-y-4">
@@ -67,6 +100,7 @@ export const ContentFactoryWorkspace = () => {
                 selectedChannels={factory.selectedChannels}
               />
               <ContentDraftPanel
+                mediaItems={persistence.mediaItems}
                 onCustomAction={factory.applyCustomCommand}
                 onDraftAction={factory.applyDraftAction}
                 onImageGenerate={factory.explainImageGeneration}
@@ -119,6 +153,7 @@ export const ContentFactoryWorkspace = () => {
                 <div className="border-t border-line p-4">
                   <ChannelAdaptationsPanel
                     activeChannel={factory.activeChannel}
+                    mediaItems={persistence.mediaItems}
                     onActiveChannelChange={factory.setActiveChannel}
                     onAdaptAction={factory.adaptChannel}
                     onMediaBrowse={factory.browseChannelImage}
@@ -134,8 +169,9 @@ export const ContentFactoryWorkspace = () => {
               approved={factory.approved}
               onApprove={factory.approveDraft}
               onPublish={factory.publishDemo}
-              onSaveDraft={factory.saveDraftDemo}
+              onSaveDraft={() => void saveDraft()}
               onSchedule={handleSchedule}
+              isSavingDraft={isSavingDraft}
               selectedCount={factory.selectedChannels.length}
             />
           </div>
@@ -152,6 +188,17 @@ export const ContentFactoryWorkspace = () => {
 
         {factory.activeSection === "media" && (
           <MediaLibraryPanel
+            isLoadingMedia={persistence.isLoadingMedia}
+            isUploadingMedia={persistence.isUploadingMedia}
+            mediaError={persistence.mediaError}
+            mediaItems={persistence.mediaItems}
+            onRefreshMedia={() => void persistence.refreshMedia()}
+            onUploadMedia={async (file) => {
+              const uploaded = await persistence.uploadMedia(file);
+              factory.setNotice(
+                `Изображение «${uploaded.title}» добавлено в медиатеку.`,
+              );
+            }}
             onGenerateImage={factory.explainImageGeneration}
             onUseMedia={factory.useMedia}
             selectedMediaId={
@@ -164,7 +211,16 @@ export const ContentFactoryWorkspace = () => {
           />
         )}
 
-        {factory.activeSection === "history" && <PublicationHistoryPanel />}
+        {factory.activeSection === "history" && (
+          <ContentFactoryDraftHistoryPanel
+            drafts={persistence.drafts}
+            error={persistence.draftsError}
+            isLoading={persistence.isLoadingDrafts}
+            mediaItems={persistence.mediaItems}
+            onOpenDraft={factory.openDraft}
+            onRetry={() => void persistence.refreshDrafts()}
+          />
+        )}
       </div>
     </div>
   );

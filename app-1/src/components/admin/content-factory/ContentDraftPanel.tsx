@@ -9,9 +9,12 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import type { DraftVariant } from "@/lib/content-factory/contentFactoryData";
-import { MEDIA_ITEMS } from "@/lib/content-factory/contentFactoryData";
+import type {
+  DraftVariant,
+  FactoryMediaItem,
+} from "@/lib/content-factory/contentFactoryData";
 import type { DraftAction } from "@/lib/content-factory/contentFactoryTypes";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
 
@@ -19,6 +22,7 @@ export const ContentDraftPanel = ({
   variant,
   variantIndex,
   variants,
+  mediaItems,
   onVariantChange,
   onTextChange,
   onDraftAction,
@@ -29,6 +33,7 @@ export const ContentDraftPanel = ({
   variant: DraftVariant;
   variantIndex: number;
   variants: DraftVariant[];
+  mediaItems: FactoryMediaItem[];
   onVariantChange: (index: number) => void;
   onTextChange: (text: string) => void;
   onDraftAction: (action: DraftAction) => void;
@@ -39,7 +44,7 @@ export const ContentDraftPanel = ({
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [imagePromptOpen, setImagePromptOpen] = useState(false);
-  const image = MEDIA_ITEMS.find((item) => item.id === variant.imageId);
+  const image = mediaItems.find((item) => item.id === variant.imageId);
 
   const submitCustomCommand = () => {
     if (!customCommand.trim()) return;
@@ -164,7 +169,7 @@ export const ContentDraftPanel = ({
                 <img
                   alt={image.title}
                   className="size-full object-cover"
-                  src={image.image}
+                  src={resolveMediaUrl(image.image)}
                 />
                 <span className="absolute top-3 left-3 rounded-full bg-brand-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-page-foreground shadow-sm backdrop-blur">
                   Подобрано по теме «SPA»
@@ -183,7 +188,7 @@ export const ContentDraftPanel = ({
                   {image.title}
                 </p>
                 <p className="mt-1 text-xs text-muted-ui-foreground">
-                  {image.category} · {image.dimensions}
+                  {image.category} · {image.subtitle}
                 </p>
               </div>
             </div>

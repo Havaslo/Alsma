@@ -72,6 +72,8 @@ model AdminUser {
   tasks                  ManagerTask[]           @relation("TaskAssignee")
   serviceBookingsCreated ServiceBooking[]        @relation("ServiceBookingCreatedByAdmin")
   serviceBookingsManaged ServiceBooking[]        @relation("ServiceBookingResponsibleManager")
+  contentFactoryDrafts   ContentFactoryDraft[]
+  contentFactoryMedia    ContentFactoryMedia[]
 
   @@map("admin_users")
 }
@@ -602,6 +604,33 @@ model UploadedFile {
 
   @@index([category, createdAt])
   @@map("uploaded_files")
+}
+
+model ContentFactoryDraft {
+  id          String     @id @default(uuid()) @db.Uuid
+  title       String     @db.VarChar(255)
+  snapshot    Json
+  createdById String?    @map("created_by_id") @db.Uuid
+  createdBy   AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([updatedAt(sort: Desc)])
+  @@map("content_factory_drafts")
+}
+
+model ContentFactoryMedia {
+  id          String     @id @default(uuid()) @db.Uuid
+  fileName    String     @map("file_name") @db.VarChar(255)
+  contentType String     @map("content_type") @db.VarChar(100)
+  sizeBytes   Int        @map("size_bytes")
+  objectId    String     @unique @map("object_id") @db.Text
+  createdById String?    @map("created_by_id") @db.Uuid
+  createdBy   AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt(sort: Desc)])
+  @@map("content_factory_media")
 }
 
 model SiteContent {
