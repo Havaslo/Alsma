@@ -94,70 +94,70 @@ export const ContentDraftPanel = ({
         ))}
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(240px,0.92fr)]">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <label
-              className="text-sm font-semibold text-page-foreground"
-              htmlFor="factory-draft-text"
-            >
-              Текст публикации
-            </label>
-            <span className="text-xs text-muted-ui-foreground/80">
-              Можно редактировать
-            </span>
-          </div>
-          <textarea
-            className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
-            id="factory-draft-text"
-            onChange={(event) => onTextChange(event.target.value)}
-            value={variant.text}
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            <QuietButton onClick={() => onDraftAction("shorter")}>
-              <Scissors className="size-3.5" /> Сократить
-            </QuietButton>
-            <QuietButton onClick={() => onDraftAction("regenerate")}>
-              <RefreshCw className="size-3.5" /> Перегенерировать
-            </QuietButton>
-            <QuietButton onClick={() => onDraftAction("sales")}>
-              <WandSparkles className="size-3.5" /> Более продающим
-            </QuietButton>
-            <QuietButton onClick={() => onDraftAction("calmer")}>
-              Спокойнее
-            </QuietButton>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input
-              className="min-h-10 min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-3.5 text-sm outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
-              onChange={(event) => setCustomCommand(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") submitCustomCommand();
-              }}
-              placeholder="Напишите свою команду для доработки…"
-              value={customCommand}
-            />
-            <Button
-              aria-label="Отправить команду"
-              className="min-h-10 shrink-0 rounded-xl bg-slate-900 px-3.5 text-white hover:bg-slate-800"
-              disabled={!customCommand.trim()}
-              onClick={submitCustomCommand}
-              type="button"
-            >
-              <Sparkles className="size-4" />
-            </Button>
-          </div>
+      <div className="mt-5 min-w-0">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <label
+            className="text-sm font-semibold text-page-foreground"
+            htmlFor="factory-draft-text"
+          >
+            Текст публикации
+          </label>
+          <span className="text-xs text-muted-ui-foreground/80">
+            Можно редактировать
+          </span>
         </div>
+        <textarea
+          className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
+          id="factory-draft-text"
+          onChange={(event) => onTextChange(event.target.value)}
+          value={variant.text}
+        />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <QuietButton onClick={() => onDraftAction("shorter")}>
+            <Scissors className="size-3.5" /> Сократить
+          </QuietButton>
+          <QuietButton onClick={() => onDraftAction("regenerate")}>
+            <RefreshCw className="size-3.5" /> Перегенерировать
+          </QuietButton>
+          <QuietButton onClick={() => onDraftAction("sales")}>
+            <WandSparkles className="size-3.5" /> Более продающим
+          </QuietButton>
+          <QuietButton onClick={() => onDraftAction("calmer")}>
+            Спокойнее
+          </QuietButton>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            className="min-h-10 min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-3.5 text-sm outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+            onChange={(event) => setCustomCommand(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submitCustomCommand();
+            }}
+            placeholder="Напишите свою команду для доработки…"
+            value={customCommand}
+          />
+          <Button
+            aria-label="Отправить команду"
+            className="min-h-10 shrink-0 rounded-xl bg-slate-900 px-3.5 text-white hover:bg-slate-800"
+            disabled={!customCommand.trim()}
+            onClick={submitCustomCommand}
+            type="button"
+          >
+            <Sparkles className="size-4" />
+          </Button>
+        </div>
+      </div>
 
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-page-foreground">
-              Рекомендуемый визуал
-            </span>
-            <span className="rounded-full bg-muted-ui/50 px-2.5 py-1 text-[11px] font-medium text-muted-ui-foreground">
-              Из медиатеки
-            </span>
-          </div>
+      <div className="mt-6 border-t border-line pt-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-page-foreground">
+            Рекомендуемый визуал
+          </span>
+          <span className="rounded-full bg-muted-ui/50 px-2.5 py-1 text-[11px] font-medium text-muted-ui-foreground">
+            Из медиатеки
+          </span>
+        </div>
+        <div className="grid items-center gap-4 sm:grid-cols-[minmax(190px,280px)_minmax(180px,1fr)]">
           {image && (
             <div className="overflow-hidden rounded-2xl border border-line bg-muted-ui/50">
               <div className="relative aspect-[4/3] overflow-hidden">
@@ -188,62 +188,61 @@ export const ContentDraftPanel = ({
               </div>
             </div>
           )}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <QuietButton className="w-full" onClick={onMediaBrowse}>
+          <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-start">
+            <QuietButton className="w-full sm:w-auto" onClick={onMediaBrowse}>
               Подобрать фото
             </QuietButton>
             <QuietButton
               aria-controls="factory-image-prompt-form"
               aria-expanded={imagePromptOpen}
-              className="w-full"
+              className="w-full sm:w-auto"
               onClick={() => setImagePromptOpen((open) => !open)}
             >
               <Sparkles className="size-3.5" />
               {imagePromptOpen ? "Скрыть промт" : "Сгенерировать"}
             </QuietButton>
           </div>
-          {imagePromptOpen && (
-            <form
-              className="mt-3 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5"
-              id="factory-image-prompt-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (imagePrompt.trim()) onImageGenerate();
-              }}
-            >
-              <div>
-                <label
-                  className="mb-1.5 block text-sm font-semibold text-page-foreground"
-                  htmlFor="factory-image-prompt"
-                >
-                  Промт для изображения
-                </label>
-                <textarea
-                  className="min-h-24 w-full resize-y rounded-xl border border-line bg-brand-foreground px-3 py-2.5 text-sm leading-5 text-page-foreground outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
-                  id="factory-image-prompt"
-                  onChange={(event) => setImagePrompt(event.target.value)}
-                  placeholder="Опишите сцену, стиль и детали изображения…"
-                  value={imagePrompt}
-                />
-              </div>
-              <p className="text-xs leading-5 text-muted-ui-foreground">
-                Генерация пока работает в демо-режиме: промт не отправляется и
-                файл не создаётся.
-              </p>
-              <Button
-                className="w-full"
-                disabled={!imagePrompt.trim()}
-                type="submit"
-              >
-                <Sparkles className="size-4" /> Сгенерировать изображение
-              </Button>
-            </form>
-          )}
-          <p className="mt-2 text-xs leading-5 text-muted-ui-foreground">
-            Визуал можно заменить отдельно для каждого канала перед
-            согласованием.
-          </p>
         </div>
+        {imagePromptOpen && (
+          <form
+            className="mt-4 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5"
+            id="factory-image-prompt-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (imagePrompt.trim()) onImageGenerate();
+            }}
+          >
+            <div>
+              <label
+                className="mb-1.5 block text-sm font-semibold text-page-foreground"
+                htmlFor="factory-image-prompt"
+              >
+                Промт для изображения
+              </label>
+              <textarea
+                className="min-h-24 w-full resize-y rounded-xl border border-line bg-brand-foreground px-3 py-2.5 text-sm leading-5 text-page-foreground outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+                id="factory-image-prompt"
+                onChange={(event) => setImagePrompt(event.target.value)}
+                placeholder="Опишите сцену, стиль и детали изображения…"
+                value={imagePrompt}
+              />
+            </div>
+            <p className="text-xs leading-5 text-muted-ui-foreground">
+              Генерация пока работает в демо-режиме: промт не отправляется и
+              файл не создаётся.
+            </p>
+            <Button
+              className="w-full"
+              disabled={!imagePrompt.trim()}
+              type="submit"
+            >
+              <Sparkles className="size-4" /> Сгенерировать изображение
+            </Button>
+          </form>
+        )}
+        <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
+          Визуал можно заменить отдельно для каждого канала перед согласованием.
+        </p>
       </div>
       <p className="mt-5 rounded-xl bg-page px-3.5 py-2.5 text-xs leading-5 text-muted-ui-foreground">
         {variant.concept}
