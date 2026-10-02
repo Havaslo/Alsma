@@ -35,7 +35,7 @@ export const ContentBriefPanel = ({
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-[0.13em] text-brand uppercase">
-            Шаг 01 · задача
+            Задача
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-page-foreground">
             Что нужно опубликовать?

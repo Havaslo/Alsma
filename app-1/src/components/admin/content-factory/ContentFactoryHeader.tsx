@@ -46,7 +46,7 @@ export const ContentFactoryHeader = ({
 
     <nav
       aria-label="Разделы Фабрики контента"
-      className="scrollbar-none flex gap-1 overflow-x-auto border-b border-line"
+      className="scrollbar-none flex gap-8 overflow-x-auto border-b border-line"
     >
       {workspaceTabs.map((tab) => {
         const Icon = tab.icon;
@@ -55,10 +55,10 @@ export const ContentFactoryHeader = ({
           <button
             aria-current={current ? "page" : undefined}
             className={cn(
-              "relative flex min-h-11 shrink-0 items-center gap-2 rounded-t-xl px-4 text-sm font-semibold transition",
+              "inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition",
               current
-                ? "bg-brand text-brand-foreground"
-                : "text-muted-ui-foreground hover:bg-muted-ui/40 hover:text-brand",
+                ? "border-brand text-brand"
+                : "border-transparent text-muted-ui-foreground hover:text-page-foreground",
             )}
             key={tab.id}
             onClick={() => onSectionChange(tab.id)}

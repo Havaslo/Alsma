@@ -37,6 +37,8 @@ export const ContentDraftPanel = ({
   onImageGenerate: () => void;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [imagePromptOpen, setImagePromptOpen] = useState(false);
   const image = MEDIA_ITEMS.find((item) => item.id === variant.imageId);
 
   const submitCustomCommand = () => {
@@ -51,7 +53,7 @@ export const ContentDraftPanel = ({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold tracking-[0.13em] text-brand uppercase">
-              Шаг 02 · результат
+              Результат
             </p>
             <span className="rounded-full bg-brand/5 px-2.5 py-1 text-[11px] font-semibold text-brand">
               AI подготовил 3 варианта
@@ -190,10 +192,53 @@ export const ContentDraftPanel = ({
             <QuietButton className="w-full" onClick={onMediaBrowse}>
               Подобрать фото
             </QuietButton>
-            <QuietButton className="w-full" onClick={onImageGenerate}>
-              <Sparkles className="size-3.5" /> Сгенерировать
+            <QuietButton
+              aria-controls="factory-image-prompt-form"
+              aria-expanded={imagePromptOpen}
+              className="w-full"
+              onClick={() => setImagePromptOpen((open) => !open)}
+            >
+              <Sparkles className="size-3.5" />
+              {imagePromptOpen ? "Скрыть промт" : "Сгенерировать"}
             </QuietButton>
           </div>
+          {imagePromptOpen && (
+            <form
+              className="mt-3 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5"
+              id="factory-image-prompt-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (imagePrompt.trim()) onImageGenerate();
+              }}
+            >
+              <div>
+                <label
+                  className="mb-1.5 block text-sm font-semibold text-page-foreground"
+                  htmlFor="factory-image-prompt"
+                >
+                  Промт для изображения
+                </label>
+                <textarea
+                  className="min-h-24 w-full resize-y rounded-xl border border-line bg-brand-foreground px-3 py-2.5 text-sm leading-5 text-page-foreground outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+                  id="factory-image-prompt"
+                  onChange={(event) => setImagePrompt(event.target.value)}
+                  placeholder="Опишите сцену, стиль и детали изображения…"
+                  value={imagePrompt}
+                />
+              </div>
+              <p className="text-xs leading-5 text-muted-ui-foreground">
+                Генерация пока работает в демо-режиме: промт не отправляется и
+                файл не создаётся.
+              </p>
+              <Button
+                className="w-full"
+                disabled={!imagePrompt.trim()}
+                type="submit"
+              >
+                <Sparkles className="size-4" /> Сгенерировать изображение
+              </Button>
+            </form>
+          )}
           <p className="mt-2 text-xs leading-5 text-muted-ui-foreground">
             Визуал можно заменить отдельно для каждого канала перед
             согласованием.
