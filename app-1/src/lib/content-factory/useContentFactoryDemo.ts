@@ -120,7 +120,7 @@ export const useContentFactoryDemo = (
       return;
     }
     setNotice(
-      "Команда принята в демо-макете. Для свободной AI-доработки нужно подключить AI-сервис.",
+      "Эта команда пока работает только как макет. Текстовые варианты можно создать AI-кнопкой в задаче слева.",
     );
   };
 
@@ -147,9 +147,7 @@ export const useContentFactoryDemo = (
     );
   };
 
-  const useMedia = (mediaId: string) => {
-    const media = mediaItems.find((item) => item.id === mediaId);
-    if (!media) return;
+  const applyMedia = (media: FactoryMediaItem) => {
     const targetLabel = mediaTargetChannel
       ? CONTENT_CHANNELS.find((item) => item.id === mediaTargetChannel)?.label
       : null;
@@ -159,19 +157,19 @@ export const useContentFactoryDemo = (
           ...variant,
           channelImageIds: {
             ...variant.channelImageIds,
-            [mediaTargetChannel]: mediaId,
+            [mediaTargetChannel]: media.id,
           },
         };
       }
       return {
         ...variant,
-        imageId: mediaId,
+        imageId: media.id,
         channelImageIds: {
-          vk: mediaId,
-          telegram: mediaId,
-          max: mediaId,
-          instagram: mediaId,
-          zen: mediaId,
+          vk: media.id,
+          telegram: media.id,
+          max: media.id,
+          instagram: media.id,
+          zen: media.id,
         },
       };
     });
@@ -184,6 +182,13 @@ export const useContentFactoryDemo = (
     );
   };
 
+  const useMedia = (mediaId: string) => {
+    const media = mediaItems.find((item) => item.id === mediaId);
+    if (media) applyMedia(media);
+  };
+
+  const useGeneratedMedia = (media: FactoryMediaItem) => applyMedia(media);
+
   const browseMainImage = () => {
     setMediaTargetChannel(null);
     setActiveSection("media");
@@ -194,11 +199,10 @@ export const useContentFactoryDemo = (
     setActiveSection("media");
   };
 
-  const handleGenerate = () => {
+  const installGeneratedVariants = (nextVariants: DraftVariant[]) => {
+    setVariants(nextVariants);
+    setVariantIndex(0);
     setCurrentDraftId(null);
-    setNotice(
-      "В демо показаны заранее подготовленные варианты. Для генерации по вашему запросу потребуется подключить AI.",
-    );
     setApproved(false);
   };
 
@@ -249,19 +253,15 @@ export const useContentFactoryDemo = (
     variants,
   });
 
-  const publishDemo = () =>
-    setNotice(
-      "Демо-режим: публикация не отправлена. Для реальной отправки нужно подключить каналы и серверную интеграцию.",
-    );
   const approveDraft = () => {
     setApproved(true);
     setNotice(
-      "Материал отмечен как согласованный вами. Публикация остаётся отдельным подтверждаемым действием.",
+      "Материал отмечен как согласованный. В тестовом режиме публикация отключена.",
     );
   };
   const explainImageGeneration = () =>
     setNotice(
-      "Промт не отправлен: реальная генерация изображений пока не подключена. Можно выбрать изображение из медиатеки.",
+      "Чтобы создать новое изображение, откройте «Создание» и укажите промт под визуалом.",
     );
 
   return {
@@ -278,12 +278,11 @@ export const useContentFactoryDemo = (
     currentDraftId,
     explainImageGeneration,
     getDraftSnapshot,
-    handleGenerate,
+    installGeneratedVariants,
     notice,
     openDraft,
     openPlanPost,
     prompt,
-    publishDemo,
     selectVariant,
     selectedChannels,
     mediaTargetChannel,
@@ -298,6 +297,7 @@ export const useContentFactoryDemo = (
     updateAdaptation,
     updateCurrentVariant,
     useMedia,
+    useGeneratedMedia,
     variantIndex,
     variants,
   };

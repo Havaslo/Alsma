@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 
 const allowedImageTypes = new Set([
@@ -138,6 +139,23 @@ export const createUploadContentFactoryMediaHandler =
         });
       throw error;
     }
+  };
+
+export const createGenerateContentFactoryTextHandler =
+  (ai: ContentFactoryAiService): RequestHandler =>
+  async (_request, response) => {
+    const result = await ai.generateText(response.locals.input.body);
+    response.json(result);
+  };
+
+export const createGenerateContentFactoryImageHandler =
+  (ai: ContentFactoryAiService): RequestHandler =>
+  async (_request, response) => {
+    const media = await ai.generateImage({
+      ...response.locals.input.body,
+      adminId: response.locals.admin.id,
+    });
+    response.status(201).json({ asset: toMediaAsset(media) });
   };
 
 export const contentFactoryUploadLimit = `${maxUploadBytes}b`;

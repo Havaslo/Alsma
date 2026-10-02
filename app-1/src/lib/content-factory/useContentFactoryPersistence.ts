@@ -4,12 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   contentFactoryErrorMessage,
+  generateContentFactoryImage,
+  generateContentFactoryText,
   loadContentFactoryDrafts,
   loadContentFactoryMedia,
   saveContentFactoryDraft,
   uploadContentFactoryMedia,
 } from "@/lib/content-factory/contentFactoryApi";
-import { MEDIA_ITEMS } from "@/lib/content-factory/contentFactoryData";
+import {
+  type ContentChannel,
+  MEDIA_ITEMS,
+} from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
   SavedContentFactoryDraft,
@@ -65,6 +70,22 @@ export const useContentFactoryPersistence = () => {
       );
     },
   });
+  const generateTextMutation = useMutation({
+    mutationFn: generateContentFactoryText,
+  });
+  const generateImageMutation = useMutation({
+    mutationFn: generateContentFactoryImage,
+    onSuccess: async (generated) => {
+      await queryClient.cancelQueries({ queryKey: mediaQueryKey });
+      queryClient.setQueryData<UploadedContentFactoryMedia[]>(
+        mediaQueryKey,
+        (current = []) => [
+          generated,
+          ...current.filter((media) => media.id !== generated.id),
+        ],
+      );
+    },
+  });
 
   const mediaItems = useMemo(
     () => [...(mediaQuery.data ?? []), ...MEDIA_ITEMS],
@@ -81,6 +102,8 @@ export const useContentFactoryPersistence = () => {
       : "",
     isLoadingDrafts: draftsQuery.isLoading,
     isLoadingMedia: mediaQuery.isLoading,
+    isGeneratingImage: generateImageMutation.isPending,
+    isGeneratingText: generateTextMutation.isPending,
     isUploadingMedia: uploadMediaMutation.isPending,
     mediaError: mediaQuery.error
       ? contentFactoryErrorMessage(
@@ -96,5 +119,11 @@ export const useContentFactoryPersistence = () => {
       input: { snapshot: ContentFactoryDraftSnapshot; title: string },
     ) => saveDraftMutation.mutateAsync({ draftId, ...input }),
     uploadMedia: (file: File) => uploadMediaMutation.mutateAsync(file),
+    generateText: (input: {
+      prompt: string;
+      selectedChannels: ContentChannel[];
+    }) => generateTextMutation.mutateAsync(input),
+    generateImage: (prompt: string) =>
+      generateImageMutation.mutateAsync(prompt),
   };
 };

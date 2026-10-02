@@ -19,6 +19,7 @@ test(
     const apiKey = "regression-key";
     const salt = "regression-salt";
     const app = createApp({
+      aiGatewayOpenai: {},
       database,
       logger: pino({ level: "silent" }),
       corsAllowedOrigins: [],

@@ -3,6 +3,10 @@ import axios from "axios";
 import { readAdminSession } from "@/lib/admin/admin-session";
 import { apiClient } from "@/lib/api/api-client";
 import type {
+  ContentChannel,
+  DraftVariant,
+} from "@/lib/content-factory/contentFactoryData";
+import type {
   ContentFactoryDraftSnapshot,
   SavedContentFactoryDraft,
   UploadedContentFactoryMedia,
@@ -53,6 +57,32 @@ export const uploadContentFactoryMedia = async (file: File) => {
     params: { fileName: file.name },
     timeout: 120_000,
   });
+  return response.data.asset;
+};
+
+export const generateContentFactoryText = async (input: {
+  prompt: string;
+  selectedChannels: ContentChannel[];
+}) => {
+  const response = await apiClient.post<{
+    model: string;
+    variants: Array<
+      Pick<DraftVariant, "title" | "concept" | "text" | "adaptations">
+    >;
+  }>("/admin/content-factory/generate/text", input, {
+    headers: headers(),
+  });
+  return response.data;
+};
+
+export const generateContentFactoryImage = async (prompt: string) => {
+  const response = await apiClient.post<{
+    asset: UploadedContentFactoryMedia;
+  }>(
+    "/admin/content-factory/generate/image",
+    { prompt },
+    { headers: headers(), timeout: 120_000 },
+  );
   return response.data.asset;
 };
 

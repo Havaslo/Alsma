@@ -69,6 +69,10 @@ const environmentSchema = z
   );
 
 export type AppConfig = {
+  readonly aiGatewayOpenai: {
+    readonly apiKey?: string;
+    readonly baseUrl?: string;
+  };
   readonly databaseUrl: string;
   readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
@@ -125,6 +129,10 @@ export const readConfig = (
   const parsed = environmentSchema.parse(environment);
   return {
     databaseUrl: parsed.DATABASE_URL,
+    aiGatewayOpenai: {
+      apiKey: parsed.AMAZI_AI_GATEWAY_OPENAI_API_KEY,
+      baseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
+    },
     corsAllowedOrigins: parseCorsOrigins(parsed.CORS_ALLOWED_ORIGINS),
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,

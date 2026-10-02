@@ -12,6 +12,10 @@ import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 import { createApiRouter } from "./routes.js";
 
 type CreateAppOptions = {
+  readonly aiGatewayOpenai: {
+    readonly apiKey?: string;
+    readonly baseUrl?: string;
+  };
   readonly corsAllowedOrigins: readonly string[];
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
@@ -65,6 +69,7 @@ export const mangoExternalEventPaths = [
 ];
 
 export const createApp = ({
+  aiGatewayOpenai,
   corsAllowedOrigins,
   database,
   epteraApiKey,
@@ -114,6 +119,7 @@ export const createApp = ({
     response.json({ service: "booking-api", status: "ok" }),
   );
   const apiRouter = createApiRouter({
+    aiGatewayOpenai,
     corsAllowedOrigins,
     database,
     epteraApiKey,

@@ -1,4 +1,5 @@
 import { Router, raw } from "express";
+import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -9,8 +10,11 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import { createContentFactoryAiService } from "./content-factory-ai.service.js";
 import {
   contentFactoryUploadLimit,
+  createGenerateContentFactoryImageHandler,
+  createGenerateContentFactoryTextHandler,
   createListContentFactoryDraftsHandler,
   createListContentFactoryMediaHandler,
   createSaveContentFactoryDraftHandler,
@@ -19,14 +23,24 @@ import {
 import {
   contentFactoryDraftBodySchema,
   contentFactoryDraftParamsSchema,
+  contentFactoryImageGenerationBodySchema,
+  contentFactoryTextGenerationBodySchema,
   contentFactoryUploadQuerySchema,
 } from "./content-factory.schemas.js";
 
 export const createContentFactoryRouter = (
   database: Database,
   managedStorage: ManagedStorage,
+  aiGateway: { readonly apiKey?: string; readonly baseUrl?: string },
+  logger: Logger,
 ): Router => {
   const router = Router();
+  const ai = createContentFactoryAiService({
+    ...aiGateway,
+    database,
+    logger,
+    managedStorage,
+  });
   router.use(
     createRequireAdmin(
       createAdminAuthService(createAdminAuthRepository(database)),
@@ -35,6 +49,16 @@ export const createContentFactoryRouter = (
   );
 
   router.get("/drafts", createListContentFactoryDraftsHandler(database));
+  router.post(
+    "/generate/text",
+    validateRequest({ body: contentFactoryTextGenerationBodySchema }),
+    createGenerateContentFactoryTextHandler(ai),
+  );
+  router.post(
+    "/generate/image",
+    validateRequest({ body: contentFactoryImageGenerationBodySchema }),
+    createGenerateContentFactoryImageHandler(ai),
+  );
   router.post(
     "/drafts",
     validateRequest({ body: contentFactoryDraftBodySchema }),

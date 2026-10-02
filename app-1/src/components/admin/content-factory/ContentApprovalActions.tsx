@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { CalendarClock, Check, Clock3, Save, Send } from "lucide-react";
+import { CalendarClock, Check, Clock3, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 
@@ -10,7 +10,6 @@ export const ContentApprovalActions = ({
   approved,
   selectedCount,
   onApprove,
-  onPublish,
   onSaveDraft,
   onSchedule,
   isSavingDraft,
@@ -18,7 +17,6 @@ export const ContentApprovalActions = ({
   approved: boolean;
   selectedCount: number;
   onApprove: () => void;
-  onPublish: () => void;
   onSaveDraft: () => void;
   onSchedule: (date: string, time: string) => void;
   isSavingDraft: boolean;
@@ -77,15 +75,11 @@ export const ContentApprovalActions = ({
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            <Button
-              className="min-h-11 rounded-xl bg-brand text-white hover:bg-brand/90"
-              onClick={onPublish}
-              type="button"
-            >
-              <Send className="size-4" /> Опубликовать сейчас
-            </Button>
+            <span className="inline-flex min-h-11 items-center rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800">
+              Публикация отключена в тестовом режиме
+            </span>
             <QuietButton onClick={() => setScheduleOpen(true)}>
-              <CalendarClock className="size-4" /> Запланировать
+              <CalendarClock className="size-4" /> Добавить в демо-план
             </QuietButton>
             <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
               <Save className="size-4" />

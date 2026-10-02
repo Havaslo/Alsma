@@ -54,6 +54,19 @@ export const contentFactoryUploadQuerySchema = z.object({
   fileName: z.string().trim().min(1).max(255),
 });
 
+export const contentFactoryTextGenerationBodySchema = z.object({
+  prompt: z.string().trim().min(1).max(4_000),
+  selectedChannels: z
+    .array(contentChannelSchema)
+    .min(1)
+    .max(5)
+    .refine((channels) => new Set(channels).size === channels.length),
+});
+
+export const contentFactoryImageGenerationBodySchema = z.object({
+  prompt: z.string().trim().min(1).max(2_000),
+});
+
 export type ContentFactoryDraftBody = z.infer<
   typeof contentFactoryDraftBodySchema
 >;

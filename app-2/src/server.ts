@@ -23,6 +23,7 @@ const start = async (): Promise<void> => {
   const database = createDatabase(config.databaseUrl);
   const managedStorage = createManagedStorage(config.managedStorage);
   const app = createApp({
+    aiGatewayOpenai: config.aiGatewayOpenai,
     corsAllowedOrigins: config.corsAllowedOrigins,
     database,
     logger,

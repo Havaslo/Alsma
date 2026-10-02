@@ -40,6 +40,10 @@ import type { Database } from "./lib/database/database.js";
 import type { ManagedStorage } from "./lib/storage/managed-storage.js";
 
 type CreateApiRouterOptions = {
+  readonly aiGatewayOpenai: {
+    readonly apiKey?: string;
+    readonly baseUrl?: string;
+  };
   readonly corsAllowedOrigins: readonly string[];
   readonly database: Database;
   readonly epteraApiKey?: string;
@@ -82,6 +86,7 @@ type CreateApiRouterOptions = {
 };
 
 export const createApiRouter = ({
+  aiGatewayOpenai,
   corsAllowedOrigins,
   database,
   epteraApiKey,
@@ -234,7 +239,12 @@ export const createApiRouter = ({
   );
   router.use(
     "/admin/content-factory",
-    createContentFactoryRouter(database, managedStorage),
+    createContentFactoryRouter(
+      database,
+      managedStorage,
+      aiGatewayOpenai,
+      logger,
+    ),
   );
   router.use("/media", createMediaRouter(database, managedStorage));
   router.use("/admin/knowledge-base", createKnowledgeBaseRouter(database));

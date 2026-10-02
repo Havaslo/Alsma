@@ -29,6 +29,7 @@ export const ContentDraftPanel = ({
   onCustomAction,
   onMediaBrowse,
   onImageGenerate,
+  isGeneratingImage,
 }: {
   variant: DraftVariant;
   variantIndex: number;
@@ -39,7 +40,8 @@ export const ContentDraftPanel = ({
   onDraftAction: (action: DraftAction) => void;
   onCustomAction: (command: string) => void;
   onMediaBrowse: () => void;
-  onImageGenerate: () => void;
+  onImageGenerate: (prompt: string) => Promise<void>;
+  isGeneratingImage: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
@@ -214,7 +216,7 @@ export const ContentDraftPanel = ({
             id="factory-image-prompt-form"
             onSubmit={(event) => {
               event.preventDefault();
-              if (imagePrompt.trim()) onImageGenerate();
+              if (imagePrompt.trim()) void onImageGenerate(imagePrompt.trim());
             }}
           >
             <div>
@@ -233,15 +235,19 @@ export const ContentDraftPanel = ({
               />
             </div>
             <p className="text-xs leading-5 text-muted-ui-foreground">
-              Генерация пока работает в демо-режиме: промт не отправляется и
-              файл не создаётся.
+              Изображение будет создано в тестовом режиме и сохранено в
+              медиатеке. В социальные сети оно не отправляется.
             </p>
             <Button
+              aria-busy={isGeneratingImage}
               className="w-full"
-              disabled={!imagePrompt.trim()}
+              disabled={!imagePrompt.trim() || isGeneratingImage}
               type="submit"
             >
-              <Sparkles className="size-4" /> Сгенерировать изображение
+              <Sparkles className="size-4" />
+              {isGeneratingImage
+                ? "Создаём изображение…"
+                : "Сгенерировать изображение"}
             </Button>
           </form>
         )}

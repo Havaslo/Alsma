@@ -26,6 +26,73 @@ export const ContentFactoryWorkspace = () => {
   const [adaptationsOpen, setAdaptationsOpen] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
+  const generateText = async () => {
+    if (!factory.prompt.trim() || !factory.selectedChannels.length) return;
+    try {
+      const result = await persistence.generateText({
+        prompt: factory.prompt.trim(),
+        selectedChannels: factory.selectedChannels,
+      });
+      const variants = result.variants.map((generated, index) => {
+        const source = factory.variants[index] ?? factory.activeVariant;
+        return {
+          ...source,
+          id: `generated-${Date.now()}-${index}`,
+          label: `Вариант ${index + 1}`,
+          title: generated.title,
+          concept: generated.concept,
+          text: generated.text,
+          adaptations: generated.adaptations,
+        };
+      });
+      factory.installGeneratedVariants(variants);
+
+      try {
+        const saved = await persistence.saveDraft(null, {
+          title: variants[0]?.title || "Новая AI-публикация",
+          snapshot: {
+            prompt: factory.prompt.trim(),
+            selectedChannels: factory.selectedChannels,
+            variantIndex: 0,
+            variants,
+          },
+        });
+        factory.setCurrentDraftId(saved.id);
+        factory.setNotice(
+          "Созданы и сохранены три AI-варианта. Это черновик; в каналы ничего не отправлялось.",
+        );
+      } catch {
+        factory.setNotice(
+          "AI-варианты созданы, но черновик не сохранился. Сохраните его вручную перед закрытием страницы.",
+        );
+      }
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось создать текстовые варианты. Проверьте запрос и попробуйте ещё раз.",
+        ),
+      );
+    }
+  };
+
+  const generateImage = async (prompt: string) => {
+    try {
+      const media = await persistence.generateImage(prompt);
+      factory.useGeneratedMedia(media);
+      factory.setNotice(
+        "AI-изображение сохранено в медиатеке и добавлено в черновик. Публикация отключена.",
+      );
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось создать изображение. Попробуйте другой промт.",
+        ),
+      );
+    }
+  };
+
   const saveDraft = async () => {
     setIsSavingDraft(true);
     try {
@@ -93,7 +160,8 @@ export const ContentFactoryWorkspace = () => {
           <div className="space-y-5">
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(310px,0.82fr)_minmax(0,1.48fr)]">
               <ContentBriefPanel
-                onGenerate={factory.handleGenerate}
+                isGenerating={persistence.isGeneratingText}
+                onGenerate={() => void generateText()}
                 onPromptChange={factory.setPrompt}
                 onToggleChannel={factory.toggleChannel}
                 prompt={factory.prompt}
@@ -101,9 +169,10 @@ export const ContentFactoryWorkspace = () => {
               />
               <ContentDraftPanel
                 mediaItems={persistence.mediaItems}
+                isGeneratingImage={persistence.isGeneratingImage}
                 onCustomAction={factory.applyCustomCommand}
                 onDraftAction={factory.applyDraftAction}
-                onImageGenerate={factory.explainImageGeneration}
+                onImageGenerate={generateImage}
                 onMediaBrowse={factory.browseMainImage}
                 onTextChange={(text) =>
                   factory.updateCurrentVariant((variant) => ({
@@ -168,7 +237,6 @@ export const ContentFactoryWorkspace = () => {
             <ContentApprovalActions
               approved={factory.approved}
               onApprove={factory.approveDraft}
-              onPublish={factory.publishDemo}
               onSaveDraft={() => void saveDraft()}
               onSchedule={handleSchedule}
               isSavingDraft={isSavingDraft}

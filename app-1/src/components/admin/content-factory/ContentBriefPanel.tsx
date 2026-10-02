@@ -14,12 +14,14 @@ import { SelectField } from "./ContentFactoryPrimitives";
 export const ContentBriefPanel = ({
   prompt,
   selectedChannels,
+  isGenerating,
   onPromptChange,
   onToggleChannel,
   onGenerate,
 }: {
   prompt: string;
   selectedChannels: ContentChannel[];
+  isGenerating: boolean;
   onPromptChange: (value: string) => void;
   onToggleChannel: (channel: ContentChannel) => void;
   onGenerate: () => void;
@@ -190,12 +192,16 @@ export const ContentBriefPanel = ({
 
       <div className="mt-6 border-t border-line pt-5">
         <Button
+          aria-busy={isGenerating}
           className="min-h-12 w-full rounded-xl bg-brand text-white shadow-md shadow-emerald-900/10 hover:bg-brand/90 disabled:bg-slate-300"
-          disabled={!prompt.trim() || selectedChannels.length === 0}
+          disabled={
+            !prompt.trim() || selectedChannels.length === 0 || isGenerating
+          }
           onClick={onGenerate}
           type="button"
         >
-          <Sparkles className="size-4" /> Сгенерировать варианты
+          <Sparkles className="size-4" />
+          {isGenerating ? "Создаём варианты…" : "Сгенерировать варианты"}
         </Button>
         <p className="mt-3 text-center text-xs leading-5 text-muted-ui-foreground">
           Публикация не отправляется автоматически. Вы сначала проверяете и
