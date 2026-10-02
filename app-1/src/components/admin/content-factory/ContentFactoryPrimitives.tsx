@@ -41,10 +41,10 @@ export const ChannelBadge = ({
 
 export const StatusBadge = ({ status }: { status: PlanStatus }) => {
   const tone: Record<PlanStatus, string> = {
-    Черновик: "bg-slate-100 text-slate-700",
+    Черновик: "bg-muted-ui/50 text-page-foreground",
     "На согласовании": "bg-amber-50 text-amber-800",
     Запланировано: "bg-blue-50 text-blue-700",
-    Опубликовано: "bg-emerald-50 text-emerald-700",
+    Опубликовано: "bg-brand/5 text-brand",
     Ошибка: "bg-rose-50 text-rose-700",
   };
   return (
@@ -68,7 +68,7 @@ export const FactoryCard = ({
 }) => (
   <section
     className={cn(
-      "rounded-3xl border border-slate-200/90 bg-white shadow-[0_8px_30px_rgba(25,45,34,0.045)]",
+      "rounded-3xl border border-line bg-brand-foreground shadow-[0_8px_30px_rgba(25,45,34,0.045)]",
       className,
     )}
   >
@@ -84,13 +84,13 @@ export const FactoryNotice = ({
   onClose: () => void;
 }) => (
   <div
-    className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+    className="flex items-start justify-between gap-3 rounded-2xl border border-brand/10 bg-brand/5 px-4 py-3 text-sm text-brand"
     role="status"
   >
     <p>{children}</p>
     <button
       aria-label="Закрыть уведомление"
-      className="rounded-lg p-1 text-emerald-800 transition hover:bg-emerald-100"
+      className="rounded-lg p-1 text-brand transition hover:bg-brand/10"
       onClick={onClose}
       type="button"
     >
@@ -113,19 +113,19 @@ export const SelectField = ({
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
-      <span className="mb-1.5 block text-xs font-semibold text-slate-500">
+      <span className="mb-1.5 block text-xs font-semibold text-muted-ui-foreground">
         {label}
       </span>
       <button
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition outline-none hover:border-slate-300 focus-visible:ring-4 focus-visible:ring-emerald-700/10"
+        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-line bg-brand-foreground px-3.5 py-2.5 text-left text-sm font-medium text-page-foreground transition outline-none hover:border-slate-300 focus-visible:ring-4 focus-visible:ring-emerald-700/10"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
         {value}
         <ChevronDown
           className={cn(
-            "size-4 text-slate-400 transition",
+            "size-4 text-muted-ui-foreground/80 transition",
             open && "rotate-180",
           )}
         />
@@ -133,13 +133,13 @@ export const SelectField = ({
       {open && (
         <div
           aria-label={label}
-          className="absolute z-20 mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10"
+          className="absolute z-20 mt-1.5 w-full rounded-xl border border-line bg-brand-foreground p-1.5 shadow-xl shadow-slate-900/10"
           role="listbox"
         >
           {options.map((option) => (
             <button
               aria-selected={option === value}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-page-foreground transition hover:bg-page"
               key={option}
               onClick={() => {
                 onChange(option);
@@ -149,9 +149,7 @@ export const SelectField = ({
               type="button"
             >
               {option}
-              {option === value && (
-                <Check className="size-4 text-emerald-700" />
-              )}
+              {option === value && <Check className="size-4 text-brand" />}
             </button>
           ))}
         </div>
@@ -168,7 +166,7 @@ export const QuietButton = ({
   <Button
     variant="secondary"
     className={cn(
-      "min-h-10 rounded-xl border-slate-200 bg-white px-3.5 py-2 text-slate-700 shadow-none hover:border-slate-300 hover:bg-slate-50",
+      "min-h-10 rounded-xl border-line bg-brand-foreground px-3.5 py-2 text-page-foreground shadow-none hover:border-slate-300 hover:bg-page",
       className,
     )}
     {...props}

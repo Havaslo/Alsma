@@ -39,7 +39,7 @@ const PlanPostCard = ({
 }) => {
   const image = MEDIA_ITEMS.find((item) => item.id === post.imageId);
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-2">
+    <article className="rounded-xl border border-line bg-brand-foreground p-2">
       <button
         className="flex w-full min-w-0 items-center gap-2 text-left"
         onClick={() => onOpen(post)}
@@ -53,10 +53,10 @@ const PlanPostCard = ({
           />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[11px] leading-4 font-semibold text-slate-800">
+          <span className="block truncate text-[11px] leading-4 font-semibold text-page-foreground">
             {post.title}
           </span>
-          <span className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-500">
+          <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-ui-foreground">
             <Clock3 className="size-3" /> {post.time}
           </span>
         </span>
@@ -69,10 +69,10 @@ const PlanPostCard = ({
           ))}
         </div>
       </div>
-      <div className="mt-2 flex justify-end gap-1 border-t border-slate-100 pt-1.5">
+      <div className="mt-2 flex justify-end gap-1 border-t border-line pt-1.5">
         <button
           aria-label="Перенести публикацию на следующий день"
-          className="grid size-7 place-items-center rounded-lg text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 disabled:opacity-30"
+          className="grid size-7 place-items-center rounded-lg text-muted-ui-foreground/80 transition hover:bg-blue-50 hover:text-blue-700 disabled:opacity-30"
           disabled={post.status === "Опубликовано"}
           onClick={() => onReschedule(post.id)}
           title="Перенести на следующий день"
@@ -82,7 +82,7 @@ const PlanPostCard = ({
         </button>
         <button
           aria-label="Отменить публикацию"
-          className="grid size-7 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30"
+          className="grid size-7 place-items-center rounded-lg text-muted-ui-foreground/80 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30"
           disabled={post.status === "Опубликовано"}
           onClick={() => onCancel(post.id)}
           title="Отменить"
@@ -117,10 +117,10 @@ export const ContentPlanCalendar = ({
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[920px]">
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70">
+        <div className="grid grid-cols-7 border-b border-line bg-page/70">
           {WEEKDAYS.map((day) => (
             <div
-              className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500"
+              className="px-3 py-2.5 text-center text-xs font-semibold text-muted-ui-foreground"
               key={day}
             >
               {day}
@@ -135,8 +135,8 @@ export const ContentPlanCalendar = ({
             return (
               <div
                 className={cn(
-                  "group min-h-44 border-r border-b border-slate-100 p-2.5 last:border-r-0",
-                  outsideMonth && "bg-slate-50/70",
+                  "group min-h-44 border-r border-b border-line p-2.5 last:border-r-0",
+                  outsideMonth && "bg-page/70",
                 )}
                 key={dateKey}
               >
@@ -145,16 +145,16 @@ export const ContentPlanCalendar = ({
                     className={cn(
                       "grid size-7 place-items-center rounded-full text-xs font-semibold",
                       dateKey === todayKey
-                        ? "bg-emerald-800 text-white"
+                        ? "bg-brand text-white"
                         : outsideMonth
                           ? "text-slate-300"
-                          : "text-slate-600",
+                          : "text-muted-ui-foreground",
                     )}
                   >
                     {day.getDate()}
                   </span>
                   {dayPosts.length > 0 && (
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-muted-ui-foreground/80">
                       {dayPosts.length} поста
                     </span>
                   )}
@@ -172,7 +172,7 @@ export const ContentPlanCalendar = ({
                   {dayPosts.length === 0 && !outsideMonth && (
                     <button
                       aria-label={`Добавить публикацию на ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(day)}`}
-                      className="grid size-7 place-items-center rounded-lg text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-emerald-50 hover:text-emerald-700 focus:opacity-100"
+                      className="grid size-7 place-items-center rounded-lg text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-brand/5 hover:text-brand focus:opacity-100"
                       onClick={() => onCreate(dateKey)}
                       type="button"
                     >

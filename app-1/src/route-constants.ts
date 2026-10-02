@@ -60,6 +60,7 @@ export const ADMIN_DASHBOARD_ROUTES = [
   ROUTES.adminAgentScenarios,
   ROUTES.adminBookingRequests,
   ROUTES.adminClients,
+  ROUTES.adminContentFactory,
   ROUTES.adminClient,
   ROUTES.adminIntegrations,
   ROUTES.adminVoiceCalls,

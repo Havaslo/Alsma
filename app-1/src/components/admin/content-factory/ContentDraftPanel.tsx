@@ -46,25 +46,25 @@ export const ContentDraftPanel = ({
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
+    <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-semibold tracking-[0.13em] text-emerald-800 uppercase">
+            <p className="text-xs font-semibold tracking-[0.13em] text-brand uppercase">
               Шаг 02 · результат
             </p>
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+            <span className="rounded-full bg-brand/5 px-2.5 py-1 text-[11px] font-semibold text-brand">
               AI подготовил 3 варианта
             </span>
           </div>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+          <h2 className="mt-2 text-xl font-semibold tracking-tight text-page-foreground">
             Исходный материал
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-ui-foreground">
             Выберите идею, отредактируйте текст и визуал
           </p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+        <span className="rounded-full border border-line bg-page px-3 py-1.5 text-xs font-medium text-muted-ui-foreground">
           Черновик · не опубликован
         </span>
       </div>
@@ -79,8 +79,8 @@ export const ContentDraftPanel = ({
             aria-selected={variantIndex === index}
             className={`min-h-10 shrink-0 rounded-xl px-4 text-sm font-semibold transition ${
               variantIndex === index
-                ? "bg-emerald-800 text-white shadow-sm shadow-emerald-900/15"
-                : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                ? "bg-brand text-white shadow-sm shadow-emerald-900/15"
+                : "border border-line bg-brand-foreground text-muted-ui-foreground hover:bg-page"
             }`}
             key={item.id}
             onClick={() => onVariantChange(index)}
@@ -96,15 +96,17 @@ export const ContentDraftPanel = ({
         <div className="min-w-0">
           <div className="mb-2 flex items-center justify-between gap-2">
             <label
-              className="text-sm font-semibold text-slate-800"
+              className="text-sm font-semibold text-page-foreground"
               htmlFor="factory-draft-text"
             >
               Текст публикации
             </label>
-            <span className="text-xs text-slate-400">Можно редактировать</span>
+            <span className="text-xs text-muted-ui-foreground/80">
+              Можно редактировать
+            </span>
           </div>
           <textarea
-            className="min-h-[248px] w-full resize-y rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3.5 text-sm leading-6 text-slate-800 transition outline-none focus:border-emerald-700/40 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+            className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
             id="factory-draft-text"
             onChange={(event) => onTextChange(event.target.value)}
             value={variant.text}
@@ -125,7 +127,7 @@ export const ContentDraftPanel = ({
           </div>
           <div className="mt-3 flex gap-2">
             <input
-              className="min-h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none placeholder:text-slate-400 focus:border-emerald-700/40 focus:ring-4 focus:ring-emerald-700/10"
+              className="min-h-10 min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-3.5 text-sm outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
               onChange={(event) => setCustomCommand(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") submitCustomCommand();
@@ -147,27 +149,27 @@ export const ContentDraftPanel = ({
 
         <div className="min-w-0">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-slate-800">
+            <span className="text-sm font-semibold text-page-foreground">
               Рекомендуемый визуал
             </span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+            <span className="rounded-full bg-muted-ui/50 px-2.5 py-1 text-[11px] font-medium text-muted-ui-foreground">
               Из медиатеки
             </span>
           </div>
           {image && (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="overflow-hidden rounded-2xl border border-line bg-muted-ui/50">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img
                   alt={image.title}
                   className="size-full object-cover"
                   src={image.image}
                 />
-                <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur">
+                <span className="absolute top-3 left-3 rounded-full bg-brand-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-page-foreground shadow-sm backdrop-blur">
                   Подобрано по теме «SPA»
                 </span>
                 <button
                   aria-label="Заменить фотографию"
-                  className="absolute right-3 bottom-3 grid size-9 place-items-center rounded-xl bg-white text-slate-700 shadow-md transition hover:bg-emerald-50 hover:text-emerald-800"
+                  className="absolute right-3 bottom-3 grid size-9 place-items-center rounded-xl bg-brand-foreground text-page-foreground shadow-md transition hover:bg-brand/5 hover:text-brand"
                   onClick={onMediaBrowse}
                   type="button"
                 >
@@ -175,10 +177,10 @@ export const ContentDraftPanel = ({
                 </button>
               </div>
               <div className="p-3.5">
-                <p className="truncate text-sm font-semibold text-slate-800">
+                <p className="truncate text-sm font-semibold text-page-foreground">
                   {image.title}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-ui-foreground">
                   {image.category} · {image.dimensions}
                 </p>
               </div>
@@ -192,13 +194,13 @@ export const ContentDraftPanel = ({
               <Sparkles className="size-3.5" /> Сгенерировать
             </QuietButton>
           </div>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <p className="mt-2 text-xs leading-5 text-muted-ui-foreground">
             Визуал можно заменить отдельно для каждого канала перед
             согласованием.
           </p>
         </div>
       </div>
-      <p className="mt-5 rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-500">
+      <p className="mt-5 rounded-xl bg-page px-3.5 py-2.5 text-xs leading-5 text-muted-ui-foreground">
         {variant.concept}
       </p>
     </section>

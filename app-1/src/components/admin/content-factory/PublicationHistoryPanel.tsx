@@ -48,16 +48,16 @@ export const PublicationHistoryPanel = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
+      <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.13em] text-emerald-800 uppercase">
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.13em] text-brand uppercase">
               <History className="size-4" /> История публикаций
             </div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-page-foreground">
               Опубликованный контент
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-ui-foreground">
               Смотрите версии и основные показатели материалов по каналам.
             </p>
           </div>
@@ -68,13 +68,13 @@ export const PublicationHistoryPanel = () => {
               ["Переходов", "1 286"],
             ].map(([label, value]) => (
               <div
-                className="rounded-2xl border border-slate-200 bg-slate-50/60 px-3 py-3"
+                className="rounded-2xl border border-line bg-page/60 px-3 py-3"
                 key={label}
               >
-                <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+                <p className="text-[10px] font-medium text-muted-ui-foreground sm:text-xs">
                   {label}
                 </p>
-                <p className="mt-1 text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
+                <p className="mt-1 text-base font-semibold tracking-tight text-page-foreground sm:text-lg">
                   {value}
                 </p>
               </div>
@@ -83,12 +83,12 @@ export const PublicationHistoryPanel = () => {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_8px_30px_rgba(25,45,34,0.045)]">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground shadow-[0_8px_30px_rgba(25,45,34,0.045)]">
+        <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <label className="relative block min-w-0 flex-1 sm:max-w-sm">
-            <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-ui-foreground/80" />
             <input
-              className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pr-4 pl-10 text-sm transition outline-none placeholder:text-slate-400 focus:border-emerald-700/40 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+              className="min-h-10 w-full rounded-xl border border-line bg-page/70 pr-4 pl-10 text-sm transition outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Найти публикацию…"
               type="search"
@@ -101,8 +101,8 @@ export const PublicationHistoryPanel = () => {
               className={cn(
                 "min-h-9 shrink-0 rounded-full border px-3 text-xs font-semibold",
                 channelFilter === "all"
-                  ? "border-emerald-800 bg-emerald-800 text-white"
-                  : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                  ? "border-brand bg-brand text-white"
+                  : "border-line text-muted-ui-foreground hover:bg-page",
               )}
               onClick={() => setChannelFilter("all")}
               type="button"
@@ -115,8 +115,8 @@ export const PublicationHistoryPanel = () => {
                 className={cn(
                   "min-h-9 shrink-0 rounded-full border px-3 text-xs font-semibold",
                   channelFilter === channel.id
-                    ? "border-emerald-800 bg-emerald-800 text-white"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                    ? "border-brand bg-brand text-white"
+                    : "border-line text-muted-ui-foreground hover:bg-page",
                 )}
                 key={channel.id}
                 onClick={() => setChannelFilter(channel.id)}
@@ -146,10 +146,10 @@ export const PublicationHistoryPanel = () => {
                       />
                     )}
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-slate-900 sm:text-base">
+                      <h3 className="truncate text-sm font-semibold text-page-foreground sm:text-base">
                         {item.title}
                       </h3>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-muted-ui-foreground">
                         Опубликовано {formatDate(item.date)}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -162,28 +162,28 @@ export const PublicationHistoryPanel = () => {
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap gap-x-5 gap-y-2">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <UsersRound className="size-3.5 text-slate-400" />
+                      <div className="flex items-center gap-1.5 text-xs text-muted-ui-foreground">
+                        <UsersRound className="size-3.5 text-muted-ui-foreground/80" />
                         <span>
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-page-foreground">
                             {item.reach}
                           </span>{" "}
                           охват
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <TrendingUp className="size-3.5 text-slate-400" />
+                      <div className="flex items-center gap-1.5 text-xs text-muted-ui-foreground">
+                        <TrendingUp className="size-3.5 text-muted-ui-foreground/80" />
                         <span>
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-page-foreground">
                             {item.engagement}
                           </span>{" "}
                           отклик
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <MousePointerClick className="size-3.5 text-slate-400" />
+                      <div className="flex items-center gap-1.5 text-xs text-muted-ui-foreground">
+                        <MousePointerClick className="size-3.5 text-muted-ui-foreground/80" />
                         <span>
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-page-foreground">
                             {item.clicks}
                           </span>{" "}
                           переходов
@@ -192,7 +192,7 @@ export const PublicationHistoryPanel = () => {
                     </div>
                     <button
                       aria-expanded={expanded}
-                      className="inline-flex min-h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-brand transition hover:bg-brand/5"
                       onClick={() => setExpandedId(expanded ? null : item.id)}
                       type="button"
                     >
@@ -207,14 +207,14 @@ export const PublicationHistoryPanel = () => {
                 </div>
 
                 {expanded && (
-                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="mt-4 grid gap-3 border-t border-line pt-4 md:grid-cols-2 xl:grid-cols-3">
                     {Object.entries(item.versions).map(([channel, text]) => (
                       <div
-                        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5"
+                        className="rounded-2xl border border-line bg-page/70 p-3.5"
                         key={channel}
                       >
                         <ChannelBadge channel={channel as ContentChannel} />
-                        <p className="mt-2 text-xs leading-5 whitespace-pre-line text-slate-700">
+                        <p className="mt-2 text-xs leading-5 whitespace-pre-line text-page-foreground">
                           {text}
                         </p>
                       </div>
@@ -225,12 +225,12 @@ export const PublicationHistoryPanel = () => {
             );
           })}
           {filtered.length === 0 && (
-            <div className="p-12 text-center text-sm text-slate-500">
+            <div className="p-12 text-center text-sm text-muted-ui-foreground">
               Публикаций с такими параметрами нет.
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3.5 text-xs text-slate-500 sm:px-5">
+        <div className="flex items-center justify-between border-t border-line bg-page/50 px-4 py-3.5 text-xs text-muted-ui-foreground sm:px-5">
           <span>Показаны демонстрационные публикации и показатели</span>
           <span>{filtered.length} материала</span>
         </div>

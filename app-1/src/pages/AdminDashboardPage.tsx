@@ -32,6 +32,7 @@ import { AdminVoiceAgentTestPanel } from "@/components/admin/AdminVoiceAgentTest
 import { AdminVoiceCallDetail } from "@/components/admin/AdminVoiceCallDetail";
 import { AdminVoiceCallsPanel } from "@/components/admin/AdminVoiceCallsPanel";
 import { getAdminSiteTitle } from "@/components/admin/admin-site-navigation";
+import { ContentFactoryWorkspace } from "@/components/admin/content-factory/ContentFactoryWorkspace";
 import { Loader } from "@/components/ui/Loader";
 import { logoutAdmin } from "@/lib/admin/admin-api";
 import { writeAdminSession } from "@/lib/admin/admin-session";
@@ -105,6 +106,10 @@ export const AdminDashboardPage = () => {
       {path === ROUTES.adminAgentScenarios && can("scenarios.access") && (
         <AdminAgentScenariosPanel />
       )}
+      {path === ROUTES.adminContentFactory &&
+        (can("site.access") || can("site.manage")) && (
+          <ContentFactoryWorkspace />
+        )}
       {path === ROUTES.adminSettings && can("settings.access") && (
         <AdminSettingsPanel currentUserId={user.id} />
       )}

@@ -41,13 +41,13 @@ export const ContentPlanList = ({
           />
           <div className="min-w-0">
             <button
-              className="block truncate text-left text-sm font-semibold text-slate-800 hover:text-emerald-800"
+              className="block truncate text-left text-sm font-semibold text-page-foreground hover:text-brand"
               onClick={() => onOpen(post)}
               type="button"
             >
               {post.title}
             </button>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-ui-foreground">
               <span>{formatShortDate(post.date)}</span>
               <span>·</span>
               <span>{post.time}</span>
@@ -81,7 +81,7 @@ export const ContentPlanList = ({
       </div>
     ))}
     {posts.length === 0 && (
-      <div className="p-12 text-center text-sm text-slate-500">
+      <div className="p-12 text-center text-sm text-muted-ui-foreground">
         На этот месяц публикаций пока нет.
       </div>
     )}

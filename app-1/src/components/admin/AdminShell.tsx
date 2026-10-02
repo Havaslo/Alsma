@@ -11,6 +11,7 @@ import {
   LogOut,
   MessagesSquare,
   PanelTop,
+  PenTool,
   PhoneCall,
   Settings,
   Sparkles,
@@ -87,6 +88,12 @@ const navigation = [
     to: ROUTES.adminSiteLeads,
   },
   {
+    active: (path: string) => path === ROUTES.adminContentFactory,
+    icon: PenTool,
+    label: "Фабрика контента",
+    to: ROUTES.adminContentFactory,
+  },
+  {
     active: (path: string) => path === ROUTES.adminAgentScenarios,
     icon: Sparkles,
     label: "Сценарии агентов",
@@ -118,6 +125,7 @@ const adminPageTitle = (path: string): string => {
   if (path.startsWith(`${ROUTES.adminRequests}/`))
     return `Обращение #${path.split("/").at(-1)}`;
   if (path === ROUTES.adminKnowledgeBase) return "База знаний";
+  if (path === ROUTES.adminContentFactory) return "Фабрика контента";
   if (path === ROUTES.adminAgentScenarios) return "Сценарии агентов";
   if (path === ROUTES.adminSettings) return "Настройки";
   if (path === ROUTES.adminIntegrations) return "Интеграции";
