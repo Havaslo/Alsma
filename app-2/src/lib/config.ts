@@ -46,7 +46,6 @@ const environmentSchema = z
     MANGO_API_SECRET: z.string().min(1).optional(),
     MANGO_VPBX_API_KEY: z.string().min(1).optional(),
     MANGO_VPBX_API_SALT: z.string().min(1).optional(),
-    T2_TRANSFER_NUMBER: z.string().min(3).optional(),
     VOICE_AGENT_PUBLIC_WEBHOOK_URL: z.string().url().optional(),
     MAX_BOT_TOKEN: z.string().min(1).optional(),
     MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
@@ -115,9 +114,7 @@ export type AppConfig = {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
     readonly mangoConfigured: boolean;
-    readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
-    readonly transferNumber?: string;
   };
   readonly mailRu: { readonly email?: string; readonly password?: string };
 };
@@ -181,9 +178,7 @@ export const readConfig = (
           parsed.MANGO_API_KEY &&
           parsed.MANGO_API_SECRET),
       ),
-      t2TransferConfigured: Boolean(parsed.T2_TRANSFER_NUMBER),
       publicWebhookConfigured: Boolean(parsed.VOICE_AGENT_PUBLIC_WEBHOOK_URL),
-      transferNumber: parsed.T2_TRANSFER_NUMBER,
     },
     mailRu: {
       email: parsed.MAIL_RU_EMAIL,

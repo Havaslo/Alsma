@@ -146,6 +146,15 @@ export type AdminVoiceCall = {
   readonly agentAudioTruncated: boolean;
   readonly hasAgentAudio: boolean;
   readonly hasTranscript: boolean;
+  readonly callbackRequest: {
+    readonly guestName: string | null;
+    readonly phone: string | null;
+    readonly preferredTime: string | null;
+    readonly reason: string;
+    readonly requestedAt: string | null;
+    readonly completedAt: string | null;
+    readonly status: "pending" | "completed";
+  } | null;
 };
 export type AdminNotification = {
   readonly id: string;
@@ -272,6 +281,12 @@ export const reprocessAdminVoiceCall = (recordId: string) =>
     // The backend can spend up to 60 seconds per STT model and may try four
     // models in sequence, in addition to fetching the Mango recording.
     { headers: headers(), timeout: 300_000 },
+  );
+export const completeAdminVoiceCallback = (recordId: string) =>
+  apiClient.post(
+    `/admin/voice-calls/${recordId}/callback/complete`,
+    {},
+    { headers: headers() },
   );
 export const loadAdminAnalytics = (
   start: string,

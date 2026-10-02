@@ -1,7 +1,4 @@
-import { randomUUID } from "node:crypto";
-
 import type { Database } from "../../lib/database/database.js";
-import { createLogger } from "../../lib/logger.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { createAmaziLifecycle } from "./voice-agent.amazi.lifecycle.js";
@@ -18,12 +15,6 @@ import type {
 } from "./voice-agent.schemas.js";
 import { toolBodySchema } from "./voice-agent.schemas.js";
 import { transcribeMangoRecording } from "./voice-agent.transcription.js";
-import {
-  MangoTransferError,
-  isTimeoutError,
-  selectMangoTransferInitiator,
-  transferMangoCall,
-} from "./voice-agent.transfer.js";
 
 export {
   MangoTransferError,
@@ -31,8 +22,6 @@ export {
   selectMangoTransferInitiator,
   transferMangoCall,
 } from "./voice-agent.transfer.js";
-
-const logger = createLogger();
 
 const parseJson = (value: string) => {
   try {
@@ -52,12 +41,9 @@ export const createVoiceAgentService = (
   apiKey?: string,
   openaiBaseUrl?: string,
   eptera?: EpteraClient,
-  transfer?: {
+  mango?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
-    readonly destination?: string;
-    readonly openaiSipApiKey?: string;
-    readonly openaiSipBaseUrl?: string;
   },
 ) => {
   const isVoiceEnabled = async () => {
@@ -140,101 +126,22 @@ export const createVoiceAgentService = (
   const mangoEventHandler = createMangoEventHandler({
     completeCall: completeCallForId,
     repository,
-    ...(apiKey &&
-    openaiBaseUrl &&
-    transfer?.mangoApiKey &&
-    transfer.mangoApiSalt
+    ...(apiKey && openaiBaseUrl && mango?.mangoApiKey && mango.mangoApiSalt
       ? {
           transcribeRecording: async ({ callId, recordingId }) => {
             await transcribeMangoRecording({
-              mangoApiKey: transfer.mangoApiKey!,
+              mangoApiKey: mango.mangoApiKey!,
               callId,
               openaiBaseUrl,
               openaiApiKey: apiKey,
               recordingId,
               repository,
-              salt: transfer.mangoApiSalt!,
+              salt: mango.mangoApiSalt!,
             });
           },
         }
       : {}),
   });
-
-  const transferToManager = async (callId: string, reason: string) => {
-    const call = await repository.findCall(callId);
-    const transferFailure = (reason: string) => ({
-      accepted: false as const,
-      message:
-        "Не удалось соединить вас с менеджером. Пожалуйста, оставайтесь на линии или позвоните позднее.",
-      reason,
-    });
-    if (!call || !transfer?.destination)
-      return transferFailure("transfer_not_configured");
-    if (!transfer.mangoApiKey || !transfer.mangoApiSalt)
-      return transferFailure("transfer_not_configured");
-    const entryId = call.providerEntryId?.trim();
-    if (!entryId) return transferFailure("mango_entry_id_missing");
-
-    // The Amazi row can retain a stale or unrelated Mango snapshot. Resolve
-    // the current Mango leg again by the entry_id that belongs to this call
-    // chain, then validate the state and transfer identifiers on that row.
-    const mangoCall =
-      typeof repository.findConnectedMangoCallByProviderEntryId === "function"
-        ? await repository.findConnectedMangoCallByProviderEntryId(entryId)
-        : call.providerEntryId === entryId &&
-            call.mangoCallState === "Connected"
-          ? call
-          : null;
-    if (!mangoCall) return transferFailure("mango_call_not_connected");
-    const mangoCallId =
-      mangoCall.mangoCallId?.trim() ||
-      (mangoCall.provider === "mango"
-        ? mangoCall.providerCallId?.trim()
-        : undefined);
-    const initiator = selectMangoTransferInitiator(mangoCall);
-    if (!mangoCallId) return transferFailure("mango_call_id_missing");
-    if (!initiator) return transferFailure("mango_transfer_initiator_missing");
-    if (call.status === "transferring" || call.status === "completed")
-      return { accepted: true, duplicate: true };
-
-    const claimed = await repository.claimTransfer(
-      callId,
-      `transfer_requested:${reason}`,
-    );
-    if (!claimed) return { accepted: true, duplicate: true };
-
-    try {
-      const commandId = `alsma-transfer-${randomUUID()}`;
-      await repository.setTransferCommand(callId, commandId, "requested");
-      const transferResult = await transferMangoCall({
-        apiKey: transfer.mangoApiKey,
-        callId: mangoCallId,
-        destination: transfer.destination,
-        initiator,
-        salt: transfer.mangoApiSalt,
-        commandId,
-        readResult: () => repository.findTransferResult(commandId),
-      });
-      return { accepted: true, state: transferResult.state };
-    } catch (error) {
-      const diagnostic =
-        error instanceof MangoTransferError
-          ? error.diagnostic
-          : isTimeoutError(error)
-            ? "mango_transfer_timeout"
-            : "mango_transfer_error";
-      logger.warn(
-        {
-          stage: "mango_transfer",
-          outcome: "failed",
-          errorCode: diagnostic,
-        },
-        "Voice transfer failed",
-      );
-      await repository.failTransfer(callId, diagnostic).catch(() => undefined);
-      return transferFailure("transfer_failed");
-    }
-  };
 
   const executeTool = async (input: ToolBody) => {
     if (input.name === "check_availability" || input.name === "compare_rooms") {
@@ -314,7 +221,16 @@ export const createVoiceAgentService = (
       );
       return { requestId: request.id, accepted: true };
     }
-    return transferToManager(input.callId, input.reason);
+    if (input.name === "request_callback") {
+      const request = await repository.createCallbackRequest(input.callId, {
+        reason: input.reason,
+        phone: input.phone,
+        guestName: input.guestName,
+        preferredTime: input.preferredTime,
+      });
+      return request ?? { accepted: false, reason: "callback_request_failed" };
+    }
+    return { accepted: false, reason: "unsupported_tool" };
   };
   const amaziLifecycle = createAmaziLifecycle(repository);
   const testAudioTurn = createVoiceTestAudioTurn({

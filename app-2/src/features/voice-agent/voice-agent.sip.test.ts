@@ -11,7 +11,7 @@ import {
   isRealtimeTranscriptEvent,
 } from "./voice-agent.sip.js";
 
-test("SIP acceptance enables an audio response and the transfer tool", () => {
+test("SIP acceptance enables an audio response and the callback tool", () => {
   const payload = buildSipAcceptPayload("Начни с приветствия.");
   assert.equal(payload.type, "realtime");
   assert.deepEqual(payload.output_modalities, ["audio"]);
@@ -21,10 +21,9 @@ test("SIP acceptance enables an audio response and the transfer tool", () => {
   assert.equal(payload.audio.output.voice, voiceResponseName);
   assert.equal(payload.audio.output.voice, "marin");
   assert.equal(payload.audio.output.speed, voiceResponseSpeed);
-  assert.equal(
-    payload.tools.some((tool) => tool.name === "transfer_to_manager"),
-    true,
-  );
+  const toolNames: readonly string[] = payload.tools.map((tool) => tool.name);
+  assert.equal(toolNames.includes("request_callback"), true);
+  assert.equal(toolNames.includes("transfer_to_manager"), false);
 });
 
 test("waits for realtime readiness and recognizes both transcript roles", () => {

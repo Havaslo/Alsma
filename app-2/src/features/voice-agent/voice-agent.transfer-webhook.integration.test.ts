@@ -32,7 +32,6 @@ test(
         mangoApiKey: apiKey,
         mangoApiSalt: salt,
         mangoConfigured: true,
-        t2TransferConfigured: true,
         publicWebhookConfigured: true,
       },
     });

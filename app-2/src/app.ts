@@ -45,9 +45,7 @@ type CreateAppOptions = {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
     readonly mangoConfigured: boolean;
-    readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
-    readonly transferNumber?: string;
   };
   readonly database: Database;
   readonly logger: Logger;

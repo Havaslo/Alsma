@@ -42,6 +42,14 @@ export const buildAdminPushMessage = (
       url: "/admin/booking-requests",
     };
   }
+  if (event.eventKind === "voice_callback_requested") {
+    return {
+      body: "Нажмите, чтобы открыть карточку звонка и перезвонить гостю.",
+      tag: `alsma-${event.id}`,
+      title: "Нужен обратный звонок гостю",
+      url: `/admin/voice-calls/${encodeURIComponent(event.entityId)}`,
+    };
+  }
   if (event.eventKind === "manager_requested") {
     return {
       body: "Нажмите, чтобы открыть чат и ответить гостю.",
@@ -80,9 +88,12 @@ const canReceiveAdminPush = (user: {
   });
   return (
     permissions.has("*") ||
-    ["leads.access", "requests.access", "dashboard.access"].some((permission) =>
-      permissions.has(permission),
-    )
+    [
+      "leads.access",
+      "requests.access",
+      "dashboard.access",
+      "voice.calls.access",
+    ].some((permission) => permissions.has(permission))
   );
 };
 

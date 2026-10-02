@@ -21,6 +21,7 @@ const durationLabel = (seconds: number | null) => {
 };
 
 const callDetailScore = (call: AdminVoiceCall) =>
+  (call.callbackRequest?.status === "pending" ? 16 : 0) +
   (call.hasTranscript ? 8 : 0) +
   (call.hasRecording ? 4 : 0) +
   (call.summary ? 2 : 0) +
@@ -123,10 +124,25 @@ export const AdminVoiceCallsPanel = () => {
                     <span className="mt-1 block text-xs text-muted-ui-foreground">
                       {call.outcome ?? call.intent ?? "Результат не указан"}
                     </span>
+                    {call.callbackRequest && (
+                      <span
+                        className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          call.callbackRequest.status === "pending"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-supporting/25 text-accent-ui-foreground"
+                        }`}
+                      >
+                        {call.callbackRequest.status === "pending"
+                          ? "Нужно перезвонить"
+                          : "Перезвон выполнен"}
+                      </span>
+                    )}
                   </td>
                   <td className="max-w-md px-5 py-4">
                     <span className="line-clamp-2 block text-muted-ui-foreground">
-                      {call.summary ?? "Резюме ещё не сформировано."}
+                      {call.callbackRequest?.reason ??
+                        call.summary ??
+                        "Резюме ещё не сформировано."}
                     </span>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-brand">
                       {call.hasRecording && (

@@ -36,6 +36,10 @@ test("notification messages link to the matching admin section without guest det
     ...event("request"),
     eventKind: "manager_requested",
   });
+  const callbackRequest = buildAdminPushMessage({
+    ...event("request"),
+    eventKind: "voice_callback_requested",
+  });
   const booking = buildAdminPushMessage(event("booking"));
 
   assert.equal(lead.title, "Новая заявка с сайта");
@@ -44,9 +48,17 @@ test("notification messages link to the matching admin section without guest det
   assert.match(request.url, /^\/admin\/requests\//u);
   assert.equal(managerRequest.title, "Гость просит подключить менеджера");
   assert.match(managerRequest.url, /^\/admin\/requests\//u);
+  assert.equal(callbackRequest.title, "Нужен обратный звонок гостю");
+  assert.match(callbackRequest.url, /^\/admin\/voice-calls\//u);
   assert.equal(booking.title, "Новая заявка на бронирование");
   assert.equal(booking.url, "/admin/booking-requests");
-  for (const message of [lead, request, managerRequest, booking]) {
+  for (const message of [
+    lead,
+    request,
+    managerRequest,
+    callbackRequest,
+    booking,
+  ]) {
     assert.doesNotMatch(JSON.stringify(message), /phone|email|guestName/iu);
   }
 });

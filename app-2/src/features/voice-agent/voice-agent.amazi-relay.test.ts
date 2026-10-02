@@ -47,7 +47,10 @@ const setupGreetingRelay = () => {
     logger: silentLogger,
     service: {
       appendTranscriptByProvider: async () => null,
-      toolForProviderCall: async () => ({ accepted: true, state: "accepted" }),
+      toolForProviderCall: async () => ({
+        accepted: false,
+        reason: "unsupported_tool",
+      }),
     },
     WebSocketClass: FakeRelaySocket as never,
   });
@@ -204,17 +207,15 @@ test("stops relay retries after an authentication response", async () => {
   relay.close("session-401");
 });
 
-test("executes an Amazi relay tool once and returns function output on the same relay", async () => {
+test("rejects retired manager-transfer events without calling the tool service", async () => {
   FakeRelaySocket.instances.length = 0;
-  const toolCalls: Array<{ providerCallId: string; name: string }> = [];
+  let serviceCalls = 0;
   const relay = createAmaziEventRelay({
-    transferPlaybackFallbackMs: 0,
-    transferPlaybackGraceMs: 0,
     service: {
       appendTranscriptByProvider: async () => null,
-      toolForProviderCall: async (providerCallId, name) => {
-        toolCalls.push({ name, providerCallId });
-        return { accepted: false, reason: "mango_transfer_initiator_missing" };
+      toolForProviderCall: async () => {
+        serviceCalls += 1;
+        return { accepted: false, reason: "invalid_tool_arguments" };
       },
     },
     WebSocketClass: FakeRelaySocket as never,
@@ -245,34 +246,15 @@ test("executes an Amazi relay tool once and returns function output on the same 
     false,
   );
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(toolCalls, []);
-
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        response: { status: "completed" },
-        type: "response.done",
-      }),
-    ),
-    false,
-  );
-  await wait(10);
-
+  assert.equal(serviceCalls, 0);
   assert.equal(FakeRelaySocket.instances.length, 1);
-  assert.deepEqual(toolCalls, [
-    { name: "transfer_to_manager", providerCallId: "amazi:session-1" },
-  ]);
-  assert.match(socket.sent[0] ?? "", /function_call_output/u);
-  assert.match(socket.sent[1] ?? "", /response\.create/u);
+  assert.match(socket.sent.join("\n"), /unsupported_tool/u);
   relay.close("session-1");
 });
 
 test("gives a short Russian spoken fallback when Eptera is unavailable", async () => {
   FakeRelaySocket.instances.length = 0;
   const relay = createAmaziEventRelay({
-    transferPlaybackFallbackMs: 0,
-    transferPlaybackGraceMs: 0,
     service: {
       appendTranscriptByProvider: async () => null,
       toolForProviderCall: async () => ({
@@ -324,72 +306,6 @@ test("gives a short Russian spoken fallback when Eptera is unavailable", async (
   relay.close("eptera-unavailable");
 });
 
-test("waits for generated announcement audio before starting the transfer", async () => {
-  FakeRelaySocket.instances.length = 0;
-  const toolCalls: string[] = [];
-  const relay = createAmaziEventRelay({
-    transferPlaybackFallbackMs: 0,
-    transferPlaybackGraceMs: 40,
-    service: {
-      appendTranscriptByProvider: async () => null,
-      toolForProviderCall: async (_providerCallId, name) => {
-        toolCalls.push(name);
-        return { accepted: true, state: "accepted" };
-      },
-    },
-    WebSocketClass: FakeRelaySocket as never,
-  });
-  relay.connect({
-    eventRelayUrl: "wss://relay.example/session",
-    providerCallId: "amazi:session-audio-delay",
-    sessionId: "session-audio-delay",
-  });
-  const socket = FakeRelaySocket.instances[0]!;
-  socket.emit(
-    "message",
-    Buffer.from(JSON.stringify({ type: "response.created" })),
-    false,
-  );
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        delta: Buffer.alloc(48_000).toString("base64"),
-        type: "response.output_audio.delta",
-      }),
-    ),
-    false,
-  );
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        type: "response.function_call_arguments.done",
-        call_id: "transfer-call-audio-delay",
-        name: "transfer_to_manager",
-        arguments: "{}",
-      }),
-    ),
-    false,
-  );
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        response: { status: "completed" },
-        type: "response.done",
-      }),
-    ),
-    false,
-  );
-
-  await wait(1_020);
-  assert.deepEqual(toolCalls, []);
-  await wait(100);
-  assert.deepEqual(toolCalls, ["transfer_to_manager"]);
-  relay.close("session-audio-delay");
-});
-
 test("persists clean output audio when the relay closes", async () => {
   FakeRelaySocket.instances.length = 0;
   const persisted: Array<{
@@ -405,7 +321,8 @@ test("persists clean output audio when the relay closes", async () => {
       appendTranscriptByProvider: async () => null,
       toolForProviderCall: async () => ({
         accepted: true,
-        state: "accepted" as const,
+        requestId: "request-id",
+        status: "pending",
       }),
     },
     WebSocketClass: FakeRelaySocket as never,
@@ -439,60 +356,6 @@ test("persists clean output audio when the relay closes", async () => {
   );
 });
 
-test("cancels a queued transfer if the guest interrupts the announcement", async () => {
-  FakeRelaySocket.instances.length = 0;
-  const toolCalls: string[] = [];
-  const relay = createAmaziEventRelay({
-    transferPlaybackFallbackMs: 0,
-    transferPlaybackGraceMs: 100,
-    service: {
-      appendTranscriptByProvider: async () => null,
-      toolForProviderCall: async (_providerCallId, name) => {
-        toolCalls.push(name);
-        return { accepted: true, state: "accepted" };
-      },
-    },
-    WebSocketClass: FakeRelaySocket as never,
-  });
-  relay.connect({
-    eventRelayUrl: "wss://relay.example/session",
-    providerCallId: "amazi:session-transfer-interrupt",
-    sessionId: "session-transfer-interrupt",
-  });
-  const socket = FakeRelaySocket.instances[0]!;
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        type: "response.function_call_arguments.done",
-        call_id: "transfer-call-interrupted",
-        name: "transfer_to_manager",
-        arguments: "{}",
-      }),
-    ),
-    false,
-  );
-  socket.emit(
-    "message",
-    Buffer.from(
-      JSON.stringify({
-        response: { status: "completed" },
-        type: "response.done",
-      }),
-    ),
-    false,
-  );
-  socket.emit(
-    "message",
-    Buffer.from(JSON.stringify({ type: "input_audio_buffer.speech_started" })),
-    false,
-  );
-
-  await wait(150);
-  assert.deepEqual(toolCalls, []);
-  relay.close("session-transfer-interrupt");
-});
-
 test("attempts one safe Russian fallback after a Realtime response failure", () => {
   FakeRelaySocket.instances.length = 0;
   const warnings: unknown[] = [];
@@ -505,7 +368,8 @@ test("attempts one safe Russian fallback after a Realtime response failure", () 
       appendTranscriptByProvider: async () => null,
       toolForProviderCall: async () => ({
         accepted: true,
-        state: "accepted" as const,
+        requestId: "request-id",
+        status: "pending",
       }),
     },
     WebSocketClass: FakeRelaySocket as never,
@@ -564,7 +428,8 @@ test("uses a safe Russian fallback for a retryable Gateway error", () => {
       appendTranscriptByProvider: async () => null,
       toolForProviderCall: async () => ({
         accepted: true,
-        state: "accepted" as const,
+        requestId: "request-id",
+        status: "pending",
       }),
     },
     WebSocketClass: FakeRelaySocket as never,

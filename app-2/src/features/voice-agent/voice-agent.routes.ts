@@ -43,12 +43,9 @@ export const createVoiceAgentRouter = (
   apiKey?: string,
   openaiBaseUrl?: string,
   eptera?: { apiKey?: string; hotelId?: string },
-  transfer?: {
+  mango?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
-    readonly destination?: string;
-    readonly openaiSipApiKey?: string;
-    readonly openaiSipBaseUrl?: string;
   },
   openaiSip?: {
     readonly apiKey?: string;
@@ -67,9 +64,7 @@ export const createVoiceAgentRouter = (
     openaiBaseUrl,
     createEpteraClient(eptera ?? {}),
     {
-      ...transfer,
-      openaiSipApiKey: openaiSip?.apiKey,
-      openaiSipBaseUrl: openaiSip?.baseUrl,
+      ...mango,
     },
   );
   const amaziRelay = createAmaziEventRelay({
@@ -166,9 +161,9 @@ export const createVoiceAgentRouter = (
       try {
         response.locals.input = {
           body: parseMangoWebhook({
-            apiKey: transfer?.mangoApiKey,
+            apiKey: mango?.mangoApiKey,
             body: request.body,
-            salt: transfer?.mangoApiSalt,
+            salt: mango?.mangoApiSalt,
           }),
         };
         next();

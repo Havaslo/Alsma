@@ -1,3 +1,4 @@
+import type { Prisma } from "../../generated/prisma/client.js";
 import type { Database } from "../../lib/database/database.js";
 import { getPaginationRange } from "../../lib/http/pagination.js";
 import type {
@@ -18,6 +19,32 @@ export const hasPlayableVoiceCallRecording = (call: {
     (call.providerRecordingId &&
       ["available", "completed"].includes(call.recordingStatus ?? "")),
   );
+
+const recordOf = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+const callbackRequestOf = (details: unknown) => {
+  const callback = recordOf(recordOf(details).callbackRequest);
+  if (callback.status !== "pending" && callback.status !== "completed")
+    return null;
+  return {
+    guestName:
+      typeof callback.guestName === "string" ? callback.guestName : null,
+    phone: typeof callback.phone === "string" ? callback.phone : null,
+    preferredTime:
+      typeof callback.preferredTime === "string"
+        ? callback.preferredTime
+        : null,
+    reason: typeof callback.reason === "string" ? callback.reason : "",
+    requestedAt:
+      typeof callback.requestedAt === "string" ? callback.requestedAt : null,
+    completedAt:
+      typeof callback.completedAt === "string" ? callback.completedAt : null,
+    status: callback.status,
+  };
+};
 
 export const createAdminOperationsRepository = (database: Database) => ({
   getAnalytics: async (start: Date, end: Date) => {
@@ -338,6 +365,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([
       database.client.voiceCall.findMany({
+        include: { adminRequest: { select: { details: true } } },
         orderBy: { startedAt: "desc" },
         skip,
         take,
@@ -346,10 +374,15 @@ export const createAdminOperationsRepository = (database: Database) => ({
     ]);
     return {
       items: items.map((call) => {
-        const { recordingUrl: _recordingUrl, ...publicCall } = call;
+        const {
+          recordingUrl: _recordingUrl,
+          adminRequest,
+          ...publicCall
+        } = call;
         void _recordingUrl;
         return {
           ...publicCall,
+          callbackRequest: callbackRequestOf(adminRequest?.details),
           // A Mango ID is only a reference, not proof that the audio exists.
           // Show the player after a successful fetch or with a durable copy.
           hasRecording: hasPlayableVoiceCallRecording(call),
@@ -363,19 +396,58 @@ export const createAdminOperationsRepository = (database: Database) => ({
   },
   getVoiceCall: async (recordId: string) => {
     const call = await database.client.voiceCall.findUnique({
+      include: { adminRequest: { select: { details: true } } },
       where: { id: recordId },
     });
     if (!call) return null;
-    const { recordingUrl: _recordingUrl, ...publicCall } = call;
+    const { recordingUrl: _recordingUrl, adminRequest, ...publicCall } = call;
     void _recordingUrl;
     return {
       ...publicCall,
+      callbackRequest: callbackRequestOf(adminRequest?.details),
       hasRecording: hasPlayableVoiceCallRecording(call),
       hasAgentAudio: Boolean(call.agentAudioObjectId),
       hasTranscript:
         Array.isArray(call.transcript) && call.transcript.length > 0,
     };
   },
+  completeVoiceCallback: (recordId: string) =>
+    database.client.$transaction(async (transaction) => {
+      const call = await transaction.voiceCall.findUnique({
+        where: { id: recordId },
+        select: { adminRequestId: true },
+      });
+      if (!call?.adminRequestId) return null;
+      const request = await transaction.adminRequest.findUnique({
+        where: { id: call.adminRequestId },
+      });
+      if (!request) return null;
+      const details = recordOf(request.details);
+      const callback = recordOf(details.callbackRequest);
+      if (callback.status === "completed")
+        return {
+          callId: recordId,
+          completedAt:
+            typeof callback.completedAt === "string"
+              ? callback.completedAt
+              : null,
+          alreadyCompleted: true,
+          status: "completed",
+        };
+      if (callback.status !== "pending") return null;
+      const completedAt = new Date().toISOString();
+      await transaction.adminRequest.update({
+        where: { id: request.id },
+        data: {
+          details: {
+            ...details,
+            callbackRequest: { ...callback, completedAt, status: "completed" },
+          } as Prisma.InputJsonValue,
+          status: "completed",
+        },
+      });
+      return { callId: recordId, completedAt, status: "completed" };
+    }),
   listTasks: async (query: AdminOperationsQuery) => {
     const { skip, take } = getPaginationRange(query);
     const [items, total] = await database.client.$transaction([

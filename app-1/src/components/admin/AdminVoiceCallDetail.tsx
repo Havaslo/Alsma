@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ScrollText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, PhoneCall, ScrollText } from "lucide-react";
 
 import { AdminVoiceCallPlayer } from "@/components/admin/AdminVoiceCallPlayer";
+import { Button } from "@/components/ui/Button";
 import {
   useAdminVoiceCall,
+  useCompleteAdminVoiceCallback,
   useReprocessAdminVoiceCall,
 } from "@/lib/admin/useAdmin";
 import { getApiErrorMessage } from "@/lib/api/api-error";
@@ -36,6 +38,7 @@ export const AdminVoiceCallDetail = ({
 }) => {
   const query = useAdminVoiceCall(callId);
   const reprocess = useReprocessAdminVoiceCall();
+  const completeCallback = useCompleteAdminVoiceCallback();
   const call = query.data?.call;
   const transcript = [...(call?.transcript ?? [])].sort((left, right) =>
     segmentTime(left).localeCompare(segmentTime(right)),
@@ -117,6 +120,55 @@ export const AdminVoiceCallDetail = ({
           </section>
         </section>
         <aside className="space-y-5">
+          {call.callbackRequest && (
+            <section className="rounded-3xl border border-line bg-brand-foreground p-6">
+              <div className="flex items-center gap-2">
+                <PhoneCall className="size-5 text-brand" />
+                <h2 className="text-xl font-semibold">Обратный звонок</h2>
+              </div>
+              <p className="mt-3 rounded-full bg-page px-3 py-1 text-sm font-semibold">
+                {call.callbackRequest.status === "pending"
+                  ? "Ожидает звонка менеджера"
+                  : "Перезвон выполнен"}
+              </p>
+              <dl className="mt-5 space-y-4 text-sm">
+                <Meta
+                  label="Телефон"
+                  value={call.callbackRequest.phone ?? "Не указан"}
+                />
+                <Meta
+                  label="Имя"
+                  value={call.callbackRequest.guestName ?? "Не указано"}
+                />
+                <Meta label="Причина" value={call.callbackRequest.reason} />
+                <Meta
+                  label="Удобное время"
+                  value={call.callbackRequest.preferredTime ?? "Не указано"}
+                />
+              </dl>
+              {call.callbackRequest.status === "pending" && (
+                <Button
+                  className="mt-5 w-full"
+                  disabled={completeCallback.isPending}
+                  onClick={() => completeCallback.mutate(callId)}
+                  variant="secondary"
+                >
+                  <CheckCircle2 className="size-4" />
+                  {completeCallback.isPending
+                    ? "Сохраняем…"
+                    : "Отметить перезвон выполненным"}
+                </Button>
+              )}
+              {completeCallback.isError && (
+                <p className="mt-3 text-sm text-destructive">
+                  {getApiErrorMessage(
+                    completeCallback.error,
+                    "Не удалось обновить статус перезвона.",
+                  )}
+                </p>
+              )}
+            </section>
+          )}
           <section className="rounded-3xl border border-line bg-brand-foreground p-6">
             <h2 className="text-xl font-semibold">Данные звонка</h2>
             <dl className="mt-5 space-y-4 text-sm">

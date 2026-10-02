@@ -72,9 +72,7 @@ type CreateApiRouterOptions = {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
     readonly mangoConfigured: boolean;
-    readonly t2TransferConfigured: boolean;
     readonly publicWebhookConfigured: boolean;
-    readonly transferNumber?: string;
   };
   readonly yooKassaSecretKey?: string;
   readonly logger: Logger;
@@ -246,13 +244,8 @@ export const createApiRouter = ({
       sipLimitation: openaiSip.apiKey
         ? undefined
         : "Прямой OpenAI SIP не настроен.",
-      t2TransferConfigured: voiceIntegration.t2TransferConfigured,
       publicWebhookConfigured: voiceIntegration.publicWebhookConfigured,
-      transferConfigured: Boolean(
-        voiceIntegration.mangoApiKey &&
-        voiceIntegration.mangoApiSalt &&
-        voiceIntegration.transferNumber,
-      ),
+      callbackRequestsEnabled: true,
     }),
   );
   router.use(
@@ -265,7 +258,6 @@ export const createApiRouter = ({
       {
         mangoApiKey: voiceIntegration.mangoApiKey,
         mangoApiSalt: voiceIntegration.mangoApiSalt,
-        destination: voiceIntegration.transferNumber,
       },
       openaiSip,
       voiceConfigurationSecret,

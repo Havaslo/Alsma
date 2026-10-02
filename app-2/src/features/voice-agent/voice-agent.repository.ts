@@ -60,7 +60,7 @@ export const createVoiceAgentRepository = (database: Database) => ({
   }) => ensureCall(database, input),
   getKnowledgeContext: async () => {
     await ensureDefaultAgentPlaybook(database);
-    const [articles, rules, scenarios, transferRules] = await Promise.all([
+    const [articles, rules, scenarios] = await Promise.all([
       database.client.knowledgeArticle.findMany({
         where: { status: "published", channels: { has: "voice" } },
         orderBy: { updatedAt: "desc" },
@@ -73,12 +73,11 @@ export const createVoiceAgentRepository = (database: Database) => ({
         where: {
           enabled: true,
           channels: { has: "voice" },
-          NOT: { title: "Голос: уведомление о возможной записи" },
+          NOT: [
+            { title: "Голос: уведомление о возможной записи" },
+            { title: "Голос: перевод при необходимости" },
+          ],
         },
-        orderBy: { updatedAt: "desc" },
-      }),
-      database.client.agentTransferRule.findMany({
-        where: { enabled: true, channels: { has: "voice" } },
         orderBy: { updatedAt: "desc" },
       }),
     ]);
@@ -87,10 +86,6 @@ export const createVoiceAgentRepository = (database: Database) => ({
       ...rules.map((item) => `Правило ${item.title}: ${item.content}`),
       ...scenarios.map(
         (item) => `Голосовой сценарий ${item.title}: ${item.response}`,
-      ),
-      ...transferRules.map(
-        (item) =>
-          `Правило перевода ${item.title}: ${item.condition}. Назначение: ${item.destination}`,
       ),
     ].join("\n\n");
   },
@@ -432,6 +427,118 @@ export const createVoiceAgentRepository = (database: Database) => ({
           data: { adminRequestId: request.id },
         });
       return request;
+    }),
+  createCallbackRequest: (
+    callId: string,
+    input: {
+      reason: string;
+      phone?: string;
+      guestName?: string;
+      preferredTime?: string;
+    },
+  ) =>
+    database.client.$transaction(async (transaction) => {
+      const call = await transaction.voiceCall.findUnique({
+        where: { id: callId },
+      });
+      if (!call) return { accepted: false, reason: "call_not_found" };
+      const existing = call.adminRequestId
+        ? await transaction.adminRequest.findUnique({
+            where: { id: call.adminRequestId },
+          })
+        : null;
+      const existingDetails = asObject(existing?.details);
+      const existingCallback = asObject(existingDetails.callbackRequest);
+      if (Object.keys(existingCallback).length) {
+        return {
+          accepted: true,
+          duplicate: true,
+          requestId: existing!.id,
+          status: existingCallback.status ?? "pending",
+        };
+      }
+      const phone = input.phone?.trim() || call.callerPhone?.trim();
+      if (!phone) return { accepted: false, reason: "callback_phone_required" };
+      const claimed = await transaction.voiceCall.updateMany({
+        where: {
+          id: callId,
+          OR: [{ intent: null }, { intent: { not: "callback_requested" } }],
+        },
+        data: { intent: "callback_requested" },
+      });
+      if (!claimed.count) {
+        const latestRequest = call.adminRequestId
+          ? await transaction.adminRequest.findUnique({
+              where: { id: call.adminRequestId },
+            })
+          : null;
+        const latestCallback = asObject(
+          asObject(latestRequest?.details).callbackRequest,
+        );
+        if (Object.keys(latestCallback).length) {
+          return {
+            accepted: true,
+            duplicate: true,
+            requestId: latestRequest!.id,
+            status: latestCallback.status ?? "pending",
+          };
+        }
+        return { accepted: false, reason: "callback_request_failed" };
+      }
+      const requestedAt = new Date().toISOString();
+      const callbackRequest = {
+        guestName: input.guestName ?? null,
+        phone,
+        preferredTime: input.preferredTime ?? null,
+        reason: input.reason,
+        requestedAt,
+        status: "pending",
+      };
+      const details = {
+        ...existingDetails,
+        source: "Звонки",
+        channelType: "call",
+        voiceCallId: call.id,
+        callbackRequest,
+      } as Prisma.InputJsonValue;
+      const request = existing
+        ? await transaction.adminRequest.update({
+            where: { id: existing.id },
+            data: {
+              category: "voice-call",
+              contact: phone,
+              description: `Просьба о перезвоне: ${input.reason}`,
+              details,
+              requester: input.guestName ?? existing.requester,
+              status: "new",
+              title: "Перезвонить клиенту",
+            },
+            select: { id: true },
+          })
+        : await transaction.adminRequest.create({
+            data: {
+              category: "voice-call",
+              contact: phone,
+              description: `Просьба о перезвоне: ${input.reason}`,
+              details,
+              requester: input.guestName,
+              status: "new",
+              title: "Перезвонить клиенту",
+            },
+            select: { id: true },
+          });
+      await transaction.voiceCall.update({
+        where: { id: callId },
+        data: { adminRequestId: request.id },
+      });
+      await transaction.adminPushEvent.create({
+        data: {
+          entityId: call.id,
+          eventKind: "voice_callback_requested",
+          type: "request",
+        },
+      });
+      return { accepted: true, requestId: request.id, status: "pending" };
     }),
   ...createTransferRepository(database),
 });

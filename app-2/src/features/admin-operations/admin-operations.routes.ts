@@ -344,6 +344,26 @@ export const createAdminOperationsRouter = (
       response.json({ call });
     },
   );
+  router.post(
+    "/voice-calls/:recordId/callback/complete",
+    createRequireAdminPermission("voice.calls.access", "requests.access"),
+    validateRequest({ params: recordParamsSchema }),
+    async (_request, response) => {
+      const result = await repository.completeVoiceCallback(
+        response.locals.input.params.recordId,
+      );
+      if (!result) {
+        response.status(404).json({
+          error: {
+            code: "CALLBACK_REQUEST_NOT_FOUND",
+            message: "Ожидающая заявка на обратный звонок не найдена.",
+          },
+        });
+        return;
+      }
+      response.json({ callbackRequest: result });
+    },
+  );
   router.patch(
     "/requests/:recordId",
     createRequireAdminPermission("requests.access"),

@@ -162,9 +162,18 @@ export const toolBodySchema = z.discriminatedUnion("name", [
     comment: z.string().trim().max(4_000).optional(),
   }),
   z.object({
-    name: z.literal("transfer_to_manager"),
+    name: z.literal("request_callback"),
     callId: z.string().uuid(),
     reason: z.string().trim().min(1).max(500),
+    phone: z
+      .string()
+      .trim()
+      .min(5)
+      .max(32)
+      .regex(/^[+\d() .-]+$/u)
+      .optional(),
+    guestName: z.string().trim().min(1).max(120).optional(),
+    preferredTime: z.string().trim().min(1).max(120).optional(),
   }),
 ]);
 

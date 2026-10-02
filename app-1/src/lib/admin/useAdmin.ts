@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
+  completeAdminVoiceCallback,
   completeManagerTask,
   createAdminBooking,
   deleteAdminClient,
@@ -81,6 +82,20 @@ export const useReprocessAdminVoiceCall = () => {
       void client.invalidateQueries({
         queryKey: [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls", recordId],
       }),
+  });
+};
+export const useCompleteAdminVoiceCallback = () => {
+  const client = useQueryClient();
+  return useApiMutation(completeAdminVoiceCallback, {
+    onSuccess: (_data, callId) => {
+      void client.invalidateQueries({
+        queryKey: [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls", callId],
+      });
+      void client.invalidateQueries({
+        queryKey: [...ADMIN_OPERATIONS_QUERY_KEY, "voice-calls"],
+      });
+    },
+    successMessage: "Обратный звонок отмечен выполненным",
   });
 };
 export const useAdminAnalytics = (start: string, end: string) =>

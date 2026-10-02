@@ -8,54 +8,55 @@ import {
   getVoiceToolFailureInstructions,
   voiceAgentCommunicationInstruction,
   voiceBookingInstruction,
-  voiceTransferInstruction,
+  voiceCallbackInstruction,
 } from "./voice-agent.prompt.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 import { createVoiceAgentService } from "./voice-agent.service.js";
 import { voiceAgentTools } from "./voice-agent.tools.js";
 
-const transferTool = voiceAgentTools.find(
-  (tool) => tool.name === "transfer_to_manager",
+const callbackTool = voiceAgentTools.find(
+  (tool) => tool.name === "request_callback",
 );
 
-test("requires explicit consent before a voice transfer", () => {
-  assert.match(voiceTransferInstruction, /только если гость/u);
-  assert.match(voiceTransferInstruction, /не означает согласие/u);
-  assert.match(voiceTransferInstruction, /дождись однозначного согласия/u);
-  assert.match(voiceTransferInstruction, /вызови transfer_to_manager/u);
-  assert.match(voiceTransferInstruction, /полностью закончи фразу/u);
-  assert.match(voiceTransferInstruction, /accepted=true/u);
-  assert.match(voiceTransferInstruction, /accepted=false/u);
-  assert.match(
-    voiceTransferInstruction,
-    /забронировать номер не означает согласие/u,
-  );
+test("requires explicit consent and records a callback instead of transfer", () => {
+  assert.match(voiceCallbackInstruction, /прямой просьбы гостя/u);
+  assert.match(voiceCallbackInstruction, /ясного согласия/u);
+  assert.match(voiceCallbackInstruction, /вызови request_callback/u);
+  assert.match(voiceCallbackInstruction, /номер.*подтверждения/u);
+  assert.match(voiceCallbackInstruction, /только при accepted=true/u);
+  assert.match(voiceCallbackInstruction, /не переводи/iu);
+  assert.match(voiceCallbackInstruction, /обратный звонок в рабочее время/u);
 });
 
-test("keeps the transfer tool contract aligned with the prompt", () => {
-  assert.ok(transferTool);
-  assert.match(transferTool.description, /только если гость/u);
-  assert.match(transferTool.description, /не означает согласие/u);
-  assert.match(transferTool.description, /дождись явного согласия/u);
-  assert.match(transferTool.description, /accepted=true/u);
-  assert.match(transferTool.description, /accepted=false/u);
-  assert.doesNotMatch(transferTool.description, /Eptera/iu);
+test("keeps the callback tool contract aligned with the prompt", () => {
+  assert.ok(callbackTool);
+  assert.match(callbackTool.description, /обратный звонок/u);
+  assert.match(callbackTool.description, /после прямой просьбы гостя/u);
+  assert.match(callbackTool.description, /не переключай/iu);
+  assert.doesNotMatch(callbackTool.description, /transfer_to_manager/iu);
 });
 
-test("checks room availability before offering manager assistance for booking", () => {
+test("checks room availability before offering a callback for booking", () => {
   assert.match(voiceBookingInstruction, /помоги проверить наличие/u);
   assert.match(voiceBookingInstruction, /молча вызови check_availability/u);
-  assert.match(voiceBookingInstruction, /подтверждённый результат/u);
-  assert.match(voiceBookingInstruction, /дождись согласия/u);
-  assert.match(voiceBookingInstruction, /не переводи автоматически/u);
-  assert.match(voiceBookingInstruction, /перед вызовом не произноси/iu);
-  assert.match(voiceBookingInstruction, /говори только после результата/u);
-  assert.match(voiceBookingInstruction, /не говори, что проверяешь наличие/u);
+  assert.match(voiceBookingInstruction, /подтверждённые сведения/u);
+  assert.match(voiceBookingInstruction, /дождись ясного согласия/u);
+  assert.match(voiceBookingInstruction, /обратный звонок/u);
+  assert.match(voiceBookingInstruction, /не переводит звонок/u);
   assert.match(
     voiceBookingInstruction,
-    /распределение гостей по нескольким номерам/u,
+    /не произноси вступлений и статусов перед вызовом/iu,
   );
-  assert.match(voiceBookingInstruction, /предложи уточнить у менеджера/u);
+  assert.match(
+    voiceBookingInstruction,
+    /после результата сообщи только подтверждённые сведения/iu,
+  );
+  assert.match(voiceBookingInstruction, /не говори, что бронь оформлена/u);
+  assert.match(
+    voiceBookingInstruction,
+    /точное распределение гостей нельзя подтвердить/u,
+  );
+  assert.match(voiceBookingInstruction, /требуется ручное уточнение/u);
   assert.doesNotMatch(voiceBookingInstruction, /Eptera/iu);
 });
 
@@ -137,13 +138,14 @@ test("uses GPT-6 Luna for voice-agent text answers", async () => {
   }
 });
 
-test("exposes only read-only lodging tools and manager transfer to voice", async () => {
+test("exposes only read-only lodging tools and callback requests to voice", async () => {
   const toolNames: readonly string[] = voiceAgentTools.map((tool) => tool.name);
   assert.equal(toolNames.includes("check_availability"), true);
   assert.equal(toolNames.includes("compare_rooms"), true);
   assert.equal(toolNames.includes("create_booking"), false);
   assert.equal(toolNames.includes("create_booking_request"), false);
-  assert.equal(toolNames.includes("transfer_to_manager"), true);
+  assert.equal(toolNames.includes("request_callback"), true);
+  assert.equal(toolNames.includes("transfer_to_manager"), false);
   assert.equal(toolNames.includes("create_payment"), false);
   const service = createVoiceAgentService(
     {} as VoiceAgentRepository,
@@ -207,15 +209,15 @@ test("uses the current Moscow year without asking guests to confirm it", () => {
   assert.match(instruction, /если дата этого года уже прошла/iu);
 });
 
-test("offers manager help with consent when availability cannot be checked", () => {
+test("offers a callback with consent when availability cannot be checked", () => {
   const instructions = getVoiceToolFailureInstructions({
     available: false,
     reason: "eptera_temporarily_unavailable",
   });
   assert.match(instructions ?? "", /только по-русски/u);
   assert.match(instructions ?? "", /не получается проверить наличие/u);
-  assert.match(instructions ?? "", /Хотите, соединю вас с менеджером/iu);
-  assert.match(instructions ?? "", /не запускай перевод без согласия/u);
+  assert.match(instructions ?? "", /оставить заявку/u);
+  assert.match(instructions ?? "", /не создавай заявку без согласия/u);
   assert.doesNotMatch(instructions ?? "", /Eptera/iu);
   assert.equal(
     getVoiceToolFailureInstructions({ available: false }),

@@ -2,10 +2,7 @@ import type { Logger } from "pino";
 import WebSocket from "ws";
 
 import { createLogger } from "../../lib/logger.js";
-import {
-  voiceAgentDiagnosticMaxBytes,
-  voiceAgentPcmBytesPerMillisecond,
-} from "./voice-agent.audio-diagnostic.js";
+import { voiceAgentDiagnosticMaxBytes } from "./voice-agent.audio-diagnostic.js";
 import { getVoiceToolFailureInstructions } from "./voice-agent.prompt.js";
 import type { VoiceAgentService } from "./voice-agent.service.js";
 
@@ -49,8 +46,6 @@ type AmaziRelayOptions = {
   >;
   readonly authorizationToken?: string;
   readonly WebSocketClass?: RelaySocketConstructor;
-  readonly transferPlaybackFallbackMs?: number;
-  readonly transferPlaybackGraceMs?: number;
   readonly persistOutputAudio?: (input: {
     readonly pcm: Uint8Array;
     readonly providerCallId: string;
@@ -63,7 +58,6 @@ type RelaySession = {
   readonly sessionId: string;
   readonly providerCallId: string;
   readonly toolCallIds: Set<string>;
-  readonly pendingTransferCalls: RelayEvent[];
   socket: RelaySocket;
   reconnectAttempts: number;
   reconnectTimer?: NodeJS.Timeout;
@@ -72,11 +66,9 @@ type RelaySession = {
   failureFallbackSent: boolean;
   greetingPending: boolean;
   greetingSent: boolean;
-  responseAudioDurationMs: number;
   readonly outputAudioChunks: Buffer[];
   outputAudioBytes: number;
   outputAudioTruncated: boolean;
-  transferTimer?: NodeJS.Timeout;
 };
 
 const relayRetryDelays = [250, 500, 1_000, 2_000] as const;
@@ -106,8 +98,6 @@ export const createAmaziEventRelay = ({
   service,
   authorizationToken,
   WebSocketClass = WebSocket,
-  transferPlaybackFallbackMs = 1_200,
-  transferPlaybackGraceMs = 400,
   persistOutputAudio,
 }: AmaziRelayOptions) => {
   const sessions = new Map<string, RelaySession>();
@@ -249,19 +239,6 @@ export const createAmaziEventRelay = ({
     );
   };
 
-  const cancelPendingTransfers = (session: RelaySession, reason: string) => {
-    if (session.transferTimer) clearTimeout(session.transferTimer);
-    session.transferTimer = undefined;
-    for (const event of session.pendingTransferCalls.splice(0))
-      if (event.call_id)
-        sendToolOutput(
-          session,
-          event.call_id,
-          { accepted: false, reason },
-          false,
-        );
-  };
-
   const handleToolCall = async (
     session: RelaySession,
     event: RelayEvent,
@@ -270,60 +247,15 @@ export const createAmaziEventRelay = ({
       return;
     session.toolCallIds.add(event.call_id);
     if (event.name === "transfer_to_manager") {
-      // The transfer disconnects the current audio leg. Defer it until the
-      // handoff announcement has finished generating and playing.
-      session.pendingTransferCalls.push(event);
+      sendToolOutput(
+        session,
+        event.call_id,
+        { accepted: false, reason: "unsupported_tool" },
+        true,
+      );
       return;
     }
     await executeToolCall(session, event);
-  };
-
-  const finishAssistantResponse = (
-    session: RelaySession,
-    event: RelayEvent,
-  ) => {
-    if (session.pendingTransferCalls.length === 0) return;
-    const status = event.response?.status;
-    if (status && status !== "completed") {
-      cancelPendingTransfers(session, "transfer_announcement_interrupted");
-      return;
-    }
-    const audioDuration = session.responseAudioDurationMs;
-    session.responseAudioDurationMs = 0;
-    const delay = Math.max(
-      transferPlaybackFallbackMs,
-      audioDuration > 0
-        ? audioDuration + transferPlaybackGraceMs
-        : transferPlaybackFallbackMs,
-    );
-    session.transferTimer = setTimeout(() => {
-      session.transferTimer = undefined;
-      if (
-        session.closing ||
-        session.retryDisabled ||
-        session.socket.readyState !== WebSocket.OPEN ||
-        sessions.get(session.sessionId) !== session
-      ) {
-        cancelPendingTransfers(session, "transfer_session_unavailable");
-        return;
-      }
-      const pending = session.pendingTransferCalls.splice(0);
-      for (const transferCall of pending)
-        void executeToolCall(session, transferCall).catch((error: unknown) => {
-          logger.warn(
-            {
-              error: error instanceof Error ? error.message : "unknown",
-              stage: "amazi_relay_tool",
-            },
-            "Amazi relay tool execution failed",
-          );
-          if (transferCall.call_id)
-            sendToolOutput(session, transferCall.call_id, {
-              accepted: false,
-              reason: "tool_failed",
-            });
-        });
-    }, delay);
   };
 
   const scheduleReconnect = (
@@ -374,15 +306,11 @@ export const createAmaziEventRelay = ({
       if (isBinary) return;
       const event = parseRelayEvent(data);
       if (!event?.type) return;
-      if (event.type === "response.created")
-        session.responseAudioDurationMs = 0;
       if (
         event.type === "response.audio.delta" ||
         event.type === "response.output_audio.delta"
       ) {
         const chunk = Buffer.from(event.delta ?? "", "base64");
-        session.responseAudioDurationMs +=
-          chunk.byteLength / voiceAgentPcmBytesPerMillisecond;
         const remaining =
           voiceAgentDiagnosticMaxBytes - session.outputAudioBytes;
         if (remaining > 0 && chunk.byteLength > 0) {
@@ -398,8 +326,6 @@ export const createAmaziEventRelay = ({
         event.type === "response.created"
       )
         session.greetingSent = true;
-      if (event.type === "input_audio_buffer.speech_started")
-        cancelPendingTransfers(session, "guest_interrupted_before_transfer");
       if (transcriptEventTypes.has(event.type) && event.transcript?.trim()) {
         const providerEventId =
           event.event_id ??
@@ -469,7 +395,6 @@ export const createAmaziEventRelay = ({
           });
       }
       if (event.type === "response.done") {
-        finishAssistantResponse(session, event);
         if (event.response?.status === "failed")
           sendFailureFallback(session, {
             errorCode: event.response.status_details?.error?.code,
@@ -523,11 +448,9 @@ export const createAmaziEventRelay = ({
       )
         return;
       if (session.closing || session.retryDisabled) {
-        cancelPendingTransfers(session, "transfer_session_closed");
         sessions.delete(session.sessionId);
         return;
       }
-      cancelPendingTransfers(session, "transfer_session_disconnected");
       scheduleReconnect(session, "socket_close");
       if (
         !session.reconnectTimer &&
@@ -578,13 +501,11 @@ export const createAmaziEventRelay = ({
       sessionId,
       socket: undefined as unknown as RelaySocket,
       toolCallIds: new Set<string>(),
-      pendingTransferCalls: [],
       closing: false,
       retryDisabled: false,
       failureFallbackSent: false,
       greetingPending: false,
       greetingSent: false,
-      responseAudioDurationMs: 0,
       outputAudioChunks: [],
       outputAudioBytes: 0,
       outputAudioTruncated: false,
@@ -605,7 +526,6 @@ export const createAmaziEventRelay = ({
       if (!session) return;
       session.closing = true;
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
-      cancelPendingTransfers(session, "transfer_session_closed");
       sessions.delete(sessionId);
       if (persistOutputAudio && session.outputAudioBytes > 0) {
         const pcm = Buffer.concat(
