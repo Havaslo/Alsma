@@ -7,22 +7,16 @@ import {
   type DraftVariant,
   type FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
+import type { ContentFactoryGuidelines } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { ChannelBadge, QuietButton } from "./ContentFactoryPrimitives";
-
-const channelGuidance: Record<ContentChannel, string> = {
-  vk: "Подробная версия с контекстом и призывом к действию",
-  telegram: "Компактная, живая подача для быстрого чтения",
-  max: "Короткий самостоятельный текст без лишних деталей",
-  instagram: "Визуальный акцент, короткая подпись и хэштеги",
-  zen: "Развёрнутый информационный формат",
-};
 
 export const ChannelAdaptationsPanel = ({
   variant,
   activeChannel,
   selectedChannels,
+  guidelines,
   onActiveChannelChange,
   onToggleChannel,
   onTextChange,
@@ -34,6 +28,7 @@ export const ChannelAdaptationsPanel = ({
   mediaItems: FactoryMediaItem[];
   activeChannel: ContentChannel;
   selectedChannels: ContentChannel[];
+  guidelines: ContentFactoryGuidelines | null;
   onActiveChannelChange: (channel: ContentChannel) => void;
   onToggleChannel: (channel: ContentChannel) => void;
   onTextChange: (channel: ContentChannel, text: string) => void;
@@ -44,6 +39,9 @@ export const ChannelAdaptationsPanel = ({
   onMediaBrowse: (channel: ContentChannel) => void;
 }) => {
   const active = selectedChannels.includes(activeChannel);
+  const guideline = guidelines?.channels.find(
+    (channel) => channel.id === activeChannel,
+  );
   const image =
     mediaItems.find(
       (item) => item.id === variant.channelImageIds[activeChannel],
@@ -119,7 +117,7 @@ export const ChannelAdaptationsPanel = ({
             <div className="flex items-center gap-2.5">
               <ChannelBadge channel={activeChannel} />
               <span className="text-xs text-muted-ui-foreground">
-                {channelGuidance[activeChannel]}
+                {guideline?.copy ?? "Отдельная версия для выбранной площадки"}
               </span>
             </div>
             <button
@@ -146,6 +144,25 @@ export const ChannelAdaptationsPanel = ({
               {active ? "Канал включён" : "Добавить канал"}
             </button>
           </div>
+
+          {guideline && (
+            <div className="mt-4 space-y-2 rounded-xl border border-line bg-page/70 p-3.5 text-xs leading-5 text-muted-ui-foreground">
+              <p>
+                <span className="font-semibold text-page-foreground">
+                  Изображение:
+                </span>{" "}
+                {guideline.image.dimensions} · {guideline.image.ratio} ·{" "}
+                {guideline.image.format}.
+              </p>
+              <p>{guideline.image.note}</p>
+              <p>
+                <span className="font-semibold text-page-foreground">
+                  Несколько изображений:
+                </span>{" "}
+                {guideline.gallery}
+              </p>
+            </div>
+          )}
 
           {active ? (
             <>
@@ -217,18 +234,28 @@ export const ChannelAdaptationsPanel = ({
               <ChannelBadge channel={activeChannel} compact />
             </div>
             {image && (
-              <img
-                alt={image.title}
-                className="aspect-[16/9] w-full object-cover"
-                src={resolveMediaUrl(image.image)}
-              />
+              <div
+                className="w-full overflow-hidden bg-muted-ui"
+                style={{
+                  aspectRatio:
+                    guideline?.image.ratio.replace(":", " / ") ?? "16 / 9",
+                }}
+              >
+                <img
+                  alt={image.title}
+                  className="size-full object-cover"
+                  src={resolveMediaUrl(image.image)}
+                />
+              </div>
             )}
             <div className="p-4">
               <p className="line-clamp-4 text-xs leading-5 whitespace-pre-line text-page-foreground">
                 {variant.adaptations[activeChannel]}
               </p>
               <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[10px] text-muted-ui-foreground/80">
-                <span>Изображение адаптировано под формат</span>
+                <span>
+                  Формат {guideline?.image.ratio ?? "канала"} · черновик
+                </span>
                 <span>Сейчас</span>
               </div>
             </div>
@@ -240,7 +267,8 @@ export const ChannelAdaptationsPanel = ({
             <ImagePlus className="size-3.5" /> Заменить визуал для этого канала
           </QuietButton>
           <p className="mt-3 text-center text-xs leading-5 text-muted-ui-foreground">
-            Визуал будет подготовлен отдельно для формата выбранной площадки.
+            Генерация изображения выполняется отдельно для канала, который
+            выбран в поле формата под визуалом.
           </p>
         </div>
       </div>

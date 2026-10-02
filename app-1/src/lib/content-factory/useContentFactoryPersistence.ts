@@ -7,6 +7,7 @@ import {
   generateContentFactoryImage,
   generateContentFactoryText,
   loadContentFactoryDrafts,
+  loadContentFactoryGuidelines,
   loadContentFactoryMedia,
   saveContentFactoryDraft,
   uploadContentFactoryMedia,
@@ -23,6 +24,7 @@ import type {
 
 const draftsQueryKey = ["content-factory", "drafts"] as const;
 const mediaQueryKey = ["content-factory", "media"] as const;
+const guidelinesQueryKey = ["content-factory", "guidelines"] as const;
 
 export const useContentFactoryPersistence = () => {
   const queryClient = useQueryClient();
@@ -33,6 +35,10 @@ export const useContentFactoryPersistence = () => {
   const mediaQuery = useQuery({
     queryFn: ({ signal }) => loadContentFactoryMedia(signal),
     queryKey: mediaQueryKey,
+  });
+  const guidelinesQuery = useQuery({
+    queryFn: ({ signal }) => loadContentFactoryGuidelines(signal),
+    queryKey: guidelinesQueryKey,
   });
   const saveDraftMutation = useMutation({
     mutationFn: (input: {
@@ -94,6 +100,7 @@ export const useContentFactoryPersistence = () => {
 
   return {
     drafts: draftsQuery.data ?? [],
+    guidelines: guidelinesQuery.data ?? null,
     draftsError: draftsQuery.error
       ? contentFactoryErrorMessage(
           draftsQuery.error,
@@ -122,8 +129,12 @@ export const useContentFactoryPersistence = () => {
     generateText: (input: {
       prompt: string;
       selectedChannels: ContentChannel[];
+      reference: (typeof mediaItems)[number];
     }) => generateTextMutation.mutateAsync(input),
-    generateImage: (prompt: string) =>
-      generateImageMutation.mutateAsync(prompt),
+    generateImage: (input: {
+      prompt: string;
+      channel: ContentChannel;
+      reference: (typeof mediaItems)[number];
+    }) => generateImageMutation.mutateAsync(input),
   };
 };

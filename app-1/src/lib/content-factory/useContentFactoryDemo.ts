@@ -147,17 +147,21 @@ export const useContentFactoryDemo = (
     );
   };
 
-  const applyMedia = (media: FactoryMediaItem) => {
-    const targetLabel = mediaTargetChannel
-      ? CONTENT_CHANNELS.find((item) => item.id === mediaTargetChannel)?.label
+  const applyMedia = (
+    media: FactoryMediaItem,
+    channelOverride?: ContentChannel,
+  ) => {
+    const targetChannel = channelOverride ?? mediaTargetChannel;
+    const targetLabel = targetChannel
+      ? CONTENT_CHANNELS.find((item) => item.id === targetChannel)?.label
       : null;
     updateCurrentVariant((variant) => {
-      if (mediaTargetChannel) {
+      if (targetChannel) {
         return {
           ...variant,
           channelImageIds: {
             ...variant.channelImageIds,
-            [mediaTargetChannel]: media.id,
+            [targetChannel]: media.id,
           },
         };
       }
@@ -187,7 +191,10 @@ export const useContentFactoryDemo = (
     if (media) applyMedia(media);
   };
 
-  const useGeneratedMedia = (media: FactoryMediaItem) => applyMedia(media);
+  const useGeneratedMedia = (
+    media: FactoryMediaItem,
+    channel: ContentChannel,
+  ) => applyMedia(media, channel);
 
   const browseMainImage = () => {
     setMediaTargetChannel(null);

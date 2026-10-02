@@ -11,6 +11,7 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { createContentFactoryAiService } from "./content-factory-ai.service.js";
+import { contentFactoryGuidelinesResponse } from "./content-factory-guidelines.js";
 import {
   contentFactoryUploadLimit,
   createGenerateContentFactoryImageHandler,
@@ -23,8 +24,8 @@ import {
 import {
   contentFactoryDraftBodySchema,
   contentFactoryDraftParamsSchema,
-  contentFactoryImageGenerationBodySchema,
-  contentFactoryTextGenerationBodySchema,
+  contentFactoryImageGenerationQuerySchema,
+  contentFactoryTextGenerationQuerySchema,
   contentFactoryUploadQuerySchema,
 } from "./content-factory.schemas.js";
 
@@ -48,15 +49,20 @@ export const createContentFactoryRouter = (
     createRequireAdminPermission("site.access", "site.manage"),
   );
 
+  router.get("/guidelines", (_request, response) => {
+    response.json(contentFactoryGuidelinesResponse);
+  });
   router.get("/drafts", createListContentFactoryDraftsHandler(database));
   router.post(
     "/generate/text",
-    validateRequest({ body: contentFactoryTextGenerationBodySchema }),
+    raw({ limit: contentFactoryUploadLimit, type: () => true }),
+    validateRequest({ query: contentFactoryTextGenerationQuerySchema }),
     createGenerateContentFactoryTextHandler(ai),
   );
   router.post(
     "/generate/image",
-    validateRequest({ body: contentFactoryImageGenerationBodySchema }),
+    raw({ limit: contentFactoryUploadLimit, type: () => true }),
+    validateRequest({ query: contentFactoryImageGenerationQuerySchema }),
     createGenerateContentFactoryImageHandler(ai),
   );
   router.post(

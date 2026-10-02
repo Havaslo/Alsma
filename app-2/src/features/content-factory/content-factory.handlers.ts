@@ -143,17 +143,25 @@ export const createUploadContentFactoryMediaHandler =
 
 export const createGenerateContentFactoryTextHandler =
   (ai: ContentFactoryAiService): RequestHandler =>
-  async (_request, response) => {
-    const result = await ai.generateText(response.locals.input.body);
+  async (request, response) => {
+    const result = await ai.generateText({
+      ...response.locals.input.query,
+      referencePhoto: request.body,
+      referencePhotoContentType:
+        request.headers["content-type"]?.split(";")[0] ?? "",
+    });
     response.json(result);
   };
 
 export const createGenerateContentFactoryImageHandler =
   (ai: ContentFactoryAiService): RequestHandler =>
-  async (_request, response) => {
+  async (request, response) => {
     const media = await ai.generateImage({
-      ...response.locals.input.body,
+      ...response.locals.input.query,
       adminId: response.locals.admin.id,
+      referencePhoto: request.body,
+      referencePhotoContentType:
+        request.headers["content-type"]?.split(";")[0] ?? "",
     });
     response.status(201).json({ asset: toMediaAsset(media) });
   };

@@ -4,10 +4,17 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import {
+  contentFactoryModels,
+  getContentFactoryChannelGuideline,
+} from "./content-factory-guidelines.js";
+import {
+  assertReferencePhoto,
+  buildContentFactoryChannelPromptContext,
+  cropGeneratedImage,
+} from "./content-factory-image-processing.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 
-const textModel = "gpt-4.1-mini";
-const imageModel = "gpt-image-1-mini";
 const imagePromptMaxLength = 2_000;
 const generatedImageMaxBytes = 20 * 1_024 * 1_024;
 
@@ -161,30 +168,129 @@ export const createContentFactoryAiService = (options: {
     return payload;
   };
 
+  const requestImageEdit = async (input: {
+    readonly content: Buffer;
+    readonly contentType: string;
+    readonly fileName: string;
+    readonly prompt: string;
+    readonly size: string;
+  }): Promise<unknown> => {
+    if (!apiKey || !baseUrl) throw gatewayUnavailableError();
+    const form = new FormData();
+    form.set("model", contentFactoryModels.image);
+    form.set("n", "1");
+    form.set("output_format", "png");
+    form.set("prompt", input.prompt);
+    form.set("quality", "medium");
+    form.set("size", input.size);
+    form.set(
+      "image",
+      new Blob([Uint8Array.from(input.content)], { type: input.contentType }),
+      getStorageFileName(input.fileName),
+    );
+
+    let response: Response;
+    try {
+      response = await fetchImplementation(`${baseUrl}/images/edits`, {
+        body: form,
+        headers: { Authorization: `Bearer ${apiKey}` },
+        method: "POST",
+        signal: AbortSignal.timeout(180_000),
+      });
+    } catch (error) {
+      options.logger.warn(
+        {
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          gatewayStage: "content_factory_image",
+        },
+        "Content factory AI Gateway image edit could not be completed",
+      );
+      throw new HttpError(
+        503,
+        "CONTENT_FACTORY_AI_TIMEOUT",
+        "AI-сервис не ответил вовремя. Повторите запрос немного позже.",
+      );
+    }
+
+    const payload = await readJson(response);
+    if (!response.ok) {
+      const failure = readGatewayFailure(payload, response);
+      options.logger.warn(
+        {
+          gatewayCode: failure.code,
+          gatewayRequestId: failure.requestId,
+          gatewayStage: failure.stage ?? "content_factory_image",
+          gatewayStatus: response.status,
+        },
+        "Content factory AI Gateway image edit failed",
+      );
+      throw new HttpError(
+        response.status === 429 ? 503 : 502,
+        "CONTENT_FACTORY_AI_REQUEST_FAILED",
+        response.status === 429
+          ? "AI-сервис временно занят. Повторите запрос немного позже."
+          : "AI-сервис не смог обработать выбранное фото. Проверьте промт и попробуйте ещё раз.",
+        {
+          gatewayCode: failure.code,
+          requestId: failure.requestId,
+          stage: failure.stage ?? "content_factory_image",
+        },
+      );
+    }
+    return payload;
+  };
+
   return {
     generateText: async (input: {
       readonly prompt: string;
       readonly selectedChannels: readonly string[];
+      readonly sourceTitle: string;
+      readonly sourceCategory: string;
+      readonly sourceTags: readonly string[];
+      readonly referencePhoto: unknown;
+      readonly referencePhotoContentType: string;
     }) => {
+      const referencePhoto = assertReferencePhoto(
+        input.referencePhoto,
+        input.referencePhotoContentType,
+      );
+      const channelContext = buildContentFactoryChannelPromptContext();
       const payload = await requestJson(
         "/chat/completions",
         {
-          model: textModel,
+          model: contentFactoryModels.text,
           max_tokens: 3_500,
           response_format: { type: "json_object" },
           temperature: 0.7,
           messages: [
             {
               role: "system",
-              content:
-                'Ты редактор контента для загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string}}]}. Создай ровно три отличающихся по подаче варианта на русском языке. Для каждого подготовь самостоятельную адаптацию для каждой из перечисленных площадок: VK, Telegram, MAX, Instagram и Яндекс.Дзен; если площадка не выбрана, всё равно сформируй черновой вариант. Не выдумывай цены, сроки, скидки, условия, адреса, доступность услуг или ссылки: используй только факты из задачи. Если фактов недостаточно, сформулируй текст без неподтверждённых обещаний и отметь осторожность в концепции. Это только черновики для проверки человеком, ничего не публикуй и не заявляй, что публикация отправлена.',
+              content: `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех пяти подготовь самостоятельные адаптации. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если brief просит карусель, включай только подходящие ей каналы и не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Используй фото как фактический визуальный ориентир: опирайся на то, что действительно видно, не придумывай не показанные услуги и свойства места. Метаданные фото и его пиксели помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и утверждённых данных. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`,
             },
             {
               role: "user",
-              content: JSON.stringify({
-                task: input.prompt,
-                selectedChannels: input.selectedChannels,
-              }),
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    task: input.prompt,
+                    selectedChannels: input.selectedChannels,
+                    referencePhoto: {
+                      title: input.sourceTitle,
+                      category: input.sourceCategory,
+                      tags: input.sourceTags,
+                      instruction:
+                        "Сверь текст с фактическим содержимым фото; не считай название и теги доказательством скрытых свойств.",
+                    },
+                  }),
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${input.referencePhotoContentType};base64,${referencePhoto.toString("base64")}`,
+                  },
+                },
+              ],
             },
           ],
         },
@@ -234,25 +340,42 @@ export const createContentFactoryAiService = (options: {
           "AI-сервис подготовил варианты в неожиданном формате. Повторите запрос.",
         );
       }
-      return { model: textModel, variants: result.data.variants };
+      return {
+        model: contentFactoryModels.text,
+        variants: result.data.variants,
+      };
     },
 
     generateImage: async (input: {
       readonly adminId: string;
       readonly prompt: string;
+      readonly channel: string;
+      readonly sourceTitle: string;
+      readonly sourceCategory: string;
+      readonly sourceTags: readonly string[];
+      readonly referencePhoto: unknown;
+      readonly referencePhotoContentType: string;
     }) => {
-      const payload = await requestJson(
-        "/images/generations",
-        {
-          model: imageModel,
-          n: 1,
-          output_format: "png",
-          prompt: input.prompt,
-          quality: "low",
-          size: "1024x1024",
-        },
-        "content_factory_image",
+      const referencePhoto = assertReferencePhoto(
+        input.referencePhoto,
+        input.referencePhotoContentType,
       );
+      const channel = getContentFactoryChannelGuideline(input.channel);
+      const prompt = [
+        `Задача пользователя: ${input.prompt}`,
+        `Выбранное исходное фото: «${input.sourceTitle}», раздел «${input.sourceCategory}», теги: ${input.sourceTags.join(", ") || "нет"}. Используй переданное фото как обязательную визуальную основу, а не только как вдохновение.`,
+        `Канал назначения: ${channel.label}. Целевой кадр: ${channel.image.dimensions}, соотношение ${channel.image.ratio}, формат хранения PNG. Это визуальная рекомендация; готовый кадр будет обрезан до указанного соотношения.`,
+        `Правила площадки: ${channel.image.note} ${channel.gallery}`,
+        "Сохрани узнаваемую планировку, архитектуру, мебель, предметы, людей и другие видимые элементы оригинала. Не добавляй и не удаляй объекты, услуги, оборудование, детали интерьера или пейзажа, которых нет на фото. Разрешены аккуратные изменения освещения, цветового баланса и фотографической композиции.",
+        "Фотореалистичная редактура, естественные цвета, чистая композиция. Оставь главный объект и важные детали в центральной безопасной области кадра, чтобы они пережили обрезку. Не добавляй текст, буквы, логотипы, водяные знаки, рамки или коллаж. За один запрос создаётся один кадр, даже если канал поддерживает альбом или карусель.",
+      ].join("\n\n");
+      const payload = await requestImageEdit({
+        content: referencePhoto,
+        contentType: input.referencePhotoContentType,
+        fileName: `${input.sourceTitle}.jpg`,
+        prompt,
+        size: channel.image.apiSize,
+      });
       const root =
         typeof payload === "object" && payload
           ? (payload as Record<string, unknown>)
@@ -270,11 +393,11 @@ export const createContentFactoryAiService = (options: {
         );
       }
 
-      const content = Buffer.from(imageBase64, "base64");
+      const rawContent = Buffer.from(imageBase64, "base64");
       if (
-        content.length === 0 ||
-        content.length > generatedImageMaxBytes ||
-        !content
+        rawContent.length === 0 ||
+        rawContent.length > generatedImageMaxBytes ||
+        !rawContent
           .subarray(0, 8)
           .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
       ) {
@@ -285,7 +408,12 @@ export const createContentFactoryAiService = (options: {
         );
       }
 
-      const fileName = `ai-image-${new Date().toISOString().replace(/[:.]/gu, "-")}.png`;
+      const content = await cropGeneratedImage(rawContent, {
+        width: channel.image.outputWidth,
+        height: channel.image.outputHeight,
+      });
+
+      const fileName = `ai-${input.channel}-${new Date().toISOString().replace(/[:.]/gu, "-")}.png`;
       let stored: { readonly objectId: string };
       try {
         stored = await options.managedStorage.upload({
@@ -310,7 +438,7 @@ export const createContentFactoryAiService = (options: {
         return await repository.createMedia({
           adminId: input.adminId,
           contentType: "image/png",
-          fileName: "Изображение, созданное ИИ.png",
+          fileName: `AI · ${channel.label} · ${input.sourceTitle}.png`,
           objectId: stored.objectId,
           sizeBytes: content.length,
         });

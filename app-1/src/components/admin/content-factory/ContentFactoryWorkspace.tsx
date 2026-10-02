@@ -28,10 +28,21 @@ export const ContentFactoryWorkspace = () => {
 
   const generateText = async () => {
     if (!factory.prompt.trim() || !factory.selectedChannels.length) return;
+    const referencePhoto = persistence.mediaItems.find(
+      (item) =>
+        item.id ===
+        (factory.activeVariant.channelImageIds[factory.activeChannel] ||
+          factory.activeVariant.imageId),
+    );
+    if (!referencePhoto) {
+      factory.setNotice("Сначала выберите фотографию для публикации.");
+      return;
+    }
     try {
       const result = await persistence.generateText({
         prompt: factory.prompt.trim(),
         selectedChannels: factory.selectedChannels,
+        reference: referencePhoto,
       });
       const variants = result.variants.map((generated, index) => {
         const source = factory.variants[index] ?? factory.activeVariant;
@@ -59,7 +70,7 @@ export const ContentFactoryWorkspace = () => {
         });
         factory.setCurrentDraftId(saved.id);
         factory.setNotice(
-          "Созданы и сохранены три AI-варианта. Это черновик; в каналы ничего не отправлялось.",
+          `Созданы и сохранены три варианта моделью ${result.model}; контекст включал фото «${referencePhoto.title}». Это черновик — в каналы ничего не отправлялось.`,
         );
       } catch {
         factory.setNotice(
@@ -76,13 +87,58 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const generateImage = async (prompt: string) => {
+  const generateImage = async (
+    prompt: string,
+    channel: typeof factory.activeChannel,
+  ) => {
+    const referencePhoto = persistence.mediaItems.find(
+      (item) =>
+        item.id ===
+        (factory.activeVariant.channelImageIds[channel] ||
+          factory.activeVariant.imageId),
+    );
+    if (!referencePhoto) {
+      factory.setNotice("Сначала выберите исходное фото в медиатеке.");
+      return;
+    }
     try {
-      const media = await persistence.generateImage(prompt);
-      factory.useGeneratedMedia(media);
-      factory.setNotice(
-        "AI-изображение сохранено в медиатеке и добавлено в черновик. Публикация отключена.",
-      );
+      const media = await persistence.generateImage({
+        prompt,
+        channel,
+        reference: referencePhoto,
+      });
+      factory.useGeneratedMedia(media, channel);
+      const currentSnapshot = factory.getDraftSnapshot();
+      const snapshot = {
+        ...currentSnapshot,
+        variants: currentSnapshot.variants.map((variant, index) =>
+          index === factory.variantIndex
+            ? {
+                ...variant,
+                channelImageIds: {
+                  ...variant.channelImageIds,
+                  [channel]: media.id,
+                },
+              }
+            : variant,
+        ),
+      };
+      try {
+        const saved = await persistence.saveDraft(factory.currentDraftId, {
+          snapshot,
+          title:
+            snapshot.variants[factory.variantIndex]?.title.trim() ||
+            "Новая AI-публикация",
+        });
+        factory.setCurrentDraftId(saved.id);
+        factory.setNotice(
+          `Фото «${referencePhoto.title}» отредактировано для ${channel}, добавлено в медиатеку и сохранено в черновике. Публикация отключена.`,
+        );
+      } catch {
+        factory.setNotice(
+          "Кадр создан и сохранён в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить его за публикацией.",
+        );
+      }
     } catch (error) {
       factory.setNotice(
         contentFactoryErrorMessage(
@@ -143,6 +199,7 @@ export const ContentFactoryWorkspace = () => {
     <div className="mx-auto max-w-[1540px] space-y-5">
       <ContentFactoryHeader
         activeSection={factory.activeSection}
+        models={persistence.guidelines?.models ?? null}
         onSectionChange={(section) => {
           factory.setActiveSection(section);
           if (section === "history") void persistence.refreshDrafts();
@@ -169,6 +226,14 @@ export const ContentFactoryWorkspace = () => {
               />
               <ContentDraftPanel
                 mediaItems={persistence.mediaItems}
+                selectedChannels={factory.selectedChannels}
+                imageTargetChannel={
+                  factory.selectedChannels.includes(factory.activeChannel)
+                    ? factory.activeChannel
+                    : (factory.selectedChannels[0] ?? factory.activeChannel)
+                }
+                guidelines={persistence.guidelines}
+                onImageTargetChannelChange={factory.setActiveChannel}
                 isGeneratingImage={persistence.isGeneratingImage}
                 onCustomAction={factory.applyCustomCommand}
                 onDraftAction={factory.applyDraftAction}
@@ -222,6 +287,7 @@ export const ContentFactoryWorkspace = () => {
                 <div className="border-t border-line p-4">
                   <ChannelAdaptationsPanel
                     activeChannel={factory.activeChannel}
+                    guidelines={persistence.guidelines}
                     mediaItems={persistence.mediaItems}
                     onActiveChannelChange={factory.setActiveChannel}
                     onAdaptAction={factory.adaptChannel}

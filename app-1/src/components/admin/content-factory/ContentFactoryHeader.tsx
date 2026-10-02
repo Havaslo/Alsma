@@ -22,9 +22,11 @@ const workspaceTabs: {
 
 export const ContentFactoryHeader = ({
   activeSection,
+  models,
   onSectionChange,
 }: {
   activeSection: WorkspaceSection;
+  models: { text: string; image: string } | null;
   onSectionChange: (section: WorkspaceSection) => void;
 }) => (
   <section className="space-y-4">
@@ -43,6 +45,20 @@ export const ContentFactoryHeader = ({
         публикации
       </span>
     </div>
+
+    {models && (
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-ui-foreground">
+        <span className="font-semibold text-page-foreground">
+          Модели генерации:
+        </span>
+        <span className="rounded-full border border-line bg-brand-foreground px-2.5 py-1">
+          Текст · {models.text}
+        </span>
+        <span className="rounded-full border border-line bg-brand-foreground px-2.5 py-1">
+          Фото · {models.image} · medium · с исходным фото
+        </span>
+      </div>
+    )}
 
     <nav
       aria-label="Разделы Фабрики контента"

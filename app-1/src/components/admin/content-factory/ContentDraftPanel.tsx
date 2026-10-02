@@ -9,11 +9,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import type {
-  DraftVariant,
-  FactoryMediaItem,
+import {
+  CONTENT_CHANNELS,
+  type ContentChannel,
+  type DraftVariant,
+  type FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
 import type { DraftAction } from "@/lib/content-factory/contentFactoryTypes";
+import type { ContentFactoryGuidelines } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
@@ -23,7 +26,11 @@ export const ContentDraftPanel = ({
   variantIndex,
   variants,
   mediaItems,
+  selectedChannels,
+  imageTargetChannel,
+  guidelines,
   onVariantChange,
+  onImageTargetChannelChange,
   onTextChange,
   onDraftAction,
   onCustomAction,
@@ -35,18 +42,27 @@ export const ContentDraftPanel = ({
   variantIndex: number;
   variants: DraftVariant[];
   mediaItems: FactoryMediaItem[];
+  selectedChannels: ContentChannel[];
+  imageTargetChannel: ContentChannel;
+  guidelines: ContentFactoryGuidelines | null;
   onVariantChange: (index: number) => void;
+  onImageTargetChannelChange: (channel: ContentChannel) => void;
   onTextChange: (text: string) => void;
   onDraftAction: (action: DraftAction) => void;
   onCustomAction: (command: string) => void;
   onMediaBrowse: () => void;
-  onImageGenerate: (prompt: string) => Promise<void>;
+  onImageGenerate: (prompt: string, channel: ContentChannel) => Promise<void>;
   isGeneratingImage: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [imagePromptOpen, setImagePromptOpen] = useState(false);
-  const image = mediaItems.find((item) => item.id === variant.imageId);
+  const targetImageId =
+    variant.channelImageIds[imageTargetChannel] || variant.imageId;
+  const image = mediaItems.find((item) => item.id === targetImageId);
+  const imageGuideline = guidelines?.channels.find(
+    (channel) => channel.id === imageTargetChannel,
+  );
 
   const submitCustomCommand = () => {
     if (!customCommand.trim()) return;
@@ -174,7 +190,7 @@ export const ContentDraftPanel = ({
                   src={resolveMediaUrl(image.image)}
                 />
                 <span className="absolute top-3 left-3 rounded-full bg-brand-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-page-foreground shadow-sm backdrop-blur">
-                  Подобрано по теме «SPA»
+                  Источник: {image.category}
                 </span>
                 <button
                   aria-label="Заменить фотографию"
@@ -216,9 +232,48 @@ export const ContentDraftPanel = ({
             id="factory-image-prompt-form"
             onSubmit={(event) => {
               event.preventDefault();
-              if (imagePrompt.trim()) void onImageGenerate(imagePrompt.trim());
+              if (imagePrompt.trim()) {
+                void onImageGenerate(imagePrompt.trim(), imageTargetChannel);
+              }
             }}
           >
+            <div>
+              <label
+                className="mb-1.5 block text-sm font-semibold text-page-foreground"
+                htmlFor="factory-image-channel"
+              >
+                Формат изображения для канала
+              </label>
+              <select
+                className="min-h-11 w-full rounded-xl border border-line bg-brand-foreground px-3 text-sm text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+                id="factory-image-channel"
+                onChange={(event) =>
+                  onImageTargetChannelChange(
+                    event.target.value as ContentChannel,
+                  )
+                }
+                value={imageTargetChannel}
+              >
+                {(selectedChannels.length
+                  ? selectedChannels
+                  : CONTENT_CHANNELS.map((channel) => channel.id)
+                ).map((channel) => (
+                  <option key={channel} value={channel}>
+                    {
+                      CONTENT_CHANNELS.find((item) => item.id === channel)
+                        ?.label
+                    }
+                  </option>
+                ))}
+              </select>
+              {imageGuideline && (
+                <p className="mt-1.5 text-xs leading-5 text-muted-ui-foreground">
+                  Рекомендация: {imageGuideline.image.dimensions} ·{" "}
+                  {imageGuideline.image.ratio}. Главный объект будет сохранён в
+                  безопасной зоне кадра.
+                </p>
+              )}
+            </div>
             <div>
               <label
                 className="mb-1.5 block text-sm font-semibold text-page-foreground"
@@ -235,13 +290,14 @@ export const ContentDraftPanel = ({
               />
             </div>
             <p className="text-xs leading-5 text-muted-ui-foreground">
-              Изображение будет создано в тестовом режиме и сохранено в
-              медиатеке. В социальные сети оно не отправляется.
+              AI получит выбранное фото и создаст один отредактированный кадр
+              для выбранного канала. Результат сохранится в медиатеке; в
+              социальные сети он не отправляется.
             </p>
             <Button
               aria-busy={isGeneratingImage}
               className="w-full"
-              disabled={!imagePrompt.trim() || isGeneratingImage}
+              disabled={!image || !imagePrompt.trim() || isGeneratingImage}
               type="submit"
             >
               <Sparkles className="size-4" />

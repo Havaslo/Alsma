@@ -28,3 +28,24 @@ export interface UploadedContentFactoryMedia extends FactoryMediaItem {
   createdAt: string;
   sizeBytes: number;
 }
+
+export interface ContentFactoryChannelGuideline {
+  id: ContentChannel;
+  label: string;
+  copy: string;
+  image: {
+    ratio: string;
+    dimensions: string;
+    format: string;
+    apiSize: string;
+    outputWidth: number;
+    outputHeight: number;
+    note: string;
+  };
+  gallery: string;
+}
+
+export interface ContentFactoryGuidelines {
+  models: { text: string; image: string };
+  channels: ContentFactoryChannelGuideline[];
+}

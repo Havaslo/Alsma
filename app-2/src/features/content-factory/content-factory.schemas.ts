@@ -54,17 +54,37 @@ export const contentFactoryUploadQuerySchema = z.object({
   fileName: z.string().trim().min(1).max(255),
 });
 
-export const contentFactoryTextGenerationBodySchema = z.object({
+const channelListQuerySchema = z
+  .string()
+  .transform((value) => value.split(",").filter(Boolean))
+  .pipe(
+    z
+      .array(contentChannelSchema)
+      .min(1)
+      .max(5)
+      .refine((channels) => new Set(channels).size === channels.length),
+  );
+
+const sourcePhotoQueryFields = {
+  sourceTitle: z.string().trim().min(1).max(255),
+  sourceCategory: z.string().trim().min(1).max(120),
+  sourceTags: z
+    .string()
+    .max(800)
+    .transform((value) => value.split("|").filter(Boolean))
+    .pipe(z.array(z.string().trim().min(1).max(80)).max(20)),
+};
+
+export const contentFactoryTextGenerationQuerySchema = z.object({
   prompt: z.string().trim().min(1).max(4_000),
-  selectedChannels: z
-    .array(contentChannelSchema)
-    .min(1)
-    .max(5)
-    .refine((channels) => new Set(channels).size === channels.length),
+  selectedChannels: channelListQuerySchema,
+  ...sourcePhotoQueryFields,
 });
 
-export const contentFactoryImageGenerationBodySchema = z.object({
+export const contentFactoryImageGenerationQuerySchema = z.object({
   prompt: z.string().trim().min(1).max(2_000),
+  channel: contentChannelSchema,
+  ...sourcePhotoQueryFields,
 });
 
 export type ContentFactoryDraftBody = z.infer<
