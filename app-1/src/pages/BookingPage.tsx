@@ -65,6 +65,8 @@ const displayBoardType = (value: string) =>
     : value;
 
 const steps = ["Номера", "Тарифы", "Контакты"];
+// Keep online booking disabled until the booking and payment flow is restored.
+const onlineBookingEnabled = false;
 type RoomChild = {
   id: string;
   birthDate: string;
@@ -1021,29 +1023,20 @@ export const BookingPage = () => {
                       ))}
                     </div>
                     <p className="mt-3 text-sm text-muted-ui-foreground">
-                      После создания брони вы перейдёте на защищённую страницу
-                      для оплаты.
-                      {roomGuests.length > 1 && (
-                        <>
-                          {" "}
-                          Для каждого выбранного номера будет своя бронь и
-                          отдельная ссылка оплаты.
-                        </>
-                      )}
+                      Онлайн-оформление бронирования и оплата временно
+                      отключены. Для бронирования свяжитесь с отделом
+                      бронирования.
                     </p>
-                    <div className="mt-4 rounded-2xl border border-accent-ui/30 bg-accent-ui/10 p-4 text-sm leading-6">
-                      <p className="font-semibold text-page-foreground">
-                        Важно: оплатить бронь нужно в течение 30 минут.
-                      </p>
-                      <p className="mt-1 text-muted-ui-foreground">
-                        Если оплата не будет завершена за это время, бронь
-                        автоматически отменится.
-                      </p>
-                    </div>
                   </div>
+                  {/* Re-enable only when online booking and payment are restored. */}
                   <button
-                    className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 font-semibold text-brand-foreground disabled:opacity-60"
-                    disabled={submitting}
+                    className={cn(
+                      "mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 font-semibold",
+                      onlineBookingEnabled
+                        ? "bg-brand text-brand-foreground disabled:opacity-60"
+                        : "cursor-not-allowed bg-muted-ui text-muted-ui-foreground opacity-70",
+                    )}
+                    disabled={!onlineBookingEnabled || submitting}
                     onClick={submit}
                     type="button"
                   >
