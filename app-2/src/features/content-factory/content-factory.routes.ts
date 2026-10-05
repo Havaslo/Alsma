@@ -18,6 +18,7 @@ import {
   createGenerateContentFactoryTextHandler,
   createListContentFactoryDraftsHandler,
   createListContentFactoryMediaHandler,
+  createRefineContentFactoryTextHandler,
   createSaveContentFactoryDraftHandler,
   createUploadContentFactoryMediaHandler,
 } from "./content-factory.handlers.js";
@@ -26,6 +27,7 @@ import {
   contentFactoryDraftParamsSchema,
   contentFactoryImageGenerationQuerySchema,
   contentFactoryTextGenerationQuerySchema,
+  contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
 } from "./content-factory.schemas.js";
 
@@ -58,6 +60,11 @@ export const createContentFactoryRouter = (
     raw({ limit: contentFactoryUploadLimit, type: () => true }),
     validateRequest({ query: contentFactoryTextGenerationQuerySchema }),
     createGenerateContentFactoryTextHandler(ai),
+  );
+  router.post(
+    "/generate/refine",
+    validateRequest({ body: contentFactoryTextRefinementBodySchema }),
+    createRefineContentFactoryTextHandler(ai),
   );
   router.post(
     "/generate/image",

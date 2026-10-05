@@ -15,6 +15,7 @@ import {
 import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlanPanel";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
+import type { TextRefinementAction } from "@/lib/content-factory/contentFactoryTypes";
 import { useContentFactoryDemo } from "@/lib/content-factory/useContentFactoryDemo";
 import { useContentFactoryPersistence } from "@/lib/content-factory/useContentFactoryPersistence";
 import { useContentFactoryPlanDemo } from "@/lib/content-factory/useContentFactoryPlanDemo";
@@ -84,6 +85,77 @@ export const ContentFactoryWorkspace = () => {
           "Не удалось создать текстовые варианты. Проверьте запрос и попробуйте ещё раз.",
         ),
       );
+    }
+  };
+
+  const refineText = async (
+    action: TextRefinementAction,
+    customInstruction?: string,
+  ): Promise<boolean> => {
+    if (!factory.prompt.trim() || !factory.selectedChannels.length) {
+      factory.setNotice(
+        "Сначала заполните задачу и выберите канал публикации.",
+      );
+      return false;
+    }
+    const referencePhoto = persistence.mediaItems.find(
+      (item) =>
+        item.id ===
+        (factory.activeVariant.channelImageIds[factory.activeChannel] ||
+          factory.activeVariant.imageId),
+    );
+    if (!referencePhoto) {
+      factory.setNotice("Сначала выберите фотографию для публикации.");
+      return false;
+    }
+
+    try {
+      const result = await persistence.refineText({
+        action,
+        currentText: factory.activeVariant.text,
+        customInstruction,
+        prompt: factory.prompt.trim(),
+        selectedChannels: factory.selectedChannels,
+        reference: referencePhoto,
+      });
+      const currentSnapshot = factory.getDraftSnapshot();
+      const nextVariants = currentSnapshot.variants.map((variant, index) => {
+        if (index !== factory.variantIndex) return variant;
+        const adaptations = { ...variant.adaptations };
+        for (const channel of factory.selectedChannels) {
+          adaptations[channel] = result.adaptations[channel];
+        }
+        return { ...variant, text: result.text, adaptations };
+      });
+      const nextSnapshot = { ...currentSnapshot, variants: nextVariants };
+      const updatedVariant = nextVariants[factory.variantIndex];
+      factory.updateCurrentVariant(
+        () => updatedVariant ?? factory.activeVariant,
+      );
+
+      try {
+        const saved = await persistence.saveDraft(factory.currentDraftId, {
+          snapshot: nextSnapshot,
+          title: updatedVariant?.title.trim() || "Новая AI-публикация",
+        });
+        factory.setCurrentDraftId(saved.id);
+        factory.setNotice(
+          `Текст переработан моделью ${result.model} с учётом фото и каналов и сохранён в черновике. Публикация отключена.`,
+        );
+      } catch {
+        factory.setNotice(
+          `Текст переработан моделью ${result.model}, но черновик не сохранился. Нажмите «Сохранить черновик», чтобы не потерять изменения.`,
+        );
+      }
+      return true;
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось переработать текст. Проверьте задание и попробуйте ещё раз.",
+        ),
+      );
+      return false;
     }
   };
 
@@ -227,6 +299,7 @@ export const ContentFactoryWorkspace = () => {
               <ContentDraftPanel
                 mediaItems={persistence.mediaItems}
                 selectedChannels={factory.selectedChannels}
+                isRefiningText={persistence.isRefiningText}
                 imageTargetChannel={
                   factory.selectedChannels.includes(factory.activeChannel)
                     ? factory.activeChannel
@@ -235,8 +308,8 @@ export const ContentFactoryWorkspace = () => {
                 guidelines={persistence.guidelines}
                 onImageTargetChannelChange={factory.setActiveChannel}
                 isGeneratingImage={persistence.isGeneratingImage}
-                onCustomAction={factory.applyCustomCommand}
-                onDraftAction={factory.applyDraftAction}
+                onCustomAction={(command) => refineText("custom", command)}
+                onDraftAction={refineText}
                 onImageGenerate={generateImage}
                 onMediaBrowse={factory.browseMainImage}
                 onTextChange={(text) =>

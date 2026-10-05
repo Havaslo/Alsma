@@ -153,6 +153,13 @@ export const createGenerateContentFactoryTextHandler =
     response.json(result);
   };
 
+export const createRefineContentFactoryTextHandler =
+  (ai: ContentFactoryAiService): RequestHandler =>
+  async (_request, response) => {
+    const result = await ai.refineText(response.locals.input.body);
+    response.json(result);
+  };
+
 export const createGenerateContentFactoryImageHandler =
   (ai: ContentFactoryAiService): RequestHandler =>
   async (request, response) => {

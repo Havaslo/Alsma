@@ -15,8 +15,10 @@ import {
   type DraftVariant,
   type FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
-import type { DraftAction } from "@/lib/content-factory/contentFactoryTypes";
-import type { ContentFactoryGuidelines } from "@/lib/content-factory/contentFactoryTypes";
+import type {
+  ContentFactoryGuidelines,
+  DraftAction,
+} from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
@@ -37,6 +39,7 @@ export const ContentDraftPanel = ({
   onMediaBrowse,
   onImageGenerate,
   isGeneratingImage,
+  isRefiningText,
 }: {
   variant: DraftVariant;
   variantIndex: number;
@@ -48,11 +51,12 @@ export const ContentDraftPanel = ({
   onVariantChange: (index: number) => void;
   onImageTargetChannelChange: (channel: ContentChannel) => void;
   onTextChange: (text: string) => void;
-  onDraftAction: (action: DraftAction) => void;
-  onCustomAction: (command: string) => void;
+  onDraftAction: (action: DraftAction) => Promise<boolean>;
+  onCustomAction: (command: string) => Promise<boolean>;
   onMediaBrowse: () => void;
   onImageGenerate: (prompt: string, channel: ContentChannel) => Promise<void>;
   isGeneratingImage: boolean;
+  isRefiningText: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
@@ -66,8 +70,9 @@ export const ContentDraftPanel = ({
 
   const submitCustomCommand = () => {
     if (!customCommand.trim()) return;
-    onCustomAction(customCommand.trim());
-    setCustomCommand("");
+    void onCustomAction(customCommand.trim()).then((applied) => {
+      if (applied) setCustomCommand("");
+    });
   };
 
   return (
@@ -109,6 +114,7 @@ export const ContentDraftPanel = ({
             }`}
             key={item.id}
             onClick={() => onVariantChange(index)}
+            disabled={isRefiningText}
             role="tab"
             type="button"
           >
@@ -130,45 +136,75 @@ export const ContentDraftPanel = ({
           </span>
         </div>
         <textarea
-          className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
+          className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10 disabled:cursor-wait disabled:opacity-70"
+          disabled={isRefiningText}
           id="factory-draft-text"
           onChange={(event) => onTextChange(event.target.value)}
           value={variant.text}
         />
         <div className="mt-3 flex flex-wrap gap-2">
-          <QuietButton onClick={() => onDraftAction("shorter")}>
+          <QuietButton
+            disabled={isRefiningText}
+            onClick={() => void onDraftAction("shorter")}
+          >
             <Scissors className="size-3.5" /> Сократить
           </QuietButton>
-          <QuietButton onClick={() => onDraftAction("regenerate")}>
+          <QuietButton
+            disabled={isRefiningText}
+            onClick={() => void onDraftAction("regenerate")}
+          >
             <RefreshCw className="size-3.5" /> Перегенерировать
           </QuietButton>
-          <QuietButton onClick={() => onDraftAction("sales")}>
+          <QuietButton
+            disabled={isRefiningText}
+            onClick={() => void onDraftAction("sales")}
+          >
             <WandSparkles className="size-3.5" /> Более продающим
           </QuietButton>
-          <QuietButton onClick={() => onDraftAction("calmer")}>
+          <QuietButton
+            disabled={isRefiningText}
+            onClick={() => void onDraftAction("calmer")}
+          >
             Спокойнее
           </QuietButton>
         </div>
         <div className="mt-3 flex gap-2">
+          <label className="sr-only" htmlFor="factory-text-refinement-command">
+            Своя инструкция для переработки текста публикации
+          </label>
           <input
-            className="min-h-10 min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-3.5 text-sm outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+            className="min-h-10 min-w-0 flex-1 rounded-xl border border-line bg-brand-foreground px-3.5 text-sm outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isRefiningText}
+            id="factory-text-refinement-command"
             onChange={(event) => setCustomCommand(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") submitCustomCommand();
+              if (event.key === "Enter") {
+                event.preventDefault();
+                submitCustomCommand();
+              }
             }}
-            placeholder="Напишите свою команду для доработки…"
+            placeholder="Например: добавь призыв, сохрани спокойный тон…"
             value={customCommand}
           />
           <Button
             aria-label="Отправить команду"
+            aria-busy={isRefiningText}
             className="min-h-10 shrink-0 rounded-xl bg-slate-900 px-3.5 text-white hover:bg-slate-800"
-            disabled={!customCommand.trim()}
+            disabled={!customCommand.trim() || isRefiningText}
             onClick={submitCustomCommand}
             type="button"
           >
             <Sparkles className="size-4" />
           </Button>
         </div>
+        {isRefiningText && (
+          <p
+            aria-live="polite"
+            className="mt-2 text-xs text-muted-ui-foreground"
+          >
+            Перерабатываем текст по заданию, фото и выбранным каналам…
+          </p>
+        )}
       </div>
 
       <div className="mt-6 border-t border-line pt-5">

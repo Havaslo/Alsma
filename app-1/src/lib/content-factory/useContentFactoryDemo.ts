@@ -11,7 +11,6 @@ import {
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
-  DraftAction,
   SavedContentFactoryDraft,
   WorkspaceSection,
 } from "@/lib/content-factory/contentFactoryTypes";
@@ -69,59 +68,6 @@ export const useContentFactoryDemo = (
   const selectVariant = (index: number) => {
     setVariantIndex(index);
     setApproved(false);
-  };
-
-  const applyDraftAction = (action: DraftAction) => {
-    if (action === "regenerate") {
-      setVariantIndex((current) => (current + 1) % variants.length);
-      setNotice(
-        "Показан другой демонстрационный вариант. Реальная генерация требует подключения AI.",
-      );
-      setApproved(false);
-      return;
-    }
-
-    updateCurrentVariant((variant) => {
-      if (action === "shorter") {
-        return { ...variant, text: shortenText(variant.text) };
-      }
-      if (action === "sales") {
-        const callToAction =
-          "Выберите удобный день — условия и доступность уточните при бронировании.";
-        return {
-          ...variant,
-          text: `${variant.text.replace(/\n*Подробности.*$/s, "").trim()}\n\n${callToAction}`,
-        };
-      }
-      return {
-        ...variant,
-        text: variant.text
-          .replaceAll("!", ".")
-          .replace("хороший повод", "возможность"),
-      };
-    });
-    setNotice(
-      "Изменение применено к демонстрационному тексту. Проверьте результат перед согласованием.",
-    );
-  };
-
-  const applyCustomCommand = (command: string) => {
-    const normalized = command.toLocaleLowerCase("ru-RU");
-    if (normalized.includes("корот")) {
-      applyDraftAction("shorter");
-      return;
-    }
-    if (normalized.includes("прода")) {
-      applyDraftAction("sales");
-      return;
-    }
-    if (normalized.includes("спокой") || normalized.includes("нейтрал")) {
-      applyDraftAction("calmer");
-      return;
-    }
-    setNotice(
-      "Эта команда пока работает только как макет. Текстовые варианты можно создать AI-кнопкой в задаче слева.",
-    );
   };
 
   const updateAdaptation = (channel: ContentChannel, text: string) => {
@@ -276,8 +222,6 @@ export const useContentFactoryDemo = (
     activeSection,
     activeVariant,
     adaptChannel,
-    applyCustomCommand,
-    applyDraftAction,
     approveDraft,
     approved,
     browseChannelImage,

@@ -9,6 +9,7 @@ import {
   loadContentFactoryDrafts,
   loadContentFactoryGuidelines,
   loadContentFactoryMedia,
+  refineContentFactoryText,
   saveContentFactoryDraft,
   uploadContentFactoryMedia,
 } from "@/lib/content-factory/contentFactoryApi";
@@ -19,6 +20,7 @@ import {
 import type {
   ContentFactoryDraftSnapshot,
   SavedContentFactoryDraft,
+  TextRefinementAction,
   UploadedContentFactoryMedia,
 } from "@/lib/content-factory/contentFactoryTypes";
 
@@ -79,6 +81,9 @@ export const useContentFactoryPersistence = () => {
   const generateTextMutation = useMutation({
     mutationFn: generateContentFactoryText,
   });
+  const refineTextMutation = useMutation({
+    mutationFn: refineContentFactoryText,
+  });
   const generateImageMutation = useMutation({
     mutationFn: generateContentFactoryImage,
     onSuccess: async (generated) => {
@@ -111,6 +116,7 @@ export const useContentFactoryPersistence = () => {
     isLoadingMedia: mediaQuery.isLoading,
     isGeneratingImage: generateImageMutation.isPending,
     isGeneratingText: generateTextMutation.isPending,
+    isRefiningText: refineTextMutation.isPending,
     isUploadingMedia: uploadMediaMutation.isPending,
     mediaError: mediaQuery.error
       ? contentFactoryErrorMessage(
@@ -131,6 +137,14 @@ export const useContentFactoryPersistence = () => {
       selectedChannels: ContentChannel[];
       reference: (typeof mediaItems)[number];
     }) => generateTextMutation.mutateAsync(input),
+    refineText: (input: {
+      action: TextRefinementAction;
+      currentText: string;
+      customInstruction?: string;
+      prompt: string;
+      selectedChannels: ContentChannel[];
+      reference: (typeof mediaItems)[number];
+    }) => refineTextMutation.mutateAsync(input),
     generateImage: (input: {
       prompt: string;
       channel: ContentChannel;

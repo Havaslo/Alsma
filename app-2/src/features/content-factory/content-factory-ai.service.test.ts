@@ -199,6 +199,61 @@ test("does not call the provider when the Gateway is not configured", async () =
   assert.equal(requestCount, 0);
 });
 
+test("refines the publication through the Gateway with task, photo, and custom instruction", async () => {
+  const referencePhoto = createCanvas(320, 480).toBuffer("image/jpeg");
+  let requestBody: Record<string, unknown> = {};
+  const service = createContentFactoryAiService({
+    apiKey: "gateway-test-key",
+    baseUrl: "https://gateway.example/v1",
+    database: {} as Database,
+    fetchImplementation: async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                text: "Новый короткий текст",
+                adaptations: {
+                  vk: "VK-версия",
+                  telegram: "Telegram-версия",
+                  max: "MAX-версия",
+                  instagram: "Instagram-версия",
+                  zen: "Версия для Дзена",
+                },
+              }),
+            },
+          },
+        ],
+      });
+    },
+    logger,
+    managedStorage: emptyStorage,
+  });
+
+  const result = await service.refineText({
+    action: "custom",
+    currentText: "Исходный текст публикации",
+    customInstruction: "Добавь спокойный призыв к бронированию",
+    prompt: "Расскажи о спокойном отдыхе в SPA",
+    referencePhotoBase64: referencePhoto.toString("base64"),
+    selectedChannels: ["vk", "telegram"],
+    sourceTitle: "Тёплая вода и тишина",
+    sourceCategory: "SPA",
+    sourceTags: ["бассейн", "релакс"],
+  });
+
+  assert.equal(result.model, "gpt-4.1-mini");
+  assert.equal(result.text, "Новый короткий текст");
+  assert.equal(result.adaptations.telegram, "Telegram-версия");
+  const messages = requestBody.messages as Array<Record<string, unknown>>;
+  const content = messages[1]?.content as Array<Record<string, unknown>>;
+  assert.match(String(content[0]?.text), /спокойный призыв к бронированию/u);
+  assert.match(String(content[0]?.text), /Исходный текст публикации/u);
+  const imageUrl = content[1]?.image_url as { url?: unknown };
+  assert.match(String(imageUrl.url), /^data:image\/jpeg;base64,/u);
+});
+
 test("rejects a source photo with a mismatched content type before Gateway use", async () => {
   let requestCount = 0;
   const service = createContentFactoryAiService({

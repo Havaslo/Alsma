@@ -11,6 +11,7 @@ import type {
   ContentFactoryDraftSnapshot,
   ContentFactoryGuidelines,
   SavedContentFactoryDraft,
+  TextRefinementAction,
   UploadedContentFactoryMedia,
 } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
@@ -62,6 +63,15 @@ const prepareReferencePhoto = async (reference: FactoryMediaItem) => {
   } finally {
     bitmap.close();
   }
+};
+
+const photoBlobToBase64 = async (photo: Blob) => {
+  const bytes = new Uint8Array(await photo.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 32_768) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768));
+  }
+  return btoa(binary);
 };
 
 export const loadContentFactoryGuidelines = async (signal?: AbortSignal) => {
@@ -138,6 +148,42 @@ export const generateContentFactoryText = async (input: {
     },
     timeout: 180_000,
   });
+  return response.data;
+};
+
+export const refineContentFactoryText = async (input: {
+  action: TextRefinementAction;
+  currentText: string;
+  customInstruction?: string;
+  prompt: string;
+  selectedChannels: ContentChannel[];
+  reference: FactoryMediaItem;
+}) => {
+  const referencePhoto = await prepareReferencePhoto(input.reference);
+  if (referencePhoto.size > 7 * 1_024 * 1_024) {
+    throw new Error(
+      "Фото слишком большое для текстовой переработки. Выберите изображение меньшего размера.",
+    );
+  }
+  const response = await apiClient.post<{
+    model: string;
+    text: string;
+    adaptations: DraftVariant["adaptations"];
+  }>(
+    "/admin/content-factory/generate/refine",
+    {
+      action: input.action,
+      currentText: input.currentText,
+      customInstruction: input.customInstruction,
+      prompt: input.prompt,
+      referencePhotoBase64: await photoBlobToBase64(referencePhoto),
+      selectedChannels: input.selectedChannels,
+      sourceTitle: input.reference.title,
+      sourceCategory: input.reference.category,
+      sourceTags: input.reference.tags,
+    },
+    { headers: headers(), timeout: 180_000 },
+  );
   return response.data;
 };
 

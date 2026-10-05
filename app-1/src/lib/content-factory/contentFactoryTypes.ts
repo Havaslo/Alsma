@@ -5,6 +5,7 @@ import type {
 } from "@/lib/content-factory/contentFactoryData";
 
 export type DraftAction = "shorter" | "regenerate" | "sales" | "calmer";
+export type TextRefinementAction = DraftAction | "custom";
 
 export type WorkspaceSection = "create" | "plan" | "media" | "history";
 

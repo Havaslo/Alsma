@@ -13,6 +13,7 @@ import {
   buildContentFactoryChannelPromptContext,
   cropGeneratedImage,
 } from "./content-factory-image-processing.js";
+import { createContentFactoryTextRefinementService } from "./content-factory-text-refinement.service.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 
 const imagePromptMaxLength = 2_000;
@@ -111,7 +112,10 @@ export const createContentFactoryAiService = (options: {
   const requestJson = async (
     path: string,
     body: unknown,
-    stage: "content_factory_text" | "content_factory_image",
+    stage:
+      | "content_factory_text"
+      | "content_factory_text_refinement"
+      | "content_factory_image",
   ): Promise<unknown> => {
     if (!apiKey || !baseUrl) throw gatewayUnavailableError();
     let response: Response;
@@ -241,6 +245,7 @@ export const createContentFactoryAiService = (options: {
   };
 
   return {
+    refineText: createContentFactoryTextRefinementService(requestJson),
     generateText: async (input: {
       readonly prompt: string;
       readonly selectedChannels: readonly string[];
