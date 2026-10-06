@@ -49,8 +49,65 @@ export const createContentFactoryRepository = (database: Database) => ({
         sizeBytes: input.sizeBytes,
       },
     }),
+  findMediaByIds: (mediaIds: readonly string[]) =>
+    database.client.contentFactoryMedia.findMany({
+      where: { id: { in: [...mediaIds] } },
+    }),
   deleteMedia: (mediaId: string) =>
     database.client.contentFactoryMedia.delete({ where: { id: mediaId } }),
+  createImageGenerationJob: (input: {
+    readonly createdById: string;
+    readonly postText: string;
+    readonly prompt: string;
+    readonly referencePhotoObjectId: string;
+    readonly selectedChannels: readonly string[];
+    readonly sourceCategory: string;
+    readonly sourceTags: readonly string[];
+    readonly sourceTitle: string;
+  }) =>
+    database.client.contentFactoryImageGenerationJob.create({
+      data: {
+        createdById: input.createdById,
+        postText: input.postText,
+        prompt: input.prompt,
+        referencePhotoObjectId: input.referencePhotoObjectId,
+        selectedChannels: [...input.selectedChannels],
+        sourceCategory: input.sourceCategory,
+        sourceTags: [...input.sourceTags],
+        sourceTitle: input.sourceTitle,
+      },
+    }),
+  findImageGenerationJob: (jobId: string) =>
+    database.client.contentFactoryImageGenerationJob.findUnique({
+      where: { id: jobId },
+    }),
+  findImageGenerationJobForAdmin: (jobId: string, adminId: string) =>
+    database.client.contentFactoryImageGenerationJob.findFirst({
+      where: { createdById: adminId, id: jobId },
+    }),
+  claimImageGenerationJob: (jobId: string) =>
+    database.client.contentFactoryImageGenerationJob.updateMany({
+      data: { status: "processing" },
+      where: { id: jobId, status: "pending" },
+    }),
+  updateImageGenerationJob: (
+    jobId: string,
+    input: {
+      readonly errorMessage?: string | null;
+      readonly referencePhotoObjectId?: string;
+      readonly result?: Prisma.InputJsonValue;
+      readonly status: string;
+    },
+  ) =>
+    database.client.contentFactoryImageGenerationJob.update({
+      data: input,
+      where: { id: jobId },
+    }),
+  listPendingImageGenerationJobs: () =>
+    database.client.contentFactoryImageGenerationJob.findMany({
+      select: { id: true },
+      where: { status: "pending" },
+    }),
 });
 
 export type ContentFactoryRepository = ReturnType<

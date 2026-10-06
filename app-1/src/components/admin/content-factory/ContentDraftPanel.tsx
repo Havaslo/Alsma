@@ -227,6 +227,27 @@ export const ContentDraftPanel = ({
                 >
                   <ImagePlus className="size-4" />
                 </button>
+                {isGeneratingImage && (
+                  <div
+                    aria-label="Идёт генерация изображения"
+                    aria-live="polite"
+                    className="absolute inset-0 z-10 grid place-items-center bg-page-foreground/45 p-4 backdrop-blur-[2px]"
+                    role="status"
+                  >
+                    <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/40 bg-brand-foreground/95 px-5 py-4 text-center shadow-xl">
+                      <span className="relative grid size-12 place-items-center">
+                        <span className="absolute inset-0 animate-spin rounded-full border-2 border-brand/20 border-t-brand" />
+                        <Sparkles className="size-5 animate-pulse text-brand" />
+                      </span>
+                      <span className="text-sm font-semibold text-page-foreground">
+                        Создаём изображение
+                      </span>
+                      <span className="text-xs leading-5 text-muted-ui-foreground">
+                        Готовим кадры для выбранных площадок…
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="p-3.5">
                 <p className="truncate text-sm font-semibold text-page-foreground">

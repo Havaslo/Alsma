@@ -4,6 +4,7 @@ import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
+import type { ContentFactoryImageGenerationJobsService } from "./content-factory-image-generation-jobs.service.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 
 const allowedImageTypes = new Set([
@@ -160,21 +161,33 @@ export const createRefineContentFactoryTextHandler =
     response.json(result);
   };
 
-export const createGenerateContentFactoryImageHandler =
-  (ai: ContentFactoryAiService): RequestHandler =>
+export const createSubmitContentFactoryImageGenerationJobHandler =
+  (jobs: ContentFactoryImageGenerationJobsService): RequestHandler =>
   async (_request, response) => {
-    const { referencePhotoBase64, ...input } = response.locals.input.body;
-    const media = await ai.generateImage({
-      ...input,
-      adminId: response.locals.admin.id,
-      referencePhoto: Buffer.from(referencePhotoBase64, "base64"),
-      referencePhotoContentType: "image/jpeg",
-    });
-    response.status(201).json({
-      assets: media.assets.map(({ channels, media: asset }) => ({
-        asset: toMediaAsset(asset),
-        channels,
-      })),
+    const job = await jobs.submit(
+      response.locals.admin.id,
+      response.locals.input.body,
+    );
+    response.status(202).json(job);
+  };
+
+export const createGetContentFactoryImageGenerationJobHandler =
+  (jobs: ContentFactoryImageGenerationJobsService): RequestHandler =>
+  async (_request, response) => {
+    const job = await jobs.getStatus(
+      response.locals.input.params.jobId,
+      response.locals.admin.id,
+    );
+    response.json({
+      ...job,
+      ...(job.status === "completed"
+        ? {
+            assets: job.assets.map(({ channels, media }) => ({
+              asset: toMediaAsset(media),
+              channels,
+            })),
+          }
+        : {}),
     });
   };
 

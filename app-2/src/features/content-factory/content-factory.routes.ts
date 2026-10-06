@@ -12,20 +12,23 @@ import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.j
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { createContentFactoryAiService } from "./content-factory-ai.service.js";
 import { contentFactoryGuidelinesResponse } from "./content-factory-guidelines.js";
+import { createContentFactoryImageGenerationJobsService } from "./content-factory-image-generation-jobs.service.js";
 import {
   contentFactoryUploadLimit,
-  createGenerateContentFactoryImageHandler,
   createGenerateContentFactoryTextHandler,
+  createGetContentFactoryImageGenerationJobHandler,
   createListContentFactoryDraftsHandler,
   createListContentFactoryMediaHandler,
   createRefineContentFactoryTextHandler,
   createSaveContentFactoryDraftHandler,
+  createSubmitContentFactoryImageGenerationJobHandler,
   createUploadContentFactoryMediaHandler,
 } from "./content-factory.handlers.js";
 import {
   contentFactoryDraftBodySchema,
   contentFactoryDraftParamsSchema,
   contentFactoryImageGenerationBodySchema,
+  contentFactoryImageGenerationJobParamsSchema,
   contentFactoryTextGenerationQuerySchema,
   contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
@@ -40,6 +43,12 @@ export const createContentFactoryRouter = (
   const router = Router();
   const ai = createContentFactoryAiService({
     ...aiGateway,
+    database,
+    logger,
+    managedStorage,
+  });
+  const imageGenerationJobs = createContentFactoryImageGenerationJobsService({
+    ai,
     database,
     logger,
     managedStorage,
@@ -69,7 +78,12 @@ export const createContentFactoryRouter = (
   router.post(
     "/generate/image",
     validateRequest({ body: contentFactoryImageGenerationBodySchema }),
-    createGenerateContentFactoryImageHandler(ai),
+    createSubmitContentFactoryImageGenerationJobHandler(imageGenerationJobs),
+  );
+  router.get(
+    "/generate/image/:jobId",
+    validateRequest({ params: contentFactoryImageGenerationJobParamsSchema }),
+    createGetContentFactoryImageGenerationJobHandler(imageGenerationJobs),
   );
   router.post(
     "/drafts",

@@ -200,10 +200,8 @@ export const generateContentFactoryImage = async (input: {
     );
   }
   const response = await apiClient.post<{
-    assets: Array<{
-      channels: ContentChannel[];
-      asset: UploadedContentFactoryMedia;
-    }>;
+    jobId: string;
+    status: "pending";
   }>(
     "/admin/content-factory/generate/image",
     {
@@ -217,16 +215,68 @@ export const generateContentFactoryImage = async (input: {
     },
     {
       headers: headers(),
-      timeout: 180_000,
+      timeout: 15_000,
     },
   );
-  const assetsByChannel: Partial<
-    Record<ContentChannel, UploadedContentFactoryMedia>
-  > = {};
-  for (const { asset, channels } of response.data.assets) {
-    for (const channel of channels) assetsByChannel[channel] = asset;
+  const deadline = Date.now() + 4 * 60_000;
+  let latestPollingError: unknown;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => window.setTimeout(resolve, 1_200));
+    try {
+      const statusResponse = await apiClient.get<
+        | { status: "pending" | "processing" }
+        | {
+            status: "failed";
+            message: string;
+          }
+        | {
+            status: "completed";
+            assets: Array<{
+              channels: ContentChannel[];
+              asset: UploadedContentFactoryMedia;
+            }>;
+          }
+      >(`/admin/content-factory/generate/image/${response.data.jobId}`, {
+        headers: headers(),
+        timeout: 15_000,
+      });
+      latestPollingError = undefined;
+      switch (statusResponse.data.status) {
+        case "pending":
+        case "processing":
+          continue;
+        case "failed":
+          throw new Error(statusResponse.data.message);
+        case "completed": {
+          const assetsByChannel: Partial<
+            Record<ContentChannel, UploadedContentFactoryMedia>
+          > = {};
+          for (const { asset, channels } of statusResponse.data.assets) {
+            for (const channel of channels) assetsByChannel[channel] = asset;
+          }
+          return assetsByChannel;
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && !axios.isAxiosError(error)) throw error;
+      if (
+        axios.isAxiosError(error) &&
+        error.response &&
+        error.response.status < 500
+      ) {
+        throw error;
+      }
+      latestPollingError = error;
+    }
   }
-  return assetsByChannel;
+  if (latestPollingError) {
+    throw new Error(
+      "Генерация ещё выполняется на сервере. Не запускайте её повторно; обновите страницу через минуту.",
+    );
+  }
+  throw new Error(
+    "Генерация ещё выполняется на сервере. Не запускайте её повторно; обновите страницу через минуту.",
+  );
 };
 
 export const contentFactoryErrorMessage = (
