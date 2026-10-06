@@ -4,6 +4,7 @@ import test from "node:test";
 import type { Database } from "../../lib/database/database.js";
 import type { EpteraClient } from "../booking/eptera.client.js";
 import {
+  getVoiceGreetingInstruction,
   getVoiceStayDateInstruction,
   getVoiceToolFailureInstructions,
   voiceAgentCommunicationInstruction,
@@ -22,9 +23,13 @@ test("requires explicit consent and records a callback instead of transfer", () 
   assert.match(voiceCallbackInstruction, /прямой просьбы гостя/u);
   assert.match(voiceCallbackInstruction, /ясного согласия/u);
   assert.match(voiceCallbackInstruction, /вызови request_callback/u);
-  assert.match(voiceCallbackInstruction, /номер.*подтверждения/u);
-  assert.match(voiceCallbackInstruction, /спроси, как обращаться к гостю/u);
-  assert.match(voiceCallbackInstruction, /в какое время ему удобно/u);
+  assert.match(voiceCallbackInstruction, /одним коротким вопросом.*номер/u);
+  assert.match(voiceCallbackInstruction, /не разделяй запрос имени и номера/iu);
+  assert.match(
+    voiceCallbackInstruction,
+    /повтори неизвестный номер для подтверждения/iu,
+  );
+  assert.match(voiceCallbackInstruction, /удобное время звонка/u);
   assert.match(
     voiceCallbackInstruction,
     /если гость не знает или не хочет сообщать/iu,
@@ -38,7 +43,8 @@ test("keeps the callback tool contract aligned with the prompt", () => {
   assert.ok(callbackTool);
   assert.match(callbackTool.description, /обратный звонок/u);
   assert.match(callbackTool.description, /после прямой просьбы гостя/u);
-  assert.match(callbackTool.description, /спроси имя гостя и удобное время/u);
+  assert.match(callbackTool.description, /одним коротким вопросом/u);
+  assert.match(callbackTool.description, /не разделяй имя и номер/iu);
   assert.match(callbackTool.description, /не переключай/iu);
   assert.doesNotMatch(callbackTool.description, /transfer_to_manager/iu);
 });
@@ -49,7 +55,11 @@ test("checks room availability before offering a callback for booking", () => {
   assert.match(voiceBookingInstruction, /подтверждённые сведения/u);
   assert.match(voiceBookingInstruction, /дождись ясного согласия/u);
   assert.match(voiceBookingInstruction, /обратный звонок/u);
-  assert.match(voiceBookingInstruction, /имя гостя и удобное время звонка/u);
+  assert.match(
+    voiceBookingInstruction,
+    /имя и номер для связи неизвестны, запроси их вместе одним вопросом/u,
+  );
+  assert.match(voiceBookingInstruction, /удобное время звонка/u);
   assert.match(voiceBookingInstruction, /не переводит звонок/u);
   assert.match(
     voiceBookingInstruction,
@@ -87,6 +97,25 @@ test("keeps spoken replies concise, Russian, and free of internal provider names
   assert.doesNotMatch(
     `${voiceAgentCommunicationInstruction}\n${voiceBookingInstruction}`,
     /Eptera/iu,
+  );
+});
+
+test("chooses the opening greeting from Moscow local time", () => {
+  assert.match(
+    getVoiceGreetingInstruction(new Date("2026-10-06T15:00:00Z")),
+    /«Добрый вечер»/u,
+  );
+  assert.match(
+    getVoiceGreetingInstruction(new Date("2026-10-06T20:00:00Z")),
+    /«Доброй ночи»/u,
+  );
+  assert.match(
+    getVoiceGreetingInstruction(new Date("2026-10-06T06:00:00Z")),
+    /«Доброе утро»/u,
+  );
+  assert.match(
+    getVoiceGreetingInstruction(new Date("2026-10-06T11:00:00Z")),
+    /«Добрый день»/u,
   );
 });
 
