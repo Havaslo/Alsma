@@ -13,19 +13,29 @@ import {
   FactoryNotice,
 } from "@/components/admin/content-factory/ContentFactoryPrimitives";
 import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlanPanel";
+import { ContentPlanPostReviewDialog } from "@/components/admin/content-factory/ContentPlanPostReviewDialog";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import type { TextRefinementAction } from "@/lib/content-factory/contentFactoryTypes";
+import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
+import type {
+  ContentPlanPostInput,
+  TextRefinementAction,
+} from "@/lib/content-factory/contentFactoryTypes";
 import { useContentFactoryDemo } from "@/lib/content-factory/useContentFactoryDemo";
 import { useContentFactoryPersistence } from "@/lib/content-factory/useContentFactoryPersistence";
-import { useContentFactoryPlanDemo } from "@/lib/content-factory/useContentFactoryPlanDemo";
+import { useContentPlanPersistence } from "@/lib/content-factory/useContentPlanPersistence";
 
 export const ContentFactoryWorkspace = () => {
   const persistence = useContentFactoryPersistence();
   const factory = useContentFactoryDemo(persistence.mediaItems);
-  const plan = useContentFactoryPlanDemo();
+  const plan = useContentPlanPersistence();
   const [adaptationsOpen, setAdaptationsOpen] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [manualPostDate, setManualPostDate] = useState<string>();
+  const [reviewingPost, setReviewingPost] = useState<PlanPublication | null>(
+    null,
+  );
 
   const generateText = async () => {
     if (!factory.prompt.trim() || !factory.selectedChannels.length) return;
@@ -256,24 +266,108 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const handleSchedule = (date: string, time: string) => {
-    plan.schedulePublication(
-      date,
-      time,
-      factory.activeVariant,
-      factory.selectedChannels,
-    );
-    factory.setNotice(
-      "Расписание добавлено в демонстрационный контент-план. Отправки в каналы не было.",
-    );
-    factory.setActiveSection("plan");
+  const handleSchedule = async (date: string, time: string) => {
+    if (!factory.selectedChannels.length) {
+      factory.setNotice(
+        "Выберите хотя бы одну площадку перед добавлением в календарь.",
+      );
+      throw new Error("Не выбрана площадка для публикации.");
+    }
+    setIsScheduling(true);
+    try {
+      const result = await plan.createManualPosts({
+        date,
+        time,
+        title: factory.activeVariant.title || "Новая публикация",
+        posts: factory.selectedChannels.map((channel) => ({
+          channel,
+          text:
+            factory.activeVariant.adaptations[channel] ||
+            factory.activeVariant.text,
+        })),
+      });
+      factory.setNotice(
+        `В календарь добавлено публикаций: ${result.postCount}. Каждая ждёт отдельного одобрения; отправки в соцсети не было.`,
+      );
+      setManualPostDate(undefined);
+      factory.setActiveSection("plan");
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось добавить публикацию в календарь.",
+        ),
+      );
+      throw error;
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
-  const generatePlan = () => {
-    plan.addSuggestedPosts();
+  const generatePlan = async (input: {
+    fileName: string;
+    posts: ContentPlanPostInput[];
+  }) => {
+    const result = await plan.generatePlan(input);
     factory.setNotice(
-      "Добавлены идеи для контент-плана. Это демо-предложение — проверьте и подтвердите каждую дату.",
+      `Создание запущено для ${result.postCount} постов. Они появятся в календаре и будут ждать отдельного одобрения.`,
     );
+  };
+
+  const openPlanPost = (post: PlanPublication) => {
+    if (post.sourceStatus === "manual_new") {
+      setManualPostDate(post.date);
+      factory.openPlanPost(post);
+      return;
+    }
+    setReviewingPost(post);
+  };
+
+  const saveReviewChanges = async (input: {
+    postId: string;
+    date: string;
+    time: string;
+    title: string;
+    text: string;
+  }) => {
+    try {
+      await plan.updatePost(input);
+      factory.setNotice(
+        "Правки сохранены. Пост снова ожидает ручного одобрения.",
+      );
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(error, "Не удалось сохранить правки."),
+      );
+      throw error;
+    }
+  };
+
+  const approvePlanPost = async (postId: string) => {
+    try {
+      await plan.approvePost(postId);
+      factory.setNotice(
+        "Пост одобрен к публикации. Он не отправлен в соцсеть автоматически.",
+      );
+      setReviewingPost(null);
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(error, "Не удалось одобрить пост."),
+      );
+      throw error;
+    }
+  };
+
+  const retryPlanPost = async (postId: string) => {
+    try {
+      await plan.retryPost(postId);
+      factory.setNotice("Повторная генерация поста запущена.");
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(error, "Не удалось повторить генерацию."),
+      );
+      throw error;
+    }
   };
 
   return (
@@ -282,6 +376,7 @@ export const ContentFactoryWorkspace = () => {
         activeSection={factory.activeSection}
         models={persistence.guidelines?.models ?? null}
         onSectionChange={(section) => {
+          if (section !== "create") setManualPostDate(undefined);
           factory.setActiveSection(section);
           if (section === "history") void persistence.refreshDrafts();
         }}
@@ -377,11 +472,11 @@ export const ContentFactoryWorkspace = () => {
               )}
             </div>
             <ContentApprovalActions
-              approved={factory.approved}
-              onApprove={factory.approveDraft}
               onSaveDraft={() => void saveDraft()}
               onSchedule={handleSchedule}
               isSavingDraft={isSavingDraft}
+              isScheduling={isScheduling}
+              initialDate={manualPostDate}
               selectedCount={factory.selectedChannels.length}
             />
           </div>
@@ -390,8 +485,34 @@ export const ContentFactoryWorkspace = () => {
         {factory.activeSection === "plan" && (
           <ContentPlanPanel
             onGeneratePlan={generatePlan}
-            onOpenPost={factory.openPlanPost}
-            onPostsChange={plan.setPosts}
+            onPreviewFile={plan.previewFile}
+            onOpenPost={openPlanPost}
+            onUpdatePost={(input) =>
+              void plan
+                .updatePost(input)
+                .catch((error: unknown) =>
+                  factory.setNotice(
+                    contentFactoryErrorMessage(
+                      error,
+                      "Не удалось изменить дату публикации.",
+                    ),
+                  ),
+                )
+            }
+            onCancelPost={(postId) =>
+              void plan
+                .cancelPost(postId)
+                .catch((error: unknown) =>
+                  factory.setNotice(
+                    contentFactoryErrorMessage(
+                      error,
+                      "Не удалось отменить публикацию.",
+                    ),
+                  ),
+                )
+            }
+            isLoading={plan.isLoading}
+            loadError={plan.error}
             posts={plan.posts}
           />
         )}
@@ -432,6 +553,20 @@ export const ContentFactoryWorkspace = () => {
           />
         )}
       </div>
+
+      {reviewingPost && (
+        <ContentPlanPostReviewDialog
+          busy={plan.isUpdating || plan.isApproving || plan.isRetrying}
+          onApprove={approvePlanPost}
+          onClose={() => setReviewingPost(null)}
+          onRetry={retryPlanPost}
+          onSave={saveReviewChanges}
+          post={
+            plan.posts.find((post) => post.id === reviewingPost.id) ??
+            reviewingPost
+          }
+        />
+      )}
     </div>
   );
 };

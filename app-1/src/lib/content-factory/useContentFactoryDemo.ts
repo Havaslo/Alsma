@@ -39,7 +39,6 @@ export const useContentFactoryDemo = (
     "telegram",
     "instagram",
   ]);
-  const [approved, setApproved] = useState(false);
   const [notice, setNotice] = useState("");
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
@@ -53,7 +52,6 @@ export const useContentFactoryDemo = (
         index === variantIndex ? update(variant) : variant,
       ),
     );
-    setApproved(false);
   };
 
   const toggleChannel = (channel: ContentChannel) => {
@@ -62,12 +60,10 @@ export const useContentFactoryDemo = (
         ? current.filter((item) => item !== channel)
         : [...current, channel],
     );
-    setApproved(false);
   };
 
   const selectVariant = (index: number) => {
     setVariantIndex(index);
-    setApproved(false);
   };
 
   const updateAdaptation = (channel: ContentChannel, text: string) => {
@@ -151,7 +147,6 @@ export const useContentFactoryDemo = (
     setVariants(nextVariants);
     setVariantIndex(0);
     setCurrentDraftId(null);
-    setApproved(false);
   };
 
   const openPlanPost = (post: PlanPublication) => {
@@ -175,7 +170,6 @@ export const useContentFactoryDemo = (
         ),
       );
     }
-    setApproved(false);
     setCurrentDraftId(null);
     setNotice(`Открыт материал «${post.title}» для редактирования.`);
     setActiveSection("create");
@@ -189,7 +183,6 @@ export const useContentFactoryDemo = (
     setVariantIndex(
       Math.min(draft.snapshot.variantIndex, draft.snapshot.variants.length - 1),
     );
-    setApproved(false);
     setNotice(`Открыт черновик «${draft.title}».`);
     setActiveSection("create");
   };
@@ -201,12 +194,6 @@ export const useContentFactoryDemo = (
     variants,
   });
 
-  const approveDraft = () => {
-    setApproved(true);
-    setNotice(
-      "Материал отмечен как согласованный. В тестовом режиме публикация отключена.",
-    );
-  };
   const explainImageGeneration = () =>
     setNotice(
       "Чтобы создать изображение по тексту поста, откройте «Создание». Дополнительный промт можно оставить пустым; форматы будут подготовлены для всех выбранных площадок.",
@@ -217,8 +204,6 @@ export const useContentFactoryDemo = (
     activeSection,
     activeVariant,
     adaptChannel,
-    approveDraft,
-    approved,
     browseChannelImage,
     browseMainImage,
     currentDraftId,

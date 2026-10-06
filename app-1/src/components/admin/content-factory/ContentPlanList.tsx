@@ -1,4 +1,4 @@
-import { Clock3, Edit3, Trash2 } from "lucide-react";
+import { Clock3, Edit3, Image, Trash2 } from "lucide-react";
 
 import {
   MEDIA_ITEMS,
@@ -34,11 +34,17 @@ export const ContentPlanList = ({
         key={post.id}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <img
-            alt=""
-            className="size-14 shrink-0 rounded-xl object-cover"
-            src={MEDIA_ITEMS.find((item) => item.id === post.imageId)?.image}
-          />
+          {MEDIA_ITEMS.find((item) => item.id === post.imageId)?.image ? (
+            <img
+              alt=""
+              className="size-14 shrink-0 rounded-xl object-cover"
+              src={MEDIA_ITEMS.find((item) => item.id === post.imageId)?.image}
+            />
+          ) : (
+            <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-page text-muted-ui-foreground">
+              <Image className="size-5" />
+            </span>
+          )}
           <div className="min-w-0">
             <button
               className="block truncate text-left text-sm font-semibold text-page-foreground hover:text-brand"
@@ -57,6 +63,12 @@ export const ContentPlanList = ({
                 ))}
               </span>
             </div>
+            {post.postType && (
+              <p className="mt-1 text-xs text-muted-ui-foreground">
+                {post.postType}
+                {post.format ? ` · ${post.format}` : ""}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -64,7 +76,7 @@ export const ContentPlanList = ({
           <QuietButton onClick={() => onOpen(post)}>
             <Edit3 className="size-3.5" /> Открыть
           </QuietButton>
-          {post.status !== "Опубликовано" && (
+          {post.sourceStatus !== "cancelled" && (
             <>
               <QuietButton onClick={() => onReschedule(post.id)}>
                 <Clock3 className="size-3.5" /> Перенести

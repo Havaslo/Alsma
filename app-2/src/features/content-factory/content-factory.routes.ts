@@ -33,6 +33,25 @@ import {
   contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
 } from "./content-factory.schemas.js";
+import { createContentPlanGenerationService } from "./content-plan-generation.service.js";
+import {
+  contentPlanUploadLimit,
+  createApproveContentPlanPostHandler,
+  createCancelContentPlanPostHandler,
+  createCreateManualContentPlanPostsHandler,
+  createGenerateContentPlanHandler,
+  createListContentPlanPostsHandler,
+  createPreviewContentPlanHandler,
+  createRetryContentPlanPostHandler,
+  createUpdateContentPlanPostHandler,
+} from "./content-plan.handlers.js";
+import {
+  contentPlanFileQuerySchema,
+  contentPlanImportBodySchema,
+  contentPlanPostParamsSchema,
+  contentPlanPostUpdateSchema,
+  manualContentPlanPostSchema,
+} from "./content-plan.schemas.js";
 
 export const createContentFactoryRouter = (
   database: Database,
@@ -53,6 +72,11 @@ export const createContentFactoryRouter = (
     logger,
     managedStorage,
   });
+  const contentPlanGeneration = createContentPlanGenerationService({
+    ai,
+    database,
+    logger,
+  });
   router.use(
     createRequireAdmin(
       createAdminAuthService(createAdminAuthRepository(database)),
@@ -63,6 +87,49 @@ export const createContentFactoryRouter = (
   router.get("/guidelines", (_request, response) => {
     response.json(contentFactoryGuidelinesResponse);
   });
+  router.post(
+    "/plan/preview",
+    raw({ limit: contentPlanUploadLimit, type: () => true }),
+    validateRequest({ query: contentPlanFileQuerySchema }),
+    createPreviewContentPlanHandler,
+  );
+  router.post(
+    "/plan/generate",
+    validateRequest({ body: contentPlanImportBodySchema }),
+    createGenerateContentPlanHandler(contentPlanGeneration),
+  );
+  router.post(
+    "/plan/posts/manual",
+    validateRequest({ body: manualContentPlanPostSchema }),
+    createCreateManualContentPlanPostsHandler(contentPlanGeneration),
+  );
+  router.get(
+    "/plan/posts",
+    createListContentPlanPostsHandler(database, contentPlanGeneration),
+  );
+  router.patch(
+    "/plan/posts/:postId",
+    validateRequest({
+      body: contentPlanPostUpdateSchema,
+      params: contentPlanPostParamsSchema,
+    }),
+    createUpdateContentPlanPostHandler(database),
+  );
+  router.post(
+    "/plan/posts/:postId/approve",
+    validateRequest({ params: contentPlanPostParamsSchema }),
+    createApproveContentPlanPostHandler(database),
+  );
+  router.post(
+    "/plan/posts/:postId/cancel",
+    validateRequest({ params: contentPlanPostParamsSchema }),
+    createCancelContentPlanPostHandler(database),
+  );
+  router.post(
+    "/plan/posts/:postId/retry",
+    validateRequest({ params: contentPlanPostParamsSchema }),
+    createRetryContentPlanPostHandler(contentPlanGeneration),
+  );
   router.get("/drafts", createListContentFactoryDraftsHandler(database));
   router.post(
     "/generate/text",

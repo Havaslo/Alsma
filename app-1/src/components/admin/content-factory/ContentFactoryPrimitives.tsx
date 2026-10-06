@@ -41,6 +41,12 @@ export const ChannelBadge = ({
 
 export const StatusBadge = ({ status }: { status: PlanStatus }) => {
   const tone: Record<PlanStatus, string> = {
+    "В очереди": "bg-slate-100 text-slate-700",
+    Создаётся: "bg-blue-50 text-blue-700",
+    "На проверке": "bg-amber-50 text-amber-800",
+    "Одобрен к публикации": "bg-brand/5 text-brand",
+    "Ошибка генерации": "bg-rose-50 text-rose-700",
+    Отменён: "bg-slate-100 text-slate-500",
     Черновик: "bg-muted-ui/50 text-page-foreground",
     "На согласовании": "bg-amber-50 text-amber-800",
     Запланировано: "bg-blue-50 text-blue-700",

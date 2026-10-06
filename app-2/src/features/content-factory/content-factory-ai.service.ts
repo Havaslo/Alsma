@@ -4,13 +4,17 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
-import { contentFactoryModels } from "./content-factory-guidelines.js";
+import {
+  contentFactoryChannelGuidelines,
+  contentFactoryModels,
+} from "./content-factory-guidelines.js";
 import { createContentFactoryImageGenerationService } from "./content-factory-image-generation.service.js";
 import {
   assertReferencePhoto,
   buildContentFactoryChannelPromptContext,
 } from "./content-factory-image-processing.js";
 import { createContentFactoryTextRefinementService } from "./content-factory-text-refinement.service.js";
+import type { ContentPlanPostInput } from "./content-plan.schemas.js";
 
 const generatedAdaptationsSchema = z.object({
   vk: z.string().trim().min(1).max(20_000),
@@ -31,6 +35,11 @@ const generatedTextSchema = z.object({
       }),
     )
     .length(3),
+});
+
+const generatedPlanCopySchema = z.object({
+  title: z.string().trim().min(1).max(255),
+  text: z.string().trim().min(1).max(20_000),
 });
 
 type GatewayFailure = {
@@ -107,6 +116,7 @@ export const createContentFactoryAiService = (options: {
     body: unknown,
     stage:
       | "content_factory_text"
+      | "content_factory_plan_generation"
       | "content_factory_text_refinement"
       | "content_factory_image",
   ): Promise<unknown> => {
@@ -349,6 +359,92 @@ export const createContentFactoryAiService = (options: {
         model: contentFactoryModels.text,
         variants: result.data.variants,
       };
+    },
+
+    generatePlanCopy: async (input: ContentPlanPostInput) => {
+      const channelGuideline = contentFactoryChannelGuidelines.find(
+        (guideline) => guideline.id === input.channel,
+      );
+      if (!channelGuideline) {
+        throw new HttpError(
+          400,
+          "CONTENT_PLAN_CHANNEL_UNSUPPORTED",
+          "Для этой площадки пока нет редакционного профиля.",
+        );
+      }
+      const payload = await requestJson(
+        "/chat/completions",
+        {
+          model: contentFactoryModels.text,
+          max_tokens: 1_800,
+          response_format: { type: "json_object" },
+          temperature: 0.55,
+          messages: [
+            {
+              role: "system",
+              content: `Ты — редактор SMM загородного отеля ALSMA. Подготовь один готовый к редакторской проверке пост на русском языке. Верни только JSON: {"title": string, "text": string}. Соблюдай стиль выбранной площадки. Не выдумывай цены, скидки, сроки, наличие мест, адреса, услуги, ссылки, отзывы и условия. Используй только факты из брифа; если их не хватает, сформулируй нейтрально и не превращай неизвестное в обещание. Текст промта для изображения и рекомендацию исходного фото используй только как визуальные указания, не копируй их как факты в пост. Не заявляй, что пост одобрен или опубликован. Площадка: ${channelGuideline.label}. Редакторский профиль: ${channelGuideline.copy}`,
+            },
+            {
+              role: "user",
+              content: JSON.stringify({
+                type: input.postType,
+                format: input.format,
+                topic: input.topic,
+                audience: input.audience,
+                confirmedFactsAndConditions: input.keyFacts,
+                callToAction: input.callToAction,
+                styleAndRestrictions: input.styleGuidance,
+                imagePrompt: input.imagePrompt,
+                sourceImageRecommendation: input.sourceImageRecommendation,
+              }),
+            },
+          ],
+        },
+        "content_factory_plan_generation",
+      );
+      const root =
+        typeof payload === "object" && payload
+          ? (payload as Record<string, unknown>)
+          : null;
+      const choices = Array.isArray(root?.choices) ? root.choices : [];
+      const message =
+        choices[0] && typeof choices[0] === "object"
+          ? (choices[0] as Record<string, unknown>).message
+          : null;
+      const content =
+        typeof message === "object" && message
+          ? (message as Record<string, unknown>).content
+          : null;
+      if (typeof content !== "string") {
+        throw new HttpError(
+          502,
+          "CONTENT_PLAN_AI_RESPONSE_INVALID",
+          "AI-сервис вернул ответ без текста. Повторите генерацию этого поста.",
+        );
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        throw new HttpError(
+          502,
+          "CONTENT_PLAN_AI_RESPONSE_INVALID",
+          "AI-сервис вернул ответ в неподдерживаемом формате. Повторите генерацию этого поста.",
+        );
+      }
+      const result = generatedPlanCopySchema.safeParse(parsed);
+      if (!result.success) {
+        options.logger.warn(
+          { validationIssueCount: result.error.issues.length },
+          "Content plan AI response did not match the expected format",
+        );
+        throw new HttpError(
+          502,
+          "CONTENT_PLAN_AI_RESPONSE_INVALID",
+          "AI-сервис подготовил пост в неожиданном формате. Повторите генерацию.",
+        );
+      }
+      return { ...result.data, model: contentFactoryModels.text };
     },
 
     generateImage: imageGeneration.generateImage,

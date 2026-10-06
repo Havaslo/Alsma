@@ -2,7 +2,17 @@
 
 ## Scope and access
 
-The feature serves the administrator content-factory page at `/admin/content-factory`. Its existing authorization requires `site.access`, `site.manage`, or `*`. Calls run through the backend and the connected Amazi AI Gateway; provider credentials never reach the browser. This is a draft-only test integration: it does not call a social-platform publishing API or send content to a channel. Do not add publishing as part of model generation.
+The feature serves the administrator content-factory page at `/admin/content-factory`. Its existing authorization requires `site.access`, `site.manage`, or `*`. Calls run through the backend and the connected Amazi AI Gateway; provider credentials never reach the browser. Generated items are drafts. Approval records a human's permission to publish but does not call a social-platform publishing API or send content to a channel.
+
+## XLSX content plan and review gate
+
+- `POST /api/admin/content-factory/plan/preview` accepts a raw XLSX file and its file name, parses it server-side with SheetJS, and returns a validated preview. It stores nothing and makes no AI call. The route accepts up to 10 MiB; a file may contain at most 50 non-empty publication rows. The parser scans for the template's header row so the title and instruction rows above it are allowed.
+- Required columns: `Дата публикации`, `Тип публикации`, `Площадка`, `Формат`, `Тема / заголовок`. Optional columns: `Для кого пост`, `Что рассказать (условия, ключевые факты)`, `Призыв к действию / ссылка`, `Стиль и ограничения`, `Промт для изображения`, and `Исходное изображение (файл или рекомендация)`. A time column is optional; missing times default to 12:00. Rows are one post per channel. Supported labels map to `vk`, `telegram`, `max`, `instagram`, or `zen`; unsupported channels fail preview with a row-specific error.
+- The explicit `POST /api/admin/content-factory/plan/generate` action creates a `ContentPlanImport` and one `ContentPlanPost` per validated row, with status `queued`. The browser doesn't send the XLSX to AI. Text generation uses one `gpt-4.1-mini` Chat Completions request per post, including the row's confirmed facts/conditions, post type, topic, audience, CTA, style limits, image prompt and source-image recommendation, plus the channel writing profile. At most two per-post requests run concurrently; results and errors are persisted independently.
+- The queue uses database status compare-and-set (`queued` → `generating`) so dev and production workers sharing the project database cannot both claim the same row. `GET /plan/posts` resumes queued work and requeues `generating` rows that have been stale for five minutes. A successful post enters `needs_review`; failures enter `generation_failed` and can be retried individually.
+- `PATCH /plan/posts/:postId` permits changes only for `needs_review` or `approved` posts. Any edit resets approval and requires a new review. `POST /plan/posts/:postId/approve` atomically transitions only `needs_review` to `approved`, recording `approvedById` and `approvedAt`; generation errors and already approved rows cannot be approved again. Manual additions from the content editor also enter `needs_review`.
+- Imported image prompts and source-photo recommendations are retained for the review card but do not generate an image. Reviewers can edit title, text, date and time before approval. Social publishing and image creation are not performed by this import workflow.
+- Cancellation is a soft status change (`cancelled`) so the content and source row remain available in history. Updating an approved post clears its approval metadata. Calendar records are shared between authorized administrators.
 
 ## Models and image context
 

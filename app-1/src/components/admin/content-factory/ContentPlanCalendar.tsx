@@ -59,6 +59,11 @@ const PlanPostCard = ({
           <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-ui-foreground">
             <Clock3 className="size-3" /> {post.time}
           </span>
+          {post.postType && (
+            <span className="mt-0.5 block truncate text-[10px] text-muted-ui-foreground/80">
+              {post.postType}
+            </span>
+          )}
         </span>
       </button>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-1.5">
@@ -73,7 +78,7 @@ const PlanPostCard = ({
         <button
           aria-label="Перенести публикацию на следующий день"
           className="grid size-7 place-items-center rounded-lg text-muted-ui-foreground/80 transition hover:bg-blue-50 hover:text-blue-700 disabled:opacity-30"
-          disabled={post.status === "Опубликовано"}
+          disabled={post.sourceStatus === "cancelled"}
           onClick={() => onReschedule(post.id)}
           title="Перенести на следующий день"
           type="button"
@@ -83,7 +88,7 @@ const PlanPostCard = ({
         <button
           aria-label="Отменить публикацию"
           className="grid size-7 place-items-center rounded-lg text-muted-ui-foreground/80 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30"
-          disabled={post.status === "Опубликовано"}
+          disabled={post.sourceStatus === "cancelled"}
           onClick={() => onCancel(post.id)}
           title="Отменить"
           type="button"

@@ -1,28 +1,33 @@
 import { useState } from "react";
 
-import { CalendarClock, Check, Clock3, Save } from "lucide-react";
+import { CalendarClock, Clock3, LoaderCircle, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 
 import { FactoryCard, QuietButton } from "./ContentFactoryPrimitives";
 
 export const ContentApprovalActions = ({
-  approved,
   selectedCount,
-  onApprove,
+  initialDate,
   onSaveDraft,
   onSchedule,
   isSavingDraft,
+  isScheduling,
 }: {
-  approved: boolean;
   selectedCount: number;
-  onApprove: () => void;
+  initialDate?: string;
   onSaveDraft: () => void;
-  onSchedule: (date: string, time: string) => void;
+  onSchedule: (date: string, time: string) => Promise<void>;
   isSavingDraft: boolean;
+  isScheduling: boolean;
 }) => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [date, setDate] = useState("2026-11-06");
+  const [date, setDate] = useState(() => {
+    if (initialDate) return initialDate;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+  });
   const [time, setTime] = useState("11:00");
 
   return (
@@ -30,63 +35,35 @@ export const ContentApprovalActions = ({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2.5">
-            <span
-              className={`grid size-9 place-items-center rounded-full ${
-                approved
-                  ? "bg-brand/10 text-brand"
-                  : "bg-amber-50 text-amber-700"
-              }`}
-            >
-              {approved ? (
-                <Check className="size-4" />
-              ) : (
-                <Clock3 className="size-4" />
-              )}
+            <span className="grid size-9 place-items-center rounded-full bg-amber-50 text-amber-700">
+              <Clock3 className="size-4" />
             </span>
             <div>
               <p className="text-sm font-semibold text-page-foreground">
-                {approved
-                  ? "Материал согласован"
-                  : "Проверьте версии и согласуйте материал"}
+                Добавьте готовый черновик в календарь
               </p>
               <p className="mt-0.5 text-xs text-muted-ui-foreground">
-                {approved
-                  ? `${selectedCount} канал${selectedCount === 1 ? "" : selectedCount < 5 ? "а" : "ов"} включено · публикация только по вашему действию`
-                  : "До согласования публикация не отправляется ни в один канал"}
+                Каждый пост после этого отдельно проверяется и одобряется в
+                календаре.
               </p>
             </div>
           </div>
         </div>
 
-        {!approved ? (
-          <div className="flex flex-wrap gap-2">
-            <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
-              <Save className="size-4" />
-              {isSavingDraft ? "Сохраняем…" : "Сохранить черновик"}
-            </QuietButton>
-            <Button
-              className="min-h-12 rounded-xl bg-brand px-6 text-white shadow-md shadow-emerald-900/10 hover:bg-brand/90"
-              disabled={selectedCount === 0}
-              onClick={onApprove}
-              type="button"
-            >
-              <Check className="size-4" /> Согласовать
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex min-h-11 items-center rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800">
-              Публикация отключена в тестовом режиме
-            </span>
-            <QuietButton onClick={() => setScheduleOpen(true)}>
-              <CalendarClock className="size-4" /> Добавить в демо-план
-            </QuietButton>
-            <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
-              <Save className="size-4" />
-              {isSavingDraft ? "Сохраняем…" : "Сохранить черновик"}
-            </QuietButton>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <QuietButton disabled={isSavingDraft} onClick={onSaveDraft}>
+            <Save className="size-4" />
+            {isSavingDraft ? "Сохраняем…" : "Сохранить черновик"}
+          </QuietButton>
+          <Button
+            className="min-h-11 rounded-xl bg-brand px-5 text-white hover:bg-brand/90"
+            disabled={selectedCount === 0 || isScheduling}
+            onClick={() => setScheduleOpen(true)}
+            type="button"
+          >
+            <CalendarClock className="size-4" /> Добавить в календарь
+          </Button>
+        </div>
       </div>
 
       {scheduleOpen && (
@@ -116,8 +93,8 @@ export const ContentApprovalActions = ({
               </button>
             </div>
             <p className="mt-2 text-sm leading-6 text-muted-ui-foreground">
-              В демо-режиме выбранное расписание отобразится в контент-плане, но
-              не будет отправлено в социальные сети.
+              Каждый выбранный канал получит отдельный пост со статусом «На
+              проверке». Ничего не отправляется в соцсети до одобрения поста.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label className="text-xs font-semibold text-muted-ui-foreground">
@@ -140,19 +117,28 @@ export const ContentApprovalActions = ({
               </label>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <QuietButton onClick={() => setScheduleOpen(false)}>
+              <QuietButton
+                disabled={isScheduling}
+                onClick={() => setScheduleOpen(false)}
+              >
                 Отмена
               </QuietButton>
               <Button
                 className="rounded-xl bg-brand text-white hover:bg-brand/90"
-                disabled={!date || !time}
+                disabled={!date || !time || isScheduling}
                 onClick={() => {
-                  onSchedule(date, time);
-                  setScheduleOpen(false);
+                  void onSchedule(date, time)
+                    .then(() => setScheduleOpen(false))
+                    .catch(() => undefined);
                 }}
                 type="button"
               >
-                Добавить в план
+                {isScheduling ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="size-4" />
+                )}
+                Добавить в календарь
               </Button>
             </div>
           </div>

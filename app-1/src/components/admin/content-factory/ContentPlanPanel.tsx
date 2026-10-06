@@ -1,23 +1,20 @@
 import { useMemo, useState } from "react";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  List,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, List, Plus } from "lucide-react";
 
-import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import {
   CONTENT_CHANNELS,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
+import type {
+  ContentPlanPostInput,
+  ContentPlanPreview,
+} from "@/lib/content-factory/contentFactoryTypes";
 
 import { ChannelBadge } from "./ContentFactoryPrimitives";
 import { ContentPlanCalendar } from "./ContentPlanCalendar";
+import { ContentPlanImportPanel } from "./ContentPlanImportPanel";
 import { ContentPlanList } from "./ContentPlanList";
 
 const monthLabel = (date: Date) =>
@@ -33,16 +30,33 @@ const addDay = (value: string) => {
 
 export const ContentPlanPanel = ({
   posts,
-  onPostsChange,
   onGeneratePlan,
+  onPreviewFile,
   onOpenPost,
+  onUpdatePost,
+  onCancelPost,
+  isLoading,
+  loadError,
 }: {
   posts: PlanPublication[];
-  onPostsChange: (posts: PlanPublication[]) => void;
-  onGeneratePlan: () => void;
+  onGeneratePlan: (input: {
+    fileName: string;
+    posts: ContentPlanPostInput[];
+  }) => Promise<unknown>;
+  onPreviewFile: (file: File) => Promise<ContentPlanPreview>;
   onOpenPost: (post: PlanPublication) => void;
+  onUpdatePost: (input: {
+    postId: string;
+    date?: string;
+    time?: string;
+  }) => void;
+  onCancelPost: (postId: string) => void;
+  isLoading: boolean;
+  loadError: string;
 }) => {
-  const [month, setMonth] = useState(() => new Date(2026, 9, 1));
+  const [month, setMonth] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const visiblePosts = useMemo(
     () =>
@@ -61,16 +75,25 @@ export const ContentPlanPanel = ({
   );
   const summary = [
     {
-      label: "Запланировано",
-      count: posts.filter((post) => post.status === "Запланировано").length,
+      label: "На проверке",
+      count: posts.filter((post) => post.sourceStatus === "needs_review")
+        .length,
     },
     {
-      label: "На согласовании",
-      count: posts.filter((post) => post.status === "На согласовании").length,
+      label: "Одобрено",
+      count: posts.filter((post) => post.sourceStatus === "approved").length,
     },
     {
-      label: "Черновики",
-      count: posts.filter((post) => post.status === "Черновик").length,
+      label: "Генерируется",
+      count: posts.filter(
+        (post) =>
+          post.sourceStatus === "queued" || post.sourceStatus === "generating",
+      ).length,
+    },
+    {
+      label: "Ошибки",
+      count: posts.filter((post) => post.sourceStatus === "generation_failed")
+        .length,
     },
   ];
 
@@ -80,16 +103,13 @@ export const ContentPlanPanel = ({
         new Date(current.getFullYear(), current.getMonth() + step, 1),
     );
   };
-  const reschedule = (id: string) =>
-    onPostsChange(
-      posts.map((post) =>
-        post.id === id && post.status !== "Опубликовано"
-          ? { ...post, date: addDay(post.date) }
-          : post,
-      ),
-    );
-  const cancel = (id: string) =>
-    onPostsChange(posts.filter((post) => post.id !== id));
+  const reschedule = (id: string) => {
+    const post = posts.find((item) => item.id === id);
+    if (post && post.sourceStatus !== "cancelled") {
+      onUpdatePost({ postId: id, date: addDay(post.date) });
+    }
+  };
+  const cancel = (id: string) => onCancelPost(id);
   const createOnDate = (date: string) =>
     onOpenPost({
       id: `new-${date}`,
@@ -99,32 +119,19 @@ export const ContentPlanPanel = ({
       channels: ["vk"],
       status: "Черновик",
       imageId: "spa-pool",
+      postType: "Пост",
+      format: "Пост",
+      sourceStatus: "manual_new",
     });
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-col gap-4 rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.13em] text-brand uppercase">
-            <CalendarDays className="size-4" /> Контент-план
-          </div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-page-foreground">
-            Все публикации — в одном расписании
-          </h2>
-          <p className="mt-1 text-sm text-muted-ui-foreground">
-            Просматривайте каналы, сроки и статус материалов.
-          </p>
-        </div>
-        <Button
-          className="min-h-11 shrink-0 rounded-xl bg-brand text-white hover:bg-brand/90"
-          onClick={onGeneratePlan}
-          type="button"
-        >
-          <Sparkles className="size-4" /> Сгенерировать контент-план
-        </Button>
-      </section>
+      <ContentPlanImportPanel
+        onGenerate={onGeneratePlan}
+        onPreview={onPreviewFile}
+      />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map(({ label, count }) => (
           <div
             className="rounded-2xl border border-line bg-brand-foreground px-4 py-3.5"
@@ -139,6 +146,21 @@ export const ContentPlanPanel = ({
           </div>
         ))}
       </div>
+
+      {loadError && (
+        <div
+          className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+          role="alert"
+        >
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && (
+        <p className="text-sm text-muted-ui-foreground" role="status">
+          Загружаем публикации…
+        </p>
+      )}
 
       <section className="overflow-hidden rounded-3xl border border-line bg-brand-foreground shadow-[0_8px_30px_rgba(25,45,34,0.045)]">
         <div className="flex flex-col gap-4 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -221,7 +243,7 @@ export const ContentPlanPanel = ({
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-page/50 px-4 py-3.5 text-xs text-muted-ui-foreground sm:px-5">
-          <span>Показано {visiblePosts.length} материалов · демо-данные</span>
+          <span>Показано {visiblePosts.length} публикаций</span>
           <span className="inline-flex items-center gap-1.5">
             <Plus className="size-3.5" /> Нажмите на карточку, чтобы открыть
             материал

@@ -24,6 +24,48 @@ export interface SavedContentFactoryDraft {
   updatedAt: string;
 }
 
+export interface ContentPlanPostInput {
+  sourceRow: number;
+  date: string;
+  time: string;
+  postType: string;
+  channel: ContentChannel;
+  format: string;
+  topic: string;
+  audience: string;
+  keyFacts: string;
+  callToAction: string;
+  styleGuidance: string;
+  imagePrompt: string;
+  sourceImageRecommendation: string;
+}
+
+export type ContentPlanPostStatus =
+  | "queued"
+  | "generating"
+  | "needs_review"
+  | "approved"
+  | "generation_failed"
+  | "cancelled";
+
+export interface ContentPlanPostRecord extends ContentPlanPostInput {
+  id: string;
+  importId: string;
+  title: string;
+  text: string;
+  status: ContentPlanPostStatus;
+  generationError: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  import: { fileName: string };
+}
+
+export interface ContentPlanPreview {
+  fileName: string;
+  posts: ContentPlanPostInput[];
+}
+
 export interface UploadedContentFactoryMedia extends FactoryMediaItem {
   contentType: string;
   createdAt: string;

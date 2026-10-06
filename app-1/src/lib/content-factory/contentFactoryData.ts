@@ -201,7 +201,17 @@ export const DEMO_VARIANTS: DraftVariant[] = [
 ];
 
 export type PlanStatus =
-  "Черновик" | "На согласовании" | "Запланировано" | "Опубликовано" | "Ошибка";
+  | "В очереди"
+  | "Создаётся"
+  | "На проверке"
+  | "Одобрен к публикации"
+  | "Ошибка генерации"
+  | "Отменён"
+  | "Черновик"
+  | "На согласовании"
+  | "Запланировано"
+  | "Опубликовано"
+  | "Ошибка";
 
 export interface PlanPublication {
   id: string;
@@ -211,61 +221,16 @@ export interface PlanPublication {
   channels: ContentChannel[];
   status: PlanStatus;
   imageId: string;
+  postType?: string;
+  format?: string;
+  text?: string;
+  imagePrompt?: string;
+  sourceImageRecommendation?: string;
+  generationError?: string | null;
+  sourceStatus?: string;
+  audience?: string;
+  keyFacts?: string;
+  callToAction?: string;
+  styleGuidance?: string;
+  importFileName?: string;
 }
-
-export const DEMO_PLAN: PlanPublication[] = [
-  {
-    id: "plan-1",
-    title: "Первые прохладные дни — время для SPA",
-    date: "2026-10-01",
-    time: "10:30",
-    channels: ["vk", "telegram"],
-    status: "Опубликовано",
-    imageId: "spa-thermal",
-  },
-  {
-    id: "plan-2",
-    title: "Что взять с собой на SPA-день",
-    date: "2026-10-02",
-    time: "15:00",
-    channels: ["vk", "zen"],
-    status: "Ошибка",
-    imageId: "spa-programs",
-  },
-  {
-    id: "plan-3",
-    title: "Тёплый вечер после прогулки",
-    date: "2026-10-06",
-    time: "18:00",
-    channels: ["telegram", "instagram"],
-    status: "Запланировано",
-    imageId: "river",
-  },
-  {
-    id: "plan-4",
-    title: "Команда ALSMA: знакомство с мастером SPA",
-    date: "2026-10-08",
-    time: "12:00",
-    channels: ["vk", "max"],
-    status: "На согласовании",
-    imageId: "spa-massage",
-  },
-  {
-    id: "plan-5",
-    title: "Ноябрьская акция: SPA −20%",
-    date: "2026-10-10",
-    time: "11:00",
-    channels: ["vk", "telegram", "instagram"],
-    status: "Черновик",
-    imageId: "spa-pool",
-  },
-  {
-    id: "plan-6",
-    title: "Спокойное утро в ресторане",
-    date: "2026-10-14",
-    time: "09:30",
-    channels: ["vk", "zen"],
-    status: "Запланировано",
-    imageId: "restaurant",
-  },
-];
