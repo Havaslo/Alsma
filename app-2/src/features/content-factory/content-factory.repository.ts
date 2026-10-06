@@ -49,6 +49,8 @@ export const createContentFactoryRepository = (database: Database) => ({
         sizeBytes: input.sizeBytes,
       },
     }),
+  deleteMedia: (mediaId: string) =>
+    database.client.contentFactoryMedia.delete({ where: { id: mediaId } }),
 });
 
 export type ContentFactoryRepository = ReturnType<

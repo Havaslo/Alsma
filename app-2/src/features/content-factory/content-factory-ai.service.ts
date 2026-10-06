@@ -4,20 +4,13 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
-import {
-  contentFactoryModels,
-  getContentFactoryChannelGuideline,
-} from "./content-factory-guidelines.js";
+import { contentFactoryModels } from "./content-factory-guidelines.js";
+import { createContentFactoryImageGenerationService } from "./content-factory-image-generation.service.js";
 import {
   assertReferencePhoto,
   buildContentFactoryChannelPromptContext,
-  cropGeneratedImage,
 } from "./content-factory-image-processing.js";
 import { createContentFactoryTextRefinementService } from "./content-factory-text-refinement.service.js";
-import { createContentFactoryRepository } from "./content-factory.repository.js";
-
-const imagePromptMaxLength = 2_000;
-const generatedImageMaxBytes = 20 * 1_024 * 1_024;
 
 const generatedAdaptationsSchema = z.object({
   vk: z.string().trim().min(1).max(20_000),
@@ -244,6 +237,13 @@ export const createContentFactoryAiService = (options: {
     return payload;
   };
 
+  const imageGeneration = createContentFactoryImageGenerationService({
+    database: options.database,
+    logger: options.logger,
+    managedStorage: options.managedStorage,
+    requestImageEdit,
+  });
+
   return {
     refineText: createContentFactoryTextRefinementService(requestJson),
     generateText: async (input: {
@@ -351,122 +351,6 @@ export const createContentFactoryAiService = (options: {
       };
     },
 
-    generateImage: async (input: {
-      readonly adminId: string;
-      readonly prompt: string;
-      readonly channel: string;
-      readonly sourceTitle: string;
-      readonly sourceCategory: string;
-      readonly sourceTags: readonly string[];
-      readonly referencePhoto: unknown;
-      readonly referencePhotoContentType: string;
-    }) => {
-      const referencePhoto = assertReferencePhoto(
-        input.referencePhoto,
-        input.referencePhotoContentType,
-      );
-      const channel = getContentFactoryChannelGuideline(input.channel);
-      const prompt = [
-        `Задача пользователя: ${input.prompt}`,
-        `Выбранное исходное фото: «${input.sourceTitle}», раздел «${input.sourceCategory}», теги: ${input.sourceTags.join(", ") || "нет"}. Используй переданное фото как обязательную визуальную основу, а не только как вдохновение.`,
-        `Канал назначения: ${channel.label}. Целевой кадр: ${channel.image.dimensions}, соотношение ${channel.image.ratio}, формат хранения PNG. Это визуальная рекомендация; готовый кадр будет обрезан до указанного соотношения.`,
-        `Правила площадки: ${channel.image.note} ${channel.gallery}`,
-        "Сохрани узнаваемую планировку, архитектуру, мебель, предметы, людей и другие видимые элементы оригинала. Не добавляй и не удаляй объекты, услуги, оборудование, детали интерьера или пейзажа, которых нет на фото. Разрешены аккуратные изменения освещения, цветового баланса и фотографической композиции.",
-        "Фотореалистичная редактура, естественные цвета, чистая композиция. Оставь главный объект и важные детали в центральной безопасной области кадра, чтобы они пережили обрезку. Не добавляй текст, буквы, логотипы, водяные знаки, рамки или коллаж. За один запрос создаётся один кадр, даже если канал поддерживает альбом или карусель.",
-      ].join("\n\n");
-      const payload = await requestImageEdit({
-        content: referencePhoto,
-        contentType: input.referencePhotoContentType,
-        fileName: `${input.sourceTitle}.jpg`,
-        prompt,
-        size: channel.image.apiSize,
-      });
-      const root =
-        typeof payload === "object" && payload
-          ? (payload as Record<string, unknown>)
-          : null;
-      const data = Array.isArray(root?.data) ? root.data[0] : null;
-      const imageBase64 =
-        typeof data === "object" && data
-          ? (data as Record<string, unknown>).b64_json
-          : null;
-      if (typeof imageBase64 !== "string" || !imageBase64.trim()) {
-        throw new HttpError(
-          502,
-          "CONTENT_FACTORY_AI_IMAGE_INVALID",
-          "AI-сервис не вернул изображение. Попробуйте другой запрос.",
-        );
-      }
-
-      const rawContent = Buffer.from(imageBase64, "base64");
-      if (
-        rawContent.length === 0 ||
-        rawContent.length > generatedImageMaxBytes ||
-        !rawContent
-          .subarray(0, 8)
-          .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-      ) {
-        throw new HttpError(
-          502,
-          "CONTENT_FACTORY_AI_IMAGE_INVALID",
-          "AI-сервис вернул повреждённый файл изображения.",
-        );
-      }
-
-      const content = await cropGeneratedImage(rawContent, {
-        width: channel.image.outputWidth,
-        height: channel.image.outputHeight,
-      });
-
-      const fileName = `ai-${input.channel}-${new Date().toISOString().replace(/[:.]/gu, "-")}.png`;
-      let stored: { readonly objectId: string };
-      try {
-        stored = await options.managedStorage.upload({
-          content: Uint8Array.from(content),
-          contentType: "image/png",
-          name: getStorageFileName(fileName),
-        });
-      } catch (error) {
-        options.logger.error(
-          { errorName: error instanceof Error ? error.name : "UnknownError" },
-          "Generated content factory image could not be stored",
-        );
-        throw new HttpError(
-          502,
-          "CONTENT_FACTORY_AI_IMAGE_STORAGE_FAILED",
-          "Изображение создано, но не удалось сохранить его в медиатеке. Повторите позже.",
-        );
-      }
-
-      try {
-        const repository = createContentFactoryRepository(options.database);
-        return await repository.createMedia({
-          adminId: input.adminId,
-          contentType: "image/png",
-          fileName: `AI · ${channel.label} · ${input.sourceTitle}.png`,
-          objectId: stored.objectId,
-          sizeBytes: content.length,
-        });
-      } catch (error) {
-        await options.managedStorage
-          .deleteObject(stored.objectId)
-          .catch((cleanupError) => {
-            options.logger.warn(
-              {
-                cleanupErrorName:
-                  cleanupError instanceof Error
-                    ? cleanupError.name
-                    : "UnknownError",
-              },
-              "Orphaned generated content factory image cleanup failed",
-            );
-          });
-        throw error;
-      }
-    },
+    generateImage: imageGeneration.generateImage,
   };
 };
-
-export const contentFactoryImageGenerationLimits = {
-  maxPromptLength: imagePromptMaxLength,
-} as const;

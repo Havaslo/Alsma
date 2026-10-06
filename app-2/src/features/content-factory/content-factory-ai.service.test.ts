@@ -98,21 +98,21 @@ test("generates three structured draft variants through the Gateway", async () =
 
 test("stores a generated PNG in managed storage and media metadata", async () => {
   const png = createReferencePhoto();
-  let storedContentType = "";
-  let storedBytes = 0;
-  let storedDimensions = { height: 0, width: 0 };
-  let createdMedia: Record<string, unknown> = {};
+  const storedContentTypes: string[] = [];
+  const storedDimensions: Array<{ height: number; width: number }> = [];
+  const createdMedia: Array<Record<string, unknown>> = [];
   let requestedPath = "";
+  let requestCount = 0;
   let formValues = new FormData();
   const database = {
     client: {
       contentFactoryMedia: {
         create: async ({ data }: { data: Record<string, unknown> }) => {
-          createdMedia = data;
+          createdMedia.push(data);
           return {
             ...data,
             createdAt: new Date("2026-10-02T10:00:00.000Z"),
-            id: "generated-media-id",
+            id: `generated-media-${createdMedia.length}`,
           };
         },
       },
@@ -121,11 +121,10 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
   const managedStorage = {
     deleteObject: async () => undefined,
     upload: async (input: { content: Uint8Array; contentType: string }) => {
-      storedContentType = input.contentType;
-      storedBytes = input.content.byteLength;
+      storedContentTypes.push(input.contentType);
       const image = await loadImage(Buffer.from(input.content));
-      storedDimensions = { height: image.height, width: image.width };
-      return { objectId: "generated-object" };
+      storedDimensions.push({ height: image.height, width: image.width });
+      return { objectId: `generated-object-${storedDimensions.length}` };
     },
   } as unknown as ManagedStorage;
   const service = createContentFactoryAiService({
@@ -133,6 +132,7 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
     baseUrl: "https://gateway.example/v1",
     database,
     fetchImplementation: async (url, init) => {
+      requestCount += 1;
       requestedPath = String(url);
       formValues = init?.body as FormData;
       return Response.json({ data: [{ b64_json: png.toString("base64") }] });
@@ -143,8 +143,9 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
 
   const result = await service.generateImage({
     adminId: "admin-id",
-    prompt: "Спокойное утро в загородном отеле",
-    channel: "instagram",
+    postText: "Время для спокойного отдыха в загородном отеле",
+    prompt: "Мягкий утренний свет",
+    selectedChannels: ["instagram", "vk", "telegram", "max", "zen"],
     sourceTitle: "Номер для спокойного отдыха",
     sourceCategory: "Номера",
     sourceTags: ["интерьер", "комфорт"],
@@ -153,20 +154,41 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
   });
 
   assert.equal(requestedPath, "https://gateway.example/v1/images/edits");
+  assert.equal(requestCount, 1);
   assert.equal(formValues.get("model"), "gpt-image-1.5");
   assert.equal(formValues.get("quality"), "medium");
-  assert.equal(formValues.get("size"), "1024x1536");
+  assert.equal(formValues.get("size"), "1536x1024");
+  assert.match(String(formValues.get("prompt")), /Смысл текста публикации/u);
+  assert.match(
+    String(formValues.get("prompt")),
+    /Время для спокойного отдыха/u,
+  );
+  assert.match(String(formValues.get("prompt")), /Мягкий утренний свет/u);
   assert.match(
     String(formValues.get("prompt")),
     /Номер для спокойного отдыха/u,
   );
-  assert.equal(storedContentType, "image/png");
-  assert.equal(storedDimensions.width, 1080);
-  assert.equal(storedDimensions.height, 1350);
-  assert.ok(storedBytes > 0);
-  assert.equal(createdMedia.createdById, "admin-id");
-  assert.equal(createdMedia.objectId, "generated-object");
-  assert.equal(result.id, "generated-media-id");
+  assert.deepEqual(storedContentTypes, ["image/png", "image/png", "image/png"]);
+  assert.deepEqual(storedDimensions, [
+    { width: 1080, height: 1350 },
+    { width: 1200, height: 1200 },
+    { width: 1600, height: 900 },
+  ]);
+  assert.equal(createdMedia.length, 3);
+  assert.ok(createdMedia.every((media) => media.createdById === "admin-id"));
+  assert.equal(result.assets.length, 3);
+  const portrait = result.assets.find(({ channels }) =>
+    channels.includes("instagram"),
+  );
+  const square = result.assets.find(({ channels }) =>
+    channels.includes("telegram"),
+  );
+  const landscape = result.assets.find(({ channels }) =>
+    channels.includes("zen"),
+  );
+  assert.deepEqual(portrait?.channels, ["instagram", "vk"]);
+  assert.deepEqual(square?.channels, ["telegram", "max"]);
+  assert.deepEqual(landscape?.channels, ["zen"]);
 });
 
 test("does not call the provider when the Gateway is not configured", async () => {
@@ -271,8 +293,9 @@ test("rejects a source photo with a mismatched content type before Gateway use",
   await assert.rejects(
     service.generateImage({
       adminId: "admin-id",
+      postText: "Текст публикации",
       prompt: "Оставить как есть",
-      channel: "vk",
+      selectedChannels: ["vk"],
       sourceTitle: "Фото",
       sourceCategory: "SPA",
       sourceTags: [],

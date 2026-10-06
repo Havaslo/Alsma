@@ -159,42 +159,51 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const generateImage = async (
-    prompt: string,
-    channel: typeof factory.activeChannel,
-  ) => {
+  const generateImage = async (prompt: string) => {
+    const selectedChannels = factory.selectedChannels;
+    if (!selectedChannels.length) {
+      factory.setNotice("Сначала отметьте площадки в блоке «Задача».");
+      return;
+    }
     const referencePhoto = persistence.mediaItems.find(
-      (item) =>
-        item.id ===
-        (factory.activeVariant.channelImageIds[channel] ||
-          factory.activeVariant.imageId),
+      (item) => item.id === factory.activeVariant.imageId,
     );
     if (!referencePhoto) {
       factory.setNotice("Сначала выберите исходное фото в медиатеке.");
       return;
     }
     try {
-      const media = await persistence.generateImage({
+      const generatedAssets = await persistence.generateImage({
         prompt,
-        channel,
+        postText: factory.activeVariant.text,
+        selectedChannels,
         reference: referencePhoto,
       });
-      factory.useGeneratedMedia(media, channel);
+      const channelImageIds = {
+        ...factory.activeVariant.channelImageIds,
+      };
+      for (const channel of selectedChannels) {
+        const media = generatedAssets[channel];
+        if (!media) {
+          throw new Error("Не удалось подготовить кадр для каждой площадки.");
+        }
+        channelImageIds[channel] = media.id;
+      }
       const currentSnapshot = factory.getDraftSnapshot();
+      const updatedVariant = {
+        ...factory.activeVariant,
+        imageId:
+          generatedAssets[selectedChannels[0]]?.id ??
+          factory.activeVariant.imageId,
+        channelImageIds,
+      };
       const snapshot = {
         ...currentSnapshot,
         variants: currentSnapshot.variants.map((variant, index) =>
-          index === factory.variantIndex
-            ? {
-                ...variant,
-                channelImageIds: {
-                  ...variant.channelImageIds,
-                  [channel]: media.id,
-                },
-              }
-            : variant,
+          index === factory.variantIndex ? updatedVariant : variant,
         ),
       };
+      factory.updateCurrentVariant(() => updatedVariant);
       try {
         const saved = await persistence.saveDraft(factory.currentDraftId, {
           snapshot,
@@ -204,11 +213,11 @@ export const ContentFactoryWorkspace = () => {
         });
         factory.setCurrentDraftId(saved.id);
         factory.setNotice(
-          `Фото «${referencePhoto.title}» отредактировано для ${channel}, добавлено в медиатеку и сохранено в черновике. Публикация отключена.`,
+          `Изображение создано один раз по тексту публикации и сохранено в медиатеке. Для ${selectedChannels.length} выбранных площадок подготовлены нужные форматы и сохранены в черновике. Публикация отключена.`,
         );
       } catch {
         factory.setNotice(
-          "Кадр создан и сохранён в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить его за публикацией.",
+          "Кадры подготовлены и сохранены в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить их за публикацией.",
         );
       }
     } catch (error) {
@@ -300,13 +309,7 @@ export const ContentFactoryWorkspace = () => {
                 mediaItems={persistence.mediaItems}
                 selectedChannels={factory.selectedChannels}
                 isRefiningText={persistence.isRefiningText}
-                imageTargetChannel={
-                  factory.selectedChannels.includes(factory.activeChannel)
-                    ? factory.activeChannel
-                    : (factory.selectedChannels[0] ?? factory.activeChannel)
-                }
                 guidelines={persistence.guidelines}
-                onImageTargetChannelChange={factory.setActiveChannel}
                 isGeneratingImage={persistence.isGeneratingImage}
                 onCustomAction={(command) => refineText("custom", command)}
                 onDraftAction={refineText}

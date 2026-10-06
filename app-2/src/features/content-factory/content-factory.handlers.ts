@@ -162,15 +162,20 @@ export const createRefineContentFactoryTextHandler =
 
 export const createGenerateContentFactoryImageHandler =
   (ai: ContentFactoryAiService): RequestHandler =>
-  async (request, response) => {
+  async (_request, response) => {
+    const { referencePhotoBase64, ...input } = response.locals.input.body;
     const media = await ai.generateImage({
-      ...response.locals.input.query,
+      ...input,
       adminId: response.locals.admin.id,
-      referencePhoto: request.body,
-      referencePhotoContentType:
-        request.headers["content-type"]?.split(";")[0] ?? "",
+      referencePhoto: Buffer.from(referencePhotoBase64, "base64"),
+      referencePhotoContentType: "image/jpeg",
     });
-    response.status(201).json({ asset: toMediaAsset(media) });
+    response.status(201).json({
+      assets: media.assets.map(({ channels, media: asset }) => ({
+        asset: toMediaAsset(asset),
+        channels,
+      })),
+    });
   };
 
 export const contentFactoryUploadLimit = `${maxUploadBytes}b`;

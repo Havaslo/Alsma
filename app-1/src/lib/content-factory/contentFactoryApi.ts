@@ -189,24 +189,44 @@ export const refineContentFactoryText = async (input: {
 
 export const generateContentFactoryImage = async (input: {
   prompt: string;
-  channel: ContentChannel;
+  postText: string;
+  selectedChannels: ContentChannel[];
   reference: FactoryMediaItem;
 }) => {
   const referencePhoto = await prepareReferencePhoto(input.reference);
+  if (referencePhoto.size > 6 * 1_024 * 1_024) {
+    throw new Error(
+      "Фото после подготовки превышает 6 МБ. Выберите изображение поменьше.",
+    );
+  }
   const response = await apiClient.post<{
-    asset: UploadedContentFactoryMedia;
-  }>("/admin/content-factory/generate/image", referencePhoto, {
-    headers: { ...headers(), "Content-Type": "image/jpeg" },
-    params: {
+    assets: Array<{
+      channels: ContentChannel[];
+      asset: UploadedContentFactoryMedia;
+    }>;
+  }>(
+    "/admin/content-factory/generate/image",
+    {
       prompt: input.prompt,
-      channel: input.channel,
+      postText: input.postText,
+      selectedChannels: input.selectedChannels,
+      referencePhotoBase64: await photoBlobToBase64(referencePhoto),
       sourceTitle: input.reference.title,
       sourceCategory: input.reference.category,
-      sourceTags: input.reference.tags.join("|"),
+      sourceTags: input.reference.tags,
     },
-    timeout: 180_000,
-  });
-  return response.data.asset;
+    {
+      headers: headers(),
+      timeout: 180_000,
+    },
+  );
+  const assetsByChannel: Partial<
+    Record<ContentChannel, UploadedContentFactoryMedia>
+  > = {};
+  for (const { asset, channels } of response.data.assets) {
+    for (const channel of channels) assetsByChannel[channel] = asset;
+  }
+  return assetsByChannel;
 };
 
 export const contentFactoryErrorMessage = (

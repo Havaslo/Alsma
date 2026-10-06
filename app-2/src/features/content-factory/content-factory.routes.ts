@@ -25,7 +25,7 @@ import {
 import {
   contentFactoryDraftBodySchema,
   contentFactoryDraftParamsSchema,
-  contentFactoryImageGenerationQuerySchema,
+  contentFactoryImageGenerationBodySchema,
   contentFactoryTextGenerationQuerySchema,
   contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
@@ -68,8 +68,7 @@ export const createContentFactoryRouter = (
   );
   router.post(
     "/generate/image",
-    raw({ limit: contentFactoryUploadLimit, type: () => true }),
-    validateRequest({ query: contentFactoryImageGenerationQuerySchema }),
+    validateRequest({ body: contentFactoryImageGenerationBodySchema }),
     createGenerateContentFactoryImageHandler(ai),
   );
   router.post(

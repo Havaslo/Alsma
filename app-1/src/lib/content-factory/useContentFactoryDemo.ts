@@ -137,11 +137,6 @@ export const useContentFactoryDemo = (
     if (media) applyMedia(media);
   };
 
-  const useGeneratedMedia = (
-    media: FactoryMediaItem,
-    channel: ContentChannel,
-  ) => applyMedia(media, channel);
-
   const browseMainImage = () => {
     setMediaTargetChannel(null);
     setActiveSection("media");
@@ -214,7 +209,7 @@ export const useContentFactoryDemo = (
   };
   const explainImageGeneration = () =>
     setNotice(
-      "Чтобы создать новое изображение, откройте «Создание» и укажите промт под визуалом.",
+      "Чтобы создать изображение по тексту поста, откройте «Создание». Дополнительный промт можно оставить пустым; форматы будут подготовлены для всех выбранных площадок.",
     );
 
   return {
@@ -248,7 +243,6 @@ export const useContentFactoryDemo = (
     updateAdaptation,
     updateCurrentVariant,
     useMedia,
-    useGeneratedMedia,
     variantIndex,
     variants,
   };

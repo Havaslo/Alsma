@@ -99,10 +99,22 @@ export const contentFactoryTextRefinementBodySchema = z.object({
   ...sourcePhotoQueryFields,
 });
 
-export const contentFactoryImageGenerationQuerySchema = z.object({
-  prompt: z.string().trim().min(1).max(2_000),
-  channel: contentChannelSchema,
-  ...sourcePhotoQueryFields,
+export const contentFactoryImageGenerationBodySchema = z.object({
+  prompt: z.string().trim().max(2_000).default(""),
+  postText: z.string().trim().min(1).max(20_000),
+  selectedChannels: z
+    .array(contentChannelSchema)
+    .min(1)
+    .max(5)
+    .refine((channels) => new Set(channels).size === channels.length),
+  referencePhotoBase64: z
+    .string()
+    .min(1)
+    .max(8_500_000)
+    .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u),
+  sourceTitle: z.string().trim().min(1).max(255),
+  sourceCategory: z.string().trim().min(1).max(120),
+  sourceTags: z.array(z.string().trim().min(1).max(80)).max(20),
 });
 
 export type ContentFactoryDraftBody = z.infer<
@@ -110,4 +122,7 @@ export type ContentFactoryDraftBody = z.infer<
 >;
 export type ContentFactoryTextRefinementBody = z.infer<
   typeof contentFactoryTextRefinementBodySchema
+>;
+export type ContentFactoryImageGenerationBody = z.infer<
+  typeof contentFactoryImageGenerationBodySchema
 >;

@@ -88,11 +88,19 @@ export const useContentFactoryPersistence = () => {
     mutationFn: generateContentFactoryImage,
     onSuccess: async (generated) => {
       await queryClient.cancelQueries({ queryKey: mediaQueryKey });
+      const generatedMedia = [
+        ...new Map(
+          Object.values(generated)
+            .filter((media) => media !== undefined)
+            .map((media) => [media.id, media] as const),
+        ).values(),
+      ];
+      const generatedIds = new Set(generatedMedia.map((media) => media.id));
       queryClient.setQueryData<UploadedContentFactoryMedia[]>(
         mediaQueryKey,
         (current = []) => [
-          generated,
-          ...current.filter((media) => media.id !== generated.id),
+          ...generatedMedia,
+          ...current.filter((media) => !generatedIds.has(media.id)),
         ],
       );
     },
@@ -147,7 +155,8 @@ export const useContentFactoryPersistence = () => {
     }) => refineTextMutation.mutateAsync(input),
     generateImage: (input: {
       prompt: string;
-      channel: ContentChannel;
+      postText: string;
+      selectedChannels: ContentChannel[];
       reference: (typeof mediaItems)[number];
     }) => generateImageMutation.mutateAsync(input),
   };

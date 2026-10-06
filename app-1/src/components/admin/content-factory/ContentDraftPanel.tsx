@@ -29,10 +29,8 @@ export const ContentDraftPanel = ({
   variants,
   mediaItems,
   selectedChannels,
-  imageTargetChannel,
   guidelines,
   onVariantChange,
-  onImageTargetChannelChange,
   onTextChange,
   onDraftAction,
   onCustomAction,
@@ -46,27 +44,20 @@ export const ContentDraftPanel = ({
   variants: DraftVariant[];
   mediaItems: FactoryMediaItem[];
   selectedChannels: ContentChannel[];
-  imageTargetChannel: ContentChannel;
   guidelines: ContentFactoryGuidelines | null;
   onVariantChange: (index: number) => void;
-  onImageTargetChannelChange: (channel: ContentChannel) => void;
   onTextChange: (text: string) => void;
   onDraftAction: (action: DraftAction) => Promise<boolean>;
   onCustomAction: (command: string) => Promise<boolean>;
   onMediaBrowse: () => void;
-  onImageGenerate: (prompt: string, channel: ContentChannel) => Promise<void>;
+  onImageGenerate: (prompt: string) => Promise<void>;
   isGeneratingImage: boolean;
   isRefiningText: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [imagePromptOpen, setImagePromptOpen] = useState(false);
-  const targetImageId =
-    variant.channelImageIds[imageTargetChannel] || variant.imageId;
-  const image = mediaItems.find((item) => item.id === targetImageId);
-  const imageGuideline = guidelines?.channels.find(
-    (channel) => channel.id === imageTargetChannel,
-  );
+  const image = mediaItems.find((item) => item.id === variant.imageId);
 
   const submitCustomCommand = () => {
     if (!customCommand.trim()) return;
@@ -268,45 +259,37 @@ export const ContentDraftPanel = ({
             id="factory-image-prompt-form"
             onSubmit={(event) => {
               event.preventDefault();
-              if (imagePrompt.trim()) {
-                void onImageGenerate(imagePrompt.trim(), imageTargetChannel);
-              }
+              void onImageGenerate(imagePrompt.trim());
             }}
           >
             <div>
-              <label
-                className="mb-1.5 block text-sm font-semibold text-page-foreground"
-                htmlFor="factory-image-channel"
-              >
-                Формат изображения для канала
-              </label>
-              <select
-                className="min-h-11 w-full rounded-xl border border-line bg-brand-foreground px-3 text-sm text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
-                id="factory-image-channel"
-                onChange={(event) =>
-                  onImageTargetChannelChange(
-                    event.target.value as ContentChannel,
-                  )
-                }
-                value={imageTargetChannel}
-              >
-                {(selectedChannels.length
-                  ? selectedChannels
-                  : CONTENT_CHANNELS.map((channel) => channel.id)
-                ).map((channel) => (
-                  <option key={channel} value={channel}>
-                    {
-                      CONTENT_CHANNELS.find((item) => item.id === channel)
-                        ?.label
-                    }
-                  </option>
-                ))}
-              </select>
-              {imageGuideline && (
-                <p className="mt-1.5 text-xs leading-5 text-muted-ui-foreground">
-                  Рекомендация: {imageGuideline.image.dimensions} ·{" "}
-                  {imageGuideline.image.ratio}. Главный объект будет сохранён в
-                  безопасной зоне кадра.
+              <p className="mb-1.5 text-sm font-semibold text-page-foreground">
+                Форматы для выбранных площадок
+              </p>
+              {selectedChannels.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedChannels.map((channelId) => {
+                    const channel = CONTENT_CHANNELS.find(
+                      (item) => item.id === channelId,
+                    );
+                    const guideline = guidelines?.channels.find(
+                      (item) => item.id === channelId,
+                    );
+                    return (
+                      <span
+                        className="rounded-full border border-line bg-brand-foreground px-2.5 py-1 text-xs text-page-foreground"
+                        key={channelId}
+                      >
+                        {channel?.label ?? channelId}
+                        {guideline ? ` · ${guideline.image.ratio}` : ""}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs leading-5 text-muted-ui-foreground">
+                  Сначала отметьте площадки в блоке «Задача» — тогда для них
+                  подготовятся кадры нужных пропорций.
                 </p>
               )}
             </div>
@@ -315,36 +298,43 @@ export const ContentDraftPanel = ({
                 className="mb-1.5 block text-sm font-semibold text-page-foreground"
                 htmlFor="factory-image-prompt"
               >
-                Промт для изображения
+                Дополнительный промт
               </label>
               <textarea
                 className="min-h-24 w-full resize-y rounded-xl border border-line bg-brand-foreground px-3 py-2.5 text-sm leading-5 text-page-foreground outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
                 id="factory-image-prompt"
                 onChange={(event) => setImagePrompt(event.target.value)}
-                placeholder="Опишите сцену, стиль и детали изображения…"
+                placeholder="Например: мягкий утренний свет и спокойная атмосфера…"
                 value={imagePrompt}
               />
             </div>
             <p className="text-xs leading-5 text-muted-ui-foreground">
-              AI получит выбранное фото и создаст один отредактированный кадр
-              для выбранного канала. Результат сохранится в медиатеке; в
-              социальные сети он не отправляется.
+              AI учтёт текст публикации, это фото и ваши пожелания. Изображение
+              будет сгенерировано один раз, а затем обрезано под форматы всех
+              выбранных площадок. Результаты сохранятся в медиатеке и черновике;
+              публикации не отправляются.
             </p>
             <Button
               aria-busy={isGeneratingImage}
               className="w-full"
-              disabled={!image || !imagePrompt.trim() || isGeneratingImage}
+              disabled={
+                !image ||
+                !variant.text.trim() ||
+                !selectedChannels.length ||
+                isGeneratingImage
+              }
               type="submit"
             >
               <Sparkles className="size-4" />
               {isGeneratingImage
-                ? "Создаём изображение…"
+                ? "Создаём изображение и форматы…"
                 : "Сгенерировать изображение"}
             </Button>
           </form>
         )}
         <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-          Визуал можно заменить отдельно для каждого канала перед согласованием.
+          Изображение создаётся один раз; кадрирование по каждому каналу можно
+          проверить в блоке «Версии для каналов».
         </p>
       </div>
       <p className="mt-5 rounded-xl bg-page px-3.5 py-2.5 text-xs leading-5 text-muted-ui-foreground">
