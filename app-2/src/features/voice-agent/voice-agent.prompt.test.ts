@@ -23,6 +23,12 @@ test("requires explicit consent and records a callback instead of transfer", () 
   assert.match(voiceCallbackInstruction, /ясного согласия/u);
   assert.match(voiceCallbackInstruction, /вызови request_callback/u);
   assert.match(voiceCallbackInstruction, /номер.*подтверждения/u);
+  assert.match(voiceCallbackInstruction, /спроси, как обращаться к гостю/u);
+  assert.match(voiceCallbackInstruction, /в какое время ему удобно/u);
+  assert.match(
+    voiceCallbackInstruction,
+    /если гость не знает или не хочет сообщать/iu,
+  );
   assert.match(voiceCallbackInstruction, /только при accepted=true/u);
   assert.match(voiceCallbackInstruction, /не переводи/iu);
   assert.match(voiceCallbackInstruction, /обратный звонок в рабочее время/u);
@@ -32,6 +38,7 @@ test("keeps the callback tool contract aligned with the prompt", () => {
   assert.ok(callbackTool);
   assert.match(callbackTool.description, /обратный звонок/u);
   assert.match(callbackTool.description, /после прямой просьбы гостя/u);
+  assert.match(callbackTool.description, /спроси имя гостя и удобное время/u);
   assert.match(callbackTool.description, /не переключай/iu);
   assert.doesNotMatch(callbackTool.description, /transfer_to_manager/iu);
 });
@@ -42,6 +49,7 @@ test("checks room availability before offering a callback for booking", () => {
   assert.match(voiceBookingInstruction, /подтверждённые сведения/u);
   assert.match(voiceBookingInstruction, /дождись ясного согласия/u);
   assert.match(voiceBookingInstruction, /обратный звонок/u);
+  assert.match(voiceBookingInstruction, /имя гостя и удобное время звонка/u);
   assert.match(voiceBookingInstruction, /не переводит звонок/u);
   assert.match(
     voiceBookingInstruction,
