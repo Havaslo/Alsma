@@ -195,7 +195,7 @@ export const AdminVoiceCallDetail = ({
                   " Диагностическая запись ограничена первыми 10 минутами речи агента."}
               </p>
             )}
-            {call.hasRecording && (
+            {(call.hasRecording || call.providerRecordingId) && (
               <AdminVoiceCallPlayer
                 callId={callId}
                 title="Запись Mango — после телефонного тракта"
@@ -220,10 +220,13 @@ export const AdminVoiceCallDetail = ({
                 )}
                 {reprocess.isError && (
                   <p className="mt-2 text-xs leading-5 text-destructive">
-                    {getApiErrorMessage(
-                      reprocess.error,
-                      "Не удалось повторить транскрибацию. Запись в Mango есть; проверьте доступность AI-шлюза и попробуйте ещё раз.",
-                    )}
+                    {reprocess.error instanceof Error &&
+                    reprocess.error.message === "Network Error"
+                      ? "Сервер не вернул ответ на запрос транскрибации. Это не означает, что аудиофайла нет: попробуйте отдельно воспроизвести запись ниже."
+                      : getApiErrorMessage(
+                          reprocess.error,
+                          "Не удалось повторить транскрибацию. Проверьте доступность записи и попробуйте ещё раз.",
+                        )}
                   </p>
                 )}
               </div>
@@ -231,7 +234,7 @@ export const AdminVoiceCallDetail = ({
             {!call.hasRecording && (
               <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
                 {call.providerRecordingId
-                  ? "От Mango получен только идентификатор записи. Сам аудиофайл ещё не подтверждён, поэтому плеер пока скрыт."
+                  ? "От Mango получен идентификатор записи, но доступность файла ещё не подтверждена. Нажмите воспроизведение выше — это отдельно проверит получение аудио и не зависит от транскрибации."
                   : "Запись для этого звонка не поступила. Карточка продолжает отображать остальные данные."}
               </p>
             )}
