@@ -3,11 +3,10 @@ import { useState } from "react";
 import {
   CONTENT_CHANNELS,
   type ContentChannel,
-  DEMO_VARIANTS,
   type DraftVariant,
   type FactoryMediaItem,
-  MEDIA_ITEMS,
   type PlanPublication,
+  createEmptyDraftVariant,
   getDraftVariantImageIds,
   getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
@@ -17,15 +16,11 @@ import type {
   WorkspaceSection,
 } from "@/lib/content-factory/contentFactoryTypes";
 
-const DEMO_PROMPT = "Сделай пост про ноябрьскую акцию на SPA со скидкой 20%";
-
-export const useContentFactoryDemo = (
-  mediaItems: FactoryMediaItem[] = MEDIA_ITEMS,
-) => {
+export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   const [activeSection, setActiveSection] =
     useState<WorkspaceSection>("create");
-  const [prompt, setPrompt] = useState(DEMO_PROMPT);
-  const [variants, setVariants] = useState(DEMO_VARIANTS);
+  const [prompt, setPrompt] = useState("");
+  const [variants, setVariants] = useState([createEmptyDraftVariant()]);
   const [variantIndex, setVariantIndex] = useState(0);
   const [activeChannel, setActiveChannel] = useState<ContentChannel>("vk");
   const [mediaTargetChannel, setMediaTargetChannel] =
@@ -34,11 +29,9 @@ export const useContentFactoryDemo = (
   const [selectedSourceMediaIds, setSelectedSourceMediaIds] = useState<
     string[]
   >([]);
-  const [selectedChannels, setSelectedChannels] = useState<ContentChannel[]>([
-    "vk",
-    "telegram",
-    "instagram",
-  ]);
+  const [selectedChannels, setSelectedChannels] = useState<ContentChannel[]>(
+    [],
+  );
   const [notice, setNotice] = useState("");
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 

@@ -41,7 +41,7 @@ export const ContentFactoryHeader = ({
         </p>
       </div>
       <span className="inline-flex items-center gap-2 rounded-full border border-line bg-brand-foreground px-3 py-1.5 text-xs font-semibold text-muted-ui-foreground">
-        <Sparkles className="size-3.5 text-brand" /> Тестовый режим · без
+        <Sparkles className="size-3.5 text-brand" /> Только черновики · без
         публикации
       </span>
     </div>

@@ -4,7 +4,7 @@ import { Clock3, Plus, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
-  MEDIA_ITEMS,
+  type FactoryMediaItem,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
 
@@ -27,17 +27,19 @@ const toDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const PlanPostCard = ({
+  mediaItems,
   post,
   onOpen,
   onReschedule,
   onCancel,
 }: {
+  mediaItems: FactoryMediaItem[];
   post: PlanPublication;
   onOpen: (post: PlanPublication) => void;
   onReschedule: (id: string) => void;
   onCancel: (id: string) => void;
 }) => {
-  const image = MEDIA_ITEMS.find((item) => item.id === post.imageId);
+  const image = mediaItems.find((item) => item.id === post.imageId);
   return (
     <article className="rounded-xl border border-line bg-brand-foreground p-2">
       <button
@@ -101,6 +103,7 @@ const PlanPostCard = ({
 };
 
 export const ContentPlanCalendar = ({
+  mediaItems,
   month,
   posts,
   onOpen,
@@ -108,6 +111,7 @@ export const ContentPlanCalendar = ({
   onReschedule,
   onCancel,
 }: {
+  mediaItems: FactoryMediaItem[];
   month: Date;
   posts: PlanPublication[];
   onOpen: (post: PlanPublication) => void;
@@ -168,6 +172,7 @@ export const ContentPlanCalendar = ({
                   {dayPosts.map((post) => (
                     <PlanPostCard
                       key={post.id}
+                      mediaItems={mediaItems}
                       onCancel={onCancel}
                       onOpen={onOpen}
                       onReschedule={onReschedule}

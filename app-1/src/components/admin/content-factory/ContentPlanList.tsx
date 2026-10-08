@@ -1,7 +1,7 @@
 import { Clock3, Edit3, Image, Trash2 } from "lucide-react";
 
 import {
-  MEDIA_ITEMS,
+  type FactoryMediaItem,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
 
@@ -17,11 +17,13 @@ const formatShortDate = (value: string) =>
   );
 
 export const ContentPlanList = ({
+  mediaItems,
   posts,
   onOpen,
   onReschedule,
   onCancel,
 }: {
+  mediaItems: FactoryMediaItem[];
   posts: PlanPublication[];
   onOpen: (post: PlanPublication) => void;
   onReschedule: (id: string) => void;
@@ -34,11 +36,11 @@ export const ContentPlanList = ({
         key={post.id}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          {MEDIA_ITEMS.find((item) => item.id === post.imageId)?.image ? (
+          {mediaItems.find((item) => item.id === post.imageId)?.image ? (
             <img
               alt=""
               className="size-14 shrink-0 rounded-xl object-cover"
-              src={MEDIA_ITEMS.find((item) => item.id === post.imageId)?.image}
+              src={mediaItems.find((item) => item.id === post.imageId)?.image}
             />
           ) : (
             <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-page text-muted-ui-foreground">

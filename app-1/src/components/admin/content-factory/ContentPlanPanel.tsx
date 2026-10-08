@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, List, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   CONTENT_CHANNELS,
+  type FactoryMediaItem,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
@@ -29,6 +30,7 @@ const addDay = (value: string) => {
 };
 
 export const ContentPlanPanel = ({
+  mediaItems,
   posts,
   onGeneratePlan,
   onPreviewFile,
@@ -38,6 +40,7 @@ export const ContentPlanPanel = ({
   isLoading,
   loadError,
 }: {
+  mediaItems: FactoryMediaItem[];
   posts: PlanPublication[];
   onGeneratePlan: (input: {
     fileName: string;
@@ -118,7 +121,7 @@ export const ContentPlanPanel = ({
       time: "12:00",
       channels: ["vk"],
       status: "Черновик",
-      imageId: "spa-pool",
+      imageId: "",
       postType: "Пост",
       format: "Пост",
       sourceStatus: "manual_new",
@@ -226,6 +229,7 @@ export const ContentPlanPanel = ({
 
         {view === "calendar" ? (
           <ContentPlanCalendar
+            mediaItems={mediaItems}
             month={month}
             onCancel={cancel}
             onCreate={createOnDate}
@@ -235,6 +239,7 @@ export const ContentPlanPanel = ({
           />
         ) : (
           <ContentPlanList
+            mediaItems={mediaItems}
             onCancel={cancel}
             onOpen={onOpenPost}
             onReschedule={reschedule}

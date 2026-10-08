@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -13,10 +11,7 @@ import {
   saveContentFactoryDraft,
   uploadContentFactoryMedia,
 } from "@/lib/content-factory/contentFactoryApi";
-import {
-  type ContentChannel,
-  MEDIA_ITEMS,
-} from "@/lib/content-factory/contentFactoryData";
+import type { ContentChannel } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
   ImageGenerationMode,
@@ -107,10 +102,7 @@ export const useContentFactoryPersistence = () => {
     },
   });
 
-  const mediaItems = useMemo(
-    () => [...(mediaQuery.data ?? []), ...MEDIA_ITEMS],
-    [mediaQuery.data],
-  );
+  const mediaItems = mediaQuery.data ?? [];
 
   return {
     drafts: draftsQuery.data ?? [],

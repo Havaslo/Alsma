@@ -28,13 +28,13 @@ import type {
   ImageGenerationMode,
   TextRefinementAction,
 } from "@/lib/content-factory/contentFactoryTypes";
-import { useContentFactoryDemo } from "@/lib/content-factory/useContentFactoryDemo";
 import { useContentFactoryPersistence } from "@/lib/content-factory/useContentFactoryPersistence";
+import { useContentFactoryState } from "@/lib/content-factory/useContentFactoryState";
 import { useContentPlanPersistence } from "@/lib/content-factory/useContentPlanPersistence";
 
 export const ContentFactoryWorkspace = () => {
   const persistence = useContentFactoryPersistence();
-  const factory = useContentFactoryDemo(persistence.mediaItems);
+  const factory = useContentFactoryState(persistence.mediaItems);
   const plan = useContentPlanPersistence();
   const [adaptationsOpen, setAdaptationsOpen] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -678,6 +678,7 @@ export const ContentFactoryWorkspace = () => {
 
         {factory.activeSection === "plan" && (
           <ContentPlanPanel
+            mediaItems={persistence.mediaItems}
             onGeneratePlan={generatePlan}
             onPreviewFile={plan.previewFile}
             onOpenPost={openPlanPost}
