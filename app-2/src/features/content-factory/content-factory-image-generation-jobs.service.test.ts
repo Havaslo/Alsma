@@ -101,8 +101,12 @@ test("returns immediately and makes generated channel crops available by polling
         await generationGate;
         return {
           assets: [
-            { channels: ["vk", "instagram"], media: generatedMedia[0]! },
-            { channels: ["telegram"], media: generatedMedia[1]! },
+            {
+              channels: ["vk", "instagram"],
+              media: generatedMedia[0]!,
+              setIndex: 0,
+            },
+            { channels: ["telegram"], media: generatedMedia[1]!, setIndex: 0 },
           ],
           model: "gpt-image-1.5",
         };
@@ -118,6 +122,7 @@ test("returns immediately and makes generated channel crops available by polling
   });
 
   const submitted = await jobs.submit(adminId, {
+    imageCount: 1,
     postText: "Пост о фестивале детского рисунка",
     prompt: "Тёплый свет",
     referencePhotoBase64: referencePhoto.toString("base64"),
@@ -140,6 +145,7 @@ test("returns immediately and makes generated channel crops available by polling
   if (completed.status !== "completed") assert.fail("Expected completed job.");
   assert.equal(completed.assets.length, 2);
   assert.deepEqual(completed.assets[0]?.channels, ["vk", "instagram"]);
+  assert.equal(completed.assets[0]?.setIndex, 0);
   assert.deepEqual(completed.assets[1]?.channels, ["telegram"]);
   await waitFor(() => removedObjects.includes("temporary-reference-object"));
 });

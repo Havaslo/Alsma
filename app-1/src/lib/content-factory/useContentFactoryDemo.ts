@@ -8,6 +8,7 @@ import {
   type FactoryMediaItem,
   MEDIA_ITEMS,
   type PlanPublication,
+  getDraftVariantImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
@@ -16,12 +17,6 @@ import type {
 } from "@/lib/content-factory/contentFactoryTypes";
 
 const DEMO_PROMPT = "Сделай пост про ноябрьскую акцию на SPA со скидкой 20%";
-
-const shortenText = (value: string) => {
-  const paragraphs = value.split(/\n\s*\n/).filter(Boolean);
-  if (paragraphs.length > 1) return paragraphs.slice(0, 2).join("\n\n");
-  return value.split(". ").slice(0, 2).join(". ").trim();
-};
 
 export const useContentFactoryDemo = (
   mediaItems: FactoryMediaItem[] = MEDIA_ITEMS,
@@ -73,22 +68,6 @@ export const useContentFactoryDemo = (
     }));
   };
 
-  const adaptChannel = (
-    channel: ContentChannel,
-    action: "shorter" | "rewrite",
-  ) => {
-    const nextText =
-      action === "shorter"
-        ? shortenText(activeVariant.adaptations[channel])
-        : DEMO_VARIANTS[(variantIndex + 1) % DEMO_VARIANTS.length].adaptations[
-            channel
-          ];
-    updateAdaptation(channel, nextText);
-    setNotice(
-      `Обновлена демонстрационная версия для ${channel}. Проверьте её перед согласованием.`,
-    );
-  };
-
   const applyMedia = (
     media: FactoryMediaItem,
     channelOverride?: ContentChannel,
@@ -105,6 +84,16 @@ export const useContentFactoryDemo = (
             ...variant.channelImageIds,
             [targetChannel]: media.id,
           },
+          channelImageGalleryIds: {
+            ...(Object.fromEntries(
+              CONTENT_CHANNELS.map(({ id }) => [
+                id,
+                id === targetChannel
+                  ? [media.id]
+                  : getDraftVariantImageIds(variant, id),
+              ]),
+            ) as Record<ContentChannel, string[]>),
+          },
         };
       }
       return {
@@ -116,6 +105,13 @@ export const useContentFactoryDemo = (
           max: media.id,
           instagram: media.id,
           zen: media.id,
+        },
+        channelImageGalleryIds: {
+          vk: [media.id],
+          telegram: [media.id],
+          max: [media.id],
+          instagram: [media.id],
+          zen: [media.id],
         },
       };
     });
@@ -162,10 +158,22 @@ export const useContentFactoryDemo = (
         instagram: image.id,
         zen: image.id,
       };
+      const channelImageGalleryIds: Record<ContentChannel, string[]> = {
+        vk: [image.id],
+        telegram: [image.id],
+        max: [image.id],
+        instagram: [image.id],
+        zen: [image.id],
+      };
       setVariants((current) =>
         current.map((variant, index) =>
           index === variantIndex
-            ? { ...variant, imageId: image.id, channelImageIds }
+            ? {
+                ...variant,
+                channelImageGalleryIds,
+                imageId: image.id,
+                channelImageIds,
+              }
             : variant,
         ),
       );
@@ -203,7 +211,6 @@ export const useContentFactoryDemo = (
     activeChannel,
     activeSection,
     activeVariant,
-    adaptChannel,
     browseChannelImage,
     browseMainImage,
     currentDraftId,

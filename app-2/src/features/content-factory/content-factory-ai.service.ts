@@ -179,13 +179,14 @@ export const createContentFactoryAiService = (options: {
     readonly content: Buffer;
     readonly contentType: string;
     readonly fileName: string;
+    readonly imageCount: number;
     readonly prompt: string;
     readonly size: string;
   }): Promise<unknown> => {
     if (!apiKey || !baseUrl) throw gatewayUnavailableError();
     const form = new FormData();
     form.set("model", contentFactoryModels.image);
-    form.set("n", "1");
+    form.set("n", String(input.imageCount));
     form.set("output_format", "png");
     form.set("prompt", input.prompt);
     form.set("quality", "medium");

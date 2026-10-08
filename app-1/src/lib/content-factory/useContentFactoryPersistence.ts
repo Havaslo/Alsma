@@ -91,7 +91,7 @@ export const useContentFactoryPersistence = () => {
       const generatedMedia = [
         ...new Map(
           Object.values(generated)
-            .filter((media) => media !== undefined)
+            .flatMap((media) => media ?? [])
             .map((media) => [media.id, media] as const),
         ).values(),
       ];
@@ -154,6 +154,7 @@ export const useContentFactoryPersistence = () => {
       reference: (typeof mediaItems)[number];
     }) => refineTextMutation.mutateAsync(input),
     generateImage: (input: {
+      imageCount: number;
       prompt: string;
       postText: string;
       selectedChannels: ContentChannel[];

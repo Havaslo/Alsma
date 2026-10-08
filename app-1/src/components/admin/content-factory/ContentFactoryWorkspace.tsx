@@ -16,7 +16,12 @@ import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlan
 import { ContentPlanPostReviewDialog } from "@/components/admin/content-factory/ContentPlanPostReviewDialog";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
+import {
+  CONTENT_CHANNELS,
+  type ContentChannel,
+  type PlanPublication,
+  getDraftVariantImageIds,
+} from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentPlanPostInput,
   TextRefinementAction,
@@ -169,7 +174,88 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const generateImage = async (prompt: string) => {
+  const refineChannelAdaptation = async (
+    channel: ContentChannel,
+    action: "shorter" | "rewrite",
+    instruction?: string,
+  ): Promise<boolean> => {
+    if (!factory.prompt.trim()) {
+      factory.setNotice("Сначала заполните задачу публикации.");
+      return false;
+    }
+    if (action === "rewrite" && !instruction?.trim()) {
+      factory.setNotice("Напишите, как переработать текст этого канала.");
+      return false;
+    }
+
+    const referenceId = getDraftVariantImageIds(
+      factory.activeVariant,
+      channel,
+    )[0];
+    const referencePhoto = persistence.mediaItems.find(
+      (item) => item.id === referenceId,
+    );
+    if (!referencePhoto) {
+      factory.setNotice("Для этой версии не найдено исходное фото.");
+      return false;
+    }
+
+    try {
+      const result = await persistence.refineText({
+        action: action === "shorter" ? "shorter" : "custom",
+        currentText:
+          factory.activeVariant.adaptations[channel] ||
+          factory.activeVariant.text,
+        customInstruction: instruction?.trim(),
+        prompt: factory.prompt.trim(),
+        selectedChannels: [channel],
+        reference: referencePhoto,
+      });
+      const currentSnapshot = factory.getDraftSnapshot();
+      const currentVariant =
+        currentSnapshot.variants[factory.variantIndex] ?? factory.activeVariant;
+      const updatedVariant = {
+        ...currentVariant,
+        adaptations: {
+          ...currentVariant.adaptations,
+          [channel]: result.adaptations[channel],
+        },
+      };
+      const nextSnapshot = {
+        ...currentSnapshot,
+        variants: currentSnapshot.variants.map((variant, index) =>
+          index === factory.variantIndex ? updatedVariant : variant,
+        ),
+      };
+      factory.updateCurrentVariant(() => updatedVariant);
+
+      try {
+        const saved = await persistence.saveDraft(factory.currentDraftId, {
+          snapshot: nextSnapshot,
+          title: updatedVariant.title.trim() || "Новая AI-публикация",
+        });
+        factory.setCurrentDraftId(saved.id);
+        factory.setNotice(
+          `Версия для ${channel} переработана моделью ${result.model} и сохранена. Остальные каналы не изменены.`,
+        );
+      } catch {
+        factory.setNotice(
+          `Версия для ${channel} переработана моделью ${result.model}, но черновик не сохранился. Нажмите «Сохранить черновик».`,
+        );
+      }
+      return true;
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось переработать версию для канала. Попробуйте ещё раз.",
+        ),
+      );
+      return false;
+    }
+  };
+
+  const generateImage = async (prompt: string, imageCount: number) => {
     const selectedChannels = factory.selectedChannels;
     if (!selectedChannels.length) {
       factory.setNotice("Сначала отметьте площадки в блоке «Задача».");
@@ -184,6 +270,7 @@ export const ContentFactoryWorkspace = () => {
     }
     try {
       const generatedAssets = await persistence.generateImage({
+        imageCount,
         prompt,
         postText: factory.activeVariant.text,
         selectedChannels,
@@ -192,19 +279,29 @@ export const ContentFactoryWorkspace = () => {
       const channelImageIds = {
         ...factory.activeVariant.channelImageIds,
       };
+      const channelImageGalleryIds = Object.fromEntries(
+        CONTENT_CHANNELS.map(({ id }) => [
+          id,
+          getDraftVariantImageIds(factory.activeVariant, id),
+        ]),
+      ) as Record<ContentChannel, string[]>;
       for (const channel of selectedChannels) {
-        const media = generatedAssets[channel];
-        if (!media) {
-          throw new Error("Не удалось подготовить кадр для каждой площадки.");
+        const images = generatedAssets[channel];
+        if (!images || images.length !== imageCount) {
+          throw new Error(
+            "Не удалось подготовить все кадры для каждой площадки.",
+          );
         }
-        channelImageIds[channel] = media.id;
+        channelImageGalleryIds[channel] = images.map((media) => media.id);
+        channelImageIds[channel] = images[0]!.id;
       }
       const currentSnapshot = factory.getDraftSnapshot();
       const updatedVariant = {
         ...factory.activeVariant,
         imageId:
-          generatedAssets[selectedChannels[0]]?.id ??
+          generatedAssets[selectedChannels[0]]?.[0]?.id ??
           factory.activeVariant.imageId,
+        channelImageGalleryIds,
         channelImageIds,
       };
       const snapshot = {
@@ -223,7 +320,7 @@ export const ContentFactoryWorkspace = () => {
         });
         factory.setCurrentDraftId(saved.id);
         factory.setNotice(
-          `Изображение создано один раз по тексту публикации и сохранено в медиатеке. Для ${selectedChannels.length} выбранных площадок подготовлены нужные форматы и сохранены в черновике. Публикация отключена.`,
+          `Количество созданных кадров — ${imageCount}. Для ${selectedChannels.length} выбранных площадок подготовлены галереи нужных форматов и сохранены в черновике. Публикации не отправлялись.`,
         );
       } catch {
         factory.setNotice(
@@ -460,8 +557,8 @@ export const ContentFactoryWorkspace = () => {
                     activeChannel={factory.activeChannel}
                     guidelines={persistence.guidelines}
                     mediaItems={persistence.mediaItems}
+                    onAdaptAction={refineChannelAdaptation}
                     onActiveChannelChange={factory.setActiveChannel}
-                    onAdaptAction={factory.adaptChannel}
                     onMediaBrowse={factory.browseChannelImage}
                     onTextChange={factory.updateAdaptation}
                     onToggleChannel={factory.toggleChannel}

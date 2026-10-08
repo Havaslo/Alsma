@@ -50,12 +50,13 @@ export const ContentDraftPanel = ({
   onDraftAction: (action: DraftAction) => Promise<boolean>;
   onCustomAction: (command: string) => Promise<boolean>;
   onMediaBrowse: () => void;
-  onImageGenerate: (prompt: string) => Promise<void>;
+  onImageGenerate: (prompt: string, imageCount: number) => Promise<void>;
   isGeneratingImage: boolean;
   isRefiningText: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
+  const [imageCount, setImageCount] = useState(3);
   const [imagePromptOpen, setImagePromptOpen] = useState(false);
   const image = mediaItems.find((item) => item.id === variant.imageId);
 
@@ -240,7 +241,7 @@ export const ContentDraftPanel = ({
                         <Sparkles className="size-5 animate-pulse text-brand" />
                       </span>
                       <span className="text-sm font-semibold text-page-foreground">
-                        Создаём изображение
+                        Создаём изображения
                       </span>
                       <span className="text-xs leading-5 text-muted-ui-foreground">
                         Готовим кадры для выбранных площадок…
@@ -280,7 +281,7 @@ export const ContentDraftPanel = ({
             id="factory-image-prompt-form"
             onSubmit={(event) => {
               event.preventDefault();
-              void onImageGenerate(imagePrompt.trim());
+              void onImageGenerate(imagePrompt.trim(), imageCount);
             }}
           >
             <div>
@@ -314,6 +315,34 @@ export const ContentDraftPanel = ({
                 </p>
               )}
             </div>
+            <fieldset>
+              <legend className="mb-1.5 block text-sm font-semibold text-page-foreground">
+                Количество изображений
+              </legend>
+              <div
+                aria-label="Количество создаваемых изображений"
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+              >
+                {[1, 2, 3, 4].map((count) => (
+                  <button
+                    aria-checked={imageCount === count}
+                    className={`grid size-10 place-items-center rounded-xl border text-sm font-semibold transition ${
+                      imageCount === count
+                        ? "border-brand bg-brand text-white"
+                        : "border-line bg-brand-foreground text-page-foreground hover:bg-page"
+                    }`}
+                    disabled={isGeneratingImage}
+                    key={count}
+                    onClick={() => setImageCount(count)}
+                    role="radio"
+                    type="button"
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <div>
               <label
                 className="mb-1.5 block text-sm font-semibold text-page-foreground"
@@ -330,10 +359,10 @@ export const ContentDraftPanel = ({
               />
             </div>
             <p className="text-xs leading-5 text-muted-ui-foreground">
-              AI учтёт текст публикации, это фото и ваши пожелания. Изображение
-              будет сгенерировано один раз, а затем обрезано под форматы всех
-              выбранных площадок. Результаты сохранятся в медиатеке и черновике;
-              публикации не отправляются.
+              AI учтёт текст публикации, это фото и ваши пожелания. Количество
+              отдельных кадров: {imageCount} — это не коллаж. Каждый кадр будет
+              подготовлен в форматах выбранных площадок и сохранён в медиатеке и
+              черновике. Публикации не отправляются.
             </p>
             <Button
               aria-busy={isGeneratingImage}
@@ -348,14 +377,14 @@ export const ContentDraftPanel = ({
             >
               <Sparkles className="size-4" />
               {isGeneratingImage
-                ? "Создаём изображение и форматы…"
-                : "Сгенерировать изображение"}
+                ? "Создаём изображения и форматы…"
+                : `Создать ${imageCount} ${imageCount === 1 ? "изображение" : "изображения"}`}
             </Button>
           </form>
         )}
         <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-          Изображение создаётся один раз; кадрирование по каждому каналу можно
-          проверить в блоке «Версии для каналов».
+          Созданные изображения появятся как галерея в каждой выбранной версии.
+          Кадрирование по каналу можно проверить в блоке «Версии для каналов».
         </p>
       </div>
       <p className="mt-5 rounded-xl bg-page px-3.5 py-2.5 text-xs leading-5 text-muted-ui-foreground">

@@ -60,12 +60,14 @@ export const createContentFactoryImageGenerationService = (options: {
     readonly content: Buffer;
     readonly contentType: string;
     readonly fileName: string;
+    readonly imageCount: number;
     readonly prompt: string;
     readonly size: string;
   }) => Promise<unknown>;
 }) => ({
   generateImage: async (input: {
     readonly adminId: string;
+    readonly imageCount: number;
     readonly postText: string;
     readonly prompt: string;
     readonly selectedChannels: readonly ContentFactoryChannelId[];
@@ -113,7 +115,7 @@ export const createContentFactoryImageGenerationService = (options: {
       )
       .join("; ");
     const imagePrompt = [
-      "Создай одно универсальное фотореалистичное мастер-изображение для публикации. Это один общий визуал, не отдельные варианты для каналов.",
+      `Создай ${input.imageCount} самостоятельных фотореалистичных вариантов изображения для одной публикации. Каждый результат должен быть отдельным кадром с отличающейся композицией, а не коллажем, сеткой или несколькими сценами внутри одного изображения.`,
       `Смысл текста публикации: ${input.postText}`,
       `Дополнительные пожелания пользователя: ${input.prompt.trim() || "не заданы; ориентируйся на смысл публикации"}`,
       `Исходное фото: «${input.sourceTitle}», раздел «${input.sourceCategory}», теги: ${input.sourceTags.join(", ") || "нет"}. Используй переданное фото как обязательную визуальную основу, а не только как вдохновение. Согласуй настроение и сцену с содержанием поста, не превращая текст поста в надписи на изображении.`,
@@ -125,6 +127,7 @@ export const createContentFactoryImageGenerationService = (options: {
       content: referencePhoto,
       contentType: input.referencePhotoContentType,
       fileName: `${input.sourceTitle}.jpg`,
+      imageCount: input.imageCount,
       prompt: imagePrompt,
       size: "1536x1024",
     });
@@ -132,33 +135,42 @@ export const createContentFactoryImageGenerationService = (options: {
       typeof payload === "object" && payload
         ? (payload as Record<string, unknown>)
         : null;
-    const data = Array.isArray(root?.data) ? root.data[0] : null;
-    const imageBase64 =
-      typeof data === "object" && data
-        ? (data as Record<string, unknown>).b64_json
-        : null;
-    if (typeof imageBase64 !== "string" || !imageBase64.trim()) {
-      throw new HttpError(
-        502,
-        "CONTENT_FACTORY_AI_IMAGE_INVALID",
-        "AI-сервис не вернул изображение. Попробуйте другой запрос.",
-      );
-    }
-
-    const rawContent = Buffer.from(imageBase64, "base64");
+    const data = Array.isArray(root?.data) ? root.data : [];
+    const generatedImages = data.map((item) =>
+      typeof item === "object" && item
+        ? (item as Record<string, unknown>).b64_json
+        : null,
+    );
     if (
-      rawContent.length === 0 ||
-      rawContent.length > generatedImageMaxBytes ||
-      !rawContent
-        .subarray(0, 8)
-        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+      generatedImages.length !== input.imageCount ||
+      generatedImages.some(
+        (image) => typeof image !== "string" || !image.trim(),
+      )
     ) {
       throw new HttpError(
         502,
         "CONTENT_FACTORY_AI_IMAGE_INVALID",
-        "AI-сервис вернул повреждённый файл изображения.",
+        "AI-сервис вернул не все запрошенные изображения. Попробуйте ещё раз.",
       );
     }
+
+    const rawImages = generatedImages.map((imageBase64) => {
+      const rawContent = Buffer.from(imageBase64 as string, "base64");
+      if (
+        rawContent.length === 0 ||
+        rawContent.length > generatedImageMaxBytes ||
+        !rawContent
+          .subarray(0, 8)
+          .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+      ) {
+        throw new HttpError(
+          502,
+          "CONTENT_FACTORY_AI_IMAGE_INVALID",
+          "AI-сервис вернул повреждённый файл изображения.",
+        );
+      }
+      return rawContent;
+    });
 
     const repository = createContentFactoryRepository(options.database);
     const createdMedia: Array<{
@@ -168,60 +180,70 @@ export const createContentFactoryImageGenerationService = (options: {
     const generatedTargets: Array<{
       channels: ContentFactoryChannelId[];
       media: Awaited<ReturnType<typeof repository.createMedia>>;
+      setIndex: number;
     }> = [];
     try {
-      for (const target of cropTargets) {
-        const content = await cropGeneratedImage(rawContent, {
-          width: target.width,
-          height: target.height,
-        });
-        const fileName = `AI · ${target.ratio} · ${input.sourceTitle}`
-          .slice(0, 251)
-          .concat(".png");
-        let stored: { readonly objectId: string };
-        try {
-          stored = await options.managedStorage.upload({
-            content: Uint8Array.from(content),
-            contentType: "image/png",
-            name: getStorageFileName(fileName),
+      for (const [setIndex, rawContent] of rawImages.entries()) {
+        for (const target of cropTargets) {
+          const content = await cropGeneratedImage(rawContent, {
+            width: target.width,
+            height: target.height,
           });
-        } catch (error) {
-          options.logger.error(
-            { errorName: error instanceof Error ? error.name : "UnknownError" },
-            "Generated content factory image could not be stored",
-          );
-          throw new HttpError(
-            502,
-            "CONTENT_FACTORY_AI_IMAGE_STORAGE_FAILED",
-            "Изображение создано, но не удалось сохранить его в медиатеке. Повторите позже.",
-          );
-        }
-
-        try {
-          const media = await repository.createMedia({
-            adminId: input.adminId,
-            contentType: "image/png",
-            fileName,
-            objectId: stored.objectId,
-            sizeBytes: content.length,
-          });
-          createdMedia.push({ id: media.id, objectId: stored.objectId });
-          generatedTargets.push({ channels: target.channels, media });
-        } catch (error) {
-          await options.managedStorage
-            .deleteObject(stored.objectId)
-            .catch((cleanupError: unknown) => {
-              options.logger.warn(
-                {
-                  errorName:
-                    cleanupError instanceof Error
-                      ? cleanupError.name
-                      : "UnknownError",
-                },
-                "Orphaned generated content factory image cleanup failed",
-              );
+          const fileName =
+            `AI · ${setIndex + 1} · ${target.ratio} · ${input.sourceTitle}`
+              .slice(0, 251)
+              .concat(".png");
+          let stored: { readonly objectId: string };
+          try {
+            stored = await options.managedStorage.upload({
+              content: Uint8Array.from(content),
+              contentType: "image/png",
+              name: getStorageFileName(fileName),
             });
-          throw error;
+          } catch (error) {
+            options.logger.error(
+              {
+                errorName: error instanceof Error ? error.name : "UnknownError",
+              },
+              "Generated content factory image could not be stored",
+            );
+            throw new HttpError(
+              502,
+              "CONTENT_FACTORY_AI_IMAGE_STORAGE_FAILED",
+              "Изображения созданы, но не удалось сохранить их в медиатеке. Повторите позже.",
+            );
+          }
+
+          try {
+            const media = await repository.createMedia({
+              adminId: input.adminId,
+              contentType: "image/png",
+              fileName,
+              objectId: stored.objectId,
+              sizeBytes: content.length,
+            });
+            createdMedia.push({ id: media.id, objectId: stored.objectId });
+            generatedTargets.push({
+              channels: target.channels,
+              media,
+              setIndex,
+            });
+          } catch (error) {
+            await options.managedStorage
+              .deleteObject(stored.objectId)
+              .catch((cleanupError: unknown) => {
+                options.logger.warn(
+                  {
+                    errorName:
+                      cleanupError instanceof Error
+                        ? cleanupError.name
+                        : "UnknownError",
+                  },
+                  "Orphaned generated content factory image cleanup failed",
+                );
+              });
+            throw error;
+          }
         }
       }
     } catch (error) {

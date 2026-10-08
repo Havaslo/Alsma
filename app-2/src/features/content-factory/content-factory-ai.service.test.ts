@@ -96,7 +96,7 @@ test("generates three structured draft variants through the Gateway", async () =
   assert.match(String(imageUrl.url), /data:image\/png;base64,/u);
 });
 
-test("stores a generated PNG in managed storage and media metadata", async () => {
+test("generates and stores each requested image for every selected channel format", async () => {
   const png = createReferencePhoto();
   const storedContentTypes: string[] = [];
   const storedDimensions: Array<{ height: number; width: number }> = [];
@@ -135,7 +135,12 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
       requestCount += 1;
       requestedPath = String(url);
       formValues = init?.body as FormData;
-      return Response.json({ data: [{ b64_json: png.toString("base64") }] });
+      return Response.json({
+        data: [
+          { b64_json: png.toString("base64") },
+          { b64_json: png.toString("base64") },
+        ],
+      });
     },
     logger,
     managedStorage,
@@ -143,6 +148,7 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
 
   const result = await service.generateImage({
     adminId: "admin-id",
+    imageCount: 2,
     postText: "Время для спокойного отдыха в загородном отеле",
     prompt: "Мягкий утренний свет",
     selectedChannels: ["instagram", "vk", "telegram", "max", "zen"],
@@ -157,6 +163,7 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
   assert.equal(requestCount, 1);
   assert.equal(formValues.get("model"), "gpt-image-1.5");
   assert.equal(formValues.get("quality"), "medium");
+  assert.equal(formValues.get("n"), "2");
   assert.equal(formValues.get("size"), "1536x1024");
   assert.match(String(formValues.get("prompt")), /Смысл текста публикации/u);
   assert.match(
@@ -168,15 +175,22 @@ test("stores a generated PNG in managed storage and media metadata", async () =>
     String(formValues.get("prompt")),
     /Номер для спокойного отдыха/u,
   );
-  assert.deepEqual(storedContentTypes, ["image/png", "image/png", "image/png"]);
+  assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
     { width: 1200, height: 1200 },
     { width: 1600, height: 900 },
+    { width: 1080, height: 1350 },
+    { width: 1200, height: 1200 },
+    { width: 1600, height: 900 },
   ]);
-  assert.equal(createdMedia.length, 3);
+  assert.equal(createdMedia.length, 6);
   assert.ok(createdMedia.every((media) => media.createdById === "admin-id"));
-  assert.equal(result.assets.length, 3);
+  assert.equal(result.assets.length, 6);
+  assert.deepEqual(
+    [...new Set(result.assets.map(({ setIndex }) => setIndex))],
+    [0, 1],
+  );
   const portrait = result.assets.find(({ channels }) =>
     channels.includes("instagram"),
   );
@@ -293,6 +307,7 @@ test("rejects a source photo with a mismatched content type before Gateway use",
   await assert.rejects(
     service.generateImage({
       adminId: "admin-id",
+      imageCount: 1,
       postText: "Текст публикации",
       prompt: "Оставить как есть",
       selectedChannels: ["vk"],

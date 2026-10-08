@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { Check, Eye, ImagePlus, RefreshCw, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/cn";
@@ -6,10 +8,12 @@ import {
   type ContentChannel,
   type DraftVariant,
   type FactoryMediaItem,
+  getDraftVariantImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type { ContentFactoryGuidelines } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
+import { ChannelAdaptationRewriteDialog } from "./ChannelAdaptationRewriteDialog";
 import { ChannelBadge, QuietButton } from "./ContentFactoryPrimitives";
 
 export const ChannelAdaptationsPanel = ({
@@ -35,17 +39,43 @@ export const ChannelAdaptationsPanel = ({
   onAdaptAction: (
     channel: ContentChannel,
     action: "shorter" | "rewrite",
-  ) => void;
+    instruction?: string,
+  ) => Promise<boolean>;
   onMediaBrowse: (channel: ContentChannel) => void;
 }) => {
+  const [rewriteTarget, setRewriteTarget] = useState<ContentChannel | null>(
+    null,
+  );
+  const [isRefiningChannel, setIsRefiningChannel] = useState(false);
   const active = selectedChannels.includes(activeChannel);
   const guideline = guidelines?.channels.find(
     (channel) => channel.id === activeChannel,
   );
-  const image =
-    mediaItems.find(
-      (item) => item.id === variant.channelImageIds[activeChannel],
-    ) ?? mediaItems.find((item) => item.id === variant.imageId);
+  const images = getDraftVariantImageIds(variant, activeChannel)
+    .map((imageId) => mediaItems.find((item) => item.id === imageId))
+    .filter((item): item is FactoryMediaItem => Boolean(item));
+  const channelLabel =
+    CONTENT_CHANNELS.find((item) => item.id === rewriteTarget)?.label ??
+    "канала";
+
+  const shortenChannelText = async () => {
+    setIsRefiningChannel(true);
+    try {
+      await onAdaptAction(activeChannel, "shorter");
+    } finally {
+      setIsRefiningChannel(false);
+    }
+  };
+
+  const rewriteChannelText = async (instruction: string) => {
+    if (!rewriteTarget) return false;
+    setIsRefiningChannel(true);
+    try {
+      return await onAdaptAction(rewriteTarget, "rewrite", instruction);
+    } finally {
+      setIsRefiningChannel(false);
+    }
+  };
 
   return (
     <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
@@ -186,16 +216,26 @@ export const ChannelAdaptationsPanel = ({
               />
               <div className="mt-3 flex flex-wrap gap-2">
                 <QuietButton
-                  onClick={() => onAdaptAction(activeChannel, "shorter")}
+                  disabled={isRefiningChannel}
+                  onClick={() => void shortenChannelText()}
                 >
                   <RefreshCw className="size-3.5" /> Сделать короче
                 </QuietButton>
                 <QuietButton
-                  onClick={() => onAdaptAction(activeChannel, "rewrite")}
+                  disabled={isRefiningChannel}
+                  onClick={() => setRewriteTarget(activeChannel)}
                 >
                   <Sparkles className="size-3.5" /> Переработать эту версию
                 </QuietButton>
               </div>
+              {isRefiningChannel && (
+                <p
+                  aria-live="polite"
+                  className="mt-2 text-xs text-muted-ui-foreground"
+                >
+                  Агент обновляет версию только для этого канала…
+                </p>
+              )}
             </>
           ) : (
             <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-brand-foreground px-4 py-5 text-center">
@@ -233,19 +273,31 @@ export const ChannelAdaptationsPanel = ({
               </div>
               <ChannelBadge channel={activeChannel} compact />
             </div>
-            {image && (
+            {images.length > 0 && (
               <div
-                className="w-full overflow-hidden bg-muted-ui"
-                style={{
-                  aspectRatio:
-                    guideline?.image.ratio.replace(":", " / ") ?? "16 / 9",
-                }}
+                className={`grid gap-2 ${images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
               >
-                <img
-                  alt={image.title}
-                  className="size-full object-cover"
-                  src={resolveMediaUrl(image.image)}
-                />
+                {images.map((image, index) => (
+                  <div
+                    className="relative w-full overflow-hidden bg-muted-ui"
+                    key={`${image.id}-${index}`}
+                    style={{
+                      aspectRatio:
+                        guideline?.image.ratio.replace(":", " / ") ?? "16 / 9",
+                    }}
+                  >
+                    <img
+                      alt={`Кадр ${index + 1}: ${image.title}`}
+                      className="size-full object-cover"
+                      src={resolveMediaUrl(image.image)}
+                    />
+                    {images.length > 1 && (
+                      <span className="absolute top-2 left-2 rounded-full bg-brand-foreground/90 px-2 py-1 text-[10px] font-semibold text-page-foreground shadow-sm">
+                        {index + 1} / {images.length}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
             <div className="p-4">
@@ -267,11 +319,17 @@ export const ChannelAdaptationsPanel = ({
             <ImagePlus className="size-3.5" /> Заменить визуал для этого канала
           </QuietButton>
           <p className="mt-3 text-center text-xs leading-5 text-muted-ui-foreground">
-            Генерация изображения выполняется отдельно для канала, который
-            выбран в поле формата под визуалом.
+            Порядок кадров сохранён. Все выбранные изображения будут приложены к
+            этой версии; формат каждого соответствует площадке.
           </p>
         </div>
       </div>
+      <ChannelAdaptationRewriteDialog
+        channelLabel={channelLabel}
+        onClose={() => setRewriteTarget(null)}
+        onSubmit={rewriteChannelText}
+        open={rewriteTarget !== null}
+      />
     </section>
   );
 };

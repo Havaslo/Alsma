@@ -23,6 +23,15 @@ const draftVariantSchema = z.object({
   concept: z.string().max(4_000),
   text: z.string().max(20_000),
   imageId: z.string().max(120),
+  channelImageGalleryIds: z
+    .object({
+      vk: z.array(z.string().max(120)).max(4),
+      telegram: z.array(z.string().max(120)).max(4),
+      max: z.array(z.string().max(120)).max(4),
+      instagram: z.array(z.string().max(120)).max(4),
+      zen: z.array(z.string().max(120)).max(4),
+    })
+    .optional(),
   channelImageIds: z.object({
     vk: z.string().max(120),
     telegram: z.string().max(120),
@@ -104,6 +113,7 @@ export const contentFactoryTextRefinementBodySchema = z.object({
 });
 
 export const contentFactoryImageGenerationBodySchema = z.object({
+  imageCount: z.number().int().min(1).max(4).default(1),
   prompt: z.string().trim().max(2_000).default(""),
   postText: z.string().trim().min(1).max(20_000),
   selectedChannels: z

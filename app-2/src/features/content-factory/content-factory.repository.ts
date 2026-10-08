@@ -57,6 +57,7 @@ export const createContentFactoryRepository = (database: Database) => ({
     database.client.contentFactoryMedia.delete({ where: { id: mediaId } }),
   createImageGenerationJob: (input: {
     readonly createdById: string;
+    readonly imageCount: number;
     readonly postText: string;
     readonly prompt: string;
     readonly referencePhotoObjectId: string;
@@ -68,6 +69,7 @@ export const createContentFactoryRepository = (database: Database) => ({
     database.client.contentFactoryImageGenerationJob.create({
       data: {
         createdById: input.createdById,
+        imageCount: input.imageCount,
         postText: input.postText,
         prompt: input.prompt,
         referencePhotoObjectId: input.referencePhotoObjectId,

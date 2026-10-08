@@ -188,6 +188,7 @@ export const refineContentFactoryText = async (input: {
 };
 
 export const generateContentFactoryImage = async (input: {
+  imageCount: number;
   prompt: string;
   postText: string;
   selectedChannels: ContentChannel[];
@@ -208,6 +209,7 @@ export const generateContentFactoryImage = async (input: {
       prompt: input.prompt,
       postText: input.postText,
       selectedChannels: input.selectedChannels,
+      imageCount: input.imageCount,
       referencePhotoBase64: await photoBlobToBase64(referencePhoto),
       sourceTitle: input.reference.title,
       sourceCategory: input.reference.category,
@@ -234,6 +236,7 @@ export const generateContentFactoryImage = async (input: {
             assets: Array<{
               channels: ContentChannel[];
               asset: UploadedContentFactoryMedia;
+              setIndex: number;
             }>;
           }
       >(`/admin/content-factory/generate/image/${response.data.jobId}`, {
@@ -249,10 +252,16 @@ export const generateContentFactoryImage = async (input: {
           throw new Error(statusResponse.data.message);
         case "completed": {
           const assetsByChannel: Partial<
-            Record<ContentChannel, UploadedContentFactoryMedia>
+            Record<ContentChannel, UploadedContentFactoryMedia[]>
           > = {};
-          for (const { asset, channels } of statusResponse.data.assets) {
-            for (const channel of channels) assetsByChannel[channel] = asset;
+          const orderedAssets = [...statusResponse.data.assets].sort(
+            (left, right) => left.setIndex - right.setIndex,
+          );
+          for (const { asset, channels } of orderedAssets) {
+            for (const channel of channels) {
+              assetsByChannel[channel] ??= [];
+              assetsByChannel[channel].push(asset);
+            }
           }
           return assetsByChannel;
         }

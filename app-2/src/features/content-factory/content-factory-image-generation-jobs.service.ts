@@ -24,6 +24,7 @@ const generationResultSchema = z.object({
     z.object({
       channels: z.array(contentChannelSchema),
       mediaId: z.uuid(),
+      setIndex: z.number().int().min(0).max(3).default(0),
     }),
   ),
   model: z.string(),
@@ -82,9 +83,11 @@ export const createContentFactoryImageGenerationJobsService = (options: {
         .min(1)
         .max(5)
         .parse(job.selectedChannels);
+      const imageCount = z.number().int().min(1).max(4).parse(job.imageCount);
 
       const result = await options.ai.generateImage({
         adminId: job.createdById,
+        imageCount,
         postText: job.postText,
         prompt: job.prompt,
         selectedChannels,
@@ -96,9 +99,10 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       });
       generatedAssets = result.assets;
       const persistedResult = {
-        assets: result.assets.map(({ channels, media }) => ({
+        assets: result.assets.map(({ channels, media, setIndex }) => ({
           channels,
           mediaId: media.id,
+          setIndex,
         })),
         model: result.model,
       };
@@ -170,6 +174,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
     try {
       const job = await repository.createImageGenerationJob({
         createdById: adminId,
+        imageCount: input.imageCount,
         postText: input.postText,
         prompt: input.prompt,
         referencePhotoObjectId: upload.objectId,
@@ -229,10 +234,12 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       );
       const mediaById = new Map(mediaItems.map((media) => [media.id, media]));
       return {
-        assets: result.data.assets.flatMap(({ channels, mediaId }) => {
-          const media = mediaById.get(mediaId);
-          return media ? [{ channels, media }] : [];
-        }),
+        assets: result.data.assets.flatMap(
+          ({ channels, mediaId, setIndex }) => {
+            const media = mediaById.get(mediaId);
+            return media ? [{ channels, media, setIndex }] : [];
+          },
+        ),
         model: result.data.model,
         status: "completed" as const,
       };

@@ -122,8 +122,20 @@ export interface DraftVariant {
   text: string;
   imageId: string;
   channelImageIds: Record<ContentChannel, string>;
+  /** Optional for compatibility with drafts saved before multi-image support. */
+  channelImageGalleryIds?: Record<ContentChannel, string[]>;
   adaptations: Record<ContentChannel, string>;
 }
+
+export const getDraftVariantImageIds = (
+  variant: DraftVariant,
+  channel: ContentChannel,
+) => {
+  const galleryIds = variant.channelImageGalleryIds?.[channel]?.filter(Boolean);
+  if (galleryIds?.length) return galleryIds;
+  const singleImageId = variant.channelImageIds[channel] || variant.imageId;
+  return singleImageId ? [singleImageId] : [];
+};
 
 export const DEMO_VARIANTS: DraftVariant[] = [
   {
