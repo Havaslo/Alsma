@@ -645,11 +645,13 @@ model ContentFactoryImageGenerationJob {
   prompt                 String    @default("") @db.Text
   postText               String    @map("post_text") @db.Text
   imageCount             Int       @default(1) @map("image_count")
+  mode                   String    @default("edit") @db.VarChar(16)
   selectedChannels       String[]  @map("selected_channels")
   sourceTitle            String    @map("source_title") @db.VarChar(255)
   sourceCategory         String    @map("source_category") @db.VarChar(120)
   sourceTags             String[]  @default([]) @map("source_tags")
   referencePhotoObjectId String    @map("reference_photo_object_id") @db.Text
+  referencePhotos        Json      @default("[]") @map("reference_photos")
   result                 Json?
   errorMessage           String?   @map("error_message") @db.Text
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

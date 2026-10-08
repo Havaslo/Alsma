@@ -1,16 +1,9 @@
 import { useState } from "react";
 
-import {
-  ImagePlus,
-  RefreshCw,
-  Scissors,
-  Sparkles,
-  WandSparkles,
-} from "lucide-react";
+import { RefreshCw, Scissors, Sparkles, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import {
-  CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
   type FactoryMediaItem,
@@ -18,10 +11,11 @@ import {
 import type {
   ContentFactoryGuidelines,
   DraftAction,
+  ImageGenerationMode,
 } from "@/lib/content-factory/contentFactoryTypes";
-import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
+import { ContentImageGenerationPanel } from "./ContentImageGenerationPanel";
 
 export const ContentDraftPanel = ({
   variant,
@@ -34,8 +28,10 @@ export const ContentDraftPanel = ({
   onTextChange,
   onDraftAction,
   onCustomAction,
-  onMediaBrowse,
   onImageGenerate,
+  onSourcePicker,
+  onRemoveSource,
+  onSetPrimarySource,
   isGeneratingImage,
   isRefiningText,
 }: {
@@ -49,16 +45,14 @@ export const ContentDraftPanel = ({
   onTextChange: (text: string) => void;
   onDraftAction: (action: DraftAction) => Promise<boolean>;
   onCustomAction: (command: string) => Promise<boolean>;
-  onMediaBrowse: () => void;
-  onImageGenerate: (prompt: string, imageCount: number) => Promise<void>;
+  onImageGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<void>;
+  onSourcePicker: () => void;
+  onRemoveSource: (mediaId: string) => void;
+  onSetPrimarySource: (mediaId: string) => void;
   isGeneratingImage: boolean;
   isRefiningText: boolean;
 }) => {
   const [customCommand, setCustomCommand] = useState("");
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [imageCount, setImageCount] = useState(3);
-  const [imagePromptOpen, setImagePromptOpen] = useState(false);
-  const image = mediaItems.find((item) => item.id === variant.imageId);
 
   const submitCustomCommand = () => {
     if (!customCommand.trim()) return;
@@ -199,194 +193,17 @@ export const ContentDraftPanel = ({
         )}
       </div>
 
-      <div className="mt-6 border-t border-line pt-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-page-foreground">
-            Рекомендуемый визуал
-          </span>
-          <span className="rounded-full bg-muted-ui/50 px-2.5 py-1 text-[11px] font-medium text-muted-ui-foreground">
-            Из медиатеки
-          </span>
-        </div>
-        <div className="grid items-center gap-4 sm:grid-cols-[minmax(190px,280px)_minmax(180px,1fr)]">
-          {image && (
-            <div className="overflow-hidden rounded-2xl border border-line bg-muted-ui/50">
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img
-                  alt={image.title}
-                  className="size-full object-cover"
-                  src={resolveMediaUrl(image.image)}
-                />
-                <span className="absolute top-3 left-3 rounded-full bg-brand-foreground/90 px-2.5 py-1 text-[11px] font-semibold text-page-foreground shadow-sm backdrop-blur">
-                  Источник: {image.category}
-                </span>
-                <button
-                  aria-label="Заменить фотографию"
-                  className="absolute right-3 bottom-3 grid size-9 place-items-center rounded-xl bg-brand-foreground text-page-foreground shadow-md transition hover:bg-brand/5 hover:text-brand"
-                  onClick={onMediaBrowse}
-                  type="button"
-                >
-                  <ImagePlus className="size-4" />
-                </button>
-                {isGeneratingImage && (
-                  <div
-                    aria-label="Идёт генерация изображения"
-                    aria-live="polite"
-                    className="absolute inset-0 z-10 grid place-items-center bg-page-foreground/45 p-4 backdrop-blur-[2px]"
-                    role="status"
-                  >
-                    <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/40 bg-brand-foreground/95 px-5 py-4 text-center shadow-xl">
-                      <span className="relative grid size-12 place-items-center">
-                        <span className="absolute inset-0 animate-spin rounded-full border-2 border-brand/20 border-t-brand" />
-                        <Sparkles className="size-5 animate-pulse text-brand" />
-                      </span>
-                      <span className="text-sm font-semibold text-page-foreground">
-                        Создаём изображения
-                      </span>
-                      <span className="text-xs leading-5 text-muted-ui-foreground">
-                        Готовим кадры для выбранных площадок…
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="p-3.5">
-                <p className="truncate text-sm font-semibold text-page-foreground">
-                  {image.title}
-                </p>
-                <p className="mt-1 text-xs text-muted-ui-foreground">
-                  {image.category} · {image.subtitle}
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-start">
-            <QuietButton className="w-full sm:w-auto" onClick={onMediaBrowse}>
-              Подобрать фото
-            </QuietButton>
-            <QuietButton
-              aria-controls="factory-image-prompt-form"
-              aria-expanded={imagePromptOpen}
-              className="w-full sm:w-auto"
-              onClick={() => setImagePromptOpen((open) => !open)}
-            >
-              <Sparkles className="size-3.5" />
-              {imagePromptOpen ? "Скрыть промт" : "Сгенерировать"}
-            </QuietButton>
-          </div>
-        </div>
-        {imagePromptOpen && (
-          <form
-            className="mt-4 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5"
-            id="factory-image-prompt-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void onImageGenerate(imagePrompt.trim(), imageCount);
-            }}
-          >
-            <div>
-              <p className="mb-1.5 text-sm font-semibold text-page-foreground">
-                Форматы для выбранных площадок
-              </p>
-              {selectedChannels.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {selectedChannels.map((channelId) => {
-                    const channel = CONTENT_CHANNELS.find(
-                      (item) => item.id === channelId,
-                    );
-                    const guideline = guidelines?.channels.find(
-                      (item) => item.id === channelId,
-                    );
-                    return (
-                      <span
-                        className="rounded-full border border-line bg-brand-foreground px-2.5 py-1 text-xs text-page-foreground"
-                        key={channelId}
-                      >
-                        {channel?.label ?? channelId}
-                        {guideline ? ` · ${guideline.image.ratio}` : ""}
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs leading-5 text-muted-ui-foreground">
-                  Сначала отметьте площадки в блоке «Задача» — тогда для них
-                  подготовятся кадры нужных пропорций.
-                </p>
-              )}
-            </div>
-            <fieldset>
-              <legend className="mb-1.5 block text-sm font-semibold text-page-foreground">
-                Количество изображений
-              </legend>
-              <div
-                aria-label="Количество создаваемых изображений"
-                className="flex flex-wrap gap-2"
-                role="radiogroup"
-              >
-                {[1, 2, 3, 4].map((count) => (
-                  <button
-                    aria-checked={imageCount === count}
-                    className={`grid size-10 place-items-center rounded-xl border text-sm font-semibold transition ${
-                      imageCount === count
-                        ? "border-brand bg-brand text-white"
-                        : "border-line bg-brand-foreground text-page-foreground hover:bg-page"
-                    }`}
-                    disabled={isGeneratingImage}
-                    key={count}
-                    onClick={() => setImageCount(count)}
-                    role="radio"
-                    type="button"
-                  >
-                    {count}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <div>
-              <label
-                className="mb-1.5 block text-sm font-semibold text-page-foreground"
-                htmlFor="factory-image-prompt"
-              >
-                Дополнительный промт
-              </label>
-              <textarea
-                className="min-h-24 w-full resize-y rounded-xl border border-line bg-brand-foreground px-3 py-2.5 text-sm leading-5 text-page-foreground outline-none placeholder:text-muted-ui-foreground/80 focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
-                id="factory-image-prompt"
-                onChange={(event) => setImagePrompt(event.target.value)}
-                placeholder="Например: мягкий утренний свет и спокойная атмосфера…"
-                value={imagePrompt}
-              />
-            </div>
-            <p className="text-xs leading-5 text-muted-ui-foreground">
-              AI учтёт текст публикации, это фото и ваши пожелания. Количество
-              отдельных кадров: {imageCount} — это не коллаж. Каждый кадр будет
-              подготовлен в форматах выбранных площадок и сохранён в медиатеке и
-              черновике. Публикации не отправляются.
-            </p>
-            <Button
-              aria-busy={isGeneratingImage}
-              className="w-full"
-              disabled={
-                !image ||
-                !variant.text.trim() ||
-                !selectedChannels.length ||
-                isGeneratingImage
-              }
-              type="submit"
-            >
-              <Sparkles className="size-4" />
-              {isGeneratingImage
-                ? "Создаём изображения и форматы…"
-                : `Создать ${imageCount} ${imageCount === 1 ? "изображение" : "изображения"}`}
-            </Button>
-          </form>
-        )}
-        <p className="mt-3 text-xs leading-5 text-muted-ui-foreground">
-          Созданные изображения появятся как галерея в каждой выбранной версии.
-          Кадрирование по каналу можно проверить в блоке «Версии для каналов».
-        </p>
-      </div>
+      <ContentImageGenerationPanel
+        guidelines={guidelines}
+        isGeneratingImage={isGeneratingImage}
+        mediaItems={mediaItems}
+        onGenerate={onImageGenerate}
+        onOpenSourcePicker={onSourcePicker}
+        onRemoveSource={onRemoveSource}
+        onSetPrimarySource={onSetPrimarySource}
+        selectedChannels={selectedChannels}
+        variant={variant}
+      />
       <p className="mt-5 rounded-xl bg-page px-3.5 py-2.5 text-xs leading-5 text-muted-ui-foreground">
         {variant.concept}
       </p>

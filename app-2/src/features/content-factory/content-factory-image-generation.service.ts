@@ -56,10 +56,12 @@ export const createContentFactoryImageGenerationService = (options: {
   readonly database: Database;
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
-  readonly requestImageEdit: (input: {
-    readonly content: Buffer;
-    readonly contentType: string;
-    readonly fileName: string;
+  readonly requestImage: (input: {
+    readonly images: readonly {
+      readonly content: Buffer;
+      readonly contentType: string;
+      readonly fileName: string;
+    }[];
     readonly imageCount: number;
     readonly prompt: string;
     readonly size: string;
@@ -68,19 +70,29 @@ export const createContentFactoryImageGenerationService = (options: {
   generateImage: async (input: {
     readonly adminId: string;
     readonly imageCount: number;
+    readonly mode: "edit" | "generate";
     readonly postText: string;
     readonly prompt: string;
     readonly selectedChannels: readonly ContentFactoryChannelId[];
-    readonly sourceTitle: string;
-    readonly sourceCategory: string;
-    readonly sourceTags: readonly string[];
-    readonly referencePhoto: unknown;
-    readonly referencePhotoContentType: string;
+    readonly referencePhotos: readonly {
+      readonly content: Buffer;
+      readonly contentType: string;
+      readonly sourceCategory: string;
+      readonly sourceTags: readonly string[];
+      readonly sourceTitle: string;
+    }[];
   }) => {
-    const referencePhoto = assertReferencePhoto(
-      input.referencePhoto,
-      input.referencePhotoContentType,
-    );
+    const sourcePhotos = input.referencePhotos.map((photo) => ({
+      ...photo,
+      content: assertReferencePhoto(photo.content, photo.contentType),
+    }));
+    if (input.mode === "edit" && sourcePhotos.length === 0) {
+      throw new HttpError(
+        400,
+        "CONTENT_FACTORY_REFERENCE_PHOTO_REQUIRED",
+        "Для редактирования выберите хотя бы одно исходное фото.",
+      );
+    }
     const targetsByDimensions = new Map<
       string,
       {
@@ -114,19 +126,31 @@ export const createContentFactoryImageGenerationService = (options: {
             .join(", ")}`,
       )
       .join("; ");
+    const sourceDescription = sourcePhotos.length
+      ? sourcePhotos
+          .map(
+            (photo, index) =>
+              `${index + 1}. «${photo.sourceTitle}», раздел «${photo.sourceCategory}», теги: ${photo.sourceTags.join(", ") || "нет"}`,
+          )
+          .join("\n")
+      : "Исходные фото не приложены; создай изображение с нуля по тексту и инструкции пользователя.";
     const imagePrompt = [
       `Создай ${input.imageCount} самостоятельных фотореалистичных вариантов изображения для одной публикации. Каждый результат должен быть отдельным кадром с отличающейся композицией, а не коллажем, сеткой или несколькими сценами внутри одного изображения.`,
       `Смысл текста публикации: ${input.postText}`,
       `Дополнительные пожелания пользователя: ${input.prompt.trim() || "не заданы; ориентируйся на смысл публикации"}`,
-      `Исходное фото: «${input.sourceTitle}», раздел «${input.sourceCategory}», теги: ${input.sourceTags.join(", ") || "нет"}. Используй переданное фото как обязательную визуальную основу, а не только как вдохновение. Согласуй настроение и сцену с содержанием поста, не превращая текст поста в надписи на изображении.`,
+      input.mode === "edit"
+        ? `Используй все переданные фото как визуальные референсы, при необходимости объедини релевантные элементы, не меняй оригиналы. Описания исходных материалов:\n${sourceDescription}`
+        : sourceDescription,
       `После одной генерации изображение будет обрезано до форматов: ${targetDescriptions}.`,
-      "Сохрани узнаваемый фон и важные видимые элементы исходного фото. Явные пожелания пользователя к сцене приоритетны: если пользователь просит, можно добавить или изменить людей, столы, реквизит, освещение и композиционные детали, даже если их не было в кадре. Не меняй без прямой просьбы архитектуру, отделку, оборудование и инфраструктуру объекта; не изображай неподтверждённые факты, цены, акции или услуги как действительные.",
+      "При редактировании сохраняй узнаваемый фон и важные видимые элементы референсов. Явные пожелания пользователя к сцене приоритетны: если пользователь просит, можно добавить или изменить людей, столы, реквизит, освещение и композиционные детали, даже если их не было в кадре. Не меняй без прямой просьбы архитектуру, отделку, оборудование и инфраструктуру объекта; не изображай неподтверждённые факты, цены, акции или услуги как действительные.",
       "Оставь главный объект и важные детали в центральной безопасной области, чтобы они сохранились при всех перечисленных кадрировках. Не добавляй текст, буквы, логотипы, водяные знаки, рамки или коллаж.",
     ].join("\n\n");
-    const payload = await options.requestImageEdit({
-      content: referencePhoto,
-      contentType: input.referencePhotoContentType,
-      fileName: `${input.sourceTitle}.jpg`,
+    const payload = await options.requestImage({
+      images: sourcePhotos.map((photo, index) => ({
+        content: photo.content,
+        contentType: photo.contentType,
+        fileName: `${photo.sourceTitle || `source-${index + 1}`}.jpg`,
+      })),
       imageCount: input.imageCount,
       prompt: imagePrompt,
       size: "1536x1024",
@@ -189,10 +213,12 @@ export const createContentFactoryImageGenerationService = (options: {
             width: target.width,
             height: target.height,
           });
-          const fileName =
-            `AI · ${setIndex + 1} · ${target.ratio} · ${input.sourceTitle}`
-              .slice(0, 251)
-              .concat(".png");
+          const fileName = `AI · ${setIndex + 1} · ${target.ratio} · ${
+            sourcePhotos.map((photo) => photo.sourceTitle).join(" + ") ||
+            "Новый кадр"
+          }`
+            .slice(0, 251)
+            .concat(".png");
           let stored: { readonly objectId: string };
           try {
             stored = await options.managedStorage.upload({

@@ -22,6 +22,7 @@ const waitFor = async (predicate: () => boolean) => {
 
 test("returns immediately and makes generated channel crops available by polling", async () => {
   const referencePhoto = createCanvas(320, 240).toBuffer("image/jpeg");
+  const secondReferencePhoto = createCanvas(200, 180).toBuffer("image/jpeg");
   const jobId = "d80e1270-ef90-4d04-bf7c-e716ed0a3c11";
   const adminId = "a011f0bb-d7c5-4221-894a-6c5127fa5a31";
   const generatedMedia = [
@@ -46,8 +47,10 @@ test("returns immediately and makes generated channel crops available by polling
   ];
   let job: Record<string, unknown> | null = null;
   let imageGenerationStarted = false;
+  let receivedReferenceCount = 0;
   let finishGeneration: (() => void) | undefined;
   let removedObjects: string[] = [];
+  let temporaryObjectCount = 0;
   const generationGate = new Promise<void>((resolve) => {
     finishGeneration = resolve;
   });
@@ -86,18 +89,21 @@ test("returns immediately and makes generated channel crops available by polling
     deleteObject: async (objectId: string) => {
       removedObjects.push(objectId);
     },
-    getDownload: async () => ({
+    getDownload: async (objectId: string) => ({
       contentType: "image/jpeg",
-      downloadUrl: "https://storage.example/reference.jpg",
+      downloadUrl: `https://storage.example/${objectId}.jpg`,
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       sizeBytes: referencePhoto.length,
     }),
-    upload: async () => ({ objectId: "temporary-reference-object" }),
+    upload: async () => ({
+      objectId: `temporary-reference-object-${++temporaryObjectCount}`,
+    }),
   } as unknown as ManagedStorage;
   const jobs = createContentFactoryImageGenerationJobsService({
     ai: {
-      generateImage: async () => {
+      generateImage: async (input: { referencePhotos: unknown[] }) => {
         imageGenerationStarted = true;
+        receivedReferenceCount = input.referencePhotos.length;
         await generationGate;
         return {
           assets: [
@@ -113,27 +119,46 @@ test("returns immediately and makes generated channel crops available by polling
       },
     } as never,
     database,
-    fetchImplementation: async () =>
-      new Response(Uint8Array.from(referencePhoto), {
-        headers: { "content-type": "image/jpeg" },
-      }),
+    fetchImplementation: async (url) =>
+      new Response(
+        Uint8Array.from(
+          String(url).includes("temporary-reference-object-2")
+            ? secondReferencePhoto
+            : referencePhoto,
+        ),
+        {
+          headers: { "content-type": "image/jpeg" },
+        },
+      ),
     logger,
     managedStorage,
   });
 
   const submitted = await jobs.submit(adminId, {
     imageCount: 1,
+    mode: "edit",
     postText: "Пост о фестивале детского рисунка",
     prompt: "Тёплый свет",
-    referencePhotoBase64: referencePhoto.toString("base64"),
+    referencePhotos: [
+      {
+        imageBase64: referencePhoto.toString("base64"),
+        sourceCategory: "Загрузки",
+        sourceTags: [],
+        sourceTitle: "Исходное фото",
+      },
+      {
+        imageBase64: secondReferencePhoto.toString("base64"),
+        sourceCategory: "SPA",
+        sourceTags: ["вода"],
+        sourceTitle: "Второе исходное фото",
+      },
+    ],
     selectedChannels: ["vk", "telegram", "instagram"],
-    sourceCategory: "Загрузки",
-    sourceTags: [],
-    sourceTitle: "Исходное фото",
   });
   assert.equal(submitted.status, "pending");
   assert.equal(submitted.jobId, jobId);
   await waitFor(() => imageGenerationStarted);
+  assert.equal(receivedReferenceCount, 2);
 
   const inProgress = await jobs.getStatus(jobId, adminId);
   assert.equal(inProgress.status, "processing");
@@ -147,5 +172,9 @@ test("returns immediately and makes generated channel crops available by polling
   assert.deepEqual(completed.assets[0]?.channels, ["vk", "instagram"]);
   assert.equal(completed.assets[0]?.setIndex, 0);
   assert.deepEqual(completed.assets[1]?.channels, ["telegram"]);
-  await waitFor(() => removedObjects.includes("temporary-reference-object"));
+  await waitFor(
+    () =>
+      removedObjects.includes("temporary-reference-object-1") &&
+      removedObjects.includes("temporary-reference-object-2"),
+  );
 });

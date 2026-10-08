@@ -58,9 +58,11 @@ export const createContentFactoryRepository = (database: Database) => ({
   createImageGenerationJob: (input: {
     readonly createdById: string;
     readonly imageCount: number;
+    readonly mode: string;
     readonly postText: string;
     readonly prompt: string;
     readonly referencePhotoObjectId: string;
+    readonly referencePhotos: Prisma.InputJsonValue;
     readonly selectedChannels: readonly string[];
     readonly sourceCategory: string;
     readonly sourceTags: readonly string[];
@@ -70,9 +72,11 @@ export const createContentFactoryRepository = (database: Database) => ({
       data: {
         createdById: input.createdById,
         imageCount: input.imageCount,
+        mode: input.mode,
         postText: input.postText,
         prompt: input.prompt,
         referencePhotoObjectId: input.referencePhotoObjectId,
+        referencePhotos: input.referencePhotos,
         selectedChannels: [...input.selectedChannels],
         sourceCategory: input.sourceCategory,
         sourceTags: [...input.sourceTags],
@@ -97,6 +101,7 @@ export const createContentFactoryRepository = (database: Database) => ({
     input: {
       readonly errorMessage?: string | null;
       readonly referencePhotoObjectId?: string;
+      readonly referencePhotos?: Prisma.InputJsonValue;
       readonly result?: Prisma.InputJsonValue;
       readonly status: string;
     },

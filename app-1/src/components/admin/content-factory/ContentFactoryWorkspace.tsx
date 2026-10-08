@@ -21,9 +21,11 @@ import {
   type ContentChannel,
   type PlanPublication,
   getDraftVariantImageIds,
+  getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentPlanPostInput,
+  ImageGenerationMode,
   TextRefinementAction,
 } from "@/lib/content-factory/contentFactoryTypes";
 import { useContentFactoryDemo } from "@/lib/content-factory/useContentFactoryDemo";
@@ -69,6 +71,7 @@ export const ContentFactoryWorkspace = () => {
           title: generated.title,
           concept: generated.concept,
           text: generated.text,
+          sourceImageIds: getDraftVariantSourceImageIds(factory.activeVariant),
           adaptations: generated.adaptations,
         };
       });
@@ -255,26 +258,29 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const generateImage = async (prompt: string, imageCount: number) => {
+  const generateImage = async (mode: ImageGenerationMode, prompt: string) => {
     const selectedChannels = factory.selectedChannels;
     if (!selectedChannels.length) {
       factory.setNotice("Сначала отметьте площадки в блоке «Задача».");
       return;
     }
-    const referencePhoto = persistence.mediaItems.find(
+    const selectedSource = persistence.mediaItems.find(
       (item) => item.id === factory.activeVariant.imageId,
     );
-    if (!referencePhoto) {
-      factory.setNotice("Сначала выберите исходное фото в медиатеке.");
+    const references =
+      mode === "edit" && selectedSource ? [selectedSource] : [];
+    if (mode === "edit" && !selectedSource) {
+      factory.setNotice("Выберите фото сверху или добавьте его из галереи.");
       return;
     }
     try {
       const generatedAssets = await persistence.generateImage({
-        imageCount,
+        imageCount: 1,
+        mode,
         prompt,
         postText: factory.activeVariant.text,
         selectedChannels,
-        reference: referencePhoto,
+        references,
       });
       const channelImageIds = {
         ...factory.activeVariant.channelImageIds,
@@ -287,20 +293,23 @@ export const ContentFactoryWorkspace = () => {
       ) as Record<ContentChannel, string[]>;
       for (const channel of selectedChannels) {
         const images = generatedAssets[channel];
-        if (!images || images.length !== imageCount) {
+        if (!images?.length) {
           throw new Error(
-            "Не удалось подготовить все кадры для каждой площадки.",
+            "Не удалось подготовить изображение для каждой площадки.",
           );
         }
-        channelImageGalleryIds[channel] = images.map((media) => media.id);
-        channelImageIds[channel] = images[0]!.id;
+        const nextIds = [
+          ...new Set([
+            ...channelImageGalleryIds[channel],
+            ...images.map((media) => media.id),
+          ]),
+        ];
+        channelImageGalleryIds[channel] = nextIds;
+        channelImageIds[channel] = images.at(-1)!.id;
       }
       const currentSnapshot = factory.getDraftSnapshot();
       const updatedVariant = {
         ...factory.activeVariant,
-        imageId:
-          generatedAssets[selectedChannels[0]]?.[0]?.id ??
-          factory.activeVariant.imageId,
         channelImageGalleryIds,
         channelImageIds,
       };
@@ -320,11 +329,11 @@ export const ContentFactoryWorkspace = () => {
         });
         factory.setCurrentDraftId(saved.id);
         factory.setNotice(
-          `Количество созданных кадров — ${imageCount}. Для ${selectedChannels.length} выбранных площадок подготовлены галереи нужных форматов и сохранены в черновике. Публикации не отправлялись.`,
+          `${mode === "edit" ? "Создана новая версия выбранного фото" : "Создано новое изображение с нуля"}. Результат добавлен в галереи ${selectedChannels.length} выбранных площадок и сохранён в черновике. Можно запустить генерацию ещё раз — предыдущие варианты сохраняются. Оригинал не изменён; публикации не отправлялись.`,
         );
       } catch {
         factory.setNotice(
-          "Кадры подготовлены и сохранены в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить их за публикацией.",
+          "Изображение подготовлено и сохранено в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить его за публикацией.",
         );
       }
     } catch (error) {
@@ -506,7 +515,9 @@ export const ContentFactoryWorkspace = () => {
                 onCustomAction={(command) => refineText("custom", command)}
                 onDraftAction={refineText}
                 onImageGenerate={generateImage}
-                onMediaBrowse={factory.browseMainImage}
+                onSourcePicker={factory.browseMainImage}
+                onRemoveSource={factory.removeSourceMedia}
+                onSetPrimarySource={factory.setPrimarySourceMedia}
                 onTextChange={(text) =>
                   factory.updateCurrentVariant((variant) => ({
                     ...variant,
@@ -627,8 +638,11 @@ export const ContentFactoryWorkspace = () => {
                 `Изображение «${uploaded.title}» добавлено в медиатеку.`,
               );
             }}
-            onGenerateImage={factory.explainImageGeneration}
             onUseMedia={factory.useMedia}
+            onToggleSourceMedia={factory.toggleSourceMedia}
+            onAddSourceMedia={factory.addSourceMedia}
+            selectedSourceMediaIds={factory.selectedSourceMediaIds}
+            selectingSourceMedia={factory.selectingSourceMedia}
             selectedMediaId={
               factory.mediaTargetChannel
                 ? factory.activeVariant.channelImageIds[

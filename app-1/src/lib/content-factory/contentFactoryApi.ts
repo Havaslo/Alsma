@@ -10,6 +10,7 @@ import type {
 import type {
   ContentFactoryDraftSnapshot,
   ContentFactoryGuidelines,
+  ImageGenerationMode,
   SavedContentFactoryDraft,
   TextRefinementAction,
   UploadedContentFactoryMedia,
@@ -72,6 +73,29 @@ const photoBlobToBase64 = async (photo: Blob) => {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768));
   }
   return btoa(binary);
+};
+
+const prepareReferencePhotos = async (references: FactoryMediaItem[]) => {
+  const photos = await Promise.all(
+    references.map(async (reference) => ({
+      reference,
+      photo: await prepareReferencePhoto(reference),
+    })),
+  );
+  const totalSize = photos.reduce((sum, item) => sum + item.photo.size, 0);
+  if (totalSize > 7.5 * 1_024 * 1_024) {
+    throw new Error(
+      "Исходные фото вместе занимают слишком много места. Оставьте не более четырёх небольших изображений.",
+    );
+  }
+  return Promise.all(
+    photos.map(async ({ photo, reference }) => ({
+      imageBase64: await photoBlobToBase64(photo),
+      sourceTitle: reference.title,
+      sourceCategory: reference.category,
+      sourceTags: reference.tags,
+    })),
+  );
 };
 
 export const loadContentFactoryGuidelines = async (signal?: AbortSignal) => {
@@ -189,17 +213,19 @@ export const refineContentFactoryText = async (input: {
 
 export const generateContentFactoryImage = async (input: {
   imageCount: number;
+  mode: ImageGenerationMode;
   prompt: string;
   postText: string;
   selectedChannels: ContentChannel[];
-  reference: FactoryMediaItem;
+  references: FactoryMediaItem[];
 }) => {
-  const referencePhoto = await prepareReferencePhoto(input.reference);
-  if (referencePhoto.size > 6 * 1_024 * 1_024) {
-    throw new Error(
-      "Фото после подготовки превышает 6 МБ. Выберите изображение поменьше.",
-    );
+  if (input.mode === "edit" && !input.references.length) {
+    throw new Error("Для редактирования выберите хотя бы одно исходное фото.");
   }
+  const referencePhotos =
+    input.mode === "edit"
+      ? await prepareReferencePhotos(input.references.slice(0, 4))
+      : [];
   const response = await apiClient.post<{
     jobId: string;
     status: "pending";
@@ -207,13 +233,11 @@ export const generateContentFactoryImage = async (input: {
     "/admin/content-factory/generate/image",
     {
       prompt: input.prompt,
+      mode: input.mode,
       postText: input.postText,
       selectedChannels: input.selectedChannels,
       imageCount: input.imageCount,
-      referencePhotoBase64: await photoBlobToBase64(referencePhoto),
-      sourceTitle: input.reference.title,
-      sourceCategory: input.reference.category,
-      sourceTags: input.reference.tags,
+      referencePhotos,
     },
     {
       headers: headers(),

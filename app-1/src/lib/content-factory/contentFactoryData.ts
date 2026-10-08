@@ -120,12 +120,21 @@ export interface DraftVariant {
   title: string;
   concept: string;
   text: string;
+  /** Original inputs used as AI references; falls back to imageId for older drafts. */
+  sourceImageIds?: string[];
   imageId: string;
   channelImageIds: Record<ContentChannel, string>;
   /** Optional for compatibility with drafts saved before multi-image support. */
   channelImageGalleryIds?: Record<ContentChannel, string[]>;
   adaptations: Record<ContentChannel, string>;
 }
+
+export const getDraftVariantSourceImageIds = (variant: DraftVariant) => {
+  if (variant.sourceImageIds !== undefined) {
+    return [...new Set(variant.sourceImageIds.filter(Boolean))];
+  }
+  return variant.imageId ? [variant.imageId] : [];
+};
 
 export const getDraftVariantImageIds = (
   variant: DraftVariant,

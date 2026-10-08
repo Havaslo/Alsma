@@ -19,6 +19,7 @@ import {
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
+  ImageGenerationMode,
   SavedContentFactoryDraft,
   TextRefinementAction,
   UploadedContentFactoryMedia,
@@ -155,10 +156,11 @@ export const useContentFactoryPersistence = () => {
     }) => refineTextMutation.mutateAsync(input),
     generateImage: (input: {
       imageCount: number;
+      mode: ImageGenerationMode;
       prompt: string;
       postText: string;
       selectedChannels: ContentChannel[];
-      reference: (typeof mediaItems)[number];
+      references: (typeof mediaItems)[number][];
     }) => generateImageMutation.mutateAsync(input),
   };
 };

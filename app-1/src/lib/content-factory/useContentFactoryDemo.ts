@@ -9,6 +9,7 @@ import {
   MEDIA_ITEMS,
   type PlanPublication,
   getDraftVariantImageIds,
+  getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
@@ -29,6 +30,10 @@ export const useContentFactoryDemo = (
   const [activeChannel, setActiveChannel] = useState<ContentChannel>("vk");
   const [mediaTargetChannel, setMediaTargetChannel] =
     useState<ContentChannel | null>(null);
+  const [selectingSourceMedia, setSelectingSourceMedia] = useState(false);
+  const [selectedSourceMediaIds, setSelectedSourceMediaIds] = useState<
+    string[]
+  >([]);
   const [selectedChannels, setSelectedChannels] = useState<ContentChannel[]>([
     "vk",
     "telegram",
@@ -131,12 +136,77 @@ export const useContentFactoryDemo = (
 
   const browseMainImage = () => {
     setMediaTargetChannel(null);
+    setSelectedSourceMediaIds(getDraftVariantSourceImageIds(activeVariant));
+    setSelectingSourceMedia(true);
     setActiveSection("media");
   };
 
   const browseChannelImage = (channel: ContentChannel) => {
     setMediaTargetChannel(channel);
+    setSelectingSourceMedia(false);
     setActiveSection("media");
+  };
+
+  const toggleSourceMedia = (mediaId: string) => {
+    setSelectedSourceMediaIds((current) => {
+      if (current.includes(mediaId)) {
+        return current.filter((id) => id !== mediaId);
+      }
+      return [...current, mediaId];
+    });
+  };
+
+  const addSourceMedia = () => {
+    const nextSourceIds = [...new Set(selectedSourceMediaIds)];
+    if (!nextSourceIds.length) return;
+    updateCurrentVariant((variant) => {
+      const currentSourceIds = getDraftVariantSourceImageIds(variant);
+      const newSourceIds = nextSourceIds.filter(
+        (id) => !currentSourceIds.includes(id),
+      );
+      const sourceImageIds = [
+        ...new Set([...currentSourceIds, ...nextSourceIds]),
+      ];
+      return {
+        ...variant,
+        imageId:
+          newSourceIds.at(-1) ?? variant.imageId ?? nextSourceIds[0] ?? "",
+        sourceImageIds,
+      };
+    });
+    setSelectingSourceMedia(false);
+    setActiveSection("create");
+    setNotice(`К исходным материалам добавлено фото: ${nextSourceIds.length}.`);
+  };
+
+  const removeSourceMedia = (mediaId: string) => {
+    updateCurrentVariant((variant) => {
+      const current = getDraftVariantSourceImageIds(variant);
+      const sourceImageIds = current.filter((id) => id !== mediaId);
+      return {
+        ...variant,
+        imageId:
+          variant.imageId === mediaId
+            ? (sourceImageIds[0] ?? "")
+            : variant.imageId,
+        sourceImageIds,
+      };
+    });
+  };
+
+  const setPrimarySourceMedia = (mediaId: string) => {
+    updateCurrentVariant((variant) => {
+      const sourceImageIds = getDraftVariantSourceImageIds(variant);
+      if (!sourceImageIds.includes(mediaId)) return variant;
+      return {
+        ...variant,
+        imageId: mediaId,
+        sourceImageIds: [
+          mediaId,
+          ...sourceImageIds.filter((id) => id !== mediaId),
+        ],
+      };
+    });
   };
 
   const installGeneratedVariants = (nextVariants: DraftVariant[]) => {
@@ -172,6 +242,7 @@ export const useContentFactoryDemo = (
                 ...variant,
                 channelImageGalleryIds,
                 imageId: image.id,
+                sourceImageIds: [image.id],
                 channelImageIds,
               }
             : variant,
@@ -202,11 +273,6 @@ export const useContentFactoryDemo = (
     variants,
   });
 
-  const explainImageGeneration = () =>
-    setNotice(
-      "Чтобы создать изображение по тексту поста, откройте «Создание». Дополнительный промт можно оставить пустым; форматы будут подготовлены для всех выбранных площадок.",
-    );
-
   return {
     activeChannel,
     activeSection,
@@ -214,7 +280,6 @@ export const useContentFactoryDemo = (
     browseChannelImage,
     browseMainImage,
     currentDraftId,
-    explainImageGeneration,
     getDraftSnapshot,
     installGeneratedVariants,
     notice,
@@ -224,6 +289,8 @@ export const useContentFactoryDemo = (
     selectVariant,
     selectedChannels,
     mediaTargetChannel,
+    selectingSourceMedia,
+    selectedSourceMediaIds,
     setCurrentDraftId,
     setActiveChannel,
     setActiveSection,
@@ -232,6 +299,10 @@ export const useContentFactoryDemo = (
     setSelectedChannels,
     setVariantIndex,
     toggleChannel,
+    toggleSourceMedia,
+    addSourceMedia,
+    removeSourceMedia,
+    setPrimarySourceMedia,
     updateAdaptation,
     updateCurrentVariant,
     useMedia,

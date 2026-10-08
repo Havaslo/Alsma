@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 
-import { Check, ImagePlus, Search, Sparkles, Upload } from "lucide-react";
+import { Check, ImagePlus, Search, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -16,8 +16,11 @@ export const MediaLibraryPanel = ({
   onRefreshMedia,
   onUploadMedia,
   selectedMediaId,
+  selectedSourceMediaIds,
+  selectingSourceMedia,
   onUseMedia,
-  onGenerateImage,
+  onToggleSourceMedia,
+  onAddSourceMedia,
 }: {
   isLoadingMedia: boolean;
   isUploadingMedia: boolean;
@@ -26,8 +29,11 @@ export const MediaLibraryPanel = ({
   onRefreshMedia: () => void;
   onUploadMedia: (file: File) => Promise<unknown>;
   selectedMediaId: string;
+  selectedSourceMediaIds: string[];
+  selectingSourceMedia: boolean;
   onUseMedia: (mediaId: string) => void;
-  onGenerateImage: () => void;
+  onToggleSourceMedia: (mediaId: string) => void;
+  onAddSourceMedia: () => void;
 }) => {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Все материалы");
@@ -56,22 +62,29 @@ export const MediaLibraryPanel = ({
     });
   }, [category, mediaItems, query]);
 
-  const uploadFile = async (file?: File) => {
-    if (!file) return;
+  const uploadFiles = async (files?: FileList) => {
+    if (!files?.length) return;
+    const selectedFiles = Array.from(files);
     setUploadError("");
-    if (file.size > 50 * 1_024 * 1_024) {
-      setUploadError("Размер изображения не должен превышать 50 МБ.");
-      return;
-    }
     try {
-      await onUploadMedia(file);
-    } catch (error) {
-      setUploadError(
-        contentFactoryErrorMessage(
-          error,
-          "Не удалось загрузить изображение. Попробуйте ещё раз.",
-        ),
-      );
+      for (const file of selectedFiles) {
+        if (file.size > 50 * 1_024 * 1_024) {
+          setUploadError(
+            `«${file.name}» пропущен: размер изображения не должен превышать 50 МБ.`,
+          );
+          continue;
+        }
+        try {
+          await onUploadMedia(file);
+        } catch (error) {
+          setUploadError(
+            contentFactoryErrorMessage(
+              error,
+              `Не удалось загрузить «${file.name}». Попробуйте ещё раз.`,
+            ),
+          );
+        }
+      }
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -95,7 +108,10 @@ export const MediaLibraryPanel = ({
           <input
             accept="image/jpeg,image/png,image/webp,image/gif"
             className="sr-only"
-            onChange={(event) => void uploadFile(event.target.files?.[0])}
+            multiple
+            onChange={(event) =>
+              void uploadFiles(event.target.files ?? undefined)
+            }
             ref={fileInputRef}
             tabIndex={-1}
             type="file"
@@ -109,19 +125,25 @@ export const MediaLibraryPanel = ({
             <Upload className="size-4" />
             {isUploadingMedia ? "Загружаем…" : "Загрузить фото"}
           </Button>
-          <Button
-            className="min-h-11 shrink-0 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
-            onClick={onGenerateImage}
-            type="button"
-          >
-            <Sparkles className="size-4" /> Сгенерировать изображение
-          </Button>
+          {selectingSourceMedia && (
+            <Button
+              className="min-h-11 shrink-0 rounded-xl bg-slate-900 text-white hover:bg-slate-800"
+              disabled={!selectedSourceMediaIds.length}
+              onClick={onAddSourceMedia}
+              type="button"
+            >
+              Добавить выбранные ({selectedSourceMediaIds.length})
+            </Button>
+          )}
         </div>
       </section>
 
       <div aria-live="polite" className="space-y-2">
         <p className="text-xs text-muted-ui-foreground">
-          Поддерживаются JPG, PNG, WebP и GIF — до 50 МБ на изображение.
+          Можно загрузить несколько фото за раз. Поддерживаются JPG, PNG, WebP и
+          GIF — до 50 МБ на изображение.
+          {selectingSourceMedia &&
+            " Выберите изображения и подтвердите добавление."}
         </p>
         {(uploadError || mediaError) && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800">
@@ -180,7 +202,13 @@ export const MediaLibraryPanel = ({
       {filteredItems.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filteredItems.map((item) => {
-            const selected = selectedMediaId === item.id;
+            const selected = selectingSourceMedia
+              ? selectedSourceMediaIds.includes(item.id)
+              : selectedMediaId === item.id;
+            const handleSelect = () =>
+              selectingSourceMedia
+                ? onToggleSourceMedia(item.id)
+                : onUseMedia(item.id);
             return (
               <article
                 className={cn(
@@ -195,7 +223,7 @@ export const MediaLibraryPanel = ({
                   aria-label={`Выбрать изображение: ${item.title}`}
                   aria-pressed={selected}
                   className="relative block aspect-[4/3] w-full overflow-hidden bg-muted-ui/50"
-                  onClick={() => onUseMedia(item.id)}
+                  onClick={handleSelect}
                   type="button"
                 >
                   <img
@@ -238,12 +266,16 @@ export const MediaLibraryPanel = ({
                         ? "bg-brand text-white hover:bg-brand/90"
                         : "bg-brand-foreground text-page-foreground ring-1 ring-slate-200 hover:bg-page",
                     )}
-                    onClick={() => onUseMedia(item.id)}
+                    onClick={handleSelect}
                     type="button"
                   >
-                    {selected
-                      ? "Выбрано · использовать"
-                      : "Создать публикацию с фото"}
+                    {selectingSourceMedia
+                      ? selected
+                        ? "Убрать из выбора"
+                        : "Добавить к исходным фото"
+                      : selected
+                        ? "Выбрано · использовать"
+                        : "Создать публикацию с фото"}
                   </Button>
                 </div>
               </article>

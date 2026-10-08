@@ -6,6 +6,7 @@ import type {
 
 export type DraftAction = "shorter" | "regenerate" | "sales" | "calmer";
 export type TextRefinementAction = DraftAction | "custom";
+export type ImageGenerationMode = "edit" | "generate";
 
 export type WorkspaceSection = "create" | "plan" | "media" | "history";
 

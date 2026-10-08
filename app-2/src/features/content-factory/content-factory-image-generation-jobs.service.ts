@@ -19,6 +19,16 @@ const contentChannelSchema = z.enum([
   "zen",
 ]);
 
+const storedReferencePhotosSchema = z.array(
+  z.object({
+    contentType: z.literal("image/jpeg"),
+    objectId: z.string().min(1),
+    sourceCategory: z.string(),
+    sourceTags: z.array(z.string()),
+    sourceTitle: z.string(),
+  }),
+);
+
 const generationResultSchema = z.object({
   assets: z.array(
     z.object({
@@ -59,7 +69,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
   };
 
   const processJob = async (jobId: string) => {
-    let sourceObjectId = "";
+    let sourceObjectIds: string[] = [];
     let generatedAssets: Awaited<
       ReturnType<ContentFactoryAiService["generateImage"]>
     >["assets"] = [];
@@ -69,15 +79,42 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       if (claim.count === 0) return;
       const job = await repository.findImageGenerationJob(jobId);
       if (!job) return;
-      sourceObjectId = job.referencePhotoObjectId;
-
-      const download = await options.managedStorage.getDownload(sourceObjectId);
-      const sourceResponse = await fetchImplementation(download.downloadUrl);
-      if (!sourceResponse.ok) {
-        throw new Error("Temporary source photo could not be downloaded.");
-      }
-      const sourcePhoto = Buffer.from(await sourceResponse.arrayBuffer());
-      assertReferencePhoto(sourcePhoto, "image/jpeg");
+      const storedReferences = storedReferencePhotosSchema.safeParse(
+        job.referencePhotos,
+      );
+      const referencePhotos = storedReferences.success
+        ? storedReferences.data
+        : [];
+      const sourcePhotos = referencePhotos.length
+        ? referencePhotos
+        : job.referencePhotoObjectId
+          ? [
+              {
+                contentType: "image/jpeg" as const,
+                objectId: job.referencePhotoObjectId,
+                sourceCategory: job.sourceCategory,
+                sourceTags: job.sourceTags,
+                sourceTitle: job.sourceTitle,
+              },
+            ]
+          : [];
+      sourceObjectIds = sourcePhotos.map((photo) => photo.objectId);
+      const sourceImages = await Promise.all(
+        sourcePhotos.map(async (photo) => {
+          const download = await options.managedStorage.getDownload(
+            photo.objectId,
+          );
+          const sourceResponse = await fetchImplementation(
+            download.downloadUrl,
+          );
+          if (!sourceResponse.ok) {
+            throw new Error("Temporary source photo could not be downloaded.");
+          }
+          const content = Buffer.from(await sourceResponse.arrayBuffer());
+          assertReferencePhoto(content, photo.contentType);
+          return { ...photo, content };
+        }),
+      );
       const selectedChannels = z
         .array(contentChannelSchema)
         .min(1)
@@ -88,14 +125,11 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       const result = await options.ai.generateImage({
         adminId: job.createdById,
         imageCount,
+        mode: job.mode === "generate" ? "generate" : "edit",
         postText: job.postText,
         prompt: job.prompt,
         selectedChannels,
-        sourceTitle: job.sourceTitle,
-        sourceCategory: job.sourceCategory,
-        sourceTags: job.sourceTags,
-        referencePhoto: sourcePhoto,
-        referencePhotoContentType: "image/jpeg",
+        referencePhotos: sourceImages,
       });
       generatedAssets = result.assets;
       const persistedResult = {
@@ -109,6 +143,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       await repository.updateImageGenerationJob(jobId, {
         errorMessage: null,
         referencePhotoObjectId: "",
+        referencePhotos: [],
         result: persistedResult,
         status: "completed",
       });
@@ -135,6 +170,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
         .updateImageGenerationJob(jobId, {
           errorMessage: imageGenerationErrorMessage(error),
           referencePhotoObjectId: "",
+          referencePhotos: [],
           status: "failed",
         })
         .catch((updateError: unknown) => {
@@ -150,7 +186,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
           );
         });
     } finally {
-      await removeObject(sourceObjectId);
+      await Promise.all(sourceObjectIds.map(removeObject));
     }
   };
 
@@ -164,29 +200,50 @@ export const createContentFactoryImageGenerationJobsService = (options: {
     adminId: string,
     input: ContentFactoryImageGenerationBody,
   ) => {
-    const referencePhoto = Buffer.from(input.referencePhotoBase64, "base64");
-    assertReferencePhoto(referencePhoto, "image/jpeg");
-    const upload = await options.managedStorage.upload({
-      content: Uint8Array.from(referencePhoto),
-      contentType: "image/jpeg",
-      name: `content-factory-reference-${Date.now()}.jpg`,
-    });
+    const uploadedReferences: Array<{
+      contentType: "image/jpeg";
+      objectId: string;
+      sourceCategory: string;
+      sourceTags: string[];
+      sourceTitle: string;
+    }> = [];
     try {
+      for (const [index, photo] of input.referencePhotos.entries()) {
+        const content = Buffer.from(photo.imageBase64, "base64");
+        assertReferencePhoto(content, "image/jpeg");
+        const upload = await options.managedStorage.upload({
+          content: Uint8Array.from(content),
+          contentType: "image/jpeg",
+          name: `content-factory-reference-${Date.now()}-${index + 1}.jpg`,
+        });
+        uploadedReferences.push({
+          contentType: "image/jpeg",
+          objectId: upload.objectId,
+          sourceCategory: photo.sourceCategory,
+          sourceTags: photo.sourceTags,
+          sourceTitle: photo.sourceTitle,
+        });
+      }
       const job = await repository.createImageGenerationJob({
         createdById: adminId,
         imageCount: input.imageCount,
+        mode: input.mode,
         postText: input.postText,
         prompt: input.prompt,
-        referencePhotoObjectId: upload.objectId,
+        referencePhotoObjectId: uploadedReferences[0]?.objectId ?? "",
+        referencePhotos: uploadedReferences,
         selectedChannels: input.selectedChannels,
-        sourceCategory: input.sourceCategory,
-        sourceTags: input.sourceTags,
-        sourceTitle: input.sourceTitle,
+        sourceCategory:
+          input.referencePhotos[0]?.sourceCategory ?? "Новая генерация",
+        sourceTags: input.referencePhotos[0]?.sourceTags ?? [],
+        sourceTitle: input.referencePhotos[0]?.sourceTitle ?? "Новая генерация",
       });
       scheduleJob(job.id);
       return { jobId: job.id, status: "pending" as const };
     } catch (error) {
-      await removeObject(upload.objectId);
+      await Promise.all(
+        uploadedReferences.map((photo) => removeObject(photo.objectId)),
+      );
       throw error;
     }
   };
@@ -210,14 +267,22 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       job.status === "processing" &&
       Date.now() - job.updatedAt.getTime() > staleJobMilliseconds
     ) {
-      const sourceObjectId = job.referencePhotoObjectId;
+      const parsedReferences = storedReferencePhotosSchema.safeParse(
+        job.referencePhotos,
+      );
+      const sourceObjectIds = parsedReferences.success
+        ? parsedReferences.data.map((photo) => photo.objectId)
+        : job.referencePhotoObjectId
+          ? [job.referencePhotoObjectId]
+          : [];
       job = await repository.updateImageGenerationJob(jobId, {
         errorMessage:
           "Задача прервалась до получения результата. Запустите генерацию ещё раз.",
         referencePhotoObjectId: "",
+        referencePhotos: [],
         status: "failed",
       });
-      await removeObject(sourceObjectId);
+      await Promise.all(sourceObjectIds.map(removeObject));
     }
 
     if (job.status === "completed") {

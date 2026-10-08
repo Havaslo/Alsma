@@ -175,43 +175,67 @@ export const createContentFactoryAiService = (options: {
     return payload;
   };
 
-  const requestImageEdit = async (input: {
-    readonly content: Buffer;
-    readonly contentType: string;
-    readonly fileName: string;
+  const requestImage = async (input: {
+    readonly images: readonly {
+      readonly content: Buffer;
+      readonly contentType: string;
+      readonly fileName: string;
+    }[];
     readonly imageCount: number;
     readonly prompt: string;
     readonly size: string;
   }): Promise<unknown> => {
     if (!apiKey || !baseUrl) throw gatewayUnavailableError();
-    const form = new FormData();
-    form.set("model", contentFactoryModels.image);
-    form.set("n", String(input.imageCount));
-    form.set("output_format", "png");
-    form.set("prompt", input.prompt);
-    form.set("quality", "medium");
-    form.set("size", input.size);
-    form.set(
-      "image",
-      new Blob([Uint8Array.from(input.content)], { type: input.contentType }),
-      getStorageFileName(input.fileName),
-    );
+    const isEditing = input.images.length > 0;
+    const form = isEditing ? new FormData() : null;
+    if (form) {
+      form.set("model", contentFactoryModels.image);
+      form.set("n", String(input.imageCount));
+      form.set("output_format", "png");
+      form.set("prompt", input.prompt);
+      form.set("quality", "medium");
+      form.set("size", input.size);
+      for (const image of input.images) {
+        form.append(
+          "image[]",
+          new Blob([Uint8Array.from(image.content)], {
+            type: image.contentType,
+          }),
+          getStorageFileName(image.fileName),
+        );
+      }
+    }
 
     let response: Response;
     try {
-      response = await fetchImplementation(`${baseUrl}/images/edits`, {
-        body: form,
-        headers: { Authorization: `Bearer ${apiKey}` },
-        method: "POST",
-        signal: AbortSignal.timeout(180_000),
-      });
+      response = await fetchImplementation(
+        `${baseUrl}/images/${isEditing ? "edits" : "generations"}`,
+        {
+          body: form
+            ? form
+            : JSON.stringify({
+                model: contentFactoryModels.image,
+                n: input.imageCount,
+                output_format: "png",
+                prompt: input.prompt,
+                quality: "medium",
+                size: input.size,
+              }),
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            ...(form ? {} : { "Content-Type": "application/json" }),
+          },
+          method: "POST",
+          signal: AbortSignal.timeout(180_000),
+        },
+      );
     } catch (error) {
       options.logger.warn(
         {
           errorName: error instanceof Error ? error.name : "UnknownError",
           gatewayStage: "content_factory_image",
         },
-        "Content factory AI Gateway image edit could not be completed",
+        "Content factory AI Gateway image request could not be completed",
       );
       throw new HttpError(
         503,
@@ -230,14 +254,14 @@ export const createContentFactoryAiService = (options: {
           gatewayStage: failure.stage ?? "content_factory_image",
           gatewayStatus: response.status,
         },
-        "Content factory AI Gateway image edit failed",
+        "Content factory AI Gateway image request failed",
       );
       throw new HttpError(
         response.status === 429 ? 503 : 502,
         "CONTENT_FACTORY_AI_REQUEST_FAILED",
         response.status === 429
           ? "AI-сервис временно занят. Повторите запрос немного позже."
-          : "AI-сервис не смог обработать выбранное фото. Проверьте промт и попробуйте ещё раз.",
+          : "AI-сервис не смог создать или обработать изображение. Проверьте промт и попробуйте ещё раз.",
         {
           gatewayCode: failure.code,
           requestId: failure.requestId,
@@ -252,7 +276,7 @@ export const createContentFactoryAiService = (options: {
     database: options.database,
     logger: options.logger,
     managedStorage: options.managedStorage,
-    requestImageEdit,
+    requestImage,
   });
 
   return {

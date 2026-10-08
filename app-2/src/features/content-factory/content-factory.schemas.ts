@@ -112,24 +112,100 @@ export const contentFactoryTextRefinementBodySchema = z.object({
   ...sourcePhotoQueryFields,
 });
 
-export const contentFactoryImageGenerationBodySchema = z.object({
-  imageCount: z.number().int().min(1).max(4).default(1),
-  prompt: z.string().trim().max(2_000).default(""),
-  postText: z.string().trim().min(1).max(20_000),
-  selectedChannels: z
-    .array(contentChannelSchema)
-    .min(1)
-    .max(5)
-    .refine((channels) => new Set(channels).size === channels.length),
-  referencePhotoBase64: z
+const contentFactoryImageSourceSchema = z.object({
+  imageBase64: z
     .string()
     .min(1)
-    .max(8_500_000)
+    .max(10_000_000)
     .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u),
-  sourceTitle: z.string().trim().min(1).max(255),
   sourceCategory: z.string().trim().min(1).max(120),
   sourceTags: z.array(z.string().trim().min(1).max(80)).max(20),
+  sourceTitle: z.string().trim().min(1).max(255),
 });
+
+export const contentFactoryImageGenerationBodySchema = z
+  .object({
+    imageCount: z.number().int().min(1).max(4).default(1),
+    mode: z.enum(["edit", "generate"]).default("edit"),
+    prompt: z.string().trim().max(2_000).default(""),
+    postText: z.string().trim().min(1).max(20_000),
+    selectedChannels: z
+      .array(contentChannelSchema)
+      .min(1)
+      .max(5)
+      .refine((channels) => new Set(channels).size === channels.length),
+    referencePhotos: z.array(contentFactoryImageSourceSchema).max(4).optional(),
+    // Keep the one-photo request shape accepted while older previews are still open.
+    referencePhotoBase64: z
+      .string()
+      .min(1)
+      .max(8_500_000)
+      .regex(
+        /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u,
+      )
+      .optional(),
+    sourceTitle: z.string().trim().min(1).max(255).optional(),
+    sourceCategory: z.string().trim().min(1).max(120).optional(),
+    sourceTags: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  })
+  .superRefine((input, context) => {
+    const legacyPhoto = input.referencePhotoBase64
+      ? [input.referencePhotoBase64]
+      : [];
+    const encodedPhotos =
+      input.referencePhotos?.map((photo) => photo.imageBase64) ?? legacyPhoto;
+    if (input.mode === "edit" && encodedPhotos.length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["referencePhotos"],
+        message: "Для редактирования добавьте хотя бы одно исходное фото.",
+      });
+    }
+    const encodedSize = encodedPhotos.reduce(
+      (total, photo) => total + photo.length,
+      0,
+    );
+    if (encodedSize > 10_700_000) {
+      context.addIssue({
+        code: "custom",
+        path: ["referencePhotos"],
+        message: "Общий размер исходных фото слишком велик для одного запроса.",
+      });
+    }
+    if (
+      input.referencePhotoBase64 &&
+      (!input.sourceTitle || !input.sourceCategory || !input.sourceTags)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["referencePhotoBase64"],
+        message: "Для исходного фото нужно передать его описание.",
+      });
+    }
+  })
+  .transform(
+    ({
+      referencePhotoBase64,
+      sourceTitle,
+      sourceCategory,
+      sourceTags,
+      ...input
+    }) => ({
+      ...input,
+      referencePhotos:
+        input.referencePhotos ??
+        (referencePhotoBase64 && sourceTitle && sourceCategory && sourceTags
+          ? [
+              {
+                imageBase64: referencePhotoBase64,
+                sourceTitle,
+                sourceCategory,
+                sourceTags,
+              },
+            ]
+          : []),
+    }),
+  );
 
 export type ContentFactoryDraftBody = z.infer<
   typeof contentFactoryDraftBodySchema

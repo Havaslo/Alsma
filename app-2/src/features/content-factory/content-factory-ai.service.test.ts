@@ -98,6 +98,7 @@ test("generates three structured draft variants through the Gateway", async () =
 
 test("generates and stores each requested image for every selected channel format", async () => {
   const png = createReferencePhoto();
+  const secondPng = createReferencePhoto();
   const storedContentTypes: string[] = [];
   const storedDimensions: Array<{ height: number; width: number }> = [];
   const createdMedia: Array<Record<string, unknown>> = [];
@@ -149,14 +150,26 @@ test("generates and stores each requested image for every selected channel forma
   const result = await service.generateImage({
     adminId: "admin-id",
     imageCount: 2,
+    mode: "edit",
     postText: "Время для спокойного отдыха в загородном отеле",
     prompt: "Мягкий утренний свет",
     selectedChannels: ["instagram", "vk", "telegram", "max", "zen"],
-    sourceTitle: "Номер для спокойного отдыха",
-    sourceCategory: "Номера",
-    sourceTags: ["интерьер", "комфорт"],
-    referencePhoto: png,
-    referencePhotoContentType: "image/png",
+    referencePhotos: [
+      {
+        content: png,
+        contentType: "image/png",
+        sourceTitle: "Номер для спокойного отдыха",
+        sourceCategory: "Номера",
+        sourceTags: ["интерьер", "комфорт"],
+      },
+      {
+        content: secondPng,
+        contentType: "image/png",
+        sourceTitle: "Тёплая вода и тишина",
+        sourceCategory: "SPA",
+        sourceTags: ["бассейн", "релакс"],
+      },
+    ],
   });
 
   assert.equal(requestedPath, "https://gateway.example/v1/images/edits");
@@ -165,6 +178,7 @@ test("generates and stores each requested image for every selected channel forma
   assert.equal(formValues.get("quality"), "medium");
   assert.equal(formValues.get("n"), "2");
   assert.equal(formValues.get("size"), "1536x1024");
+  assert.equal(formValues.getAll("image[]").length, 2);
   assert.match(String(formValues.get("prompt")), /Смысл текста публикации/u);
   assert.match(
     String(formValues.get("prompt")),
@@ -175,6 +189,7 @@ test("generates and stores each requested image for every selected channel forma
     String(formValues.get("prompt")),
     /Номер для спокойного отдыха/u,
   );
+  assert.match(String(formValues.get("prompt")), /Тёплая вода и тишина/u);
   assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
@@ -203,6 +218,52 @@ test("generates and stores each requested image for every selected channel forma
   assert.deepEqual(portrait?.channels, ["instagram", "vk"]);
   assert.deepEqual(square?.channels, ["telegram", "max"]);
   assert.deepEqual(landscape?.channels, ["zen"]);
+});
+
+test("generates new images from text without requiring source photos", async () => {
+  const generatedPng = createReferencePhoto();
+  let requestPath = "";
+  let requestBody: Record<string, unknown> = {};
+  const service = createContentFactoryAiService({
+    apiKey: "gateway-test-key",
+    baseUrl: "https://gateway.example/v1",
+    database: {
+      client: {
+        contentFactoryMedia: {
+          create: async ({ data }: { data: Record<string, unknown> }) => ({
+            ...data,
+            createdAt: new Date(),
+            id: "generated-from-text",
+          }),
+        },
+      },
+    } as unknown as Database,
+    fetchImplementation: async (url, init) => {
+      requestPath = String(url);
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return Response.json({
+        data: [{ b64_json: generatedPng.toString("base64") }],
+      });
+    },
+    logger,
+    managedStorage: emptyStorage,
+  });
+
+  const result = await service.generateImage({
+    adminId: "admin-id",
+    imageCount: 1,
+    mode: "generate",
+    postText: "Спокойный день в SPA",
+    prompt: "Тёплый свет",
+    referencePhotos: [],
+    selectedChannels: ["telegram"],
+  });
+
+  assert.equal(requestPath, "https://gateway.example/v1/images/generations");
+  assert.equal(requestBody.model, "gpt-image-1.5");
+  assert.equal(requestBody.n, 1);
+  assert.match(String(requestBody.prompt), /Исходные фото не приложены/u);
+  assert.equal(result.assets.length, 1);
 });
 
 test("does not call the provider when the Gateway is not configured", async () => {
@@ -308,14 +369,19 @@ test("rejects a source photo with a mismatched content type before Gateway use",
     service.generateImage({
       adminId: "admin-id",
       imageCount: 1,
+      mode: "edit",
       postText: "Текст публикации",
       prompt: "Оставить как есть",
       selectedChannels: ["vk"],
-      sourceTitle: "Фото",
-      sourceCategory: "SPA",
-      sourceTags: [],
-      referencePhoto: Buffer.from("not-an-image"),
-      referencePhotoContentType: "image/jpeg",
+      referencePhotos: [
+        {
+          content: Buffer.from("not-an-image"),
+          contentType: "image/jpeg",
+          sourceTitle: "Фото",
+          sourceCategory: "SPA",
+          sourceTags: [],
+        },
+      ],
     }),
     (error: unknown) =>
       error instanceof Error &&
