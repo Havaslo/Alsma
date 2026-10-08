@@ -44,6 +44,7 @@ const toMediaAsset = (media: {
   subtitle: formatFileSize(media.sizeBytes),
   title: media.fileName,
   tags: [],
+  origin: media.fileName.startsWith("AI · ") ? "generated" : "uploaded",
 });
 
 export const createListContentFactoryDraftsHandler =
@@ -151,6 +152,13 @@ export const createGenerateContentFactoryTextHandler =
       referencePhotoContentType:
         request.headers["content-type"]?.split(";")[0] ?? "",
     });
+    response.json(result);
+  };
+
+export const createGenerateContentFactoryTaskHandler =
+  (ai: ContentFactoryAiService): RequestHandler =>
+  async (_request, response) => {
+    const result = await ai.generateText(response.locals.input.body);
     response.json(result);
   };
 

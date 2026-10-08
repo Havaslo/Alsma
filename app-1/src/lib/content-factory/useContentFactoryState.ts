@@ -11,7 +11,9 @@ import {
   getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
+  ContentFactoryBrief,
   ContentFactoryDraftSnapshot,
+  ContentFactoryImageSourceMode,
   SavedContentFactoryDraft,
   WorkspaceSection,
 } from "@/lib/content-factory/contentFactoryTypes";
@@ -20,6 +22,20 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   const [activeSection, setActiveSection] =
     useState<WorkspaceSection>("create");
   const [prompt, setPrompt] = useState("");
+  const [brief, setBrief] = useState<ContentFactoryBrief>({
+    postType: "",
+    format: "",
+    audience: "",
+    keyFacts: "",
+    callToAction: "",
+    styleGuidance: "",
+    imagePrompt: "",
+    sourceImageRecommendation: "",
+  });
+  const [imageCount, setImageCount] = useState(1);
+  const [imageSourceMode, setImageSourceMode] =
+    useState<ContentFactoryImageSourceMode>("automatic");
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [variants, setVariants] = useState([createEmptyDraftVariant()]);
   const [variantIndex, setVariantIndex] = useState(0);
   const [activeChannel, setActiveChannel] = useState<ContentChannel>("vk");
@@ -43,6 +59,17 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     setVariants((current) =>
       current.map((variant, index) =>
         index === variantIndex ? update(variant) : variant,
+      ),
+    );
+  };
+
+  const updateVariantAt = (
+    index: number,
+    update: (variant: DraftVariant) => DraftVariant,
+  ) => {
+    setVariants((current) =>
+      current.map((variant, itemIndex) =>
+        itemIndex === index ? update(variant) : variant,
       ),
     );
   };
@@ -215,10 +242,21 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     setVariants(nextVariants);
     setVariantIndex(0);
     setCurrentDraftId(null);
+    setStep(2);
   };
 
   const openPlanPost = (post: PlanPublication) => {
     setPrompt(post.title);
+    setBrief({
+      postType: post.postType ?? "",
+      format: post.format ?? "",
+      audience: post.audience ?? "",
+      keyFacts: post.keyFacts ?? "",
+      callToAction: post.callToAction ?? "",
+      styleGuidance: post.styleGuidance ?? "",
+      imagePrompt: post.imagePrompt ?? "",
+      sourceImageRecommendation: post.sourceImageRecommendation ?? "",
+    });
     setSelectedChannels(post.channels);
     setActiveChannel(post.channels[0] ?? "vk");
     const image = mediaItems.find((item) => item.id === post.imageId);
@@ -252,6 +290,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       );
     }
     setCurrentDraftId(null);
+    setStep(1);
     setNotice(`Открыт материал «${post.title}» для редактирования.`);
     setActiveSection("create");
   };
@@ -260,17 +299,35 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     setCurrentDraftId(draft.id);
     setPrompt(draft.snapshot.prompt);
     setSelectedChannels(draft.snapshot.selectedChannels);
+    setBrief(
+      draft.snapshot.brief ?? {
+        postType: "",
+        format: "",
+        audience: "",
+        keyFacts: "",
+        callToAction: "",
+        styleGuidance: "",
+        imagePrompt: "",
+        sourceImageRecommendation: "",
+      },
+    );
+    setImageCount(draft.snapshot.imageCount ?? 1);
+    setImageSourceMode(draft.snapshot.imageSourceMode ?? "automatic");
     setVariants(draft.snapshot.variants);
     setVariantIndex(
       Math.min(draft.snapshot.variantIndex, draft.snapshot.variants.length - 1),
     );
     setNotice(`Открыт черновик «${draft.title}».`);
+    setStep(2);
     setActiveSection("create");
   };
 
   const getDraftSnapshot = (): ContentFactoryDraftSnapshot => ({
     prompt,
     selectedChannels,
+    brief,
+    imageCount,
+    imageSourceMode,
     variantIndex,
     variants,
   });
@@ -279,6 +336,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     activeChannel,
     activeSection,
     activeVariant,
+    brief,
     browseChannelImage,
     browseMainImage,
     currentDraftId,
@@ -290,12 +348,19 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     prompt,
     selectVariant,
     selectedChannels,
+    imageCount,
+    imageSourceMode,
+    step,
     mediaTargetChannel,
     selectingSourceMedia,
     selectedSourceMediaIds,
     setCurrentDraftId,
     setActiveChannel,
     setActiveSection,
+    setBrief,
+    setImageCount,
+    setImageSourceMode,
+    setStep,
     setNotice,
     setPrompt,
     setSelectedChannels,
@@ -308,6 +373,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     setSourceMedia,
     updateAdaptation,
     updateCurrentVariant,
+    updateVariantAt,
     useMedia,
     variantIndex,
     variants,

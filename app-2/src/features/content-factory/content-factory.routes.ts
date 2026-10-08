@@ -15,6 +15,7 @@ import { contentFactoryGuidelinesResponse } from "./content-factory-guidelines.j
 import { createContentFactoryImageGenerationJobsService } from "./content-factory-image-generation-jobs.service.js";
 import {
   contentFactoryUploadLimit,
+  createGenerateContentFactoryTaskHandler,
   createGenerateContentFactoryTextHandler,
   createGetContentFactoryImageGenerationJobHandler,
   createListContentFactoryDraftsHandler,
@@ -29,6 +30,7 @@ import {
   contentFactoryDraftParamsSchema,
   contentFactoryImageGenerationBodySchema,
   contentFactoryImageGenerationJobParamsSchema,
+  contentFactoryTextGenerationBodySchema,
   contentFactoryTextGenerationQuerySchema,
   contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
@@ -131,6 +133,11 @@ export const createContentFactoryRouter = (
     createRetryContentPlanPostHandler(contentPlanGeneration),
   );
   router.get("/drafts", createListContentFactoryDraftsHandler(database));
+  router.post(
+    "/generate/task",
+    validateRequest({ body: contentFactoryTextGenerationBodySchema }),
+    createGenerateContentFactoryTaskHandler(ai),
+  );
   router.post(
     "/generate/text",
     raw({ limit: contentFactoryUploadLimit, type: () => true }),

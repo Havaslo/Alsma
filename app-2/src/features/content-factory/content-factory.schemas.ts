@@ -16,6 +16,19 @@ const channelTextSchema = z.object({
   zen: z.string().max(20_000),
 });
 
+const contentFactoryBriefSchema = z.object({
+  postType: z.string().trim().max(80).optional(),
+  format: z.string().trim().max(80).optional(),
+  audience: z.string().trim().max(500).optional(),
+  keyFacts: z.string().trim().max(2_000).optional(),
+  callToAction: z.string().trim().max(500).optional(),
+  styleGuidance: z.string().trim().max(1_000).optional(),
+  imagePrompt: z.string().trim().max(2_000).optional(),
+  sourceImageRecommendation: z.string().trim().max(500).optional(),
+});
+
+const imageSourceModeSchema = z.enum(["automatic", "library", "generate"]);
+
 const draftVariantSchema = z.object({
   id: z.string().trim().min(1).max(120),
   label: z.string().trim().min(1).max(120),
@@ -60,6 +73,9 @@ export const contentFactoryDraftBodySchema = z.object({
       .refine((channels) => new Set(channels).size === channels.length),
     variantIndex: z.number().int().min(0).max(9),
     variants: z.array(draftVariantSchema).min(1).max(10),
+    brief: contentFactoryBriefSchema.optional(),
+    imageCount: z.number().int().min(0).max(4).optional(),
+    imageSourceMode: imageSourceModeSchema.optional(),
   }),
 });
 
@@ -103,23 +119,52 @@ export const contentFactoryTextGenerationQuerySchema = z.object({
   ...sourcePhotoQueryFields,
 });
 
-export const contentFactoryTextRefinementBodySchema = z.object({
-  action: z.enum(["shorter", "regenerate", "sales", "calmer", "custom"]),
-  currentText: z.string().trim().min(1).max(20_000),
-  customInstruction: z.string().trim().max(2_000).optional(),
+export const contentFactoryTextGenerationBodySchema = z.object({
   prompt: z.string().trim().min(1).max(4_000),
-  referencePhotoBase64: z
-    .string()
-    .min(1)
-    .max(10_000_000)
-    .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u),
   selectedChannels: z
     .array(contentChannelSchema)
     .min(1)
     .max(5)
     .refine((channels) => new Set(channels).size === channels.length),
-  ...sourcePhotoBodyFields,
+  brief: contentFactoryBriefSchema.optional(),
 });
+
+export const contentFactoryTextRefinementBodySchema = z
+  .object({
+    action: z.enum(["shorter", "regenerate", "sales", "calmer", "custom"]),
+    currentText: z.string().trim().min(1).max(20_000),
+    customInstruction: z.string().trim().max(2_000).optional(),
+    prompt: z.string().trim().min(1).max(4_000),
+    brief: contentFactoryBriefSchema.optional(),
+    referencePhotoBase64: z
+      .string()
+      .min(1)
+      .max(10_000_000)
+      .regex(
+        /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u,
+      )
+      .optional(),
+    selectedChannels: z
+      .array(contentChannelSchema)
+      .min(1)
+      .max(5)
+      .refine((channels) => new Set(channels).size === channels.length),
+    sourceTitle: sourcePhotoDescriptionFields.sourceTitle.optional(),
+    sourceCategory: sourcePhotoDescriptionFields.sourceCategory.optional(),
+    sourceTags: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  })
+  .superRefine((input, context) => {
+    if (
+      input.referencePhotoBase64 &&
+      (!input.sourceTitle || !input.sourceCategory || !input.sourceTags)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["referencePhotoBase64"],
+        message: "Для исходного фото нужно передать его описание.",
+      });
+    }
+  });
 
 const contentFactoryImageSourceSchema = z.object({
   imageBase64: z
@@ -218,6 +263,9 @@ export const contentFactoryImageGenerationBodySchema = z
 
 export type ContentFactoryDraftBody = z.infer<
   typeof contentFactoryDraftBodySchema
+>;
+export type ContentFactoryTextGenerationBody = z.infer<
+  typeof contentFactoryTextGenerationBodySchema
 >;
 export type ContentFactoryTextRefinementBody = z.infer<
   typeof contentFactoryTextRefinementBodySchema

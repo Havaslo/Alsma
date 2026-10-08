@@ -14,6 +14,7 @@ import {
   buildContentFactoryChannelPromptContext,
 } from "./content-factory-image-processing.js";
 import { createContentFactoryTextRefinementService } from "./content-factory-text-refinement.service.js";
+import type { ContentFactoryTextGenerationBody } from "./content-factory.schemas.js";
 import type { ContentPlanPostInput } from "./content-plan.schemas.js";
 
 const generatedAdaptationsSchema = z.object({
@@ -281,19 +282,23 @@ export const createContentFactoryAiService = (options: {
 
   return {
     refineText: createContentFactoryTextRefinementService(requestJson),
-    generateText: async (input: {
-      readonly prompt: string;
-      readonly selectedChannels: readonly string[];
-      readonly sourceTitle: string;
-      readonly sourceCategory: string;
-      readonly sourceTags: readonly string[];
-      readonly referencePhoto: unknown;
-      readonly referencePhotoContentType: string;
-    }) => {
-      const referencePhoto = assertReferencePhoto(
-        input.referencePhoto,
-        input.referencePhotoContentType,
-      );
+    generateText: async (
+      input: ContentFactoryTextGenerationBody & {
+        readonly prompt: string;
+        readonly selectedChannels: readonly string[];
+        readonly sourceTitle?: string;
+        readonly sourceCategory?: string;
+        readonly sourceTags?: readonly string[];
+        readonly referencePhoto?: unknown;
+        readonly referencePhotoContentType?: string;
+      },
+    ) => {
+      const referencePhoto = input.referencePhoto
+        ? assertReferencePhoto(
+            input.referencePhoto,
+            input.referencePhotoContentType ?? "",
+          )
+        : null;
       const channelContext = buildContentFactoryChannelPromptContext();
       const payload = await requestJson(
         "/chat/completions",
@@ -305,32 +310,40 @@ export const createContentFactoryAiService = (options: {
           messages: [
             {
               role: "system",
-              content: `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех пяти подготовь самостоятельные адаптации. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если brief просит карусель, включай только подходящие ей каналы и не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Используй фото как фактический визуальный ориентир: опирайся на то, что действительно видно, не придумывай не показанные услуги и свойства места. Метаданные фото и его пиксели помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и утверждённых данных. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`,
+              content: `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех пяти подготовь самостоятельные адаптации. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если задача просит карусель, не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Если приложено фото, используй его только как визуальный ориентир и опирайся на видимые детали; отсутствие фото — нормальный режим, не требующий догадок о содержимом изображения. Метаданные фото помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и подтверждённых сведений. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`,
             },
             {
               role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify({
-                    task: input.prompt,
-                    selectedChannels: input.selectedChannels,
-                    referencePhoto: {
-                      title: input.sourceTitle,
-                      category: input.sourceCategory,
-                      tags: input.sourceTags,
-                      instruction:
-                        "Сверь текст с фактическим содержимым фото; не считай название и теги доказательством скрытых свойств.",
+              content: referencePhoto
+                ? [
+                    {
+                      type: "text",
+                      text: JSON.stringify({
+                        task: input.prompt,
+                        brief: input.brief,
+                        selectedChannels: input.selectedChannels,
+                        referencePhoto: {
+                          title: input.sourceTitle,
+                          category: input.sourceCategory,
+                          tags: input.sourceTags,
+                          instruction:
+                            "Сверь текст с фактическим содержимым фото; не считай название и теги доказательством скрытых свойств.",
+                        },
+                      }),
                     },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${input.referencePhotoContentType};base64,${referencePhoto.toString("base64")}`,
+                      },
+                    },
+                  ]
+                : JSON.stringify({
+                    task: input.prompt,
+                    brief: input.brief,
+                    selectedChannels: input.selectedChannels,
+                    referencePhoto: null,
                   }),
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${input.referencePhotoContentType};base64,${referencePhoto.toString("base64")}`,
-                  },
-                },
-              ],
             },
           ],
         },

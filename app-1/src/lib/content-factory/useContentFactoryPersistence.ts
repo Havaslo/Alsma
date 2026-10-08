@@ -13,6 +13,7 @@ import {
 } from "@/lib/content-factory/contentFactoryApi";
 import type { ContentChannel } from "@/lib/content-factory/contentFactoryData";
 import type {
+  ContentFactoryBrief,
   ContentFactoryDraftSnapshot,
   ImageGenerationMode,
   SavedContentFactoryDraft,
@@ -136,7 +137,7 @@ export const useContentFactoryPersistence = () => {
     generateText: (input: {
       prompt: string;
       selectedChannels: ContentChannel[];
-      reference: (typeof mediaItems)[number];
+      brief: ContentFactoryBrief;
     }) => generateTextMutation.mutateAsync(input),
     refineText: (input: {
       action: TextRefinementAction;
@@ -144,7 +145,8 @@ export const useContentFactoryPersistence = () => {
       customInstruction?: string;
       prompt: string;
       selectedChannels: ContentChannel[];
-      reference: (typeof mediaItems)[number];
+      reference?: (typeof mediaItems)[number];
+      brief: ContentFactoryBrief;
     }) => refineTextMutation.mutateAsync(input),
     generateImage: (input: {
       imageCount: number;

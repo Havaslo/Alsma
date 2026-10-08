@@ -8,6 +8,7 @@ import type {
   FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
+  ContentFactoryBrief,
   ContentFactoryDraftSnapshot,
   ContentFactoryGuidelines,
   ImageGenerationMode,
@@ -153,25 +154,25 @@ export const uploadContentFactoryMedia = async (file: File) => {
 export const generateContentFactoryText = async (input: {
   prompt: string;
   selectedChannels: ContentChannel[];
-  reference: FactoryMediaItem;
+  brief: ContentFactoryBrief;
 }) => {
-  const referencePhoto = await prepareReferencePhoto(input.reference);
   const response = await apiClient.post<{
     model: string;
     variants: Array<
       Pick<DraftVariant, "title" | "concept" | "text" | "adaptations">
     >;
-  }>("/admin/content-factory/generate/text", referencePhoto, {
-    headers: { ...headers(), "Content-Type": "image/jpeg" },
-    params: {
+  }>(
+    "/admin/content-factory/generate/task",
+    {
       prompt: input.prompt,
-      selectedChannels: input.selectedChannels.join(","),
-      sourceTitle: input.reference.title,
-      sourceCategory: input.reference.category,
-      sourceTags: input.reference.tags.join("|"),
+      selectedChannels: input.selectedChannels,
+      brief: input.brief,
     },
-    timeout: 180_000,
-  });
+    {
+      headers: headers(),
+      timeout: 180_000,
+    },
+  );
   return response.data;
 };
 
@@ -181,13 +182,14 @@ export const refineContentFactoryText = async (input: {
   customInstruction?: string;
   prompt: string;
   selectedChannels: ContentChannel[];
-  reference: FactoryMediaItem;
+  reference?: FactoryMediaItem;
+  brief: ContentFactoryBrief;
 }) => {
-  const referencePhoto = await prepareReferencePhoto(input.reference);
-  if (referencePhoto.size > 7 * 1_024 * 1_024) {
-    throw new Error(
-      "Фото слишком большое для текстовой переработки. Выберите изображение меньшего размера.",
-    );
+  const referencePhoto = input.reference
+    ? await prepareReferencePhoto(input.reference)
+    : null;
+  if (referencePhoto && referencePhoto.size > 7 * 1_024 * 1_024) {
+    throw new Error("Фото слишком большое для текстовой переработки.");
   }
   const response = await apiClient.post<{
     model: string;
@@ -200,11 +202,16 @@ export const refineContentFactoryText = async (input: {
       currentText: input.currentText,
       customInstruction: input.customInstruction,
       prompt: input.prompt,
-      referencePhotoBase64: await photoBlobToBase64(referencePhoto),
+      brief: input.brief,
+      ...(referencePhoto
+        ? {
+            referencePhotoBase64: await photoBlobToBase64(referencePhoto),
+            sourceTitle: input.reference!.title,
+            sourceCategory: input.reference!.category,
+            sourceTags: input.reference!.tags,
+          }
+        : {}),
       selectedChannels: input.selectedChannels,
-      sourceTitle: input.reference.title,
-      sourceCategory: input.reference.category,
-      sourceTags: input.reference.tags,
     },
     { headers: headers(), timeout: 180_000 },
   );

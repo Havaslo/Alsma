@@ -19,6 +19,7 @@ export interface FactoryMediaItem {
   image: string;
   subtitle: string;
   contentType?: string;
+  origin?: "uploaded" | "generated";
 }
 
 export interface DraftVariant {

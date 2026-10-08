@@ -9,12 +9,28 @@ export type TextRefinementAction = DraftAction | "custom";
 export type ImageGenerationMode = "edit" | "generate";
 
 export type WorkspaceSection = "create" | "plan" | "media" | "history";
+export type ContentFactoryImageSourceMode =
+  "automatic" | "library" | "generate";
+
+export interface ContentFactoryBrief {
+  postType: string;
+  format: string;
+  audience: string;
+  keyFacts: string;
+  callToAction: string;
+  styleGuidance: string;
+  imagePrompt: string;
+  sourceImageRecommendation: string;
+}
 
 export interface ContentFactoryDraftSnapshot {
   prompt: string;
   selectedChannels: ContentChannel[];
   variantIndex: number;
   variants: DraftVariant[];
+  brief?: ContentFactoryBrief;
+  imageCount?: number;
+  imageSourceMode?: ContentFactoryImageSourceMode;
 }
 
 export interface SavedContentFactoryDraft {
