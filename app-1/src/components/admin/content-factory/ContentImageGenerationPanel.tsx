@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { ChevronDown, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, Expand, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import {
@@ -17,6 +17,7 @@ import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
 import { ContentImageGalleryDialog } from "./ContentImageGalleryDialog";
+import { ContentImagePreviewDialog } from "./ContentImagePreviewDialog";
 
 export const ContentImageGenerationPanel = ({
   variant,
@@ -37,15 +38,21 @@ export const ContentImageGenerationPanel = ({
   onConfirmSources: (mediaIds: string[]) => void;
   onRemoveSource: (mediaId: string) => void;
   onSetPrimarySource: (mediaId: string) => void;
-  onGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<void>;
+  onGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<boolean>;
 }) => {
   const [mode, setMode] = useState<ImageGenerationMode>("edit");
   const [prompt, setPrompt] = useState("");
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<FactoryMediaItem | null>(
+    null,
+  );
   const sourceImages = getDraftVariantSourceImageIds(variant)
     .map((id) => mediaItems.find((item) => item.id === id))
     .filter((item): item is FactoryMediaItem => Boolean(item));
+  const selectedSource = sourceImages.find(
+    (image) => image.id === variant.imageId,
+  );
   const canGenerate =
     selectedChannels.length > 0 &&
     variant.text.trim().length > 0 &&
@@ -122,6 +129,14 @@ export const ContentImageGenerationPanel = ({
                     )}
                   </button>
                   <button
+                    aria-label={`Развернуть фото: ${image.title}`}
+                    className="absolute right-2 bottom-2 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white"
+                    onClick={() => setPreviewImage(image)}
+                    type="button"
+                  >
+                    <Expand className="size-4" />
+                  </button>
+                  <button
                     aria-label={`Убрать ${image.title} из исходных материалов`}
                     className="absolute top-2 right-2 grid size-8 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:text-red-600"
                     disabled={isGeneratingImage}
@@ -190,6 +205,12 @@ export const ContentImageGenerationPanel = ({
           onConfirm={onConfirmSources}
         />
       )}
+      {previewImage && (
+        <ContentImagePreviewDialog
+          image={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
 
       <div className="mt-4 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5">
         <div>
@@ -198,7 +219,7 @@ export const ContentImageGenerationPanel = ({
           </p>
           <p className="mt-1 text-xs text-muted-ui-foreground">
             {mode === "edit"
-              ? `Редактировать выбранные фото: ${sourceImages.length}`
+              ? `Редактировать выбранное фото: ${selectedSource?.title ?? "выберите фото выше"}`
               : "Создать новое изображение с нуля"}
           </p>
         </div>
@@ -248,7 +269,7 @@ export const ContentImageGenerationPanel = ({
 
         <p className="text-xs leading-5 text-muted-ui-foreground">
           {mode === "edit"
-            ? "AI изменит только выбранное фото. Оригинал останется нетронутым."
+            ? "AI изменит только выбранное фото. Остальные материалы и оригинал останутся нетронутыми."
             : "AI создаст новое изображение по тексту публикации и вашей инструкции."}{" "}
           Каждое нажатие создаёт ещё один результат; все варианты сохраняются в
           медиатеке и галереях каналов. Публикации не отправляются.
@@ -258,14 +279,18 @@ export const ContentImageGenerationPanel = ({
           aria-busy={isGeneratingImage}
           className="w-full"
           disabled={!canGenerate}
-          onClick={() => void onGenerate(mode, prompt.trim())}
+          onClick={() => {
+            void onGenerate(mode, prompt.trim()).then((succeeded) => {
+              if (succeeded) setMode("edit");
+            });
+          }}
           type="button"
         >
           <Sparkles className="size-4" />
           {isGeneratingImage
             ? "Создаём изображение…"
             : mode === "edit"
-              ? "Создать вариант по выбранным фото"
+              ? "Создать вариант выбранного фото"
               : "Создать изображение с нуля"}
         </Button>
       </div>

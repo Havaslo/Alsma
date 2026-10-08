@@ -45,7 +45,10 @@ export const ContentDraftPanel = ({
   onTextChange: (text: string) => void;
   onDraftAction: (action: DraftAction) => Promise<boolean>;
   onCustomAction: (command: string) => Promise<boolean>;
-  onImageGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<void>;
+  onImageGenerate: (
+    mode: ImageGenerationMode,
+    prompt: string,
+  ) => Promise<boolean>;
   onConfirmSources: (mediaIds: string[]) => void;
   onRemoveSource: (mediaId: string) => void;
   onSetPrimarySource: (mediaId: string) => void;

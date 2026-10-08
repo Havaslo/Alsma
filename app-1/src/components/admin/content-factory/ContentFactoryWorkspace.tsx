@@ -258,23 +258,25 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
-  const generateImage = async (mode: ImageGenerationMode, prompt: string) => {
+  const generateImage = async (
+    mode: ImageGenerationMode,
+    prompt: string,
+  ): Promise<boolean> => {
     const selectedChannels = factory.selectedChannels;
     if (!selectedChannels.length) {
       factory.setNotice("Сначала отметьте площадки в блоке «Задача».");
-      return;
+      return false;
     }
-    const references =
+    const selectedSource =
       mode === "edit"
-        ? getDraftVariantSourceImageIds(factory.activeVariant)
-            .map((id) => persistence.mediaItems.find((item) => item.id === id))
-            .filter((item): item is (typeof persistence.mediaItems)[number] =>
-              Boolean(item),
-            )
-        : [];
-    if (mode === "edit" && !references.length) {
+        ? persistence.mediaItems.find(
+            (item) => item.id === factory.activeVariant.imageId,
+          )
+        : undefined;
+    const references = selectedSource ? [selectedSource] : [];
+    if (mode === "edit" && !selectedSource) {
       factory.setNotice("Выберите фото сверху или добавьте его из галереи.");
-      return;
+      return false;
     }
     try {
       const generatedAssets = await persistence.generateImage({
@@ -310,9 +312,30 @@ export const ContentFactoryWorkspace = () => {
         channelImageGalleryIds[channel] = nextIds;
         channelImageIds[channel] = images.at(-1)!.id;
       }
+      const primaryChannel = selectedChannels.includes(factory.activeChannel)
+        ? factory.activeChannel
+        : selectedChannels[0]!;
+      const newPrimaryImage = generatedAssets[primaryChannel]?.[0];
+      if (!newPrimaryImage) {
+        throw new Error("Не удалось выбрать созданный вариант изображения.");
+      }
+      const sourceImageIds = getDraftVariantSourceImageIds(
+        factory.activeVariant,
+      );
+      const selectedSourceIndex = sourceImageIds.indexOf(
+        factory.activeVariant.imageId,
+      );
+      if (selectedSourceIndex >= 0) {
+        sourceImageIds[selectedSourceIndex] = newPrimaryImage.id;
+      } else {
+        sourceImageIds.push(newPrimaryImage.id);
+      }
+      const stableSourceImageIds = [...new Set(sourceImageIds)];
       const currentSnapshot = factory.getDraftSnapshot();
       const updatedVariant = {
         ...factory.activeVariant,
+        imageId: newPrimaryImage.id,
+        sourceImageIds: stableSourceImageIds,
         channelImageGalleryIds,
         channelImageIds,
       };
@@ -339,6 +362,7 @@ export const ContentFactoryWorkspace = () => {
           "Изображение подготовлено и сохранено в медиатеке, но черновик не обновился. Нажмите «Сохранить черновик», чтобы закрепить его за публикацией.",
         );
       }
+      return true;
     } catch (error) {
       factory.setNotice(
         contentFactoryErrorMessage(
@@ -346,6 +370,7 @@ export const ContentFactoryWorkspace = () => {
           "Не удалось создать изображение. Попробуйте другой промт.",
         ),
       );
+      return false;
     }
   };
 

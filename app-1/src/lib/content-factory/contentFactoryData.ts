@@ -29,6 +29,7 @@ export interface FactoryMediaItem {
   tags: string[];
   image: string;
   subtitle: string;
+  contentType?: string;
 }
 
 export const MEDIA_ITEMS: FactoryMediaItem[] = [

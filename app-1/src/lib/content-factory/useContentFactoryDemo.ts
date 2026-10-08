@@ -201,10 +201,7 @@ export const useContentFactoryDemo = (
       return {
         ...variant,
         imageId: mediaId,
-        sourceImageIds: [
-          mediaId,
-          ...sourceImageIds.filter((id) => id !== mediaId),
-        ],
+        sourceImageIds,
       };
     });
   };

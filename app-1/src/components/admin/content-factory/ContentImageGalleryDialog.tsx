@@ -1,10 +1,12 @@
 import { useState } from "react";
 
-import { Check, Search, X } from "lucide-react";
+import { Check, Expand, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import type { FactoryMediaItem } from "@/lib/content-factory/contentFactoryData";
 import { resolveMediaUrl } from "@/lib/site/media-url";
+
+import { ContentImagePreviewDialog } from "./ContentImagePreviewDialog";
 
 export const ContentImageGalleryDialog = ({
   mediaItems,
@@ -21,6 +23,9 @@ export const ContentImageGalleryDialog = ({
     initialSelectedIds.slice(0, 4),
   );
   const [query, setQuery] = useState("");
+  const [previewImage, setPreviewImage] = useState<FactoryMediaItem | null>(
+    null,
+  );
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
   const filteredItems = mediaItems.filter((item) =>
     `${item.title} ${item.category} ${item.tags.join(" ")}`
@@ -87,36 +92,48 @@ export const ContentImageGalleryDialog = ({
                 const selected = selectedIds.includes(item.id);
                 const disabled = !selected && selectedIds.length >= 4;
                 return (
-                  <button
-                    aria-pressed={selected}
-                    className={`overflow-hidden rounded-2xl border text-left transition ${
+                  <article
+                    className={`relative overflow-hidden rounded-2xl border transition ${
                       selected
                         ? "border-brand ring-2 ring-brand/20"
                         : "border-line hover:border-brand/50"
                     } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                    disabled={disabled}
                     key={item.id}
-                    onClick={() => toggle(item.id)}
-                    type="button"
                   >
-                    <span className="relative block aspect-[4/3] bg-muted-ui/50">
-                      <img
-                        alt={item.title}
-                        className="size-full object-cover"
-                        src={resolveMediaUrl(item.image)}
-                      />
-                      <span className="absolute top-2 right-2 grid size-8 place-items-center rounded-full bg-brand-foreground/95 text-xs font-bold text-page-foreground shadow">
-                        {selected ? (
-                          <Check className="size-4 text-brand" />
-                        ) : (
-                          item.category.slice(0, 1)
-                        )}
+                    <button
+                      aria-pressed={selected}
+                      className="block w-full text-left"
+                      disabled={disabled}
+                      onClick={() => toggle(item.id)}
+                      type="button"
+                    >
+                      <span className="relative block aspect-[4/3] bg-muted-ui/50">
+                        <img
+                          alt={item.title}
+                          className="size-full object-cover"
+                          src={resolveMediaUrl(item.image)}
+                        />
+                        <span className="absolute top-2 right-2 grid size-8 place-items-center rounded-full bg-brand-foreground/95 text-xs font-bold text-page-foreground shadow">
+                          {selected ? (
+                            <Check className="size-4 text-brand" />
+                          ) : (
+                            item.category.slice(0, 1)
+                          )}
+                        </span>
                       </span>
-                    </span>
-                    <span className="block truncate px-3 py-2.5 text-sm font-semibold text-page-foreground">
-                      {item.title}
-                    </span>
-                  </button>
+                      <span className="block truncate px-3 py-2.5 text-sm font-semibold text-page-foreground">
+                        {item.title}
+                      </span>
+                    </button>
+                    <button
+                      aria-label={`Развернуть фото: ${item.title}`}
+                      className="absolute right-2 bottom-12 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white"
+                      onClick={() => setPreviewImage(item)}
+                      type="button"
+                    >
+                      <Expand className="size-4" />
+                    </button>
+                  </article>
                 );
               })}
             </div>
@@ -147,6 +164,12 @@ export const ContentImageGalleryDialog = ({
           </Button>
         </footer>
       </section>
+      {previewImage && (
+        <ContentImagePreviewDialog
+          image={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
     </div>
   );
 };
