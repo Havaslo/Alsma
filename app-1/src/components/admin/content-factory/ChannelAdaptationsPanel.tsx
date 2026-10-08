@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Check, Eye, ImagePlus, RefreshCw, Sparkles } from "lucide-react";
+import { Check, RefreshCw, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
@@ -11,9 +11,9 @@ import {
   getDraftVariantImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type { ContentFactoryGuidelines } from "@/lib/content-factory/contentFactoryTypes";
-import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { ChannelAdaptationRewriteDialog } from "./ChannelAdaptationRewriteDialog";
+import { ChannelPublicationPreview } from "./ChannelPublicationPreview";
 import { ChannelBadge, QuietButton } from "./ContentFactoryPrimitives";
 
 export const ChannelAdaptationsPanel = ({
@@ -26,6 +26,7 @@ export const ChannelAdaptationsPanel = ({
   onTextChange,
   onAdaptAction,
   onMediaBrowse,
+  onReorderImages,
   mediaItems,
 }: {
   variant: DraftVariant;
@@ -38,10 +39,14 @@ export const ChannelAdaptationsPanel = ({
   onTextChange: (channel: ContentChannel, text: string) => void;
   onAdaptAction: (
     channel: ContentChannel,
-    action: "shorter" | "rewrite",
+    action: "shorter" | "regenerate" | "rewrite",
     instruction?: string,
   ) => Promise<boolean>;
   onMediaBrowse: (channel: ContentChannel) => void;
+  onReorderImages: (
+    channel: ContentChannel,
+    imageIds: string[],
+  ) => Promise<boolean>;
 }) => {
   const [rewriteTarget, setRewriteTarget] = useState<ContentChannel | null>(
     null,
@@ -62,6 +67,15 @@ export const ChannelAdaptationsPanel = ({
     setIsRefiningChannel(true);
     try {
       await onAdaptAction(activeChannel, "shorter");
+    } finally {
+      setIsRefiningChannel(false);
+    }
+  };
+
+  const regenerateChannelText = async () => {
+    setIsRefiningChannel(true);
+    try {
+      await onAdaptAction(activeChannel, "regenerate");
     } finally {
       setIsRefiningChannel(false);
     }
@@ -217,6 +231,12 @@ export const ChannelAdaptationsPanel = ({
               <div className="mt-3 flex flex-wrap gap-2">
                 <QuietButton
                   disabled={isRefiningChannel}
+                  onClick={() => void regenerateChannelText()}
+                >
+                  <Sparkles className="size-3.5" /> Перегенерировать
+                </QuietButton>
+                <QuietButton
+                  disabled={isRefiningChannel}
                   onClick={() => void shortenChannelText()}
                 >
                   <RefreshCw className="size-3.5" /> Сделать короче
@@ -225,7 +245,7 @@ export const ChannelAdaptationsPanel = ({
                   disabled={isRefiningChannel}
                   onClick={() => setRewriteTarget(activeChannel)}
                 >
-                  <Sparkles className="size-3.5" /> Переработать эту версию
+                  <Sparkles className="size-3.5" /> Переработать по инструкции
                 </QuietButton>
               </div>
               {isRefiningChannel && (
@@ -250,78 +270,14 @@ export const ChannelAdaptationsPanel = ({
         </div>
 
         <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-page-foreground">
-            <Eye className="size-4 text-muted-ui-foreground" /> Предпросмотр
-            публикации
-          </div>
-          <div className="mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-sm">
-            <div className="flex items-center gap-2.5 border-b border-line px-4 py-3">
-              <span className="grid size-8 place-items-center rounded-full bg-brand text-[10px] font-bold text-white">
-                A
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-page-foreground">
-                  ALSMA · официальный канал
-                </p>
-                <p className="text-[10px] text-muted-ui-foreground/80">
-                  Предпросмотр ·{" "}
-                  {
-                    CONTENT_CHANNELS.find((item) => item.id === activeChannel)
-                      ?.label
-                  }
-                </p>
-              </div>
-              <ChannelBadge channel={activeChannel} compact />
-            </div>
-            {images.length > 0 && (
-              <div
-                className={`grid gap-2 ${images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
-              >
-                {images.map((image, index) => (
-                  <div
-                    className="relative w-full overflow-hidden bg-muted-ui"
-                    key={`${image.id}-${index}`}
-                    style={{
-                      aspectRatio:
-                        guideline?.image.ratio.replace(":", " / ") ?? "16 / 9",
-                    }}
-                  >
-                    <img
-                      alt={`Кадр ${index + 1}: ${image.title}`}
-                      className="size-full object-cover"
-                      src={resolveMediaUrl(image.image)}
-                    />
-                    {images.length > 1 && (
-                      <span className="absolute top-2 left-2 rounded-full bg-brand-foreground/90 px-2 py-1 text-[10px] font-semibold text-page-foreground shadow-sm">
-                        {index + 1} / {images.length}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="p-4">
-              <p className="line-clamp-4 text-xs leading-5 whitespace-pre-line text-page-foreground">
-                {variant.adaptations[activeChannel]}
-              </p>
-              <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[10px] text-muted-ui-foreground/80">
-                <span>
-                  Формат {guideline?.image.ratio ?? "канала"} · черновик
-                </span>
-                <span>Сейчас</span>
-              </div>
-            </div>
-          </div>
-          <QuietButton
-            className="mx-auto mt-3 flex"
-            onClick={() => onMediaBrowse(activeChannel)}
-          >
-            <ImagePlus className="size-3.5" /> Заменить визуал для этого канала
-          </QuietButton>
-          <p className="mt-3 text-center text-xs leading-5 text-muted-ui-foreground">
-            Порядок кадров сохранён. Все выбранные изображения будут приложены к
-            этой версии; формат каждого соответствует площадке.
-          </p>
+          <ChannelPublicationPreview
+            activeChannel={activeChannel}
+            guideline={guideline}
+            images={images}
+            onMediaBrowse={onMediaBrowse}
+            onReorderImages={onReorderImages}
+            text={variant.adaptations[activeChannel]}
+          />
         </div>
       </div>
       <ChannelAdaptationRewriteDialog

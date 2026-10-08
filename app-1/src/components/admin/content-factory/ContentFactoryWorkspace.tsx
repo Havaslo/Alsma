@@ -179,7 +179,7 @@ export const ContentFactoryWorkspace = () => {
 
   const refineChannelAdaptation = async (
     channel: ContentChannel,
-    action: "shorter" | "rewrite",
+    action: "shorter" | "regenerate" | "rewrite",
     instruction?: string,
   ): Promise<boolean> => {
     if (!factory.prompt.trim()) {
@@ -205,7 +205,12 @@ export const ContentFactoryWorkspace = () => {
 
     try {
       const result = await persistence.refineText({
-        action: action === "shorter" ? "shorter" : "custom",
+        action:
+          action === "rewrite"
+            ? "custom"
+            : action === "shorter"
+              ? "shorter"
+              : "regenerate",
         currentText:
           factory.activeVariant.adaptations[channel] ||
           factory.activeVariant.text,
@@ -252,6 +257,58 @@ export const ContentFactoryWorkspace = () => {
         contentFactoryErrorMessage(
           error,
           "Не удалось переработать версию для канала. Попробуйте ещё раз.",
+        ),
+      );
+      return false;
+    }
+  };
+
+  const reorderChannelImages = async (
+    channel: ContentChannel,
+    imageIds: string[],
+  ): Promise<boolean> => {
+    const currentSnapshot = factory.getDraftSnapshot();
+    const currentVariant =
+      currentSnapshot.variants[factory.variantIndex] ?? factory.activeVariant;
+    const channelImageGalleryIds = {
+      ...Object.fromEntries(
+        CONTENT_CHANNELS.map(({ id }) => [
+          id,
+          getDraftVariantImageIds(currentVariant, id),
+        ]),
+      ),
+      [channel]: imageIds,
+    } as Record<ContentChannel, string[]>;
+    const channelImageIds = {
+      ...currentVariant.channelImageIds,
+      [channel]: imageIds[0] ?? "",
+    };
+    const updatedVariant = {
+      ...currentVariant,
+      channelImageGalleryIds,
+      channelImageIds,
+    };
+    const nextSnapshot = {
+      ...currentSnapshot,
+      variants: currentSnapshot.variants.map((variant, index) =>
+        index === factory.variantIndex ? updatedVariant : variant,
+      ),
+    };
+    factory.updateCurrentVariant(() => updatedVariant);
+
+    try {
+      const saved = await persistence.saveDraft(factory.currentDraftId, {
+        snapshot: nextSnapshot,
+        title: updatedVariant.title.trim() || "Новая AI-публикация",
+      });
+      factory.setCurrentDraftId(saved.id);
+      factory.setNotice("Порядок изображений изменён и сохранён в черновике.");
+      return true;
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось сохранить порядок изображений. Повторите попытку.",
         ),
       );
       return false;
@@ -599,6 +656,7 @@ export const ContentFactoryWorkspace = () => {
                     onAdaptAction={refineChannelAdaptation}
                     onActiveChannelChange={factory.setActiveChannel}
                     onMediaBrowse={factory.browseChannelImage}
+                    onReorderImages={reorderChannelImages}
                     onTextChange={factory.updateAdaptation}
                     onToggleChannel={factory.toggleChannel}
                     selectedChannels={factory.selectedChannels}
