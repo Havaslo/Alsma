@@ -78,14 +78,23 @@ const channelListQuerySchema = z
       .refine((channels) => new Set(channels).size === channels.length),
   );
 
-const sourcePhotoQueryFields = {
+const sourcePhotoDescriptionFields = {
   sourceTitle: z.string().trim().min(1).max(255),
   sourceCategory: z.string().trim().min(1).max(120),
+};
+
+const sourcePhotoQueryFields = {
+  ...sourcePhotoDescriptionFields,
   sourceTags: z
     .string()
     .max(800)
     .transform((value) => value.split("|").filter(Boolean))
     .pipe(z.array(z.string().trim().min(1).max(80)).max(20)),
+};
+
+const sourcePhotoBodyFields = {
+  ...sourcePhotoDescriptionFields,
+  sourceTags: z.array(z.string().trim().min(1).max(80)).max(20),
 };
 
 export const contentFactoryTextGenerationQuerySchema = z.object({
@@ -109,7 +118,7 @@ export const contentFactoryTextRefinementBodySchema = z.object({
     .min(1)
     .max(5)
     .refine((channels) => new Set(channels).size === channels.length),
-  ...sourcePhotoQueryFields,
+  ...sourcePhotoBodyFields,
 });
 
 const contentFactoryImageSourceSchema = z.object({
