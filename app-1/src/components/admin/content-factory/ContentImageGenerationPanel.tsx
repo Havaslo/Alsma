@@ -16,6 +16,7 @@ import type {
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
+import { ContentImageGalleryDialog } from "./ContentImageGalleryDialog";
 
 export const ContentImageGenerationPanel = ({
   variant,
@@ -23,7 +24,7 @@ export const ContentImageGenerationPanel = ({
   selectedChannels,
   guidelines,
   isGeneratingImage,
-  onOpenSourcePicker,
+  onConfirmSources,
   onRemoveSource,
   onSetPrimarySource,
   onGenerate,
@@ -33,7 +34,7 @@ export const ContentImageGenerationPanel = ({
   selectedChannels: ContentChannel[];
   guidelines: ContentFactoryGuidelines | null;
   isGeneratingImage: boolean;
-  onOpenSourcePicker: () => void;
+  onConfirmSources: (mediaIds: string[]) => void;
   onRemoveSource: (mediaId: string) => void;
   onSetPrimarySource: (mediaId: string) => void;
   onGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<void>;
@@ -41,16 +42,14 @@ export const ContentImageGenerationPanel = ({
   const [mode, setMode] = useState<ImageGenerationMode>("edit");
   const [prompt, setPrompt] = useState("");
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const sourceImages = getDraftVariantSourceImageIds(variant)
     .map((id) => mediaItems.find((item) => item.id === id))
     .filter((item): item is FactoryMediaItem => Boolean(item));
-  const selectedSource = sourceImages.find(
-    (image) => image.id === variant.imageId,
-  );
   const canGenerate =
     selectedChannels.length > 0 &&
     variant.text.trim().length > 0 &&
-    (mode === "generate" || Boolean(selectedSource)) &&
+    (mode === "generate" || sourceImages.length > 0) &&
     !isGeneratingImage;
 
   return (
@@ -101,9 +100,7 @@ export const ContentImageGenerationPanel = ({
                       src={resolveMediaUrl(image.image)}
                     />
                     <span className="absolute top-2 left-2 rounded-full bg-brand-foreground/90 px-2 py-1 text-[10px] font-semibold text-page-foreground shadow-sm">
-                      {isPrimary
-                        ? "Выбрано для редактирования"
-                        : image.category}
+                      {isPrimary ? "Основное фото" : image.category}
                     </span>
                     {isGeneratingImage && isPrimary && (
                       <div
@@ -166,7 +163,7 @@ export const ContentImageGenerationPanel = ({
               onClick={() => {
                 setMode("edit");
                 setIsAddMenuOpen(false);
-                onOpenSourcePicker();
+                setIsGalleryOpen(true);
               }}
               type="button"
             >
@@ -185,6 +182,14 @@ export const ContentImageGenerationPanel = ({
           </div>
         )}
       </div>
+      {isGalleryOpen && (
+        <ContentImageGalleryDialog
+          initialSelectedIds={getDraftVariantSourceImageIds(variant)}
+          mediaItems={mediaItems}
+          onClose={() => setIsGalleryOpen(false)}
+          onConfirm={onConfirmSources}
+        />
+      )}
 
       <div className="mt-4 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5">
         <div>
@@ -193,7 +198,7 @@ export const ContentImageGenerationPanel = ({
           </p>
           <p className="mt-1 text-xs text-muted-ui-foreground">
             {mode === "edit"
-              ? `Редактировать выбранное фото: ${selectedSource?.title ?? "выберите фото выше"}`
+              ? `Редактировать выбранные фото: ${sourceImages.length}`
               : "Создать новое изображение с нуля"}
           </p>
         </div>
@@ -260,7 +265,7 @@ export const ContentImageGenerationPanel = ({
           {isGeneratingImage
             ? "Создаём изображение…"
             : mode === "edit"
-              ? "Создать вариант выбранного фото"
+              ? "Создать вариант по выбранным фото"
               : "Создать изображение с нуля"}
         </Button>
       </div>

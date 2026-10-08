@@ -264,12 +264,15 @@ export const ContentFactoryWorkspace = () => {
       factory.setNotice("Сначала отметьте площадки в блоке «Задача».");
       return;
     }
-    const selectedSource = persistence.mediaItems.find(
-      (item) => item.id === factory.activeVariant.imageId,
-    );
     const references =
-      mode === "edit" && selectedSource ? [selectedSource] : [];
-    if (mode === "edit" && !selectedSource) {
+      mode === "edit"
+        ? getDraftVariantSourceImageIds(factory.activeVariant)
+            .map((id) => persistence.mediaItems.find((item) => item.id === id))
+            .filter((item): item is (typeof persistence.mediaItems)[number] =>
+              Boolean(item),
+            )
+        : [];
+    if (mode === "edit" && !references.length) {
       factory.setNotice("Выберите фото сверху или добавьте его из галереи.");
       return;
     }
@@ -515,7 +518,7 @@ export const ContentFactoryWorkspace = () => {
                 onCustomAction={(command) => refineText("custom", command)}
                 onDraftAction={refineText}
                 onImageGenerate={generateImage}
-                onSourcePicker={factory.browseMainImage}
+                onConfirmSources={factory.setSourceMedia}
                 onRemoveSource={factory.removeSourceMedia}
                 onSetPrimarySource={factory.setPrimarySourceMedia}
                 onTextChange={(text) =>

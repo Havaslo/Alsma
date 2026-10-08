@@ -29,7 +29,7 @@ export const ContentDraftPanel = ({
   onDraftAction,
   onCustomAction,
   onImageGenerate,
-  onSourcePicker,
+  onConfirmSources,
   onRemoveSource,
   onSetPrimarySource,
   isGeneratingImage,
@@ -46,7 +46,7 @@ export const ContentDraftPanel = ({
   onDraftAction: (action: DraftAction) => Promise<boolean>;
   onCustomAction: (command: string) => Promise<boolean>;
   onImageGenerate: (mode: ImageGenerationMode, prompt: string) => Promise<void>;
-  onSourcePicker: () => void;
+  onConfirmSources: (mediaIds: string[]) => void;
   onRemoveSource: (mediaId: string) => void;
   onSetPrimarySource: (mediaId: string) => void;
   isGeneratingImage: boolean;
@@ -198,7 +198,7 @@ export const ContentDraftPanel = ({
         isGeneratingImage={isGeneratingImage}
         mediaItems={mediaItems}
         onGenerate={onImageGenerate}
-        onOpenSourcePicker={onSourcePicker}
+        onConfirmSources={onConfirmSources}
         onRemoveSource={onRemoveSource}
         onSetPrimarySource={onSetPrimarySource}
         selectedChannels={selectedChannels}

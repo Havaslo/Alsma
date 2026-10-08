@@ -209,6 +209,18 @@ export const useContentFactoryDemo = (
     });
   };
 
+  const setSourceMedia = (mediaIds: string[]) => {
+    const sourceImageIds = [...new Set(mediaIds.filter(Boolean))].slice(0, 4);
+    updateCurrentVariant((variant) => ({
+      ...variant,
+      imageId: sourceImageIds.includes(variant.imageId)
+        ? variant.imageId
+        : (sourceImageIds[0] ?? ""),
+      sourceImageIds,
+    }));
+    setNotice(`Выбрано фото для редактирования: ${sourceImageIds.length}.`);
+  };
+
   const installGeneratedVariants = (nextVariants: DraftVariant[]) => {
     setVariants(nextVariants);
     setVariantIndex(0);
@@ -303,6 +315,7 @@ export const useContentFactoryDemo = (
     addSourceMedia,
     removeSourceMedia,
     setPrimarySourceMedia,
+    setSourceMedia,
     updateAdaptation,
     updateCurrentVariant,
     useMedia,
