@@ -693,6 +693,7 @@ model ContentPlanPost {
   sourceImageRecommendation String            @default("") @map("source_image_recommendation") @db.Text
   generatedTitle            String            @default("") @map("generated_title") @db.VarChar(255)
   generatedCopy             String            @default("") @map("generated_copy") @db.Text
+  imageIds                  String[]          @default([]) @map("image_ids")
   status                    String            @default("queued") @db.VarChar(24)
   generationError           String?           @map("generation_error") @db.Text
   approvedAt                DateTime?         @map("approved_at") @db.Timestamptz(3)

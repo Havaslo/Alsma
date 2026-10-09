@@ -105,6 +105,7 @@ export interface PlanPublication {
   channels: ContentChannel[];
   status: PlanStatus;
   imageId: string;
+  imageIds?: string[];
   postType?: string;
   format?: string;
   text?: string;

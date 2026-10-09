@@ -26,6 +26,7 @@ const serializePost = (post: {
   readonly sourceImageRecommendation: string;
   readonly generatedTitle: string;
   readonly generatedCopy: string;
+  readonly imageIds: string[];
   readonly status: string;
   readonly generationError: string | null;
   readonly approvedAt: Date | null;
@@ -50,6 +51,7 @@ const serializePost = (post: {
   sourceImageRecommendation: post.sourceImageRecommendation,
   title: post.generatedTitle || post.topic,
   text: post.generatedCopy,
+  imageIds: post.imageIds,
   status: post.status,
   generationError: post.generationError,
   approvedAt: post.approvedAt,

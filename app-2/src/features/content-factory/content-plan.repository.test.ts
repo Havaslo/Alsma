@@ -57,3 +57,32 @@ test("a generation error cannot be approved", async () => {
   const approved = await repository.approvePost("plan-post", "admin-1");
   assert.equal(approved, null);
 });
+
+test("manual calendar posts retain their selected image order", async () => {
+  let savedImageIds: string[] = [];
+  const client = {
+    contentPlanImport: {
+      create: async (input: {
+        data: {
+          posts: { create: Array<{ imageIds: string[] }> };
+        };
+      }) => {
+        savedImageIds = input.data.posts.create[0]?.imageIds ?? [];
+        return { id: "manual-import", posts: [{ id: "manual-post" }] };
+      },
+    },
+  };
+  const repository = createContentPlanRepository({
+    client,
+  } as unknown as Database);
+  const imageIds = ["first-image", "second-image"];
+
+  await repository.createManualPosts("admin-1", {
+    date: "2026-10-22",
+    time: "11:00",
+    title: "Пост с изображениями",
+    posts: [{ channel: "vk", text: "Текст поста", imageIds }],
+  });
+
+  assert.deepEqual(savedImageIds, imageIds);
+});

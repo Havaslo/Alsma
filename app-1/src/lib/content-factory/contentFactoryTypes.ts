@@ -70,6 +70,7 @@ export interface ContentPlanPostRecord extends ContentPlanPostInput {
   importId: string;
   title: string;
   text: string;
+  imageIds?: string[];
   status: ContentPlanPostStatus;
   generationError: string | null;
   approvedAt: string | null;

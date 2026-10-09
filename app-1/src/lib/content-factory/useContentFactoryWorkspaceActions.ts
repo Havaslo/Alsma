@@ -4,6 +4,7 @@ import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactory
 import {
   type ContentChannel,
   createEmptyDraftVariant,
+  getDraftVariantImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryDraftSnapshot,
@@ -270,6 +271,12 @@ export const useContentFactoryWorkspaceActions = (input: {
           text:
             input.factory.activeVariant.adaptations[channel] ||
             input.factory.activeVariant.text,
+          imageIds: getDraftVariantImageIds(
+            input.factory.activeVariant,
+            channel,
+          ).filter((id) =>
+            input.persistence.mediaItems.some((media) => media.id === id),
+          ),
         })),
       });
       input.factory.setNotice(

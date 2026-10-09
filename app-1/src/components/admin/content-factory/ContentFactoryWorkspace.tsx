@@ -307,6 +307,7 @@ export const ContentFactoryWorkspace = () => {
       {reviewingPost && (
         <ContentPlanPostReviewDialog
           busy={plan.isUpdating || plan.isApproving || plan.isRetrying}
+          mediaItems={persistence.mediaItems}
           onApprove={approvePlanPost}
           onClose={() => setReviewingPost(null)}
           onRetry={retryPlanPost}

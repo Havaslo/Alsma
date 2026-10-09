@@ -52,6 +52,7 @@ export const createContentPlanRepository = (database: Database) => ({
             topic: input.title,
             generatedTitle: input.title,
             generatedCopy: post.text,
+            imageIds: post.imageIds,
             status: "needs_review",
             createdById: adminId,
           })),

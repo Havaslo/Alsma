@@ -44,7 +44,11 @@ export const createManualContentPlanPosts = async (input: {
   date: string;
   time: string;
   title: string;
-  posts: Array<{ channel: ContentPlanPostInput["channel"]; text: string }>;
+  posts: Array<{
+    channel: ContentPlanPostInput["channel"];
+    text: string;
+    imageIds: string[];
+  }>;
 }) => {
   const response = await apiClient.post<{
     importId: string;

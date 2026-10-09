@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
   type FactoryMediaItem,
@@ -272,36 +273,41 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     });
     setSelectedChannels(post.channels);
     setActiveChannel(post.channels[0] ?? "vk");
-    const image = mediaItems.find((item) => item.id === post.imageId);
-    if (image) {
-      const channelImageIds: Record<ContentChannel, string> = {
-        vk: image.id,
-        telegram: image.id,
-        max: image.id,
-        instagram: image.id,
-        zen: image.id,
-      };
-      const channelImageGalleryIds: Record<ContentChannel, string[]> = {
-        vk: [image.id],
-        telegram: [image.id],
-        max: [image.id],
-        instagram: [image.id],
-        zen: [image.id],
-      };
-      setVariants((current) =>
-        current.map((variant, index) =>
-          index === variantIndex
-            ? {
-                ...variant,
-                channelImageGalleryIds,
-                imageId: image.id,
-                sourceImageIds: [image.id],
-                channelImageIds,
-              }
-            : variant,
-        ),
-      );
-    }
+    const postImageIds = [
+      ...new Set(
+        (post.imageIds?.length
+          ? post.imageIds
+          : post.imageId
+            ? [post.imageId]
+            : []
+        ).filter((id) => mediaItems.some((item) => item.id === id)),
+      ),
+    ].slice(0, 4);
+    const channelImageIds = Object.fromEntries(
+      CONTENT_CHANNELS.map(({ id }) => [
+        id,
+        post.channels.includes(id) ? (postImageIds[0] ?? "") : "",
+      ]),
+    ) as Record<ContentChannel, string>;
+    const channelImageGalleryIds = Object.fromEntries(
+      CONTENT_CHANNELS.map(({ id }) => [
+        id,
+        post.channels.includes(id) ? postImageIds : [],
+      ]),
+    ) as Record<ContentChannel, string[]>;
+    setVariants((current) =>
+      current.map((variant, index) =>
+        index === variantIndex
+          ? {
+              ...variant,
+              channelImageGalleryIds,
+              imageId: postImageIds[0] ?? "",
+              sourceImageIds: postImageIds,
+              channelImageIds,
+            }
+          : variant,
+      ),
+    );
     setCurrentDraftId(null);
     setStep(1);
     setNotice(`Открыт материал «${post.title}» для редактирования.`);

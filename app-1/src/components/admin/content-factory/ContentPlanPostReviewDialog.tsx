@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Check, LoaderCircle, RefreshCw, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
+import type {
+  FactoryMediaItem,
+  PlanPublication,
+} from "@/lib/content-factory/contentFactoryData";
+import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import {
   ChannelBadge,
@@ -13,6 +17,7 @@ import {
 
 export const ContentPlanPostReviewDialog = ({
   post,
+  mediaItems,
   busy = false,
   onClose,
   onSave,
@@ -20,6 +25,7 @@ export const ContentPlanPostReviewDialog = ({
   onRetry,
 }: {
   post: PlanPublication;
+  mediaItems: FactoryMediaItem[];
   busy?: boolean;
   onClose: () => void;
   onSave: (input: {
@@ -45,6 +51,11 @@ export const ContentPlanPostReviewDialog = ({
     time !== post.time;
   const canApprove =
     post.sourceStatus === "needs_review" && text.trim().length > 0;
+  const attachedImages = (
+    post.imageIds?.length ? post.imageIds : post.imageId ? [post.imageId] : []
+  )
+    .map((id) => mediaItems.find((item) => item.id === id))
+    .filter((item): item is FactoryMediaItem => Boolean(item));
 
   return (
     <div
@@ -171,6 +182,32 @@ export const ContentPlanPostReviewDialog = ({
               value={text}
             />
           </label>
+
+          {attachedImages.length > 0 && (
+            <section aria-label="Изображения публикации">
+              <h3 className="mb-2 text-xs font-semibold text-muted-ui-foreground">
+                Изображения поста · {attachedImages.length}
+              </h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {attachedImages.map((image, index) => (
+                  <figure
+                    className="overflow-hidden rounded-xl border border-line bg-page"
+                    key={image.id}
+                  >
+                    <img
+                      alt={`Изображение ${index + 1}: ${image.title}`}
+                      className="aspect-[4/3] w-full object-cover"
+                      loading="lazy"
+                      src={resolveMediaUrl(image.image)}
+                    />
+                    <figcaption className="truncate px-3 py-2 text-xs text-page-foreground">
+                      {index + 1}. {image.title}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyBrief label="Для кого" value={post.audience} />

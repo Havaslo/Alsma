@@ -78,6 +78,7 @@ export const manualContentPlanPostSchema = z.object({
       z.object({
         channel: contentPlanChannelSchema,
         text: z.string().trim().min(1).max(20_000),
+        imageIds: z.array(z.uuid()).max(4).default([]),
       }),
     )
     .min(1)
