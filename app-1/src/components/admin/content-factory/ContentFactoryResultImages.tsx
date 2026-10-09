@@ -1,5 +1,6 @@
 import { ImagePlus, Sparkles } from "lucide-react";
 
+import { ContentFactoryImageViewer } from "@/components/admin/content-factory/ContentFactoryImageViewer";
 import { Button } from "@/components/ui/Button";
 import {
   type ContentChannel,
@@ -91,6 +92,11 @@ export const ContentFactoryResultImages = ({
                         ? "Создано ИИ"
                         : "Медиатека"}
                     </span>
+                    <ContentFactoryImageViewer
+                      alt={`Изображение ${index + 1} · ${selected.title}`}
+                      downloadName={`alsma-content-image-${index + 1}.png`}
+                      src={selected.image}
+                    />
                   </div>
                   <div className="p-3">
                     <p className="truncate text-xs font-semibold text-page-foreground">

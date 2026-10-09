@@ -19,9 +19,13 @@ export const ContentFactoryStepper = ({
 }) => (
   <nav
     aria-label="Шаги создания публикации"
-    className="rounded-2xl border border-line bg-brand-foreground p-2 sm:p-3"
+    className="relative rounded-2xl border border-line bg-brand-foreground px-3 py-3 shadow-[0_4px_18px_rgba(25,45,34,0.035)] sm:px-5 sm:py-4"
   >
-    <ol className="grid gap-2 sm:grid-cols-3">
+    <span
+      aria-hidden="true"
+      className="absolute top-10 right-[16.66%] left-[16.66%] hidden h-px bg-line sm:block"
+    />
+    <ol className="relative grid gap-1 sm:grid-cols-3 sm:gap-0">
       {steps.map((step) => {
         const completed = step.number < currentStep;
         const disabled = step.number > 1 && !canOpenResults;
@@ -31,10 +35,10 @@ export const ContentFactoryStepper = ({
             <button
               aria-current={selected ? "step" : undefined}
               className={cn(
-                "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition",
+                "group relative z-10 flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition sm:justify-center sm:gap-2.5 sm:px-2",
                 selected
-                  ? "bg-brand/8 text-brand"
-                  : "text-muted-ui-foreground hover:bg-page",
+                  ? "bg-brand/[0.06] text-brand sm:bg-transparent"
+                  : "text-muted-ui-foreground hover:bg-page sm:hover:bg-transparent",
                 disabled &&
                   "cursor-not-allowed opacity-45 hover:bg-transparent",
               )}
@@ -44,15 +48,34 @@ export const ContentFactoryStepper = ({
             >
               <span
                 className={cn(
-                  "grid size-7 shrink-0 place-items-center rounded-full border text-xs font-bold",
-                  selected || completed
-                    ? "border-brand bg-brand text-white"
-                    : "border-line bg-brand-foreground",
+                  "grid size-9 shrink-0 place-items-center rounded-full border-2 bg-brand-foreground text-xs font-bold transition",
+                  completed && "border-brand bg-brand text-white",
+                  selected &&
+                    "border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(24,91,68,0.09)]",
+                  !selected &&
+                    !completed &&
+                    "border-line text-muted-ui-foreground",
                 )}
               >
-                {completed ? <Check className="size-3.5" /> : step.number}
+                {completed ? (
+                  <Check className="size-4" strokeWidth={2.5} />
+                ) : (
+                  step.number
+                )}
               </span>
-              <span className="text-sm font-semibold">{step.label}</span>
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    "block text-sm font-semibold",
+                    disabled && "text-muted-ui-foreground/70",
+                  )}
+                >
+                  {step.label}
+                </span>
+                <span className="mt-0.5 hidden text-[11px] text-muted-ui-foreground sm:block">
+                  {completed ? "Готово" : selected ? "Текущий шаг" : "Далее"}
+                </span>
+              </span>
             </button>
           </li>
         );
