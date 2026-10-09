@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   CONTENT_CHANNELS,
@@ -17,28 +17,44 @@ import type {
   SavedContentFactoryDraft,
   WorkspaceSection,
 } from "@/lib/content-factory/contentFactoryTypes";
+import {
+  readContentFactoryWorkspaceCache,
+  saveContentFactoryWorkspaceCache,
+} from "@/lib/content-factory/contentFactoryWorkspaceCache";
 
 export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
+  const [cachedWorkspace] = useState(readContentFactoryWorkspaceCache);
+  const cachedSnapshot = cachedWorkspace?.snapshot;
   const [activeSection, setActiveSection] =
     useState<WorkspaceSection>("create");
-  const [prompt, setPrompt] = useState("");
-  const [brief, setBrief] = useState<ContentFactoryBrief>({
-    postType: "",
-    format: "",
-    audience: "",
-    keyFacts: "",
-    callToAction: "",
-    styleGuidance: "",
-    imagePrompt: "",
-    sourceImageRecommendation: "",
-  });
-  const [imageCount, setImageCount] = useState(1);
+  const [prompt, setPrompt] = useState(cachedSnapshot?.prompt ?? "");
+  const [brief, setBrief] = useState<ContentFactoryBrief>(
+    cachedSnapshot?.brief ?? {
+      postType: "",
+      format: "",
+      audience: "",
+      keyFacts: "",
+      callToAction: "",
+      styleGuidance: "",
+      imagePrompt: "",
+      sourceImageRecommendation: "",
+    },
+  );
+  const [imageCount, setImageCount] = useState(cachedSnapshot?.imageCount ?? 1);
   const [imageSourceMode, setImageSourceMode] =
-    useState<ContentFactoryImageSourceMode>("automatic");
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [variants, setVariants] = useState([createEmptyDraftVariant()]);
-  const [variantIndex, setVariantIndex] = useState(0);
-  const [activeChannel, setActiveChannel] = useState<ContentChannel>("vk");
+    useState<ContentFactoryImageSourceMode>(
+      cachedSnapshot?.imageSourceMode ?? "automatic",
+    );
+  const [step, setStep] = useState<1 | 2 | 3>(cachedWorkspace?.step ?? 1);
+  const [variants, setVariants] = useState<DraftVariant[]>(
+    cachedSnapshot?.variants ?? [createEmptyDraftVariant()],
+  );
+  const [variantIndex, setVariantIndex] = useState(
+    cachedSnapshot?.variantIndex ?? 0,
+  );
+  const [activeChannel, setActiveChannel] = useState<ContentChannel>(
+    cachedWorkspace?.activeChannel ?? "vk",
+  );
   const [mediaTargetChannel, setMediaTargetChannel] =
     useState<ContentChannel | null>(null);
   const [selectingSourceMedia, setSelectingSourceMedia] = useState(false);
@@ -46,10 +62,47 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     string[]
   >([]);
   const [selectedChannels, setSelectedChannels] = useState<ContentChannel[]>(
-    [],
+    cachedSnapshot?.selectedChannels ?? [],
   );
-  const [notice, setNotice] = useState("");
-  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [notice, setNotice] = useState(
+    cachedWorkspace
+      ? "Восстановил создание после обновления страницы. Продолжайте с сохранённого шага."
+      : "",
+  );
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(
+    cachedWorkspace?.currentDraftId ?? null,
+  );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      saveContentFactoryWorkspaceCache({
+        snapshot: {
+          prompt,
+          selectedChannels,
+          brief,
+          imageCount,
+          imageSourceMode,
+          variantIndex,
+          variants,
+        },
+        step,
+        activeChannel,
+        currentDraftId,
+      });
+    }, 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    activeChannel,
+    brief,
+    currentDraftId,
+    imageCount,
+    imageSourceMode,
+    prompt,
+    selectedChannels,
+    step,
+    variantIndex,
+    variants,
+  ]);
 
   const activeVariant = variants[variantIndex] ?? variants[0];
 
