@@ -19,30 +19,20 @@ export const ContentFactoryStepper = ({
 }) => (
   <nav
     aria-label="Шаги создания публикации"
-    className="rounded-2xl border border-line bg-brand-foreground px-3 py-3 shadow-[0_4px_18px_rgba(25,45,34,0.035)] sm:px-5 sm:py-4"
+    className="rounded-xl border border-line bg-brand-foreground px-2 py-1.5 shadow-[0_4px_18px_rgba(25,45,34,0.035)] sm:px-3"
   >
     <ol className="grid grid-cols-3">
       {steps.map((step) => {
         const completed = step.number < currentStep;
         const disabled = step.number > 1 && !canOpenResults;
         const selected = step.number === currentStep;
-        const hasNextStep = step.number < steps.length;
 
         return (
           <li className="relative min-w-0" key={step.number}>
-            {hasNextStep && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "absolute top-[18px] left-[calc(50%+18px)] z-0 h-px w-[calc(100%-36px)]",
-                  completed ? "bg-brand/40" : "bg-line",
-                )}
-              />
-            )}
             <button
               aria-current={selected ? "step" : undefined}
               className={cn(
-                "relative z-10 flex min-h-[76px] w-full flex-col items-center justify-start gap-2 rounded-xl px-1 py-1 text-center transition sm:min-h-[82px] sm:gap-2.5",
+                "relative z-10 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg px-1.5 py-1 text-center transition sm:gap-2 sm:px-2",
                 selected && "bg-brand/[0.045]",
                 !selected &&
                   !disabled &&
@@ -55,10 +45,10 @@ export const ContentFactoryStepper = ({
             >
               <span
                 className={cn(
-                  "grid size-9 shrink-0 place-items-center rounded-full border-2 bg-brand-foreground text-xs font-bold transition",
+                  "grid size-6 shrink-0 place-items-center rounded-full border-2 bg-brand-foreground text-[10px] font-bold transition sm:size-7 sm:text-xs",
                   completed && "border-brand bg-brand text-white",
                   selected &&
-                    "border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(24,91,68,0.09)]",
+                    "border-brand bg-brand text-white shadow-[0_0_0_3px_rgba(24,91,68,0.09)]",
                   !selected &&
                     !completed &&
                     "border-line text-muted-ui-foreground",
@@ -76,7 +66,7 @@ export const ContentFactoryStepper = ({
               </span>
               <span
                 className={cn(
-                  "max-w-full truncate text-xs font-semibold sm:text-sm",
+                  "min-w-0 truncate text-[10px] leading-tight font-semibold sm:text-xs",
                   selected || completed
                     ? "text-brand"
                     : "text-muted-ui-foreground",

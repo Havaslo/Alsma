@@ -11,14 +11,16 @@ import {
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import { ChannelImageOrderDialog } from "./ChannelImageOrderDialog";
+import { ChannelImageSelectionDialog } from "./ChannelImageSelectionDialog";
 import { ChannelBadge, QuietButton } from "./ContentFactoryPrimitives";
 
 export const ChannelPublicationPreview = ({
   activeChannel,
   guideline,
   images,
+  mediaItems,
   text,
-  onMediaBrowse,
+  onApplyImages,
   onReorderImages,
 }: {
   activeChannel: ContentChannel;
@@ -26,8 +28,12 @@ export const ChannelPublicationPreview = ({
     image: { ratio: string };
   };
   images: FactoryMediaItem[];
+  mediaItems: FactoryMediaItem[];
   text: string;
-  onMediaBrowse: (channel: ContentChannel) => void;
+  onApplyImages: (
+    channel: ContentChannel,
+    imageIds: string[],
+  ) => Promise<boolean>;
   onReorderImages: (
     channel: ContentChannel,
     imageIds: string[],
@@ -41,6 +47,7 @@ export const ChannelPublicationPreview = ({
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [isImageSelectionOpen, setIsImageSelectionOpen] = useState(false);
   const imagesKey = images.map((image) => image.id).join("|");
 
   const updateControls = useCallback(() => {
@@ -184,8 +191,8 @@ export const ChannelPublicationPreview = ({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap justify-center gap-2">
-        <QuietButton onClick={() => onMediaBrowse(activeChannel)}>
-          <Images className="size-3.5" /> Заменить визуал
+        <QuietButton onClick={() => setIsImageSelectionOpen(true)}>
+          <Images className="size-3.5" /> Выбрать изображения
         </QuietButton>
         {images.length > 1 && (
           <QuietButton onClick={() => setIsOrderDialogOpen(true)}>
@@ -199,6 +206,15 @@ export const ChannelPublicationPreview = ({
           images={images}
           onClose={() => setIsOrderDialogOpen(false)}
           onSave={(imageIds) => onReorderImages(activeChannel, imageIds)}
+        />
+      )}
+      {isImageSelectionOpen && (
+        <ChannelImageSelectionDialog
+          channelLabel={getChannelLabel(activeChannel)}
+          initialSelectedIds={images.map((image) => image.id)}
+          mediaItems={mediaItems}
+          onApply={(imageIds) => onApplyImages(activeChannel, imageIds)}
+          onClose={() => setIsImageSelectionOpen(false)}
         />
       )}
     </>

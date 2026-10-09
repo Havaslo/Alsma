@@ -205,8 +205,8 @@ export const ContentFactoryWorkspace = () => {
                   mediaItems={persistence.mediaItems}
                   onAdaptAction={actions.refineChannelAdaptation}
                   onActiveChannelChange={factory.setActiveChannel}
-                  onMediaBrowse={factory.browseChannelImage}
-                  onReorderImages={visuals.reorderChannelImages}
+                  onApplyImages={visuals.setChannelImages}
+                  onReorderImages={visuals.setChannelImages}
                   onTextChange={factory.updateAdaptation}
                   onToggleChannel={factory.toggleChannel}
                   selectedChannels={factory.selectedChannels}
@@ -288,13 +288,7 @@ export const ContentFactoryWorkspace = () => {
             onAddSourceMedia={factory.addSourceMedia}
             selectedSourceMediaIds={factory.selectedSourceMediaIds}
             selectingSourceMedia={factory.selectingSourceMedia}
-            selectedMediaId={
-              factory.mediaTargetChannel
-                ? factory.activeVariant.channelImageIds[
-                    factory.mediaTargetChannel
-                  ]
-                : factory.activeVariant.imageId
-            }
+            selectedMediaId={factory.activeVariant.imageId}
           />
         )}
 

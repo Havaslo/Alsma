@@ -3,6 +3,7 @@ import {
   CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
+  getChannelLabel,
   getDraftVariantImageIds,
   getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
@@ -181,10 +182,11 @@ export const useContentFactoryVisualActions = (input: {
     }
   };
 
-  const reorderChannelImages = async (
+  const setChannelImages = async (
     channel: ContentChannel,
     imageIds: string[],
   ) => {
+    const selectedImageIds = [...new Set(imageIds.filter(Boolean))].slice(0, 4);
     const snapshot = input.factory.getDraftSnapshot();
     const variant = input.factory.activeVariant;
     const channelImageGalleryIds = {
@@ -194,17 +196,16 @@ export const useContentFactoryVisualActions = (input: {
           getDraftVariantImageIds(variant, id),
         ]),
       ),
-      [channel]: imageIds,
+      [channel]: selectedImageIds,
     } as Record<ContentChannel, string[]>;
     const updatedVariant = {
       ...variant,
       channelImageGalleryIds,
       channelImageIds: {
         ...variant.channelImageIds,
-        [channel]: imageIds[0] ?? "",
+        [channel]: selectedImageIds[0] ?? "",
       },
     };
-    input.factory.updateCurrentVariant(() => updatedVariant);
     try {
       await saveSnapshot(
         input.factory.currentDraftId,
@@ -216,15 +217,16 @@ export const useContentFactoryVisualActions = (input: {
         },
         updatedVariant.title.trim() || "Новая AI-публикация",
       );
+      input.factory.updateCurrentVariant(() => updatedVariant);
       input.factory.setNotice(
-        "Порядок изображений изменён и сохранён в черновике.",
+        `Изображения для ${getChannelLabel(channel)} применены и сохранены в черновике.`,
       );
       return true;
     } catch (error) {
       input.factory.setNotice(
         contentFactoryErrorMessage(
           error,
-          "Не удалось сохранить порядок изображений.",
+          "Не удалось сохранить выбранные изображения.",
         ),
       );
       return false;
@@ -310,5 +312,5 @@ export const useContentFactoryVisualActions = (input: {
     }
   };
 
-  return { generateVisualsForVariant, generateImage, reorderChannelImages };
+  return { generateVisualsForVariant, generateImage, setChannelImages };
 };

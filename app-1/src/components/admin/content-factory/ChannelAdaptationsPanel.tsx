@@ -25,7 +25,7 @@ export const ChannelAdaptationsPanel = ({
   onToggleChannel,
   onTextChange,
   onAdaptAction,
-  onMediaBrowse,
+  onApplyImages,
   onReorderImages,
   mediaItems,
 }: {
@@ -42,7 +42,10 @@ export const ChannelAdaptationsPanel = ({
     action: "shorter" | "regenerate" | "rewrite",
     instruction?: string,
   ) => Promise<boolean>;
-  onMediaBrowse: (channel: ContentChannel) => void;
+  onApplyImages: (
+    channel: ContentChannel,
+    imageIds: string[],
+  ) => Promise<boolean>;
   onReorderImages: (
     channel: ContentChannel,
     imageIds: string[],
@@ -277,7 +280,8 @@ export const ChannelAdaptationsPanel = ({
             activeChannel={activeChannel}
             guideline={guideline}
             images={images}
-            onMediaBrowse={onMediaBrowse}
+            mediaItems={mediaItems}
+            onApplyImages={onApplyImages}
             onReorderImages={onReorderImages}
             text={variant.adaptations[activeChannel]}
           />

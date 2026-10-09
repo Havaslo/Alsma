@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 
 import {
-  CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
   type FactoryMediaItem,
   type PlanPublication,
   createEmptyDraftVariant,
-  getDraftVariantImageIds,
   getDraftVariantSourceImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
@@ -55,8 +53,6 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   const [activeChannel, setActiveChannel] = useState<ContentChannel>(
     cachedWorkspace?.activeChannel ?? "vk",
   );
-  const [mediaTargetChannel, setMediaTargetChannel] =
-    useState<ContentChannel | null>(null);
   const [selectingSourceMedia, setSelectingSourceMedia] = useState(false);
   const [selectedSourceMediaIds, setSelectedSourceMediaIds] = useState<
     string[]
@@ -146,34 +142,8 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     }));
   };
 
-  const applyMedia = (
-    media: FactoryMediaItem,
-    channelOverride?: ContentChannel,
-  ) => {
-    const targetChannel = channelOverride ?? mediaTargetChannel;
-    const targetLabel = targetChannel
-      ? CONTENT_CHANNELS.find((item) => item.id === targetChannel)?.label
-      : null;
+  const applyMedia = (media: FactoryMediaItem) => {
     updateCurrentVariant((variant) => {
-      if (targetChannel) {
-        return {
-          ...variant,
-          channelImageIds: {
-            ...variant.channelImageIds,
-            [targetChannel]: media.id,
-          },
-          channelImageGalleryIds: {
-            ...(Object.fromEntries(
-              CONTENT_CHANNELS.map(({ id }) => [
-                id,
-                id === targetChannel
-                  ? [media.id]
-                  : getDraftVariantImageIds(variant, id),
-              ]),
-            ) as Record<ContentChannel, string[]>),
-          },
-        };
-      }
       return {
         ...variant,
         imageId: media.id,
@@ -193,12 +163,9 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
         },
       };
     });
-    setMediaTargetChannel(null);
     setActiveSection("create");
     setNotice(
-      targetLabel
-        ? `Визуал «${media.title}» выбран для ${targetLabel}.`
-        : `Выбран визуал «${media.title}». Он добавлен в текущий черновик.`,
+      `Выбран визуал «${media.title}». Он добавлен в текущий черновик.`,
     );
   };
 
@@ -208,15 +175,8 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   };
 
   const browseMainImage = () => {
-    setMediaTargetChannel(null);
     setSelectedSourceMediaIds(getDraftVariantSourceImageIds(activeVariant));
     setSelectingSourceMedia(true);
-    setActiveSection("media");
-  };
-
-  const browseChannelImage = (channel: ContentChannel) => {
-    setMediaTargetChannel(channel);
-    setSelectingSourceMedia(false);
     setActiveSection("media");
   };
 
@@ -390,7 +350,6 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     activeSection,
     activeVariant,
     brief,
-    browseChannelImage,
     browseMainImage,
     currentDraftId,
     getDraftSnapshot,
@@ -404,7 +363,6 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     imageCount,
     imageSourceMode,
     step,
-    mediaTargetChannel,
     selectingSourceMedia,
     selectedSourceMediaIds,
     setCurrentDraftId,
