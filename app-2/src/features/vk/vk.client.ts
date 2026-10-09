@@ -31,6 +31,12 @@ export type VkHistoryMessage = {
   readonly date: number;
 };
 
+export type VkPublishImage = {
+  readonly content: Uint8Array;
+  readonly contentType: string;
+  readonly fileName: string;
+};
+
 export const createVkClient = ({
   accessToken,
   logger,
@@ -112,6 +118,97 @@ export const createVkClient = ({
         message: text.slice(0, 4_096),
       });
       return String(result);
+    },
+    publishWallPost: async (input: {
+      readonly groupId: string;
+      readonly idempotencyKey: string;
+      readonly images: readonly VkPublishImage[];
+      readonly text: string;
+    }) => {
+      const groupId = input.groupId.trim();
+      if (!/^\d+$/u.test(groupId)) throw new Error("VK group ID is invalid");
+      if (!input.text.trim()) throw new Error("VK post text is empty");
+      if (input.images.length > 10)
+        throw new Error("VK post has too many images");
+
+      const photoAttachments: string[] = [];
+      for (const image of input.images) {
+        const upload = (await request("photos.getWallUploadServer", {
+          group_id: groupId,
+        })) as { upload_url?: unknown };
+        if (typeof upload.upload_url !== "string")
+          throw new Error("VK photo upload URL is missing");
+
+        const form = new FormData();
+        const bytes = new ArrayBuffer(image.content.byteLength);
+        new Uint8Array(bytes).set(image.content);
+        form.append(
+          "photo",
+          new Blob([bytes], { type: image.contentType }),
+          image.fileName,
+        );
+        const uploadedResponse = await fetch(upload.upload_url, {
+          body: form,
+          method: "POST",
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!uploadedResponse.ok)
+          throw new VkApiError(
+            uploadedResponse.status,
+            "VK photo upload failed",
+          );
+        const uploaded = (await uploadedResponse.json().catch(() => null)) as {
+          hash?: unknown;
+          photo?: unknown;
+          server?: unknown;
+        } | null;
+        if (
+          !uploaded ||
+          typeof uploaded.hash !== "string" ||
+          typeof uploaded.photo !== "string" ||
+          (typeof uploaded.server !== "number" &&
+            typeof uploaded.server !== "string")
+        )
+          throw new Error("VK photo upload returned an invalid response");
+
+        const saved = (await request("photos.saveWallPhoto", {
+          group_id: groupId,
+          hash: uploaded.hash,
+          photo: uploaded.photo,
+          server: String(uploaded.server),
+        })) as Array<Record<string, unknown>>;
+        const photo = Array.isArray(saved) ? saved[0] : undefined;
+        const ownerId = photo?.owner_id;
+        const photoId = photo?.id;
+        if (
+          (typeof ownerId !== "number" && typeof ownerId !== "string") ||
+          (typeof photoId !== "number" && typeof photoId !== "string")
+        )
+          throw new Error("VK did not return a saved photo ID");
+        const accessKey =
+          typeof photo?.access_key === "string" ? `_${photo.access_key}` : "";
+        photoAttachments.push(`photo${ownerId}_${photoId}${accessKey}`);
+      }
+
+      const response = (await request("wall.post", {
+        owner_id: `-${groupId}`,
+        from_group: "1",
+        message: input.text.trim(),
+        ...(photoAttachments.length
+          ? { attachments: photoAttachments.join(",") }
+          : {}),
+        guid: input.idempotencyKey,
+      })) as { post_id?: unknown };
+      if (
+        typeof response.post_id !== "number" &&
+        typeof response.post_id !== "string"
+      )
+        throw new Error("VK did not return a post ID");
+      const postId = String(response.post_id);
+      return {
+        externalId: postId,
+        url: `https://vk.com/wall-${groupId}_${postId}`,
+      };
     },
     logConfigurationError: () => logger.warn("VK API client is not configured"),
   };

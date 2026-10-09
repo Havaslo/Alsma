@@ -146,9 +146,23 @@ export const createMaxBotRouter = ({
   });
 
   const handleUpdate = async (payload: Record<string, unknown>) => {
-    if (!(await isAgentEnabled())) return;
     const { chatId, eventId, senderId, text, updateType } =
       extractMessage(payload);
+    if (updateType === "bot_added" && payload.is_channel === true && chatId) {
+      logger.info(
+        { channelId: chatId },
+        "MAX publishing channel discovered; bot was added",
+      );
+      return;
+    }
+    if (updateType === "bot_removed" && payload.is_channel === true && chatId) {
+      logger.warn(
+        { channelId: chatId },
+        "MAX publishing channel removed the bot",
+      );
+      return;
+    }
+    if (!(await isAgentEnabled())) return;
     if (updateType && updateType !== "message_created") {
       logger.info(
         { channel: "MAX", reason: "unsupported_update", updateType },

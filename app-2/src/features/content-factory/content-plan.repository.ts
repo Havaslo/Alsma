@@ -119,7 +119,10 @@ export const createContentPlanRepository = (database: Database) => ({
       select: { id: true, status: true },
       where: { id: postId },
     });
-    if (!current || !["needs_review", "approved"].includes(current.status)) {
+    if (
+      !current ||
+      !["needs_review", "approved", "publish_failed"].includes(current.status)
+    ) {
       return null;
     }
     const updated = await database.client.contentPlanPost.updateMany({
@@ -130,6 +133,8 @@ export const createContentPlanRepository = (database: Database) => ({
         ...(input.time ? { scheduledTime: input.time } : {}),
         ...(input.title ? { generatedTitle: input.title } : {}),
         ...(input.text ? { generatedCopy: input.text } : {}),
+        publicationAttemptedAt: null,
+        publicationError: null,
         status: "needs_review",
         approvedAt: null,
         approvedById: null,
@@ -157,6 +162,86 @@ export const createContentPlanRepository = (database: Database) => ({
       where: { id: postId },
     });
   },
+  schedulePost: async (postId: string) => {
+    const updated = await database.client.contentPlanPost.updateMany({
+      data: {
+        publicationAttemptedAt: null,
+        publicationError: null,
+        status: "scheduled",
+      },
+      where: { id: postId, status: { in: ["approved", "publish_failed"] } },
+    });
+    if (updated.count === 0) return null;
+    return database.client.contentPlanPost.findUnique({
+      include: { import: { select: { fileName: true } } },
+      where: { id: postId },
+    });
+  },
+  listDuePostIds: (scheduledDate: Date, scheduledTime: string) =>
+    database.client.contentPlanPost.findMany({
+      select: { id: true },
+      where: {
+        status: "scheduled",
+        OR: [
+          { scheduledDate: { lt: scheduledDate } },
+          { scheduledDate, scheduledTime: { lte: scheduledTime } },
+        ],
+      },
+      orderBy: [{ scheduledDate: "asc" }, { scheduledTime: "asc" }],
+      take: 25,
+    }),
+  claimScheduledPost: (postId: string) =>
+    database.client.contentPlanPost.updateMany({
+      data: {
+        publicationAttemptedAt: new Date(),
+        publicationError: null,
+        status: "publishing",
+      },
+      where: { id: postId, status: "scheduled" },
+    }),
+  findPostForPublishing: (postId: string) =>
+    database.client.contentPlanPost.findUnique({ where: { id: postId } }),
+  completePublishing: (
+    postId: string,
+    result: {
+      readonly externalId: string | null;
+      readonly url: string | null;
+      readonly publishedAt: Date;
+    },
+  ) =>
+    database.client.contentPlanPost.updateMany({
+      data: {
+        publicationError: null,
+        publishedAt: result.publishedAt,
+        publishedExternalId: result.externalId,
+        publishedUrl: result.url,
+        status: "published",
+      },
+      where: { id: postId, status: "publishing" },
+    }),
+  failPublishing: (
+    postId: string,
+    result: { readonly error: string; readonly uncertain: boolean },
+  ) =>
+    database.client.contentPlanPost.updateMany({
+      data: {
+        publicationError: result.error.slice(0, 1_000),
+        status: result.uncertain ? "publish_unknown" : "publish_failed",
+      },
+      where: { id: postId, status: "publishing" },
+    }),
+  markStalePublishingAsUnknown: (cutoff: Date) =>
+    database.client.contentPlanPost.updateMany({
+      data: {
+        publicationError:
+          "Не удалось подтвердить результат отправки. Проверьте соцсеть перед повтором.",
+        status: "publish_unknown",
+      },
+      where: {
+        publicationAttemptedAt: { lt: cutoff },
+        status: "publishing",
+      },
+    }),
   cancelPost: async (postId: string) => {
     const updated = await database.client.contentPlanPost.updateMany({
       data: { status: "cancelled" },
@@ -169,6 +254,7 @@ export const createContentPlanRepository = (database: Database) => ({
             "generation_failed",
             "needs_review",
             "approved",
+            "scheduled",
           ],
         },
       },

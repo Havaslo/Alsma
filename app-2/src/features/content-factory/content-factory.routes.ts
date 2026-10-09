@@ -36,15 +36,18 @@ import {
   contentFactoryUploadQuerySchema,
 } from "./content-factory.schemas.js";
 import { createContentPlanGenerationService } from "./content-plan-generation.service.js";
+import type { ContentPlanPublishingService } from "./content-plan-publishing.service.js";
 import {
   contentPlanUploadLimit,
   createApproveContentPlanPostHandler,
   createCancelContentPlanPostHandler,
   createCreateManualContentPlanPostsHandler,
   createGenerateContentPlanHandler,
+  createGetContentPlanPublishingStatusHandler,
   createListContentPlanPostsHandler,
   createPreviewContentPlanHandler,
   createRetryContentPlanPostHandler,
+  createScheduleContentPlanPostHandler,
   createUpdateContentPlanPostHandler,
 } from "./content-plan.handlers.js";
 import {
@@ -60,6 +63,7 @@ export const createContentFactoryRouter = (
   managedStorage: ManagedStorage,
   aiGateway: { readonly apiKey?: string; readonly baseUrl?: string },
   logger: Logger,
+  publishing: ContentPlanPublishingService,
 ): Router => {
   const router = Router();
   const ai = createContentFactoryAiService({
@@ -109,6 +113,10 @@ export const createContentFactoryRouter = (
     "/plan/posts",
     createListContentPlanPostsHandler(database, contentPlanGeneration),
   );
+  router.get(
+    "/plan/publishing/status",
+    createGetContentPlanPublishingStatusHandler(publishing),
+  );
   router.patch(
     "/plan/posts/:postId",
     validateRequest({
@@ -121,6 +129,11 @@ export const createContentFactoryRouter = (
     "/plan/posts/:postId/approve",
     validateRequest({ params: contentPlanPostParamsSchema }),
     createApproveContentPlanPostHandler(database),
+  );
+  router.post(
+    "/plan/posts/:postId/schedule",
+    validateRequest({ params: contentPlanPostParamsSchema }),
+    createScheduleContentPlanPostHandler(publishing),
   );
   router.post(
     "/plan/posts/:postId/cancel",

@@ -1,6 +1,9 @@
 import { createApp } from "./app.js";
 import { createAdminPushRepository } from "./features/admin-push/admin-push.repository.js";
 import { createAdminPushService } from "./features/admin-push/admin-push.service.js";
+import { createContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
+import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
+import { createVkClient } from "./features/vk/vk.client.js";
 import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
 import { readConfig } from "./lib/config.js";
@@ -22,6 +25,24 @@ const start = async (): Promise<void> => {
   const logger = createLogger();
   const database = createDatabase(config.databaseUrl);
   const managedStorage = createManagedStorage(config.managedStorage);
+  const maxClient = createMaxBotClient({
+    logger,
+    token: config.maxBot.token,
+  });
+  const vkClient = createVkClient({
+    accessToken: config.vk.accessToken,
+    logger,
+  });
+  const contentPlanPublishing = createContentPlanPublishingService({
+    database,
+    enabled: config.nodeEnv === "production",
+    logger,
+    managedStorage,
+    max: maxClient,
+    maxPublishChatId: config.maxBot.publishChatId,
+    vk: vkClient,
+    vkGroupId: config.vk.groupId,
+  });
   const app = createApp({
     aiGatewayOpenai: config.aiGatewayOpenai,
     corsAllowedOrigins: config.corsAllowedOrigins,
@@ -38,6 +59,9 @@ const start = async (): Promise<void> => {
     voiceConfigurationSecret: config.voiceConfigurationSecret,
     adminPush: config.adminPush,
     maxBot: config.maxBot,
+    maxClient,
+    vkClient,
+    contentPlanPublishing,
     vk: config.vk,
     yooKassaSecretKey: config.yooKassaSecretKey,
     yooKassaShopId: config.yooKassaShopId,
@@ -53,6 +77,7 @@ const start = async (): Promise<void> => {
     logger,
   );
   let stopAdminPush: () => void = () => undefined;
+  let stopContentPlanPublishing: () => void = () => undefined;
   attachVoiceAgentRealtime(server, {
     apiKey: config.openaiApiKey,
     database,
@@ -75,6 +100,9 @@ const start = async (): Promise<void> => {
         await runDatabaseMigrations(database);
         logger.info("Managed database is ready and migrations are applied");
         stopAdminPush = adminPush.start();
+        if (config.nodeEnv === "production")
+          stopContentPlanPublishing =
+            contentPlanPublishing.startProductionScheduler();
         return;
       } catch (error) {
         logger.error(
@@ -126,6 +154,7 @@ const start = async (): Promise<void> => {
     isShuttingDown = true;
     clearInterval(retentionTimer);
     stopAdminPush();
+    stopContentPlanPublishing();
     logger.info({ signal }, "Backend server stopping");
     server.close((serverError) => {
       void database

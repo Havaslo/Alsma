@@ -62,6 +62,11 @@ export type ContentPlanPostStatus =
   | "generating"
   | "needs_review"
   | "approved"
+  | "scheduled"
+  | "publishing"
+  | "published"
+  | "publish_failed"
+  | "publish_unknown"
   | "generation_failed"
   | "cancelled";
 
@@ -74,9 +79,20 @@ export interface ContentPlanPostRecord extends ContentPlanPostInput {
   status: ContentPlanPostStatus;
   generationError: string | null;
   approvedAt: string | null;
+  publicationAttemptedAt: string | null;
+  publicationError: string | null;
+  publishedAt: string | null;
+  publishedExternalId: string | null;
+  publishedUrl: string | null;
   createdAt: string;
   updatedAt: string;
   import: { fileName: string };
+}
+
+export interface ContentPlanPublishingStatus {
+  enabled: boolean;
+  vk: { configured: boolean };
+  max: { configured: boolean; targetConfigured: boolean };
 }
 
 export interface ContentPlanPreview {

@@ -4,6 +4,9 @@ import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 
 import type { AdminPushConfiguration } from "./features/admin-push/admin-push.types.js";
+import type { ContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
+import type { MaxBotClient } from "./features/max-bot/max-bot.client.js";
+import type { VkClient } from "./features/vk/vk.client.js";
 import type { Database } from "./lib/database/database.js";
 import { publicCorsMiddleware } from "./lib/http/cors.js";
 import { errorHandler } from "./lib/http/error-handler.js";
@@ -35,7 +38,11 @@ type CreateAppOptions = {
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
+    readonly publishChatId?: string;
   };
+  readonly maxClient: MaxBotClient;
+  readonly vkClient: VkClient;
+  readonly contentPlanPublishing: ContentPlanPublishingService;
   readonly vk: {
     readonly accessToken?: string;
     readonly groupId?: string;
@@ -85,6 +92,9 @@ export const createApp = ({
   voiceConfigurationSecret,
   adminPush,
   maxBot,
+  maxClient,
+  vkClient,
+  contentPlanPublishing,
   vk,
   yooKassaSecretKey,
   yooKassaShopId,
@@ -134,6 +144,9 @@ export const createApp = ({
     voiceConfigurationSecret,
     adminPush,
     maxBot,
+    maxClient,
+    vkClient,
+    contentPlanPublishing,
     vk,
     yooKassaSecretKey,
     yooKassaShopId,

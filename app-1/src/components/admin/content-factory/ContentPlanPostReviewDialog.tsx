@@ -1,12 +1,13 @@
 import { useState } from "react";
 
-import { Check, LoaderCircle, RefreshCw, Save, X } from "lucide-react";
+import { CalendarClock, Check, LoaderCircle, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import type {
   FactoryMediaItem,
   PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
+import type { ContentPlanPublishingStatus } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
 import {
@@ -14,6 +15,7 @@ import {
   QuietButton,
   StatusBadge,
 } from "./ContentFactoryPrimitives";
+import { ContentPlanDeliveryStatus } from "./ContentPlanDeliveryStatus";
 
 export const ContentPlanPostReviewDialog = ({
   post,
@@ -22,11 +24,14 @@ export const ContentPlanPostReviewDialog = ({
   onClose,
   onSave,
   onApprove,
+  onSchedule,
   onCancel,
   onRetry,
+  publishingStatus,
 }: {
   post: PlanPublication;
   mediaItems: FactoryMediaItem[];
+  publishingStatus: ContentPlanPublishingStatus | null;
   busy?: boolean;
   onClose: () => void;
   onSave: (input: {
@@ -37,6 +42,7 @@ export const ContentPlanPostReviewDialog = ({
     text: string;
   }) => Promise<void>;
   onApprove: (postId: string) => Promise<void>;
+  onSchedule: (postId: string) => Promise<void>;
   onCancel: (postId: string) => Promise<void>;
   onRetry: (postId: string) => Promise<void>;
 }) => {
@@ -45,9 +51,13 @@ export const ContentPlanPostReviewDialog = ({
   const [date, setDate] = useState(post.date);
   const [time, setTime] = useState(post.time);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const [showScheduleConfirmation, setShowScheduleConfirmation] =
+    useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const canEdit =
-    post.sourceStatus === "needs_review" || post.sourceStatus === "approved";
+    post.sourceStatus === "needs_review" ||
+    post.sourceStatus === "approved" ||
+    post.sourceStatus === "publish_failed";
   const hasChanges =
     title !== post.title ||
     text !== (post.text ?? "") ||
@@ -55,6 +65,20 @@ export const ContentPlanPostReviewDialog = ({
     time !== post.time;
   const canApprove =
     post.sourceStatus === "needs_review" && text.trim().length > 0;
+  const primaryChannel = post.channels[0];
+  const channelReady =
+    publishingStatus?.enabled === true &&
+    (primaryChannel === "vk"
+      ? publishingStatus?.vk.configured === true
+      : primaryChannel === "max"
+        ? publishingStatus?.max.configured === true &&
+          publishingStatus.max.targetConfigured
+        : false);
+  const canSchedule =
+    !hasChanges &&
+    (post.sourceStatus === "approved" ||
+      post.sourceStatus === "publish_failed") &&
+    channelReady;
   const attachedImages = (
     post.imageIds?.length ? post.imageIds : post.imageId ? [post.imageId] : []
   )
@@ -101,51 +125,35 @@ export const ContentPlanPostReviewDialog = ({
         </header>
 
         <div className="space-y-5 p-5 sm:p-6">
-          {post.sourceStatus === "queued" ||
-          post.sourceStatus === "generating" ? (
-            <p className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-800">
-              {post.sourceStatus === "queued"
-                ? "Пост в очереди на генерацию. Кнопка одобрения станет доступна, когда черновик будет готов."
-                : "Агент готовит текст. Это может занять некоторое время; обновлять страницу не требуется."}
-            </p>
-          ) : null}
-
-          {post.sourceStatus === "generation_failed" && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-800">
-              <p>{post.generationError || "Не удалось создать текст поста."}</p>
-              <Button
-                className="mt-3 min-h-9 rounded-lg bg-rose-700 px-3 text-white hover:bg-rose-800"
-                disabled={busy}
-                onClick={() => void onRetry(post.id)}
-                type="button"
-              >
-                {busy ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                Повторить генерацию
-              </Button>
-            </div>
-          )}
-
-          {post.sourceStatus === "approved" && (
-            <p className="rounded-xl border border-brand/15 bg-brand/5 px-3.5 py-3 text-sm text-brand">
-              Пост одобрен к публикации. Он не отправляется в соцсеть
-              автоматически; подключение каналов и отправка потребуют отдельной
-              настройки.
-            </p>
-          )}
+          <ContentPlanDeliveryStatus
+            busy={busy}
+            channelReady={channelReady}
+            date={date}
+            hasChanges={hasChanges}
+            onRetry={onRetry}
+            onSchedule={onSchedule}
+            onShowScheduleConfirmationChange={setShowScheduleConfirmation}
+            post={post}
+            primaryChannel={primaryChannel}
+            publishingStatus={publishingStatus}
+            showScheduleConfirmation={showScheduleConfirmation}
+            time={time}
+          />
 
           {showCancelConfirmation && (
             <div
               className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-900"
               role="alert"
             >
-              <p className="font-semibold">Снять пост с одобрения?</p>
+              <p className="font-semibold">
+                {post.sourceStatus === "scheduled"
+                  ? "Снять пост с расписания?"
+                  : "Снять пост с одобрения?"}
+              </p>
               <p className="mt-1 leading-5">
-                Пост будет убран из календаря. Он не публиковался автоматически,
-                поэтому снимать его из соцсети не потребуется.
+                {post.sourceStatus === "scheduled"
+                  ? "Пост не будет отправлен по расписанию. Если отправка уже началась, отменить её этой кнопкой нельзя."
+                  : "Пост будет снят с одобрения и не попадёт в расписание публикаций."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <QuietButton
@@ -277,15 +285,17 @@ export const ContentPlanPostReviewDialog = ({
             <QuietButton disabled={busy} onClick={onClose}>
               Закрыть
             </QuietButton>
-            {post.sourceStatus === "approved" && !showCancelConfirmation && (
-              <QuietButton
-                className="text-rose-700 hover:bg-rose-50"
-                disabled={busy}
-                onClick={() => setShowCancelConfirmation(true)}
-              >
-                Снять с публикации
-              </QuietButton>
-            )}
+            {(post.sourceStatus === "approved" ||
+              post.sourceStatus === "scheduled") &&
+              !showCancelConfirmation && (
+                <QuietButton
+                  className="text-rose-700 hover:bg-rose-50"
+                  disabled={busy}
+                  onClick={() => setShowCancelConfirmation(true)}
+                >
+                  Снять с публикации
+                </QuietButton>
+              )}
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             {canEdit && (
@@ -316,6 +326,19 @@ export const ContentPlanPostReviewDialog = ({
                   <Check className="size-4" />
                 )}
                 Одобрить к публикации
+              </Button>
+            )}
+            {canSchedule && !showScheduleConfirmation && (
+              <Button
+                className="min-h-11 rounded-xl bg-brand px-4 text-white hover:bg-brand/90"
+                disabled={busy}
+                onClick={() => setShowScheduleConfirmation(true)}
+                type="button"
+              >
+                <CalendarClock className="size-4" />
+                {post.sourceStatus === "publish_failed"
+                  ? "Запланировать повторно"
+                  : "Запланировать публикацию"}
               </Button>
             )}
           </div>

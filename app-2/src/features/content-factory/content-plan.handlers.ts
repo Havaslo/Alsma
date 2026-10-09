@@ -4,6 +4,7 @@ import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import { parseContentPlanFile } from "./content-plan-file-parser.js";
 import type { ContentPlanGenerationService } from "./content-plan-generation.service.js";
+import type { ContentPlanPublishingService } from "./content-plan-publishing.service.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 
 export const contentPlanUploadLimit = "10mb";
@@ -29,6 +30,11 @@ const serializePost = (post: {
   readonly imageIds: string[];
   readonly status: string;
   readonly generationError: string | null;
+  readonly publicationAttemptedAt: Date | null;
+  readonly publicationError: string | null;
+  readonly publishedAt: Date | null;
+  readonly publishedExternalId: string | null;
+  readonly publishedUrl: string | null;
   readonly approvedAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -54,6 +60,11 @@ const serializePost = (post: {
   imageIds: post.imageIds,
   status: post.status,
   generationError: post.generationError,
+  publicationAttemptedAt: post.publicationAttemptedAt,
+  publicationError: post.publicationError,
+  publishedAt: post.publishedAt,
+  publishedExternalId: post.publishedExternalId,
+  publishedUrl: post.publishedUrl,
   approvedAt: post.approvedAt,
   createdAt: post.createdAt,
   updatedAt: post.updatedAt,
@@ -161,6 +172,21 @@ export const createApproveContentPlanPostHandler =
         "Пост можно одобрить только после завершения генерации и проверки.",
       );
     }
+    response.json({ post: serializePost(post) });
+  };
+
+export const createGetContentPlanPublishingStatusHandler =
+  (publishing: ContentPlanPublishingService): RequestHandler =>
+  (_request, response) => {
+    response.json(publishing.channelStatus());
+  };
+
+export const createScheduleContentPlanPostHandler =
+  (publishing: ContentPlanPublishingService): RequestHandler =>
+  async (_request, response) => {
+    const post = await publishing.schedulePost(
+      response.locals.input.params.postId,
+    );
     response.json({ post: serializePost(post) });
   };
 

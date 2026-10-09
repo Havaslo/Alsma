@@ -6,6 +6,9 @@ import pino from "pino";
 
 import { createApp } from "../../app.js";
 import { createDatabase } from "../../lib/database/database.js";
+import { createContentPlanPublishingService } from "../content-factory/content-plan-publishing.service.js";
+import { createMaxBotClient } from "../max-bot/max-bot.client.js";
+import { createVkClient } from "../vk/vk.client.js";
 import { createVoiceAgentRepository } from "./voice-agent.repository.js";
 
 test(
@@ -16,15 +19,29 @@ test(
   async () => {
     const database = createDatabase(process.env.VOICE_TEST_DATABASE_URL!);
     const repository = createVoiceAgentRepository(database);
+    const logger = pino({ level: "silent" });
+    const maxClient = createMaxBotClient({ logger });
+    const vkClient = createVkClient({ logger });
+    const contentPlanPublishing = createContentPlanPublishingService({
+      database,
+      enabled: false,
+      logger,
+      managedStorage: {} as never,
+      max: maxClient,
+      vk: vkClient,
+    });
     const apiKey = "regression-key";
     const salt = "regression-salt";
     const app = createApp({
       aiGatewayOpenai: {},
       database,
-      logger: pino({ level: "silent" }),
+      logger,
       corsAllowedOrigins: [],
       mailRu: {},
       maxBot: {},
+      maxClient,
+      vkClient,
+      contentPlanPublishing,
       vk: {},
       managedStorage: {} as never,
       openaiSip: { baseUrl: "https://unused.invalid" },

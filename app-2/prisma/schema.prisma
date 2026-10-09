@@ -696,6 +696,11 @@ model ContentPlanPost {
   imageIds                  String[]          @default([]) @map("image_ids")
   status                    String            @default("queued") @db.VarChar(24)
   generationError           String?           @map("generation_error") @db.Text
+  publicationAttemptedAt    DateTime?         @map("publication_attempted_at") @db.Timestamptz(3)
+  publicationError          String?           @map("publication_error") @db.Text
+  publishedAt               DateTime?         @map("published_at") @db.Timestamptz(3)
+  publishedExternalId       String?           @map("published_external_id") @db.VarChar(255)
+  publishedUrl              String?           @map("published_url") @db.Text
   approvedAt                DateTime?         @map("approved_at") @db.Timestamptz(3)
   approvedById              String?           @map("approved_by_id") @db.Uuid
   approvedBy                AdminUser?        @relation("ContentPlanPostApprover", fields: [approvedById], references: [id], onDelete: SetNull)

@@ -87,6 +87,14 @@ export const ContentPlanPanel = ({
       count: posts.filter((post) => post.sourceStatus === "approved").length,
     },
     {
+      label: "Запланировано",
+      count: posts.filter((post) => post.sourceStatus === "scheduled").length,
+    },
+    {
+      label: "Опубликовано",
+      count: posts.filter((post) => post.sourceStatus === "published").length,
+    },
+    {
       label: "Генерируется",
       count: posts.filter(
         (post) =>
@@ -134,7 +142,7 @@ export const ContentPlanPanel = ({
         onPreview={onPreviewFile}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {summary.map(({ label, count }) => (
           <div
             className="rounded-2xl border border-line bg-brand-foreground px-4 py-3.5"

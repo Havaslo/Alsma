@@ -3,15 +3,20 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import type { ContentPlanPostInput } from "@/lib/content-factory/contentFactoryTypes";
+import type {
+  ContentPlanPostInput,
+  ContentPlanPublishingStatus,
+} from "@/lib/content-factory/contentFactoryTypes";
 import {
   approveContentPlanPost,
   cancelContentPlanPost,
   createManualContentPlanPosts,
   generateContentPlanPosts,
   loadContentPlanPosts,
+  loadContentPlanPublishingStatus,
   previewContentPlanFile,
   retryContentPlanPost,
+  scheduleContentPlanPost,
   updateContentPlanPost,
 } from "@/lib/content-factory/contentPlanApi";
 import { mapContentPlanPost } from "@/lib/content-factory/contentPlanMapper";
@@ -29,6 +34,11 @@ export const useContentPlanPersistence = () => {
       current.state.data?.some((post) => isGenerationPending(post.status))
         ? 1_500
         : false,
+  });
+  const publishingStatusQuery = useQuery({
+    queryKey: ["content-factory", "publishing-status"],
+    queryFn: loadContentPlanPublishingStatus,
+    staleTime: 30_000,
   });
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: postsQueryKey });
@@ -66,6 +76,10 @@ export const useContentPlanPersistence = () => {
     mutationFn: retryContentPlanPost,
     onSuccess: refresh,
   });
+  const scheduleMutation = useMutation({
+    mutationFn: scheduleContentPlanPost,
+    onSuccess: refresh,
+  });
 
   const mappedPosts = useMemo(
     () => (query.data ?? []).map(mapContentPlanPost),
@@ -84,6 +98,9 @@ export const useContentPlanPersistence = () => {
     isApproving: approveMutation.isPending,
     isCancelling: cancelMutation.isPending,
     isRetrying: retryMutation.isPending,
+    isScheduling: scheduleMutation.isPending,
+    publishingStatus: (publishingStatusQuery.data ??
+      null) as ContentPlanPublishingStatus | null,
     posts: mappedPosts,
     previewFile: previewContentPlanFile,
     generatePlan: (input: {
@@ -103,6 +120,7 @@ export const useContentPlanPersistence = () => {
     approvePost: (postId: string) => approveMutation.mutateAsync(postId),
     cancelPost: (postId: string) => cancelMutation.mutateAsync(postId),
     retryPost: (postId: string) => retryMutation.mutateAsync(postId),
+    schedulePost: (postId: string) => scheduleMutation.mutateAsync(postId),
     refresh: query.refetch,
   };
 };

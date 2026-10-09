@@ -85,12 +85,30 @@ export const ContentFactoryWorkspace = () => {
     try {
       await plan.approvePost(postId);
       factory.setNotice(
-        "Пост одобрен к публикации. Он не отправлен в соцсеть автоматически.",
+        "Пост одобрен. Чтобы публикация вышла в выбранное время, отдельно добавьте её в расписание.",
       );
       setReviewingPost(null);
     } catch (error) {
       factory.setNotice(
         contentFactoryErrorMessage(error, "Не удалось одобрить пост."),
+      );
+      throw error;
+    }
+  };
+
+  const schedulePlanPost = async (postId: string) => {
+    try {
+      const scheduled = await plan.schedulePost(postId);
+      factory.setNotice(
+        `Пост добавлен в расписание на ${scheduled.date} в ${scheduled.time} по московскому времени.`,
+      );
+      setReviewingPost(null);
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось запланировать публикацию.",
+        ),
       );
       throw error;
     }
@@ -328,6 +346,7 @@ export const ContentFactoryWorkspace = () => {
             plan.isUpdating ||
             plan.isApproving ||
             plan.isCancelling ||
+            plan.isScheduling ||
             plan.isRetrying
           }
           mediaItems={persistence.mediaItems}
@@ -335,7 +354,9 @@ export const ContentFactoryWorkspace = () => {
           onCancel={cancelPlanPost}
           onClose={() => setReviewingPost(null)}
           onRetry={retryPlanPost}
+          onSchedule={schedulePlanPost}
           onSave={saveReviewChanges}
+          publishingStatus={plan.publishingStatus}
           post={
             plan.posts.find((post) => post.id === reviewingPost.id) ??
             reviewingPost

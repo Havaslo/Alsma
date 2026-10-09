@@ -51,6 +51,10 @@ const environmentSchema = z
     MAX_WEBHOOK_SECRET: z.string().min(16).optional(),
     MAX_BOT_WEBHOOK_URL: z.string().url().optional(),
     MAX_BOT_SITE_URL: z.string().url().optional(),
+    MAX_PUBLISH_CHAT_ID: z
+      .string()
+      .regex(/^-?\d+$/u)
+      .optional(),
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
@@ -104,6 +108,7 @@ export type AppConfig = {
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
+    readonly publishChatId?: string;
   };
   readonly vk: {
     readonly accessToken?: string;
@@ -167,6 +172,7 @@ export const readConfig = (
       webhookSecret: parsed.MAX_WEBHOOK_SECRET,
       webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
       siteUrl: parsed.MAX_BOT_SITE_URL,
+      publishChatId: parsed.MAX_PUBLISH_CHAT_ID,
     },
     vk: {
       accessToken: parsed.VK_ACCESS_TOKEN,

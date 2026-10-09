@@ -4,6 +4,7 @@ import type {
   ContentPlanPostInput,
   ContentPlanPostRecord,
   ContentPlanPreview,
+  ContentPlanPublishingStatus,
 } from "@/lib/content-factory/contentFactoryTypes";
 
 const headers = () => ({
@@ -83,6 +84,23 @@ export const updateContentPlanPost = async (
 export const approveContentPlanPost = async (postId: string) => {
   const response = await apiClient.post<{ post: ContentPlanPostRecord }>(
     `/admin/content-factory/plan/posts/${postId}/approve`,
+    {},
+    { headers: headers() },
+  );
+  return response.data.post;
+};
+
+export const loadContentPlanPublishingStatus = async () => {
+  const response = await apiClient.get<ContentPlanPublishingStatus>(
+    "/admin/content-factory/plan/publishing/status",
+    { headers: headers() },
+  );
+  return response.data;
+};
+
+export const scheduleContentPlanPost = async (postId: string) => {
+  const response = await apiClient.post<{ post: ContentPlanPostRecord }>(
+    `/admin/content-factory/plan/posts/${postId}/schedule`,
     {},
     { headers: headers() },
   );

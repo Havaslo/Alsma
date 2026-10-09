@@ -78,7 +78,12 @@ export const ContentPlanList = ({
           <QuietButton onClick={() => onOpen(post)}>
             <Edit3 className="size-3.5" /> Открыть
           </QuietButton>
-          {post.sourceStatus !== "cancelled" && (
+          {![
+            "cancelled",
+            "published",
+            "publishing",
+            "publish_unknown",
+          ].includes(post.sourceStatus ?? "") && (
             <>
               <QuietButton onClick={() => onReschedule(post.id)}>
                 <Clock3 className="size-3.5" /> Перенести

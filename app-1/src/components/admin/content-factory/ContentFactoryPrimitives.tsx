@@ -45,6 +45,8 @@ export const StatusBadge = ({ status }: { status: PlanStatus }) => {
     Создаётся: "bg-blue-50 text-blue-700",
     "На проверке": "bg-amber-50 text-amber-800",
     "Одобрен к публикации": "bg-brand/5 text-brand",
+    Публикуется: "bg-blue-50 text-blue-700",
+    "Требуется проверка": "bg-amber-50 text-amber-800",
     "Ошибка генерации": "bg-rose-50 text-rose-700",
     Отменён: "bg-slate-100 text-slate-500",
     Черновик: "bg-muted-ui/50 text-page-foreground",

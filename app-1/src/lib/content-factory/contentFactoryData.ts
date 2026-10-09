@@ -89,6 +89,8 @@ export type PlanStatus =
   | "Создаётся"
   | "На проверке"
   | "Одобрен к публикации"
+  | "Публикуется"
+  | "Требуется проверка"
   | "Ошибка генерации"
   | "Отменён"
   | "Черновик"
@@ -112,6 +114,11 @@ export interface PlanPublication {
   imagePrompt?: string;
   sourceImageRecommendation?: string;
   generationError?: string | null;
+  publicationAttemptedAt?: string | null;
+  publicationError?: string | null;
+  publishedAt?: string | null;
+  publishedExternalId?: string | null;
+  publishedUrl?: string | null;
   sourceStatus?: string;
   audience?: string;
   keyFacts?: string;
