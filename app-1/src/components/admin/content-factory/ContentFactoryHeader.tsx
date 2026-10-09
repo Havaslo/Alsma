@@ -55,7 +55,7 @@ export const ContentFactoryHeader = ({
           Текст · {models.text}
         </span>
         <span className="rounded-full border border-line bg-brand-foreground px-2.5 py-1">
-          Фото · {models.image} · medium · с исходным фото
+          Изображения · {models.image} · по описанию или фото
         </span>
       </div>
     )}

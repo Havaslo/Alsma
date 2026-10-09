@@ -92,18 +92,18 @@ export const ChannelAdaptationsPanel = ({
   };
 
   return (
-    <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-3xl border border-line bg-brand-foreground p-4 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6 lg:p-7">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div>
           <p className="text-xs font-semibold tracking-[0.13em] text-brand uppercase">
-            Проверка
+            Шаг 3 · Проверка
           </p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-page-foreground">
-            Адаптация по каналам
+          <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-page-foreground sm:text-2xl">
+            Проверьте версии и превью
           </h2>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Это отдельные версии одного материала — проверьте каждую перед
-            согласованием.
+            Переключайтесь между каналами. Правки текста влияют только на
+            выбранную версию.
           </p>
         </div>
         <span className="rounded-full bg-muted-ui/50 px-3 py-1.5 text-xs font-semibold text-muted-ui-foreground">
@@ -114,7 +114,7 @@ export const ChannelAdaptationsPanel = ({
 
       <div
         aria-label="Версии публикации по каналам"
-        className="mt-5 scrollbar-none flex gap-2 overflow-x-auto pb-1"
+        className="mt-4 scrollbar-none flex gap-2 overflow-x-auto pb-1"
         role="tablist"
       >
         {CONTENT_CHANNELS.map((channel) => {
@@ -124,7 +124,7 @@ export const ChannelAdaptationsPanel = ({
             <button
               aria-selected={chosen}
               className={cn(
-                "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition",
+                "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition",
                 chosen
                   ? "border-brand bg-brand text-white shadow-sm shadow-emerald-900/15"
                   : enabled
@@ -148,7 +148,7 @@ export const ChannelAdaptationsPanel = ({
         })}
       </div>
 
-      <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(290px,0.85fr)]">
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(390px,0.9fr)] xl:gap-6">
         <div
           className={cn(
             "min-w-0 rounded-2xl border p-4 sm:p-5",
@@ -190,28 +190,31 @@ export const ChannelAdaptationsPanel = ({
           </div>
 
           {guideline && (
-            <div className="mt-4 space-y-2 rounded-xl border border-line bg-page/70 p-3.5 text-xs leading-5 text-muted-ui-foreground">
-              <p>
-                <span className="font-semibold text-page-foreground">
-                  Изображение:
-                </span>{" "}
-                {guideline.image.dimensions} · {guideline.image.ratio} ·{" "}
-                {guideline.image.format}.
-              </p>
-              <p>{guideline.image.note}</p>
-              <p>
-                <span className="font-semibold text-page-foreground">
-                  Несколько изображений:
-                </span>{" "}
-                {guideline.gallery}
-              </p>
-            </div>
+            <details className="mt-3 rounded-xl border border-line bg-page/55 px-3.5 py-2.5">
+              <summary className="cursor-pointer list-none text-xs font-semibold text-page-foreground marker:hidden">
+                Формат {guideline.image.ratio} · {guideline.image.dimensions}
+                <span className="ml-2 font-normal text-muted-ui-foreground">
+                  Правила канала
+                </span>
+              </summary>
+              <div className="mt-2 space-y-1.5 border-t border-line pt-2 text-xs leading-5 text-muted-ui-foreground">
+                <p>
+                  {guideline.image.format}. {guideline.image.note}
+                </p>
+                <p>
+                  <span className="font-semibold text-page-foreground">
+                    Галерея:
+                  </span>{" "}
+                  {guideline.gallery}
+                </p>
+              </div>
+            </details>
           )}
 
           {active ? (
             <>
               <label
-                className="mt-5 mb-2 block text-sm font-semibold text-page-foreground"
+                className="mt-4 mb-2 block text-sm font-semibold text-page-foreground"
                 htmlFor={`adaptation-${activeChannel}`}
               >
                 Текст для{" "}
@@ -221,7 +224,7 @@ export const ChannelAdaptationsPanel = ({
                 }
               </label>
               <textarea
-                className="min-h-40 w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10"
+                className="min-h-56 w-full resize-y rounded-2xl border border-line bg-page/50 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10 xl:min-h-[360px]"
                 id={`adaptation-${activeChannel}`}
                 onChange={(event) =>
                   onTextChange(activeChannel, event.target.value)

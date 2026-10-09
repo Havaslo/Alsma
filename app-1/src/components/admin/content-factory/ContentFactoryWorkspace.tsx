@@ -113,7 +113,7 @@ export const ContentFactoryWorkspace = () => {
   );
 
   return (
-    <div className="mx-auto max-w-[1540px] space-y-5">
+    <div className="mx-auto max-w-[1680px] space-y-4 px-1 sm:px-2">
       <ContentFactoryHeader
         activeSection={factory.activeSection}
         models={persistence.guidelines?.models ?? null}
@@ -124,7 +124,7 @@ export const ContentFactoryWorkspace = () => {
         }}
       />
 
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {factory.notice && (
           <FactoryNotice onClose={() => factory.setNotice("")}>
             {factory.notice}
@@ -132,7 +132,7 @@ export const ContentFactoryWorkspace = () => {
         )}
 
         {factory.activeSection === "create" && (
-          <div className="space-y-5">
+          <div className="space-y-4">
             <ContentFactoryStepper
               canOpenResults={hasGeneratedText}
               currentStep={factory.step}

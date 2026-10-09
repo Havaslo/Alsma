@@ -77,7 +77,7 @@ export const ChannelPublicationPreview = ({
         <Images className="size-4 text-muted-ui-foreground" /> Предпросмотр
         публикации
       </div>
-      <div className="mx-auto max-w-[420px] overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-sm">
+      <div className="mx-auto w-full max-w-[520px] overflow-hidden rounded-2xl border border-line bg-brand-foreground shadow-sm">
         <div className="flex items-center gap-2.5 border-b border-line px-4 py-3">
           <span className="grid size-8 place-items-center rounded-full bg-brand text-[10px] font-bold text-white">
             A

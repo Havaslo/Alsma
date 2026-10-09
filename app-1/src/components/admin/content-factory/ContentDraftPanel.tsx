@@ -75,21 +75,22 @@ export const ContentDraftPanel = ({
 
   return (
     <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold tracking-[0.13em] text-brand uppercase">
-              Результат
+              Шаг 2 · Результат
             </p>
             <span className="rounded-full bg-brand/5 px-2.5 py-1 text-[11px] font-semibold text-brand">
               AI подготовил {variants.length} варианта
             </span>
           </div>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-page-foreground">
-            Исходный материал
+            Текст и изображения
           </h2>
           <p className="mt-1 text-sm text-muted-ui-foreground">
-            Выберите идею, отредактируйте текст и визуал
+            Выберите вариант, проверьте текст и при необходимости замените
+            визуал.
           </p>
         </div>
         <span className="rounded-full border border-line bg-page px-3 py-1.5 text-xs font-medium text-muted-ui-foreground">
@@ -98,7 +99,7 @@ export const ContentDraftPanel = ({
       </div>
 
       <div
-        className="mt-5 scrollbar-none flex gap-2 overflow-x-auto pb-1"
+        className="mt-4 scrollbar-none flex gap-2 overflow-x-auto pb-1"
         role="tablist"
         aria-label="Варианты публикации"
       >
@@ -121,7 +122,7 @@ export const ContentDraftPanel = ({
         ))}
       </div>
 
-      <div className="mt-5 grid min-w-0 gap-5 border-t border-line pt-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(290px,0.9fr)]">
+      <div className="mt-4 grid min-w-0 gap-5 border-t border-line pt-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)] xl:gap-7">
         <div className="min-w-0">
           <div className="mb-2 flex items-center justify-between gap-2">
             <label
@@ -135,7 +136,7 @@ export const ContentDraftPanel = ({
             </span>
           </div>
           <textarea
-            className="min-h-[248px] w-full resize-y rounded-2xl border border-line bg-page/60 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10 disabled:cursor-wait disabled:opacity-70"
+            className="min-h-[280px] w-full resize-y rounded-2xl border border-line bg-page/50 px-4 py-3.5 text-sm leading-6 text-page-foreground transition outline-none focus:border-focus/40 focus:bg-brand-foreground focus:ring-4 focus:ring-focus/10 disabled:cursor-wait disabled:opacity-70 xl:min-h-[360px]"
             disabled={isRefiningText}
             id="factory-draft-text"
             onChange={(event) => onTextChange(event.target.value)}
@@ -225,7 +226,7 @@ export const ContentDraftPanel = ({
         />
       </div>
 
-      <details className="mt-5 rounded-2xl border border-line bg-page/40 p-3.5">
+      <details className="mt-4 rounded-2xl border border-line bg-page/35 p-3.5">
         <summary className="cursor-pointer list-none text-sm font-semibold text-page-foreground marker:hidden">
           Настроить, заменить или создать изображение вручную
         </summary>
@@ -242,7 +243,7 @@ export const ContentDraftPanel = ({
         />
       </details>
 
-      <div className="mt-5 flex justify-end border-t border-line pt-5">
+      <div className="mt-4 flex justify-end border-t border-line pt-4">
         <Button className="min-h-11" onClick={onNext} type="button">
           Перейти к версиям каналов
         </Button>
