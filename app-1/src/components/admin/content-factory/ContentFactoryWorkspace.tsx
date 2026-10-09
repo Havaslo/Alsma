@@ -108,6 +108,24 @@ export const ContentFactoryWorkspace = () => {
     }
   };
 
+  const cancelPlanPost = async (postId: string) => {
+    try {
+      await plan.cancelPost(postId);
+      factory.setNotice(
+        "Пост снят с одобрения и убран из календаря. В соцсеть он не публиковался.",
+      );
+      setReviewingPost(null);
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось снять пост с публикации.",
+        ),
+      );
+      throw error;
+    }
+  };
+
   const hasGeneratedText = factory.variants.some((variant) =>
     variant.text.trim(),
   );
@@ -306,9 +324,15 @@ export const ContentFactoryWorkspace = () => {
 
       {reviewingPost && (
         <ContentPlanPostReviewDialog
-          busy={plan.isUpdating || plan.isApproving || plan.isRetrying}
+          busy={
+            plan.isUpdating ||
+            plan.isApproving ||
+            plan.isCancelling ||
+            plan.isRetrying
+          }
           mediaItems={persistence.mediaItems}
           onApprove={approvePlanPost}
+          onCancel={cancelPlanPost}
           onClose={() => setReviewingPost(null)}
           onRetry={retryPlanPost}
           onSave={saveReviewChanges}

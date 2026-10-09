@@ -82,6 +82,7 @@ export const useContentPlanPersistence = () => {
     isGenerating: generateMutation.isPending,
     isUpdating: updateMutation.isPending,
     isApproving: approveMutation.isPending,
+    isCancelling: cancelMutation.isPending,
     isRetrying: retryMutation.isPending,
     posts: mappedPosts,
     previewFile: previewContentPlanFile,

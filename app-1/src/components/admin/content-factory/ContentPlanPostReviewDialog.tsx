@@ -22,6 +22,7 @@ export const ContentPlanPostReviewDialog = ({
   onClose,
   onSave,
   onApprove,
+  onCancel,
   onRetry,
 }: {
   post: PlanPublication;
@@ -36,12 +37,15 @@ export const ContentPlanPostReviewDialog = ({
     text: string;
   }) => Promise<void>;
   onApprove: (postId: string) => Promise<void>;
+  onCancel: (postId: string) => Promise<void>;
   onRetry: (postId: string) => Promise<void>;
 }) => {
   const [title, setTitle] = useState(post.title);
   const [text, setText] = useState(post.text ?? "");
   const [date, setDate] = useState(post.date);
   const [time, setTime] = useState(post.time);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const canEdit =
     post.sourceStatus === "needs_review" || post.sourceStatus === "approved";
   const hasChanges =
@@ -131,6 +135,40 @@ export const ContentPlanPostReviewDialog = ({
               автоматически; подключение каналов и отправка потребуют отдельной
               настройки.
             </p>
+          )}
+
+          {showCancelConfirmation && (
+            <div
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-900"
+              role="alert"
+            >
+              <p className="font-semibold">Снять пост с одобрения?</p>
+              <p className="mt-1 leading-5">
+                Пост будет убран из календаря. Он не публиковался автоматически,
+                поэтому снимать его из соцсети не потребуется.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <QuietButton
+                  disabled={isCancelling}
+                  onClick={() => setShowCancelConfirmation(false)}
+                >
+                  Оставить в календаре
+                </QuietButton>
+                <Button
+                  className="min-h-9 rounded-xl bg-rose-700 px-3 text-white hover:bg-rose-800"
+                  disabled={isCancelling}
+                  onClick={() => {
+                    setIsCancelling(true);
+                    void onCancel(post.id)
+                      .catch(() => undefined)
+                      .finally(() => setIsCancelling(false));
+                  }}
+                  type="button"
+                >
+                  {isCancelling ? "Снимаем…" : "Да, снять с публикации"}
+                </Button>
+              </div>
+            </div>
           )}
 
           {post.sourceStatus === "cancelled" && (
@@ -235,9 +273,20 @@ export const ContentPlanPostReviewDialog = ({
         </div>
 
         <footer className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-line bg-brand-foreground/95 px-5 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <QuietButton disabled={busy} onClick={onClose}>
-            Закрыть
-          </QuietButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <QuietButton disabled={busy} onClick={onClose}>
+              Закрыть
+            </QuietButton>
+            {post.sourceStatus === "approved" && !showCancelConfirmation && (
+              <QuietButton
+                className="text-rose-700 hover:bg-rose-50"
+                disabled={busy}
+                onClick={() => setShowCancelConfirmation(true)}
+              >
+                Снять с публикации
+              </QuietButton>
+            )}
+          </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             {canEdit && (
               <QuietButton
