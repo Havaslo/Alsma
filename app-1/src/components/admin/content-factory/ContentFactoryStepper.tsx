@@ -19,28 +19,35 @@ export const ContentFactoryStepper = ({
 }) => (
   <nav
     aria-label="Шаги создания публикации"
-    className="relative rounded-2xl border border-line bg-brand-foreground px-3 py-3 shadow-[0_4px_18px_rgba(25,45,34,0.035)] sm:px-5 sm:py-4"
+    className="rounded-2xl border border-line bg-brand-foreground px-3 py-3 shadow-[0_4px_18px_rgba(25,45,34,0.035)] sm:px-5 sm:py-4"
   >
-    <span
-      aria-hidden="true"
-      className="absolute top-10 right-[16.66%] left-[16.66%] hidden h-px bg-line sm:block"
-    />
-    <ol className="relative grid gap-1 sm:grid-cols-3 sm:gap-0">
+    <ol className="grid grid-cols-3">
       {steps.map((step) => {
         const completed = step.number < currentStep;
         const disabled = step.number > 1 && !canOpenResults;
         const selected = step.number === currentStep;
+        const hasNextStep = step.number < steps.length;
+
         return (
-          <li key={step.number}>
+          <li className="relative min-w-0" key={step.number}>
+            {hasNextStep && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute top-[18px] left-[calc(50%+18px)] z-0 h-px w-[calc(100%-36px)]",
+                  completed ? "bg-brand/40" : "bg-line",
+                )}
+              />
+            )}
             <button
               aria-current={selected ? "step" : undefined}
               className={cn(
-                "group relative z-10 flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition sm:justify-center sm:gap-2.5 sm:px-2",
-                selected
-                  ? "bg-brand/[0.06] text-brand sm:bg-transparent"
-                  : "text-muted-ui-foreground hover:bg-page sm:hover:bg-transparent",
-                disabled &&
-                  "cursor-not-allowed opacity-45 hover:bg-transparent",
+                "relative z-10 flex min-h-[76px] w-full flex-col items-center justify-start gap-2 rounded-xl px-1 py-1 text-center transition sm:min-h-[82px] sm:gap-2.5",
+                selected && "bg-brand/[0.045]",
+                !selected &&
+                  !disabled &&
+                  "hover:bg-page/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+                disabled && "cursor-not-allowed opacity-45",
               )}
               disabled={disabled}
               onClick={() => onStepChange(step.number)}
@@ -58,23 +65,24 @@ export const ContentFactoryStepper = ({
                 )}
               >
                 {completed ? (
-                  <Check className="size-4" strokeWidth={2.5} />
+                  <Check
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2.5}
+                  />
                 ) : (
                   step.number
                 )}
               </span>
-              <span className="min-w-0">
-                <span
-                  className={cn(
-                    "block text-sm font-semibold",
-                    disabled && "text-muted-ui-foreground/70",
-                  )}
-                >
-                  {step.label}
-                </span>
-                <span className="mt-0.5 hidden text-[11px] text-muted-ui-foreground sm:block">
-                  {completed ? "Готово" : selected ? "Текущий шаг" : "Далее"}
-                </span>
+              <span
+                className={cn(
+                  "max-w-full truncate text-xs font-semibold sm:text-sm",
+                  selected || completed
+                    ? "text-brand"
+                    : "text-muted-ui-foreground",
+                )}
+              >
+                {step.label}
               </span>
             </button>
           </li>
