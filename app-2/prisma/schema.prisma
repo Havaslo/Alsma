@@ -691,9 +691,12 @@ model ContentPlanPost {
   styleGuidance             String            @default("") @map("style_guidance") @db.Text
   imagePrompt               String            @default("") @map("image_prompt") @db.Text
   sourceImageRecommendation String            @default("") @map("source_image_recommendation") @db.Text
+  imageSourceMode           String            @default("generate") @map("image_source_mode") @db.VarChar(24)
   generatedTitle            String            @default("") @map("generated_title") @db.VarChar(255)
   generatedCopy             String            @default("") @map("generated_copy") @db.Text
   imageIds                  String[]          @default([]) @map("image_ids")
+  imageStatus               String            @default("pending") @map("image_status") @db.VarChar(24)
+  imageError                String?           @map("image_error") @db.Text
   status                    String            @default("queued") @db.VarChar(24)
   generationError           String?           @map("generation_error") @db.Text
   publicationAttemptedAt    DateTime?         @map("publication_attempted_at") @db.Timestamptz(3)

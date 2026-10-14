@@ -4,7 +4,10 @@ import { FileSpreadsheet, LoaderCircle, Sparkles, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import { getChannelLabel } from "@/lib/content-factory/contentFactoryData";
+import {
+  type FactoryMediaItem,
+  getChannelLabel,
+} from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentPlanPostInput,
   ContentPlanPreview,
@@ -13,9 +16,11 @@ import type {
 const maxFileSizeBytes = 10 * 1_024 * 1_024;
 
 export const ContentPlanImportPanel = ({
+  mediaItems,
   onPreview,
   onGenerate,
 }: {
+  mediaItems: FactoryMediaItem[];
   onPreview: (file: File) => Promise<ContentPlanPreview>;
   onGenerate: (input: {
     fileName: string;
@@ -28,6 +33,30 @@ export const ContentPlanImportPanel = ({
   const [error, setError] = useState("");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const updateImageSource = (
+    sourceRow: number,
+    channel: ContentPlanPostInput["channel"],
+    patch: Partial<
+      Pick<
+        ContentPlanPostInput,
+        "imageSourceMode" | "sourceImageRecommendation"
+      >
+    >,
+  ) => {
+    setPreview((current) =>
+      current
+        ? {
+            ...current,
+            posts: current.posts.map((post) =>
+              post.sourceRow === sourceRow && post.channel === channel
+                ? { ...post, ...patch }
+                : post,
+            ),
+          }
+        : current,
+    );
+  };
 
   const selectFile = (nextFile?: File) => {
     if (nextFile && nextFile.size > maxFileSizeBytes) {
@@ -62,6 +91,16 @@ export const ContentPlanImportPanel = ({
 
   const generate = async () => {
     if (!preview) return;
+    if (
+      preview.posts.some(
+        (post) =>
+          post.imageSourceMode !== "generate" &&
+          !post.sourceImageRecommendation.trim(),
+      )
+    ) {
+      setError("Для фото из медиатеки выберите исходное изображение.");
+      return;
+    }
     setIsGenerating(true);
     setError("");
     try {
@@ -92,8 +131,9 @@ export const ContentPlanImportPanel = ({
             Загрузите таблицу, чтобы подготовить посты
           </h2>
           <p className="mt-1 text-sm leading-6 text-muted-ui-foreground">
-            Сначала проверим строки. Тексты появятся в календаре только после
-            нажатия «Сгенерировать посты» и будут ждать отдельного одобрения.
+            Сначала проверим строки. После нажатия «Сгенерировать посты»
+            создадутся черновики текста и изображения по указанному для каждой
+            строки источнику. Всё останется на ручной проверке.
           </p>
           <p className="mt-1 text-xs text-muted-ui-foreground">
             XLSX до 10 МБ, не более 50 публикаций. Для нескольких площадок
@@ -163,8 +203,9 @@ export const ContentPlanImportPanel = ({
                 Найдено публикаций: {preview.posts.length}
               </p>
               <p className="mt-0.5 text-xs text-muted-ui-foreground">
-                Время не указано — поставим 12:00. Сейчас ничего не сохранено и
-                генерация ещё не запущена.
+                Время не указано — поставим 12:00. Просмотр ничего не сохраняет
+                и не запускает платную генерацию. Она начнётся только после
+                подтверждения.
               </p>
             </div>
             <Button
@@ -182,7 +223,7 @@ export const ContentPlanImportPanel = ({
             </Button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-[720px] divide-y divide-line text-left text-sm">
+            <table className="min-w-[1040px] divide-y divide-line text-left text-sm">
               <thead className="bg-brand/5 text-xs text-muted-ui-foreground">
                 <tr>
                   <th className="px-3 py-2.5 font-semibold">Дата</th>
@@ -190,10 +231,15 @@ export const ContentPlanImportPanel = ({
                   <th className="px-3 py-2.5 font-semibold">Площадка</th>
                   <th className="px-3 py-2.5 font-semibold">Формат</th>
                   <th className="px-3 py-2.5 font-semibold">Тема</th>
+                  <th className="px-3 py-2.5 font-semibold">Изображение</th>
+                  <th className="px-3 py-2.5 font-semibold">Источник</th>
+                  <th className="min-w-52 px-3 py-2.5 font-semibold">
+                    Фото из медиатеки
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {preview.posts.slice(0, 8).map((post) => (
+                {preview.posts.map((post) => (
                   <tr key={`${post.sourceRow}-${post.channel}`}>
                     <td className="px-3 py-2.5 whitespace-nowrap text-page-foreground">
                       {new Intl.DateTimeFormat("ru-RU").format(
@@ -212,15 +258,69 @@ export const ContentPlanImportPanel = ({
                     <td className="max-w-64 truncate px-3 py-2.5 text-page-foreground">
                       {post.topic}
                     </td>
+                    <td className="px-3 py-2.5 text-muted-ui-foreground">
+                      {post.imageSourceMode === "library"
+                        ? "Медиатека"
+                        : post.imageSourceMode === "edit"
+                          ? "Переработать фото"
+                          : "С нуля"}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select
+                        aria-label={`Источник изображения для строки ${post.sourceRow}`}
+                        className="min-h-10 w-44 rounded-lg border border-line bg-brand-foreground px-2.5 text-xs text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10"
+                        onChange={(event) =>
+                          updateImageSource(post.sourceRow, post.channel, {
+                            imageSourceMode: event.target
+                              .value as ContentPlanPostInput["imageSourceMode"],
+                          })
+                        }
+                        value={post.imageSourceMode}
+                      >
+                        <option value="generate">С нуля</option>
+                        <option value="library">Взять из медиатеки</option>
+                        <option value="edit">Переработать фото</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {post.imageSourceMode === "generate" ? (
+                        <span className="text-xs text-muted-ui-foreground">
+                          Не требуется
+                        </span>
+                      ) : (
+                        <select
+                          aria-label={`Фото для строки ${post.sourceRow}`}
+                          className="min-h-10 w-full min-w-48 rounded-lg border border-line bg-brand-foreground px-2.5 text-xs text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10 disabled:bg-page"
+                          disabled={mediaItems.length === 0}
+                          onChange={(event) =>
+                            updateImageSource(post.sourceRow, post.channel, {
+                              sourceImageRecommendation: event.target.value,
+                            })
+                          }
+                          value={post.sourceImageRecommendation}
+                        >
+                          <option value="">Выберите фото</option>
+                          {post.sourceImageRecommendation &&
+                            !mediaItems.some(
+                              (item) =>
+                                item.title === post.sourceImageRecommendation,
+                            ) && (
+                              <option value={post.sourceImageRecommendation}>
+                                Не найдено: {post.sourceImageRecommendation}
+                              </option>
+                            )}
+                          {mediaItems.map((item) => (
+                            <option key={item.id} value={item.title}>
+                              {item.title}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {preview.posts.length > 8 && (
-              <p className="border-t border-line px-3 py-2 text-xs text-muted-ui-foreground">
-                И ещё {preview.posts.length - 8} строк.
-              </p>
-            )}
           </div>
         </div>
       )}

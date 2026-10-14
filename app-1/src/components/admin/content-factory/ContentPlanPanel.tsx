@@ -138,6 +138,7 @@ export const ContentPlanPanel = ({
   return (
     <div className="space-y-5">
       <ContentPlanImportPanel
+        mediaItems={mediaItems}
         onGenerate={onGeneratePlan}
         onPreview={onPreviewFile}
       />

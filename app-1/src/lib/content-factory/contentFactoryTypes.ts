@@ -20,6 +20,7 @@ export interface ContentFactoryBrief {
   callToAction: string;
   styleGuidance: string;
   imagePrompt: string;
+  imageSourceMode: "library" | "generate" | "edit";
   sourceImageRecommendation: string;
 }
 
@@ -54,6 +55,7 @@ export interface ContentPlanPostInput {
   callToAction: string;
   styleGuidance: string;
   imagePrompt: string;
+  imageSourceMode: "library" | "generate" | "edit";
   sourceImageRecommendation: string;
 }
 
@@ -76,6 +78,8 @@ export interface ContentPlanPostRecord extends ContentPlanPostInput {
   title: string;
   text: string;
   imageIds?: string[];
+  imageStatus: "pending" | "processing" | "completed" | "failed" | "skipped";
+  imageError: string | null;
   status: ContentPlanPostStatus;
   generationError: string | null;
   approvedAt: string | null;

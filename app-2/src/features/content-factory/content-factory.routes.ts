@@ -82,6 +82,7 @@ export const createContentFactoryRouter = (
     ai,
     database,
     logger,
+    managedStorage,
   });
   router.use(
     createRequireAdmin(

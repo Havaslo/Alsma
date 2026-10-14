@@ -36,6 +36,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       callToAction: "",
       styleGuidance: "",
       imagePrompt: "",
+      imageSourceMode: "generate",
       sourceImageRecommendation: "",
     },
   );
@@ -269,6 +270,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       callToAction: post.callToAction ?? "",
       styleGuidance: post.styleGuidance ?? "",
       imagePrompt: post.imagePrompt ?? "",
+      imageSourceMode: post.imageSourceMode ?? "generate",
       sourceImageRecommendation: post.sourceImageRecommendation ?? "",
     });
     setSelectedChannels(post.channels);
@@ -327,6 +329,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
         callToAction: "",
         styleGuidance: "",
         imagePrompt: "",
+        imageSourceMode: "generate",
         sourceImageRecommendation: "",
       },
     );

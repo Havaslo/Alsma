@@ -71,6 +71,7 @@ export const updateContentPlanPost = async (
   input: Partial<Pick<ContentPlanPostInput, "date" | "time">> & {
     title?: string;
     text?: string;
+    imageIds?: string[];
   },
 ) => {
   const response = await apiClient.patch<{ post: ContentPlanPostRecord }>(

@@ -23,6 +23,7 @@ const headerAliases = {
   callToAction: ["Призыв к действию / ссылка", "Призыв к действию", "Ссылка"],
   styleGuidance: ["Стиль и ограничения", "Стиль"],
   imagePrompt: ["Промт для изображения", "Промт на изображение"],
+  imageSourceMode: ["Источник изображения", "Режим изображения"],
   sourceImageRecommendation: [
     "Исходное изображение (файл или рекомендация)",
     "Исходное изображение",
@@ -115,6 +116,32 @@ const parseChannel = (value: unknown) => {
   return null;
 };
 
+const parseImageSourceMode = (value: unknown) => {
+  const mode = normalizeHeader(value);
+  if (
+    !mode ||
+    ["снуля", "сгенерироватьснуля", "генерация", "generate"].includes(mode)
+  ) {
+    return "generate" as const;
+  }
+  if (
+    ["медиатека", "измедиатеки", "выбратьизмедиатеки", "library"].includes(mode)
+  ) {
+    return "library" as const;
+  }
+  if (
+    [
+      "переработатьфото",
+      "переработатьизмедиатеки",
+      "редактироватьфото",
+      "edit",
+    ].includes(mode)
+  ) {
+    return "edit" as const;
+  }
+  return null;
+};
+
 const findHeaderRow = (rows: unknown[][]) => {
   const required = ["date", "postType", "channel", "format", "topic"] as const;
   for (let rowIndex = 0; rowIndex < Math.min(rows.length, 20); rowIndex += 1) {
@@ -203,8 +230,20 @@ export const parseContentPlanFile = (
       return column === undefined ? "" : row[column];
     };
     const channel = parseChannel(readField("channel"));
+    const imageSourceMode = parseImageSourceMode(readField("imageSourceMode"));
     const date = parseDate(readField("date"));
     const time = parseTime(readField("time"));
+    const imageRecommendation = valueAsText(
+      readField("sourceImageRecommendation"),
+    );
+    if (imageSourceMode !== "generate" && !imageRecommendation && channel) {
+      throw new HttpError(
+        400,
+        "CONTENT_PLAN_IMAGE_SOURCE_REQUIRED",
+        `Строка ${rowNumber}: укажите точное имя файла из медиатеки для выбранного источника изображения.`,
+        { row: rowNumber, fields: ["sourceImageRecommendation"] },
+      );
+    }
     const parsed = contentPlanPostInputSchema.safeParse({
       sourceRow: rowNumber,
       date: date ?? "",
@@ -218,9 +257,8 @@ export const parseContentPlanFile = (
       callToAction: valueAsText(readField("callToAction")),
       styleGuidance: valueAsText(readField("styleGuidance")),
       imagePrompt: valueAsText(readField("imagePrompt")),
-      sourceImageRecommendation: valueAsText(
-        readField("sourceImageRecommendation"),
-      ),
+      imageSourceMode: imageSourceMode ?? "",
+      sourceImageRecommendation: imageRecommendation,
     });
     if (!parsed.success) {
       const labels = parsed.error.issues
@@ -231,7 +269,9 @@ export const parseContentPlanFile = (
         ? "проверьте дату публикации"
         : !channel
           ? `площадка «${valueAsText(readField("channel"))}» пока не поддерживается`
-          : `проверьте поля: ${labels}`;
+          : !imageSourceMode
+            ? `источник изображения «${valueAsText(readField("imageSourceMode"))}» не распознан`
+            : `проверьте поля: ${labels}`;
       throw new HttpError(
         400,
         "CONTENT_PLAN_ROW_INVALID",

@@ -23,6 +23,7 @@ const headers = [
   "Стиль и ограничения",
   "Промт для изображения",
   "Исходное изображение (файл или рекомендация)",
+  "Источник изображения",
 ];
 
 test("parses the content-plan template and defaults omitted time to noon", () => {
@@ -42,6 +43,7 @@ test("parses the content-plan template and defaults omitted time to noon", () =>
       "Не обещать неподтверждённое",
       "Уютный осенний визуал",
       "Реальное фото территории",
+      "С нуля",
     ],
   ]);
 
@@ -51,6 +53,73 @@ test("parses the content-plan template and defaults omitted time to noon", () =>
   assert.equal(post?.channel, "vk");
   assert.equal(post?.sourceRow, 4);
   assert.equal(post?.topic, "Осенние выходные");
+  assert.equal(post?.imageSourceMode, "generate");
+});
+
+test("parses an explicit library source and requires a file name for its lookup", () => {
+  const content = makeWorkbook([
+    headers,
+    [
+      "12.10.2026",
+      "Новость",
+      "VK",
+      "Пост",
+      "Тема",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "spa-terrace.png",
+      "Медиатека",
+    ],
+  ]);
+  const [post] = parseContentPlanFile(content, "plan.xlsx");
+  assert.equal(post?.imageSourceMode, "library");
+
+  const editContent = makeWorkbook([
+    headers,
+    [
+      "12.10.2026",
+      "Новость",
+      "VK",
+      "Пост",
+      "Тема",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "spa-terrace.png",
+      "Переработать фото",
+    ],
+  ]);
+  const [editPost] = parseContentPlanFile(editContent, "plan.xlsx");
+  assert.equal(editPost?.imageSourceMode, "edit");
+
+  const missingName = makeWorkbook([
+    headers,
+    [
+      "12.10.2026",
+      "Новость",
+      "VK",
+      "Пост",
+      "Тема",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Переработать фото",
+    ],
+  ]);
+  assert.throws(
+    () => parseContentPlanFile(missingName, "plan.xlsx"),
+    (error: unknown) =>
+      error instanceof HttpError &&
+      error.code === "CONTENT_PLAN_IMAGE_SOURCE_REQUIRED",
+  );
 });
 
 test("rejects unsupported channels before persisting a plan", () => {

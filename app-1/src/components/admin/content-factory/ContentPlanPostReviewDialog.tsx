@@ -1,6 +1,15 @@
 import { useState } from "react";
 
-import { CalendarClock, Check, LoaderCircle, Save, X } from "lucide-react";
+import {
+  CalendarClock,
+  Check,
+  ImagePlus,
+  LoaderCircle,
+  RefreshCw,
+  Save,
+  WandSparkles,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import type {
@@ -23,6 +32,7 @@ export const ContentPlanPostReviewDialog = ({
   busy = false,
   onClose,
   onSave,
+  onGenerateImage,
   onApprove,
   onSchedule,
   onCancel,
@@ -40,7 +50,15 @@ export const ContentPlanPostReviewDialog = ({
     time: string;
     title: string;
     text: string;
+    imageIds: string[];
   }) => Promise<void>;
+  onGenerateImage: (input: {
+    postId: string;
+    mode: "generate" | "edit";
+    referenceImageId?: string;
+    prompt: string;
+    postText: string;
+  }) => Promise<string>;
   onApprove: (postId: string) => Promise<void>;
   onSchedule: (postId: string) => Promise<void>;
   onCancel: (postId: string) => Promise<void>;
@@ -50,6 +68,27 @@ export const ContentPlanPostReviewDialog = ({
   const [text, setText] = useState(post.text ?? "");
   const [date, setDate] = useState(post.date);
   const [time, setTime] = useState(post.time);
+  const [selectedImageIdsOverride, setSelectedImageIdsOverride] = useState<
+    string[] | null
+  >(null);
+  const [referenceImageIdOverride, setReferenceImageIdOverride] = useState<
+    string | null
+  >(null);
+  const selectedImageIds =
+    selectedImageIdsOverride ??
+    (post.imageIds?.length
+      ? post.imageIds
+      : post.imageId
+        ? [post.imageId]
+        : []);
+  const referenceImageId =
+    referenceImageIdOverride ??
+    post.imageIds?.[0] ??
+    post.imageId ??
+    mediaItems[0]?.id ??
+    "";
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [showScheduleConfirmation, setShowScheduleConfirmation] =
     useState(false);
@@ -62,7 +101,14 @@ export const ContentPlanPostReviewDialog = ({
     title !== post.title ||
     text !== (post.text ?? "") ||
     date !== post.date ||
-    time !== post.time;
+    time !== post.time ||
+    selectedImageIds.join("|") !==
+      (post.imageIds?.length
+        ? post.imageIds
+        : post.imageId
+          ? [post.imageId]
+          : []
+      ).join("|");
   const canApprove =
     post.sourceStatus === "needs_review" && text.trim().length > 0;
   const primaryChannel = post.channels[0];
@@ -79,11 +125,34 @@ export const ContentPlanPostReviewDialog = ({
     (post.sourceStatus === "approved" ||
       post.sourceStatus === "publish_failed") &&
     channelReady;
-  const attachedImages = (
-    post.imageIds?.length ? post.imageIds : post.imageId ? [post.imageId] : []
-  )
+  const attachedImages = selectedImageIds
     .map((id) => mediaItems.find((item) => item.id === id))
     .filter((item): item is FactoryMediaItem => Boolean(item));
+
+  const generateImage = async (mode: "generate" | "edit") => {
+    if (mode === "edit" && !referenceImageId) return;
+    setImageError("");
+    setIsGeneratingImage(true);
+    try {
+      const imageId = await onGenerateImage({
+        postId: post.id,
+        mode,
+        referenceImageId: mode === "edit" ? referenceImageId : undefined,
+        prompt: post.imagePrompt ?? "",
+        postText: `${title}\n\n${text}`,
+      });
+      setSelectedImageIdsOverride([imageId]);
+      setReferenceImageIdOverride(imageId);
+    } catch (error) {
+      setImageError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось подготовить изображение. Попробуйте ещё раз.",
+      );
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   return (
     <div
@@ -255,6 +324,105 @@ export const ContentPlanPostReviewDialog = ({
             </section>
           )}
 
+          {canEdit && (
+            <section
+              aria-label="Управление изображением публикации"
+              className="space-y-3 rounded-xl border border-line bg-page/60 p-3.5"
+            >
+              <div>
+                <h3 className="text-sm font-semibold text-page-foreground">
+                  Изображение поста
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-ui-foreground">
+                  Выберите готовое фото, создайте новое или попросите ИИ
+                  переработать фото из медиатеки.
+                </p>
+              </div>
+              {attachedImages.length === 0 && (
+                <p className="rounded-xl border border-dashed border-line bg-brand-foreground px-3.5 py-3 text-sm text-muted-ui-foreground">
+                  {post.imageStatus === "processing" ||
+                  post.imageStatus === "pending"
+                    ? "Изображение создаётся…"
+                    : post.imageError ||
+                      "К посту пока не прикреплено изображение."}
+                </p>
+              )}
+              <label className="block text-xs font-semibold text-muted-ui-foreground">
+                Фото из медиатеки
+                <select
+                  className="mt-1.5 min-h-11 w-full rounded-xl border border-line bg-brand-foreground px-3 text-sm font-normal text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10 disabled:bg-page"
+                  disabled={
+                    busy || isGeneratingImage || mediaItems.length === 0
+                  }
+                  onChange={(event) =>
+                    setReferenceImageIdOverride(event.target.value)
+                  }
+                  value={referenceImageId}
+                >
+                  <option value="">Выберите изображение</option>
+                  {mediaItems.map((image) => (
+                    <option key={image.id} value={image.id}>
+                      {image.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <QuietButton
+                  disabled={busy || isGeneratingImage || !referenceImageId}
+                  onClick={() =>
+                    setSelectedImageIdsOverride([referenceImageId])
+                  }
+                >
+                  <ImagePlus className="size-4" /> Использовать фото
+                </QuietButton>
+                <QuietButton
+                  disabled={busy || isGeneratingImage || !text.trim()}
+                  onClick={() => void generateImage("generate")}
+                >
+                  {isGeneratingImage ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <WandSparkles className="size-4" />
+                  )}
+                  Создать новое
+                </QuietButton>
+                <QuietButton
+                  disabled={
+                    busy ||
+                    isGeneratingImage ||
+                    !referenceImageId ||
+                    !text.trim()
+                  }
+                  onClick={() => void generateImage("edit")}
+                >
+                  {isGeneratingImage ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                  Переработать фото
+                </QuietButton>
+              </div>
+              {imageError && (
+                <p className="text-sm text-rose-700" role="alert">
+                  {imageError}
+                </p>
+              )}
+              {selectedImageIds.join("|") !==
+                (post.imageIds?.length
+                  ? post.imageIds
+                  : post.imageId
+                    ? [post.imageId]
+                    : []
+                ).join("|") && (
+                <p className="text-xs text-muted-ui-foreground">
+                  Выбор фото сохранится вместе с правками поста.
+                </p>
+              )}
+            </section>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyBrief label="Для кого" value={post.audience} />
             <ReadOnlyBrief label="Факты и условия" value={post.keyFacts} />
@@ -272,12 +440,6 @@ export const ContentPlanPostReviewDialog = ({
               value={post.sourceImageRecommendation}
             />
           </div>
-          {(post.imagePrompt || post.sourceImageRecommendation) && (
-            <p className="text-xs leading-5 text-muted-ui-foreground">
-              Промт и подсказка по исходному фото взяты из таблицы; само
-              изображение этой генерацией не создавалось.
-            </p>
-          )}
         </div>
 
         <footer className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-line bg-brand-foreground/95 px-5 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -302,7 +464,14 @@ export const ContentPlanPostReviewDialog = ({
               <QuietButton
                 disabled={busy || !hasChanges || !title.trim() || !text.trim()}
                 onClick={() =>
-                  void onSave({ postId: post.id, date, time, title, text })
+                  void onSave({
+                    postId: post.id,
+                    date,
+                    time,
+                    title,
+                    text,
+                    imageIds: selectedImageIds,
+                  })
                 }
               >
                 {busy ? (
@@ -316,7 +485,7 @@ export const ContentPlanPostReviewDialog = ({
             {canApprove && (
               <Button
                 className="min-h-11 rounded-xl bg-brand px-4 text-white hover:bg-brand/90"
-                disabled={busy}
+                disabled={busy || hasChanges}
                 onClick={() => void onApprove(post.id)}
                 type="button"
               >

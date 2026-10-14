@@ -24,10 +24,13 @@ const serializePost = (post: {
   readonly callToAction: string;
   readonly styleGuidance: string;
   readonly imagePrompt: string;
+  readonly imageSourceMode: string;
   readonly sourceImageRecommendation: string;
   readonly generatedTitle: string;
   readonly generatedCopy: string;
   readonly imageIds: string[];
+  readonly imageStatus: string;
+  readonly imageError: string | null;
   readonly status: string;
   readonly generationError: string | null;
   readonly publicationAttemptedAt: Date | null;
@@ -54,10 +57,13 @@ const serializePost = (post: {
   callToAction: post.callToAction,
   styleGuidance: post.styleGuidance,
   imagePrompt: post.imagePrompt,
+  imageSourceMode: post.imageSourceMode,
   sourceImageRecommendation: post.sourceImageRecommendation,
   title: post.generatedTitle || post.topic,
   text: post.generatedCopy,
   imageIds: post.imageIds,
+  imageStatus: post.imageStatus,
+  imageError: post.imageError,
   status: post.status,
   generationError: post.generationError,
   publicationAttemptedAt: post.publicationAttemptedAt,

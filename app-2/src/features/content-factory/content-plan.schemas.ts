@@ -8,6 +8,12 @@ export const contentPlanChannelSchema = z.enum([
   "zen",
 ]);
 
+export const contentPlanImageSourceModeSchema = z.enum([
+  "library",
+  "generate",
+  "edit",
+]);
+
 const validCalendarDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/u)
@@ -41,6 +47,7 @@ export const contentPlanPostInputSchema = z.object({
   callToAction: z.string().trim().max(1_000).default(""),
   styleGuidance: z.string().trim().max(2_000).default(""),
   imagePrompt: z.string().trim().max(2_000).default(""),
+  imageSourceMode: contentPlanImageSourceModeSchema.default("generate"),
   sourceImageRecommendation: z.string().trim().max(1_000).default(""),
 });
 
@@ -66,6 +73,7 @@ export const contentPlanPostUpdateSchema = z
       .optional(),
     title: z.string().trim().min(1).max(255).optional(),
     text: z.string().trim().min(1).max(20_000).optional(),
+    imageIds: z.array(z.uuid()).max(4).optional(),
   })
   .refine((input) => Object.keys(input).length > 0);
 

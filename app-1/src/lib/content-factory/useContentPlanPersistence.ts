@@ -58,6 +58,7 @@ export const useContentPlanPersistence = () => {
       time?: string;
       title?: string;
       text?: string;
+      imageIds?: string[];
     }) => {
       const { postId, ...changes } = input;
       return updateContentPlanPost(postId, changes);
@@ -116,6 +117,7 @@ export const useContentPlanPersistence = () => {
       time?: string;
       title?: string;
       text?: string;
+      imageIds?: string[];
     }) => updateMutation.mutateAsync(input),
     approvePost: (postId: string) => approveMutation.mutateAsync(postId),
     cancelPost: (postId: string) => cancelMutation.mutateAsync(postId),

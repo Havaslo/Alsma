@@ -113,6 +113,9 @@ export interface PlanPublication {
   text?: string;
   imagePrompt?: string;
   sourceImageRecommendation?: string;
+  imageSourceMode?: "library" | "generate" | "edit";
+  imageStatus?: "pending" | "processing" | "completed" | "failed" | "skipped";
+  imageError?: string | null;
   generationError?: string | null;
   publicationAttemptedAt?: string | null;
   publicationError?: string | null;

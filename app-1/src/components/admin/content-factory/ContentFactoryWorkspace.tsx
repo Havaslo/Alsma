@@ -12,7 +12,10 @@ import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlan
 import { ContentPlanPostReviewDialog } from "@/components/admin/content-factory/ContentPlanPostReviewDialog";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
+import type {
+  ContentChannel,
+  PlanPublication,
+} from "@/lib/content-factory/contentFactoryData";
 import type { ContentPlanPostInput } from "@/lib/content-factory/contentFactoryTypes";
 import { useContentFactoryPersistence } from "@/lib/content-factory/useContentFactoryPersistence";
 import { useContentFactoryState } from "@/lib/content-factory/useContentFactoryState";
@@ -67,6 +70,7 @@ export const ContentFactoryWorkspace = () => {
     time: string;
     title: string;
     text: string;
+    imageIds: string[];
   }) => {
     try {
       await plan.updatePost(input);
@@ -76,6 +80,51 @@ export const ContentFactoryWorkspace = () => {
     } catch (error) {
       factory.setNotice(
         contentFactoryErrorMessage(error, "Не удалось сохранить правки."),
+      );
+      throw error;
+    }
+  };
+
+  const generatePlanPostImage = async (input: {
+    postId: string;
+    mode: "generate" | "edit";
+    referenceImageId?: string;
+    prompt: string;
+    postText: string;
+  }) => {
+    try {
+      const post = plan.posts.find((item) => item.id === input.postId);
+      const channel = post?.channels[0] as ContentChannel | undefined;
+      if (!channel) throw new Error("Не удалось определить площадку поста.");
+      const reference = input.referenceImageId
+        ? persistence.mediaItems.find(
+            (item) => item.id === input.referenceImageId,
+          )
+        : undefined;
+      if (input.mode === "edit" && !reference) {
+        throw new Error("Выберите исходное фото из медиатеки.");
+      }
+      const generated = await persistence.generateImage({
+        imageCount: 1,
+        mode: input.mode,
+        prompt: input.prompt,
+        postText: input.postText,
+        selectedChannels: [channel],
+        references: reference ? [reference] : [],
+      });
+      const image = generated[channel]?.[0];
+      if (!image) {
+        throw new Error("Нейросеть не вернула изображение для этой площадки.");
+      }
+      await plan.updatePost({ postId: input.postId, imageIds: [image.id] });
+      factory.setNotice("Новое изображение создано и прикреплено к посту.");
+      return image.id;
+    } catch (error) {
+      factory.setNotice(
+        contentFactoryErrorMessage(
+          error,
+          "Не удалось создать изображение для поста.",
+        ),
       );
       throw error;
     }
@@ -353,6 +402,7 @@ export const ContentFactoryWorkspace = () => {
           onApprove={approvePlanPost}
           onCancel={cancelPlanPost}
           onClose={() => setReviewingPost(null)}
+          onGenerateImage={generatePlanPostImage}
           onRetry={retryPlanPost}
           onSchedule={schedulePlanPost}
           onSave={saveReviewChanges}

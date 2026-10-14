@@ -29,6 +29,7 @@ export const createContentPlanRepository = (database: Database) => ({
             callToAction: post.callToAction,
             styleGuidance: post.styleGuidance,
             imagePrompt: post.imagePrompt,
+            imageSourceMode: post.imageSourceMode,
             sourceImageRecommendation: post.sourceImageRecommendation,
             createdById: adminId,
           })),
@@ -88,14 +89,39 @@ export const createContentPlanRepository = (database: Database) => ({
     }),
   findPostForGeneration: (postId: string) =>
     database.client.contentPlanPost.findUnique({ where: { id: postId } }),
+  findMediaByExactFileName: (fileName: string) =>
+    database.client.contentFactoryMedia.findMany({
+      where: { fileName: { equals: fileName, mode: "insensitive" } },
+      take: 2,
+    }),
+  updateImageGenerationState: (
+    postId: string,
+    input: { readonly status: string; readonly error?: string | null },
+  ) =>
+    database.client.contentPlanPost.updateMany({
+      data: {
+        imageStatus: input.status,
+        imageError: input.error ?? null,
+      },
+      where: { id: postId, status: "generating" },
+    }),
   completeGeneration: (
     postId: string,
-    input: { readonly title: string; readonly copy: string },
+    input: {
+      readonly title: string;
+      readonly copy: string;
+      readonly imageIds: readonly string[];
+      readonly imageStatus: string;
+      readonly imageError: string | null;
+    },
   ) =>
     database.client.contentPlanPost.updateMany({
       data: {
         generatedTitle: input.title,
         generatedCopy: input.copy,
+        imageIds: [...input.imageIds],
+        imageStatus: input.imageStatus,
+        imageError: input.imageError,
         generationError: null,
         status: "needs_review",
       },
@@ -104,6 +130,8 @@ export const createContentPlanRepository = (database: Database) => ({
   failGeneration: (postId: string, message: string) =>
     database.client.contentPlanPost.updateMany({
       data: {
+        imageStatus: "skipped",
+        imageError: null,
         generationError: message.slice(0, 1_000),
         status: "generation_failed",
       },
@@ -111,7 +139,12 @@ export const createContentPlanRepository = (database: Database) => ({
     }),
   retryPost: (postId: string) =>
     database.client.contentPlanPost.updateMany({
-      data: { generationError: null, status: "queued" },
+      data: {
+        generationError: null,
+        imageError: null,
+        imageStatus: "pending",
+        status: "queued",
+      },
       where: { id: postId, status: "generation_failed" },
     }),
   updateReviewPost: async (postId: string, input: ContentPlanPostUpdate) => {
@@ -133,6 +166,7 @@ export const createContentPlanRepository = (database: Database) => ({
         ...(input.time ? { scheduledTime: input.time } : {}),
         ...(input.title ? { generatedTitle: input.title } : {}),
         ...(input.text ? { generatedCopy: input.text } : {}),
+        ...(input.imageIds ? { imageIds: [...input.imageIds] } : {}),
         publicationAttemptedAt: null,
         publicationError: null,
         status: "needs_review",

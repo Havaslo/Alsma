@@ -2,14 +2,16 @@ import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
+import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
+import { assertReferencePhoto } from "./content-factory-image-processing.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 import type {
   ContentPlanImportBody,
   ManualContentPlanPost,
 } from "./content-plan.schemas.js";
 
-const stalePostMilliseconds = 5 * 60 * 1_000;
+const stalePostMilliseconds = 10 * 60 * 1_000;
 const maxConcurrentGenerations = 2;
 
 const generationErrorMessage = (error: unknown) =>
@@ -17,15 +19,111 @@ const generationErrorMessage = (error: unknown) =>
     ? error.message
     : "Не удалось создать текст. Можно повторить генерацию этого поста.";
 
+const imageGenerationErrorMessage = (error: unknown) =>
+  error instanceof HttpError
+    ? error.message
+    : "Не удалось подготовить изображение. Его можно заменить или создать в окне проверки.";
+
 export const createContentPlanGenerationService = (options: {
-  readonly ai: Pick<ContentFactoryAiService, "generatePlanCopy">;
+  readonly ai: Pick<
+    ContentFactoryAiService,
+    "generateImage" | "generatePlanCopy"
+  >;
   readonly database: Database;
   readonly logger: Logger;
+  readonly managedStorage: ManagedStorage;
+  readonly fetchImplementation?: typeof fetch;
 }) => {
   const repository = createContentPlanRepository(options.database);
+  const fetchImplementation = options.fetchImplementation ?? fetch;
   const queue: string[] = [];
   const queuedIds = new Set<string>();
   const activeIds = new Set<string>();
+
+  const generatePlanImage = async (input: {
+    readonly adminId: string;
+    readonly imagePrompt: string;
+    readonly imageSourceMode: "edit" | "generate" | "library";
+    readonly postText: string;
+    readonly sourceImageRecommendation: string;
+    readonly channel: string;
+  }) => {
+    const sourceMedia =
+      input.imageSourceMode === "generate"
+        ? null
+        : await repository.findMediaByExactFileName(
+            input.sourceImageRecommendation.trim(),
+          );
+    if (sourceMedia && sourceMedia.length !== 1) {
+      throw new HttpError(
+        400,
+        "CONTENT_PLAN_IMAGE_SOURCE_NOT_FOUND",
+        sourceMedia.length === 0
+          ? `В медиатеке не найден файл «${input.sourceImageRecommendation}». Укажите точное имя файла или выберите другое действие для изображения.`
+          : `В медиатеке найдено несколько файлов «${input.sourceImageRecommendation}». Уточните имя файла.`,
+      );
+    }
+    const media = sourceMedia?.[0];
+    if (input.imageSourceMode === "library") {
+      if (!media) {
+        throw new HttpError(
+          400,
+          "CONTENT_PLAN_IMAGE_SOURCE_NOT_FOUND",
+          "Укажите точное имя файла из медиатеки для изображения поста.",
+        );
+      }
+      return { imageIds: [media.id], imageStatus: "completed" as const };
+    }
+
+    const referencePhotos: Array<{
+      readonly content: Buffer;
+      readonly contentType: string;
+      readonly sourceCategory: string;
+      readonly sourceTags: readonly string[];
+      readonly sourceTitle: string;
+    }> = [];
+    if (input.imageSourceMode === "edit" && media) {
+      const download = await options.managedStorage.getDownload(media.objectId);
+      const response = await fetchImplementation(download.downloadUrl);
+      if (!response.ok) {
+        throw new Error("Не удалось загрузить исходное фото из медиатеки.");
+      }
+      const content = Buffer.from(await response.arrayBuffer());
+      assertReferencePhoto(content, media.contentType);
+      referencePhotos.push({
+        content,
+        contentType: media.contentType,
+        sourceCategory: "Медиатека",
+        sourceTags: [],
+        sourceTitle: media.fileName,
+      });
+    }
+
+    const result = await options.ai.generateImage({
+      adminId: input.adminId,
+      imageCount: 1,
+      mode: input.imageSourceMode === "edit" ? "edit" : "generate",
+      postText: input.postText,
+      prompt: input.imagePrompt,
+      selectedChannels: [
+        input.channel as ContentPlanImportBody["posts"][number]["channel"],
+      ],
+      referencePhotos,
+    });
+    const asset = result.assets.find((item) =>
+      item.channels.includes(
+        input.channel as ContentPlanImportBody["posts"][number]["channel"],
+      ),
+    );
+    if (!asset) {
+      throw new HttpError(
+        502,
+        "CONTENT_PLAN_IMAGE_GENERATION_INVALID",
+        "ИИ не вернул изображение для выбранной площадки.",
+      );
+    }
+    return { imageIds: [asset.media.id], imageStatus: "completed" as const };
+  };
 
   const runPost = async (postId: string) => {
     const claim = await repository.claimPost(postId);
@@ -47,11 +145,48 @@ export const createContentPlanGenerationService = (options: {
         callToAction: post.callToAction,
         styleGuidance: post.styleGuidance,
         imagePrompt: post.imagePrompt,
+        imageSourceMode:
+          post.imageSourceMode as ContentPlanImportBody["posts"][number]["imageSourceMode"],
         sourceImageRecommendation: post.sourceImageRecommendation,
       });
+
+      let imageResult: {
+        readonly imageIds: readonly string[];
+        readonly imageStatus: "completed" | "failed";
+        readonly imageError: string | null;
+      };
+      try {
+        await repository.updateImageGenerationState(postId, {
+          status: "processing",
+        });
+        const image = await generatePlanImage({
+          adminId: post.createdById ?? "",
+          channel: post.channel,
+          imagePrompt: post.imagePrompt,
+          imageSourceMode: post.imageSourceMode as
+            "edit" | "generate" | "library",
+          postText: `${result.title}\n\n${result.text}`,
+          sourceImageRecommendation: post.sourceImageRecommendation,
+        });
+        imageResult = { ...image, imageError: null };
+      } catch (error) {
+        options.logger.warn(
+          {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+            postId,
+          },
+          "Content plan image generation failed",
+        );
+        imageResult = {
+          imageError: imageGenerationErrorMessage(error),
+          imageIds: [],
+          imageStatus: "failed",
+        };
+      }
       await repository.completeGeneration(postId, {
         title: result.title,
         copy: result.text,
+        ...imageResult,
       });
     } catch (error) {
       options.logger.warn(
