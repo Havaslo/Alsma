@@ -1,6 +1,5 @@
 import { ImagePlus, Sparkles } from "lucide-react";
 
-import { ContentFactoryImageViewer } from "@/components/admin/content-factory/ContentFactoryImageViewer";
 import { Button } from "@/components/ui/Button";
 import {
   type ContentChannel,
@@ -9,6 +8,8 @@ import {
   getDraftVariantImageIds,
 } from "@/lib/content-factory/contentFactoryData";
 import { resolveMediaUrl } from "@/lib/site/media-url";
+
+import { ContentFactoryImageDownloadButton } from "./ContentFactoryImageDownloadButton";
 
 export const ContentFactoryResultImages = ({
   variant,
@@ -92,9 +93,10 @@ export const ContentFactoryResultImages = ({
                         ? "Создано ИИ"
                         : "Медиатека"}
                     </span>
-                    <ContentFactoryImageViewer
-                      alt={`Изображение ${index + 1} · ${selected.title}`}
-                      downloadName={`alsma-content-image-${index + 1}.png`}
+                    <ContentFactoryImageDownloadButton
+                      fileName={`alsma-content-image-${index + 1}.png`}
+                      label={`Изображение ${index + 1} · ${selected.title}`}
+                      className="absolute top-2 right-2 grid size-9 place-items-center rounded-xl border border-white/70 bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60"
                       src={selected.image}
                     />
                   </div>

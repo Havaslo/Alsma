@@ -1,12 +1,13 @@
 import { useState } from "react";
 
-import { Check, Expand, Search, X } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import type { FactoryMediaItem } from "@/lib/content-factory/contentFactoryData";
+import { getFactoryMediaDownloadName } from "@/lib/content-factory/factoryImageDownload";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
-import { ContentImagePreviewDialog } from "./ContentImagePreviewDialog";
+import { ContentFactoryImageDownloadButton } from "./ContentFactoryImageDownloadButton";
 
 export const ContentImageGalleryDialog = ({
   mediaItems,
@@ -23,9 +24,6 @@ export const ContentImageGalleryDialog = ({
     initialSelectedIds.slice(0, 4),
   );
   const [query, setQuery] = useState("");
-  const [previewImage, setPreviewImage] = useState<FactoryMediaItem | null>(
-    null,
-  );
   const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
   const filteredItems = mediaItems.filter((item) =>
     `${item.title} ${item.category} ${item.tags.join(" ")}`
@@ -125,14 +123,16 @@ export const ContentImageGalleryDialog = ({
                         {item.title}
                       </span>
                     </button>
-                    <button
-                      aria-label={`Развернуть фото: ${item.title}`}
-                      className="absolute right-2 bottom-12 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white"
-                      onClick={() => setPreviewImage(item)}
-                      type="button"
-                    >
-                      <Expand className="size-4" />
-                    </button>
+                    <ContentFactoryImageDownloadButton
+                      className="absolute right-2 bottom-12 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+                      fileName={getFactoryMediaDownloadName(
+                        item.title,
+                        item.contentType,
+                        item.image,
+                      )}
+                      label={item.title}
+                      src={item.image}
+                    />
                   </article>
                 );
               })}
@@ -164,12 +164,6 @@ export const ContentImageGalleryDialog = ({
           </Button>
         </footer>
       </section>
-      {previewImage && (
-        <ContentImagePreviewDialog
-          image={previewImage}
-          onClose={() => setPreviewImage(null)}
-        />
-      )}
     </div>
   );
 };

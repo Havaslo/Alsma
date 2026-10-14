@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { ChevronDown, Expand, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import {
@@ -13,11 +13,12 @@ import type {
   ContentFactoryGuidelines,
   ImageGenerationMode,
 } from "@/lib/content-factory/contentFactoryTypes";
+import { getFactoryMediaDownloadName } from "@/lib/content-factory/factoryImageDownload";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 
+import { ContentFactoryImageDownloadButton } from "./ContentFactoryImageDownloadButton";
 import { QuietButton } from "./ContentFactoryPrimitives";
 import { ContentImageGalleryDialog } from "./ContentImageGalleryDialog";
-import { ContentImagePreviewDialog } from "./ContentImagePreviewDialog";
 
 export const ContentImageGenerationPanel = ({
   variant,
@@ -44,9 +45,6 @@ export const ContentImageGenerationPanel = ({
   const [prompt, setPrompt] = useState("");
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState<FactoryMediaItem | null>(
-    null,
-  );
   const sourceImages = getDraftVariantSourceImageIds(variant)
     .map((id) => mediaItems.find((item) => item.id === id))
     .filter((item): item is FactoryMediaItem => Boolean(item));
@@ -128,14 +126,16 @@ export const ContentImageGenerationPanel = ({
                       </div>
                     )}
                   </button>
-                  <button
-                    aria-label={`Развернуть фото: ${image.title}`}
-                    className="absolute right-2 bottom-2 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white"
-                    onClick={() => setPreviewImage(image)}
-                    type="button"
-                  >
-                    <Expand className="size-4" />
-                  </button>
+                  <ContentFactoryImageDownloadButton
+                    className="absolute right-2 bottom-2 z-10 grid size-9 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+                    fileName={getFactoryMediaDownloadName(
+                      image.title,
+                      image.contentType,
+                      image.image,
+                    )}
+                    label={image.title}
+                    src={image.image}
+                  />
                   <button
                     aria-label={`Убрать ${image.title} из исходных материалов`}
                     className="absolute top-2 right-2 grid size-8 place-items-center rounded-lg bg-brand-foreground/95 text-page-foreground shadow-sm transition hover:text-red-600"
@@ -205,13 +205,6 @@ export const ContentImageGenerationPanel = ({
           onConfirm={onConfirmSources}
         />
       )}
-      {previewImage && (
-        <ContentImagePreviewDialog
-          image={previewImage}
-          onClose={() => setPreviewImage(null)}
-        />
-      )}
-
       <div className="mt-4 space-y-3 rounded-2xl border border-line bg-page/70 p-3.5">
         <div>
           <p className="text-sm font-semibold text-page-foreground">
