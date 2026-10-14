@@ -99,15 +99,22 @@ export const createContentFactoryImageGenerationService = (options: {
       {
         channels: ContentFactoryChannelId[];
         height: number;
+        apiSize: string;
         ratio: string;
         width: number;
       }
     >();
     for (const channelId of input.selectedChannels) {
       const channel = getContentFactoryChannelGuideline(channelId);
-      const { outputHeight: height, outputWidth: width, ratio } = channel.image;
+      const {
+        apiSize,
+        outputHeight: height,
+        outputWidth: width,
+        ratio,
+      } = channel.image;
       const key = `${width}x${height}`;
       const target = targetsByDimensions.get(key) ?? {
+        apiSize,
         channels: [],
         height,
         ratio,
@@ -117,16 +124,6 @@ export const createContentFactoryImageGenerationService = (options: {
       targetsByDimensions.set(key, target);
     }
     const cropTargets = [...targetsByDimensions.values()];
-    const targetDescriptions = cropTargets
-      .map(
-        (target) =>
-          `${target.ratio} (${target.width} × ${target.height} px) для ${target.channels
-            .map(
-              (channelId) => getContentFactoryChannelGuideline(channelId).label,
-            )
-            .join(", ")}`,
-      )
-      .join("; ");
     const sourceDescription = sourcePhotos.length
       ? sourcePhotos
           .map(
@@ -135,67 +132,87 @@ export const createContentFactoryImageGenerationService = (options: {
           )
           .join("\n")
       : "Исходные фото не приложены; создай изображение с нуля по тексту и инструкции пользователя.";
-    const imagePrompt = [
-      `Создай ${input.imageCount} самостоятельных фотореалистичных вариантов изображения для одной публикации. Каждый результат должен быть отдельным кадром с отличающейся композицией, а не коллажем, сеткой или несколькими сценами внутри одного изображения.`,
-      `Смысл текста публикации: ${input.postText}`,
-      `Дополнительные пожелания пользователя: ${input.prompt.trim() || "не заданы; ориентируйся на смысл публикации"}`,
-      input.mode === "edit"
-        ? `Используй все переданные фото как визуальные референсы, при необходимости объедини релевантные элементы, не меняй оригиналы. Описания исходных материалов:\n${sourceDescription}`
-        : sourceDescription,
-      `После одной генерации изображение будет обрезано до форматов: ${targetDescriptions}.`,
-      "При редактировании сохраняй узнаваемый фон и важные видимые элементы референсов. Явные пожелания пользователя к сцене приоритетны: если пользователь просит, можно добавить или изменить людей, столы, реквизит, освещение и композиционные детали, даже если их не было в кадре. Не меняй без прямой просьбы архитектуру, отделку, оборудование и инфраструктуру объекта; не изображай неподтверждённые факты, цены, акции или услуги как действительные.",
-      "Оставь главный объект и важные детали в центральной безопасной области, общей для всех перечисленных кадрирований. Добавь одну короткую, крупную и хорошо читаемую надпись на грамотном русском языке: самостоятельно сформулируй её по смыслу публикации; если пожелания пользователя содержат точную надпись, воспроизведи её без изменений. Не копируй весь пост и не придумывай неподтверждённые цены, даты, скидки, свойства или обещания. Размести надпись внутри общей безопасной области и оставь свободным нижний левый угол, чтобы текст не обрезался и не пересекался с логотипом. Не генерируй логотипы, водяные знаки, рамки или коллаж — логотип «Алсмы» будет добавлен отдельно после кадрирования.",
-    ].join("\n\n");
-    const payload = await options.requestImage({
-      images: sourcePhotos.map((photo, index) => ({
-        content: photo.content,
-        contentType: photo.contentType,
-        fileName: `${photo.sourceTitle || `source-${index + 1}`}.jpg`,
-      })),
-      imageCount: input.imageCount,
-      prompt: imagePrompt,
-      size: "1536x1024",
-    });
-    const root =
-      typeof payload === "object" && payload
-        ? (payload as Record<string, unknown>)
-        : null;
-    const data = Array.isArray(root?.data) ? root.data : [];
-    const generatedImages = data.map((item) =>
-      typeof item === "object" && item
-        ? (item as Record<string, unknown>).b64_json
-        : null,
-    );
-    if (
-      generatedImages.length !== input.imageCount ||
-      generatedImages.some(
-        (image) => typeof image !== "string" || !image.trim(),
-      )
-    ) {
-      throw new HttpError(
-        502,
-        "CONTENT_FACTORY_AI_IMAGE_INVALID",
-        "AI-сервис вернул не все запрошенные изображения. Попробуйте ещё раз.",
+    const imagePrompt = (target: (typeof cropTargets)[number]) =>
+      [
+        `Создай ${input.imageCount} самостоятельных фотореалистичных вариантов изображения для одной публикации. Каждый результат должен быть отдельным кадром с отличающейся композицией, а не коллажем, сеткой или несколькими сценами внутри одного изображения.`,
+        `Смысл текста публикации: ${input.postText}`,
+        `Дополнительные пожелания пользователя: ${input.prompt.trim() || "не заданы; ориентируйся на смысл публикации"}`,
+        input.mode === "edit"
+          ? `Используй все переданные фото как визуальные референсы, при необходимости объедини релевантные элементы, не меняй оригиналы. Описания исходных материалов:\n${sourceDescription}`
+          : sourceDescription,
+        `Создай этот отдельный кадр специально для соотношения сторон ${target.ratio} и формата ${target.width} × ${target.height} px (${target.channels
+          .map(
+            (channelId) => getContentFactoryChannelGuideline(channelId).label,
+          )
+          .join(
+            ", ",
+          )}). Размер исходной генерации уже выбран под этот формат. Композиция должна корректно заполнять весь кадр; не рассчитывай на последующее кадрирование под другие соотношения сторон.`,
+        "При редактировании сохраняй узнаваемый фон и важные видимые элементы референсов. Явные пожелания пользователя к сцене приоритетны: если пользователь просит, можно добавить или изменить людей, столы, реквизит, освещение и композиционные детали, даже если их не было в кадре. Не меняй без прямой просьбы архитектуру, отделку, оборудование и инфраструктуру объекта; не изображай неподтверждённые факты, цены, акции или услуги как действительные.",
+        "Добавь одну короткую, крупную и хорошо читаемую надпись на грамотном русском языке: самостоятельно сформулируй её по смыслу публикации; если пожелания пользователя содержат точную надпись, воспроизведи её без изменений. Не копируй весь пост и не придумывай неподтверждённые цены, даты, скидки, свойства или обещания. Полностью помести надпись внутри кадра с отступом не менее 10% от всех краёв; не обрезай и не выпускай буквы за границы. Используй не более трёх коротких строк, уменьши текст при необходимости и оставь нижний левый угол свободным для логотипа. Не генерируй логотипы, водяные знаки, рамки или коллаж — логотип «Алсмы» будет добавлен отдельно.",
+      ].join("\n\n");
+    const referenceImages = sourcePhotos.map((photo, index) => ({
+      content: photo.content,
+      contentType: photo.contentType,
+      fileName: `${photo.sourceTitle || `source-${index + 1}`}.jpg`,
+    }));
+    const rawImagesByTarget = new Map<
+      string,
+      { target: (typeof cropTargets)[number]; images: Buffer[] }
+    >();
+    for (const target of cropTargets) {
+      const payload = await options.requestImage({
+        images: referenceImages,
+        imageCount: input.imageCount,
+        prompt: imagePrompt(target),
+        size: target.apiSize,
+      });
+      const root =
+        typeof payload === "object" && payload
+          ? (payload as Record<string, unknown>)
+          : null;
+      const data = Array.isArray(root?.data) ? root.data : [];
+      const generatedImages = data.map((item) =>
+        typeof item === "object" && item
+          ? (item as Record<string, unknown>).b64_json
+          : null,
       );
-    }
-
-    const rawImages = generatedImages.map((imageBase64) => {
-      const rawContent = Buffer.from(imageBase64 as string, "base64");
       if (
-        rawContent.length === 0 ||
-        rawContent.length > generatedImageMaxBytes ||
-        !rawContent
-          .subarray(0, 8)
-          .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+        generatedImages.length !== input.imageCount ||
+        generatedImages.some(
+          (image) => typeof image !== "string" || !image.trim(),
+        )
       ) {
         throw new HttpError(
           502,
           "CONTENT_FACTORY_AI_IMAGE_INVALID",
-          "AI-сервис вернул повреждённый файл изображения.",
+          "AI-сервис вернул не все запрошенные изображения. Попробуйте ещё раз.",
         );
       }
-      return rawContent;
-    });
+
+      const rawImages = generatedImages.map((imageBase64) => {
+        const rawContent = Buffer.from(imageBase64 as string, "base64");
+        if (
+          rawContent.length === 0 ||
+          rawContent.length > generatedImageMaxBytes ||
+          !rawContent
+            .subarray(0, 8)
+            .equals(
+              Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+            )
+        ) {
+          throw new HttpError(
+            502,
+            "CONTENT_FACTORY_AI_IMAGE_INVALID",
+            "AI-сервис вернул повреждённый файл изображения.",
+          );
+        }
+        return rawContent;
+      });
+      rawImagesByTarget.set(`${target.width}x${target.height}`, {
+        images: rawImages,
+        target,
+      });
+    }
 
     const repository = createContentFactoryRepository(options.database);
     const createdMedia: Array<{
@@ -208,8 +225,18 @@ export const createContentFactoryImageGenerationService = (options: {
       setIndex: number;
     }> = [];
     try {
-      for (const [setIndex, rawContent] of rawImages.entries()) {
+      for (let setIndex = 0; setIndex < input.imageCount; setIndex += 1) {
         for (const target of cropTargets) {
+          const rawContent = rawImagesByTarget.get(
+            `${target.width}x${target.height}`,
+          )?.images[setIndex];
+          if (!rawContent) {
+            throw new HttpError(
+              502,
+              "CONTENT_FACTORY_AI_IMAGE_INVALID",
+              "AI-сервис не вернул изображение нужного формата.",
+            );
+          }
           const croppedContent = await cropGeneratedImage(rawContent, {
             width: target.width,
             height: target.height,

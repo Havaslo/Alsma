@@ -102,9 +102,15 @@ test("generates and stores each requested image for every selected channel forma
   const storedContentTypes: string[] = [];
   const storedDimensions: Array<{ height: number; width: number }> = [];
   const createdMedia: Array<Record<string, unknown>> = [];
-  let requestedPath = "";
-  let requestCount = 0;
-  let formValues = new FormData();
+  const requestedPaths: string[] = [];
+  const imageRequests: Array<{
+    imageCount: FormDataEntryValue | null;
+    images: FormDataEntryValue[];
+    model: FormDataEntryValue | null;
+    prompt: string;
+    quality: FormDataEntryValue | null;
+    size: FormDataEntryValue | null;
+  }> = [];
   const database = {
     client: {
       contentFactoryMedia: {
@@ -133,9 +139,16 @@ test("generates and stores each requested image for every selected channel forma
     baseUrl: "https://gateway.example/v1",
     database,
     fetchImplementation: async (url, init) => {
-      requestCount += 1;
-      requestedPath = String(url);
-      formValues = init?.body as FormData;
+      requestedPaths.push(String(url));
+      const formValues = init?.body as FormData;
+      imageRequests.push({
+        imageCount: formValues.get("n"),
+        images: formValues.getAll("image[]"),
+        model: formValues.get("model"),
+        prompt: String(formValues.get("prompt")),
+        quality: formValues.get("quality"),
+        size: formValues.get("size"),
+      });
       return Response.json({
         data: [
           { b64_json: png.toString("base64") },
@@ -172,24 +185,29 @@ test("generates and stores each requested image for every selected channel forma
     ],
   });
 
-  assert.equal(requestedPath, "https://gateway.example/v1/images/edits");
-  assert.equal(requestCount, 1);
-  assert.equal(formValues.get("model"), "gpt-image-2");
-  assert.equal(formValues.get("quality"), "medium");
-  assert.equal(formValues.get("n"), "2");
-  assert.equal(formValues.get("size"), "1536x1024");
-  assert.equal(formValues.getAll("image[]").length, 2);
-  assert.match(String(formValues.get("prompt")), /Смысл текста публикации/u);
-  assert.match(
-    String(formValues.get("prompt")),
-    /Время для спокойного отдыха/u,
+  assert.deepEqual(
+    requestedPaths,
+    Array(3).fill("https://gateway.example/v1/images/edits"),
   );
-  assert.match(String(formValues.get("prompt")), /Мягкий утренний свет/u);
-  assert.match(
-    String(formValues.get("prompt")),
-    /Номер для спокойного отдыха/u,
+  assert.deepEqual(
+    imageRequests.map(({ size }) => size),
+    ["1024x1536", "1024x1024", "1536x1024"],
   );
-  assert.match(String(formValues.get("prompt")), /Тёплая вода и тишина/u);
+  for (const request of imageRequests) {
+    assert.equal(request.model, "gpt-image-2");
+    assert.equal(request.quality, "medium");
+    assert.equal(request.imageCount, "2");
+    assert.equal(request.images.length, 2);
+    assert.match(request.prompt, /Смысл текста публикации/u);
+    assert.match(request.prompt, /Время для спокойного отдыха/u);
+    assert.match(request.prompt, /Мягкий утренний свет/u);
+    assert.match(request.prompt, /Номер для спокойного отдыха/u);
+    assert.match(request.prompt, /Тёплая вода и тишина/u);
+    assert.match(request.prompt, /не менее 10% от всех краёв/u);
+  }
+  assert.match(imageRequests[0]!.prompt, /соотношения сторон 4:5/u);
+  assert.match(imageRequests[1]!.prompt, /соотношения сторон 1:1/u);
+  assert.match(imageRequests[2]!.prompt, /соотношения сторон 16:9/u);
   assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
@@ -261,6 +279,7 @@ test("generates new images from text without requiring source photos", async () 
 
   assert.equal(requestPath, "https://gateway.example/v1/images/generations");
   assert.equal(requestBody.model, "gpt-image-2");
+  assert.equal(requestBody.size, "1024x1024");
   assert.equal(requestBody.n, 1);
   assert.match(String(requestBody.prompt), /Исходные фото не приложены/u);
   assert.equal(result.assets.length, 1);
