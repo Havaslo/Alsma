@@ -8,6 +8,7 @@ import {
   contentFactoryModels,
   getContentFactoryChannelGuideline,
 } from "./content-factory-guidelines.js";
+import { addAlsmaLogo } from "./content-factory-image-branding.js";
 import {
   assertReferencePhoto,
   cropGeneratedImage,
@@ -143,7 +144,7 @@ export const createContentFactoryImageGenerationService = (options: {
         : sourceDescription,
       `После одной генерации изображение будет обрезано до форматов: ${targetDescriptions}.`,
       "При редактировании сохраняй узнаваемый фон и важные видимые элементы референсов. Явные пожелания пользователя к сцене приоритетны: если пользователь просит, можно добавить или изменить людей, столы, реквизит, освещение и композиционные детали, даже если их не было в кадре. Не меняй без прямой просьбы архитектуру, отделку, оборудование и инфраструктуру объекта; не изображай неподтверждённые факты, цены, акции или услуги как действительные.",
-      "Оставь главный объект и важные детали в центральной безопасной области, чтобы они сохранились при всех перечисленных кадрировках. Не добавляй текст, буквы, логотипы, водяные знаки, рамки или коллаж.",
+      "Оставь главный объект и важные детали в центральной безопасной области, общей для всех перечисленных кадрирований. Добавь одну короткую, крупную и хорошо читаемую надпись на грамотном русском языке: самостоятельно сформулируй её по смыслу публикации; если пожелания пользователя содержат точную надпись, воспроизведи её без изменений. Не копируй весь пост и не придумывай неподтверждённые цены, даты, скидки, свойства или обещания. Размести надпись внутри общей безопасной области и оставь свободным нижний левый угол, чтобы текст не обрезался и не пересекался с логотипом. Не генерируй логотипы, водяные знаки, рамки или коллаж — логотип «Алсмы» будет добавлен отдельно после кадрирования.",
     ].join("\n\n");
     const payload = await options.requestImage({
       images: sourcePhotos.map((photo, index) => ({
@@ -209,10 +210,11 @@ export const createContentFactoryImageGenerationService = (options: {
     try {
       for (const [setIndex, rawContent] of rawImages.entries()) {
         for (const target of cropTargets) {
-          const content = await cropGeneratedImage(rawContent, {
+          const croppedContent = await cropGeneratedImage(rawContent, {
             width: target.width,
             height: target.height,
           });
+          const content = await addAlsmaLogo(croppedContent);
           const fileName = `AI · ${setIndex + 1} · ${target.ratio} · ${
             sourcePhotos.map((photo) => photo.sourceTitle).join(" + ") ||
             "Новый кадр"
