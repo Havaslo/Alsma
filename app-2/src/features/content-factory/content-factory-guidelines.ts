@@ -1,6 +1,6 @@
 export const contentFactoryModels = {
   text: "gpt-4.1-mini",
-  image: "gpt-image-1.5",
+  image: "gpt-image-2",
 } as const;
 
 export const contentFactoryChannelGuidelines = [

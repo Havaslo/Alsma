@@ -114,7 +114,7 @@ test("returns immediately and makes generated channel crops available by polling
             },
             { channels: ["telegram"], media: generatedMedia[1]!, setIndex: 0 },
           ],
-          model: "gpt-image-1.5",
+          model: "gpt-image-2",
         };
       },
     } as never,

@@ -174,7 +174,7 @@ test("generates and stores each requested image for every selected channel forma
 
   assert.equal(requestedPath, "https://gateway.example/v1/images/edits");
   assert.equal(requestCount, 1);
-  assert.equal(formValues.get("model"), "gpt-image-1.5");
+  assert.equal(formValues.get("model"), "gpt-image-2");
   assert.equal(formValues.get("quality"), "medium");
   assert.equal(formValues.get("n"), "2");
   assert.equal(formValues.get("size"), "1536x1024");
@@ -260,7 +260,7 @@ test("generates new images from text without requiring source photos", async () 
   });
 
   assert.equal(requestPath, "https://gateway.example/v1/images/generations");
-  assert.equal(requestBody.model, "gpt-image-1.5");
+  assert.equal(requestBody.model, "gpt-image-2");
   assert.equal(requestBody.n, 1);
   assert.match(String(requestBody.prompt), /Исходные фото не приложены/u);
   assert.equal(result.assets.length, 1);
