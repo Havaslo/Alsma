@@ -57,30 +57,44 @@ export const buildContentFactoryChannelPromptContext = () =>
     multiImage: channel.gallery,
   }));
 
-export const cropGeneratedImage = async (
+export const fitGeneratedImageWithoutCropping = async (
   content: Buffer,
   target: { readonly width: number; readonly height: number },
 ) => {
   try {
     const source = await loadImage(content);
-    const targetRatio = target.width / target.height;
-    const sourceRatio = source.width / source.height;
-    const cropWidth =
-      sourceRatio > targetRatio ? source.height * targetRatio : source.width;
-    const cropHeight =
-      sourceRatio > targetRatio ? source.height : source.width / targetRatio;
+    const scale = Math.min(
+      target.width / source.width,
+      target.height / source.height,
+    );
+    const fittedWidth = Math.round(source.width * scale);
+    const fittedHeight = Math.round(source.height * scale);
+    const backgroundScale = Math.max(
+      target.width / source.width,
+      target.height / source.height,
+    );
+    const backgroundWidth = source.width * backgroundScale;
+    const backgroundHeight = source.height * backgroundScale;
     const canvas = createCanvas(target.width, target.height);
     const context = canvas.getContext("2d");
+    // Image generation supports nearby, not exact, channel ratios. Use a
+    // blurred cover for the background and preserve the complete source frame
+    // in front, so text near an edge is not cut off during aspect fitting.
+    context.filter = `blur(${Math.max(12, Math.round(target.width * 0.025))}px)`;
     context.drawImage(
       source,
-      (source.width - cropWidth) / 2,
-      (source.height - cropHeight) / 2,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      target.width,
-      target.height,
+      (target.width - backgroundWidth) / 2,
+      (target.height - backgroundHeight) / 2,
+      backgroundWidth,
+      backgroundHeight,
+    );
+    context.filter = "none";
+    context.drawImage(
+      source,
+      (target.width - fittedWidth) / 2,
+      (target.height - fittedHeight) / 2,
+      fittedWidth,
+      fittedHeight,
     );
     return canvas.toBuffer("image/png");
   } catch {

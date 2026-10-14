@@ -203,7 +203,8 @@ test("generates and stores each requested image for every selected channel forma
     assert.match(request.prompt, /Мягкий утренний свет/u);
     assert.match(request.prompt, /Номер для спокойного отдыха/u);
     assert.match(request.prompt, /Тёплая вода и тишина/u);
-    assert.match(request.prompt, /не менее 10% от всех краёв/u);
+    assert.match(request.prompt, /не менее 18% высоты кадра/u);
+    assert.match(request.prompt, /Не более двух строк/u);
   }
   assert.match(imageRequests[0]!.prompt, /соотношения сторон 4:5/u);
   assert.match(imageRequests[1]!.prompt, /соотношения сторон 1:1/u);
