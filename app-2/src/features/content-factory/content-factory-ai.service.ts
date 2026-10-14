@@ -183,6 +183,7 @@ export const createContentFactoryAiService = (options: {
       readonly fileName: string;
     }[];
     readonly imageCount: number;
+    readonly mask?: Buffer;
     readonly prompt: string;
     readonly size: string;
   }): Promise<unknown> => {
@@ -203,6 +204,13 @@ export const createContentFactoryAiService = (options: {
             type: image.contentType,
           }),
           getStorageFileName(image.fileName),
+        );
+      }
+      if (input.mask) {
+        form.append(
+          "mask",
+          new Blob([Uint8Array.from(input.mask)], { type: "image/png" }),
+          "outpainting-mask.png",
         );
       }
     }

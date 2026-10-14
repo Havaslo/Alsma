@@ -105,3 +105,188 @@ export const fitGeneratedImageWithoutCropping = async (
     );
   }
 };
+
+export const createPortraitOutpaintingCanvas = async (content: Buffer) => {
+  try {
+    const source = await loadImage(content);
+    if (Math.abs(source.width - source.height) > 1) {
+      throw new Error("Outpainting requires a square base image");
+    }
+
+    const canvasWidth = 1024;
+    const canvasHeight = 1536;
+    const sourceSize = 1024;
+    const sourceRect = {
+      height: sourceSize,
+      width: sourceSize,
+      x: 0,
+      y: (canvasHeight - sourceSize) / 2,
+    };
+    const imageCanvas = createCanvas(canvasWidth, canvasHeight);
+    const imageContext = imageCanvas.getContext("2d");
+    // Keep the outpainting area truly transparent. A blurred enlargement here
+    // can be mistaken for finished image content instead of a request to extend
+    // the scene, even when the separate mask identifies it as editable.
+    imageContext.drawImage(
+      source,
+      sourceRect.x,
+      sourceRect.y,
+      sourceRect.width,
+      sourceRect.height,
+    );
+
+    const maskCanvas = createCanvas(canvasWidth, canvasHeight);
+    const maskContext = maskCanvas.getContext("2d");
+    const protectedInset = 40;
+    maskContext.fillStyle = "#ffffff";
+    maskContext.fillRect(
+      sourceRect.x + protectedInset,
+      sourceRect.y + protectedInset,
+      sourceRect.width - protectedInset * 2,
+      sourceRect.height - protectedInset * 2,
+    );
+
+    return {
+      image: imageCanvas.toBuffer("image/png"),
+      mask: maskCanvas.toBuffer("image/png"),
+      sourceRect,
+      canvasHeight,
+      canvasWidth,
+    };
+  } catch {
+    throw new HttpError(
+      502,
+      "CONTENT_FACTORY_AI_IMAGE_INVALID",
+      "Не удалось подготовить квадратное изображение для дорисовки. Повторите запрос.",
+    );
+  }
+};
+
+export const composeOutpaintedImage = async (
+  content: Buffer,
+  sourceContent: Buffer,
+  target: { readonly width: number; readonly height: number },
+  layout: {
+    readonly canvasHeight: number;
+    readonly canvasWidth: number;
+    readonly sourceRect: {
+      readonly height: number;
+      readonly width: number;
+      readonly x: number;
+      readonly y: number;
+    };
+  },
+) => {
+  try {
+    const generated = await loadImage(content);
+    const original = await loadImage(sourceContent);
+    const targetRatio = target.width / target.height;
+    let cropWidth = generated.width;
+    let cropHeight = generated.height;
+    if (generated.width / generated.height > targetRatio) {
+      cropWidth = Math.round(generated.height * targetRatio);
+    } else {
+      cropHeight = Math.round(generated.width / targetRatio);
+    }
+    const cropX = Math.round((generated.width - cropWidth) / 2);
+    const cropY = Math.round((generated.height - cropHeight) / 2);
+    const canvas = createCanvas(target.width, target.height);
+    const context = canvas.getContext("2d");
+    context.drawImage(
+      generated,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      target.width,
+      target.height,
+    );
+
+    // Restore the untouched square center so mask-based outpainting cannot
+    // rewrite the AI-generated headline or the original scene.
+    const sourceLayer = createCanvas(original.width, original.height);
+    const sourceContext = sourceLayer.getContext("2d");
+    sourceContext.drawImage(original, 0, 0);
+    const fade = 40;
+    const sourcePixels = sourceContext.getImageData(
+      0,
+      0,
+      original.width,
+      original.height,
+    );
+    for (let y = 0; y < original.height; y += 1) {
+      for (let x = 0; x < original.width; x += 1) {
+        const distance = Math.min(
+          x,
+          y,
+          original.width - 1 - x,
+          original.height - 1 - y,
+        );
+        const alpha = Math.min(1, distance / fade);
+        sourcePixels.data[(y * original.width + x) * 4 + 3] = Math.round(
+          255 * alpha,
+        );
+      }
+    }
+    sourceContext.putImageData(sourcePixels, 0, 0);
+
+    const scaleX = generated.width / layout.canvasWidth;
+    const scaleY = generated.height / layout.canvasHeight;
+    const left =
+      ((layout.sourceRect.x * scaleX - cropX) / cropWidth) * target.width;
+    const top =
+      ((layout.sourceRect.y * scaleY - cropY) / cropHeight) * target.height;
+    const width =
+      ((layout.sourceRect.width * scaleX) / cropWidth) * target.width;
+    const height =
+      ((layout.sourceRect.height * scaleY) / cropHeight) * target.height;
+    context.drawImage(sourceLayer, left, top, width, height);
+    return canvas.toBuffer("image/png");
+  } catch {
+    throw new HttpError(
+      502,
+      "CONTENT_FACTORY_AI_IMAGE_INVALID",
+      "AI-сервис вернул повреждённый результат дорисовки. Повторите запрос.",
+    );
+  }
+};
+
+export const cropGeneratedImageToRatio = async (
+  content: Buffer,
+  target: { readonly width: number; readonly height: number },
+) => {
+  try {
+    const source = await loadImage(content);
+    const targetRatio = target.width / target.height;
+    let cropWidth = source.width;
+    let cropHeight = source.height;
+    if (source.width / source.height > targetRatio) {
+      cropWidth = Math.round(source.height * targetRatio);
+    } else {
+      cropHeight = Math.round(source.width / targetRatio);
+    }
+    const canvas = createCanvas(target.width, target.height);
+    canvas
+      .getContext("2d")
+      .drawImage(
+        source,
+        Math.round((source.width - cropWidth) / 2),
+        Math.round((source.height - cropHeight) / 2),
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        target.width,
+        target.height,
+      );
+    return canvas.toBuffer("image/png");
+  } catch {
+    throw new HttpError(
+      502,
+      "CONTENT_FACTORY_AI_IMAGE_INVALID",
+      "Не удалось подготовить горизонтальную обложку. Повторите запрос.",
+    );
+  }
+};

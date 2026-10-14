@@ -25,6 +25,14 @@ const createReferencePhoto = () => {
   return canvas.toBuffer("image/png");
 };
 
+const createSolidImage = (width: number, height: number, color: string) => {
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext("2d");
+  context.fillStyle = color;
+  context.fillRect(0, 0, width, height);
+  return canvas.toBuffer("image/png");
+};
+
 const createTextResponse = () => ({
   choices: [
     {
@@ -106,6 +114,7 @@ test("generates and stores each requested image for every selected channel forma
   const imageRequests: Array<{
     imageCount: FormDataEntryValue | null;
     images: FormDataEntryValue[];
+    mask: FormDataEntryValue | null;
     model: FormDataEntryValue | null;
     prompt: string;
     quality: FormDataEntryValue | null;
@@ -144,16 +153,20 @@ test("generates and stores each requested image for every selected channel forma
       imageRequests.push({
         imageCount: formValues.get("n"),
         images: formValues.getAll("image[]"),
+        mask: formValues.get("mask"),
         model: formValues.get("model"),
         prompt: String(formValues.get("prompt")),
         quality: formValues.get("quality"),
         size: formValues.get("size"),
       });
+      const [width, height] = String(formValues.get("size"))
+        .split("x")
+        .map(Number);
+      const generatedImage = createSolidImage(width!, height!, "#315b46");
       return Response.json({
-        data: [
-          { b64_json: png.toString("base64") },
-          { b64_json: png.toString("base64") },
-        ],
+        data: Array.from({ length: Number(formValues.get("n")) }, () => ({
+          b64_json: generatedImage.toString("base64"),
+        })),
       });
     },
     logger,
@@ -187,28 +200,44 @@ test("generates and stores each requested image for every selected channel forma
 
   assert.deepEqual(
     requestedPaths,
-    Array(3).fill("https://gateway.example/v1/images/edits"),
+    Array(5).fill("https://gateway.example/v1/images/edits"),
   );
   assert.deepEqual(
     imageRequests.map(({ size }) => size),
-    ["1024x1536", "1024x1024", "1536x1024"],
+    ["1024x1024", "1024x1536", "1024x1536", "1536x1024", "1536x1024"],
+  );
+  assert.deepEqual(
+    imageRequests.map(({ imageCount }) => imageCount),
+    ["2", "1", "1", "1", "1"],
+  );
+  assert.deepEqual(
+    imageRequests.map(({ mask }) => mask !== null),
+    [false, true, true, false, false],
   );
   for (const request of imageRequests) {
     assert.equal(request.model, "gpt-image-2");
     assert.equal(request.quality, "medium");
-    assert.equal(request.imageCount, "2");
-    assert.equal(request.images.length, 2);
-    assert.match(request.prompt, /Смысл текста публикации/u);
-    assert.match(request.prompt, /Время для спокойного отдыха/u);
-    assert.match(request.prompt, /Мягкий утренний свет/u);
-    assert.match(request.prompt, /Номер для спокойного отдыха/u);
-    assert.match(request.prompt, /Тёплая вода и тишина/u);
-    assert.match(request.prompt, /не менее 18% высоты кадра/u);
-    assert.match(request.prompt, /Не более двух строк/u);
   }
-  assert.match(imageRequests[0]!.prompt, /соотношения сторон 4:5/u);
-  assert.match(imageRequests[1]!.prompt, /соотношения сторон 1:1/u);
-  assert.match(imageRequests[2]!.prompt, /соотношения сторон 16:9/u);
+  const squareRequest = imageRequests[0]!;
+  assert.equal(squareRequest.images.length, 2);
+  assert.match(squareRequest.prompt, /единый основной квадратный кадр 1:1/u);
+  assert.match(squareRequest.prompt, /Смысл текста публикации/u);
+  assert.match(squareRequest.prompt, /Время для спокойного отдыха/u);
+  assert.match(squareRequest.prompt, /Мягкий утренний свет/u);
+  assert.match(squareRequest.prompt, /Номер для спокойного отдыха/u);
+  assert.match(squareRequest.prompt, /Тёплая вода и тишина/u);
+  assert.match(squareRequest.prompt, /не менее 18% высоты кадра/u);
+  assert.match(squareRequest.prompt, /Не более двух строк/u);
+  for (const request of imageRequests.slice(1, 3)) {
+    assert.equal(request.images.length, 1);
+    assert.match(request.prompt, /дорисовка \(outpainting\)/u);
+    assert.match(request.prompt, /не переписывай и не добавляй текст/u);
+  }
+  for (const request of imageRequests.slice(3)) {
+    assert.equal(request.images.length, 1);
+    assert.match(request.prompt, /горизонтальный вариант/u);
+    assert.match(request.prompt, /не менее 25% высоты/u);
+  }
   assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
@@ -240,7 +269,7 @@ test("generates and stores each requested image for every selected channel forma
 });
 
 test("generates new images from text without requiring source photos", async () => {
-  const generatedPng = createReferencePhoto();
+  const generatedPng = createSolidImage(320, 320, "#315b46");
   let requestPath = "";
   let requestBody: Record<string, unknown> = {};
   const service = createContentFactoryAiService({
