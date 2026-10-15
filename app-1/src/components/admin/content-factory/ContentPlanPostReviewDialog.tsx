@@ -25,6 +25,7 @@ import {
   StatusBadge,
 } from "./ContentFactoryPrimitives";
 import { ContentPlanDeliveryStatus } from "./ContentPlanDeliveryStatus";
+import { ContentPlanMediaPickerDialog } from "./ContentPlanMediaPickerDialog";
 
 export const ContentPlanPostReviewDialog = ({
   post,
@@ -82,12 +83,9 @@ export const ContentPlanPostReviewDialog = ({
         ? [post.imageId]
         : []);
   const referenceImageId =
-    referenceImageIdOverride ??
-    post.imageIds?.[0] ??
-    post.imageId ??
-    mediaItems[0]?.id ??
-    "";
+    referenceImageIdOverride ?? post.imageIds?.[0] ?? post.imageId ?? "";
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
   const [imageError, setImageError] = useState("");
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [showScheduleConfirmation, setShowScheduleConfirmation] =
@@ -347,34 +345,17 @@ export const ContentPlanPostReviewDialog = ({
                       "К посту пока не прикреплено изображение."}
                 </p>
               )}
-              <label className="block text-xs font-semibold text-muted-ui-foreground">
-                Фото из медиатеки
-                <select
-                  className="mt-1.5 min-h-11 w-full rounded-xl border border-line bg-brand-foreground px-3 text-sm font-normal text-page-foreground outline-none focus:border-focus/40 focus:ring-4 focus:ring-focus/10 disabled:bg-page"
+              <div className="flex flex-wrap gap-2">
+                <QuietButton
                   disabled={
                     busy || isGeneratingImage || mediaItems.length === 0
                   }
-                  onChange={(event) =>
-                    setReferenceImageIdOverride(event.target.value)
-                  }
-                  value={referenceImageId}
+                  onClick={() => setIsMediaPickerOpen(true)}
                 >
-                  <option value="">Выберите изображение</option>
-                  {mediaItems.map((image) => (
-                    <option key={image.id} value={image.id}>
-                      {image.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <QuietButton
-                  disabled={busy || isGeneratingImage || !referenceImageId}
-                  onClick={() =>
-                    setSelectedImageIdsOverride([referenceImageId])
-                  }
-                >
-                  <ImagePlus className="size-4" /> Использовать фото
+                  <ImagePlus className="size-4" />
+                  {referenceImageId
+                    ? "Выбрать другое фото"
+                    : "Выбрать фото из медиатеки"}
                 </QuietButton>
                 <QuietButton
                   disabled={busy || isGeneratingImage || !text.trim()}
@@ -421,6 +402,18 @@ export const ContentPlanPostReviewDialog = ({
                 </p>
               )}
             </section>
+          )}
+
+          {isMediaPickerOpen && (
+            <ContentPlanMediaPickerDialog
+              initialSelectedId={referenceImageId}
+              mediaItems={mediaItems}
+              onApply={(imageId) => {
+                setReferenceImageIdOverride(imageId);
+                setSelectedImageIdsOverride([imageId]);
+              }}
+              onClose={() => setIsMediaPickerOpen(false)}
+            />
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
