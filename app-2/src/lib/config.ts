@@ -20,6 +20,7 @@ const environmentSchema = z
   .object({
     AMAZI_STORAGE_API_URL: z.string().url(),
     AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
+    AMAZI_PREVIEW_FRONTEND_HOST: z.string().trim().min(1).optional(),
     CORS_ALLOWED_ORIGINS: z.string().min(1),
     DATABASE_URL: databaseUrlSchema,
     NODE_ENV: z
@@ -138,7 +139,12 @@ export const readConfig = (
       apiKey: parsed.AMAZI_AI_GATEWAY_OPENAI_API_KEY,
       baseUrl: parsed.AMAZI_AI_GATEWAY_OPENAI_BASE_URL,
     },
-    corsAllowedOrigins: parseCorsOrigins(parsed.CORS_ALLOWED_ORIGINS),
+    corsAllowedOrigins: parseCorsOrigins(
+      parsed.CORS_ALLOWED_ORIGINS,
+      parsed.NODE_ENV === "development"
+        ? parsed.AMAZI_PREVIEW_FRONTEND_HOST
+        : undefined,
+    ),
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
     epteraPaymentLoginToken: parsed.EPTERA_PAYMENT_LOGIN_TOKEN,
@@ -201,7 +207,7 @@ export const readConfig = (
   };
 };
 
-const parseCorsOrigins = (value: string): string[] => {
+const parseCorsOrigins = (value: string, previewHost?: string): string[] => {
   const origins = value
     .split(/[\s,]+/u)
     .map((origin) => origin.trim())
@@ -218,5 +224,27 @@ const parseCorsOrigins = (value: string): string[] => {
   if (origins.length === 0)
     throw new Error("CORS_ALLOWED_ORIGINS must contain at least one origin.");
 
-  return [...new Set(origins)];
+  const previewOrigin = previewHost
+    ? parsePreviewOrigin(previewHost)
+    : undefined;
+
+  return [...new Set([...origins, ...(previewOrigin ? [previewOrigin] : [])])];
+};
+
+const parsePreviewOrigin = (host: string): string => {
+  const parsed = new URL(`https://${host}`);
+  if (
+    parsed.hostname !== host.toLowerCase() ||
+    parsed.port ||
+    parsed.pathname !== "/" ||
+    parsed.search ||
+    parsed.hash ||
+    parsed.username ||
+    parsed.password
+  ) {
+    throw new Error(
+      "AMAZI_PREVIEW_FRONTEND_HOST must contain a hostname only.",
+    );
+  }
+  return parsed.origin;
 };
