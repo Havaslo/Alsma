@@ -193,7 +193,7 @@ export const CookieConsentProvider = ({
         </aside>
       )}
       {showControls && settingsOpen && (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[90] flex items-center justify-end bg-black/50 p-4 sm:p-6">
           <section
             aria-labelledby="cookie-settings-title"
             aria-modal="true"
