@@ -149,7 +149,7 @@ export const CookieConsentProvider = ({
       {showControls && !preferences && !settingsOpen && (
         <aside
           aria-label="Настройки cookie"
-          className="fixed inset-x-4 bottom-4 z-[80] mx-auto max-w-3xl rounded-3xl border border-line bg-panel p-5 shadow-2xl sm:inset-x-6 sm:p-7"
+          className="fixed right-4 bottom-4 z-[80] w-[calc(100%-2rem)] max-w-3xl rounded-3xl border border-line bg-panel p-5 shadow-2xl sm:right-6 sm:bottom-6 sm:p-7"
           role="region"
         >
           <h2 className="font-heading text-xl font-semibold text-brand">
@@ -193,7 +193,7 @@ export const CookieConsentProvider = ({
         </aside>
       )}
       {showControls && settingsOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-end bg-black/50 p-4 sm:p-6">
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/50 p-4">
           <section
             aria-labelledby="cookie-settings-title"
             aria-modal="true"
