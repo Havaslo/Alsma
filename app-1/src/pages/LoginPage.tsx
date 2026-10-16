@@ -11,10 +11,19 @@ import { Loader } from "@/components/ui/Loader";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { requestGuestCode, verifyGuestCode } from "@/lib/auth/guest-auth-api";
 import { writeGuestSession } from "@/lib/auth/session";
+import { currentPageUrl } from "@/lib/legal/consent";
 import { ROUTES } from "@/route-constants";
 
+type LoginFormValues = {
+  acceptTerms: boolean;
+  code: string;
+  email: string;
+};
+
 export const LoginPage = () => {
-  const form = useForm({ defaultValues: { email: "", code: "" } });
+  const form = useForm<LoginFormValues>({
+    defaultValues: { acceptTerms: false, email: "", code: "" },
+  });
   const [isCodeStep, setIsCodeStep] = useState(false);
   const requestCodeMutation = useMutation({
     mutationFn: requestGuestCode,
@@ -23,7 +32,7 @@ export const LoginPage = () => {
         getApiErrorMessage(error, "Не удалось отправить код подтверждения."),
       ),
     onSuccess: (_, variables) => {
-      form.reset({ email: variables.email, code: "" });
+      form.reset({ acceptTerms: true, email: variables.email, code: "" });
       setIsCodeStep(true);
       toast.success("Код подтверждения отправлен на вашу почту.");
     },
@@ -57,7 +66,11 @@ export const LoginPage = () => {
   const goBackToEmail = () => {
     requestCodeMutation.reset();
     verifyCodeMutation.reset();
-    form.setValue("code", "");
+    form.reset({
+      acceptTerms: false,
+      email: form.getValues("email"),
+      code: "",
+    });
     setIsCodeStep(false);
   };
 
@@ -84,12 +97,15 @@ export const LoginPage = () => {
               });
               return;
             }
-            requestCodeMutation.mutate({ email: values.email });
+            requestCodeMutation.mutate({
+              email: values.email,
+              legalAcceptance: { accepted: true, pageUrl: currentPageUrl() },
+            });
           }}
           onInvalid={(errors) => {
             const message = isCodeStep
               ? errors.code?.message
-              : errors.email?.message;
+              : (errors.email?.message ?? errors.acceptTerms?.message);
             if (typeof message === "string") toast.error(message);
           }}
         >
@@ -134,6 +150,44 @@ export const LoginPage = () => {
               </p>
             </div>
           )}
+          {!isCodeStep && (
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 text-sm leading-6 text-muted-ui-foreground">
+                <input
+                  className="mt-1 size-4 shrink-0 accent-brand"
+                  type="checkbox"
+                  {...form.register("acceptTerms", {
+                    required: "Примите Пользовательское соглашение.",
+                  })}
+                />
+                <span>
+                  Принимаю{" "}
+                  <Link
+                    className="font-semibold text-brand underline"
+                    to={ROUTES.terms}
+                  >
+                    Пользовательское соглашение
+                  </Link>
+                  .
+                </span>
+              </label>
+              {form.formState.errors.acceptTerms?.message && (
+                <p className="text-sm text-destructive" role="alert">
+                  {form.formState.errors.acceptTerms.message}
+                </p>
+              )}
+              <p className="text-sm leading-6 text-muted-ui-foreground">
+                Информация об обработке данных для входа — в{" "}
+                <Link
+                  className="font-semibold text-brand underline"
+                  to={ROUTES.privacy}
+                >
+                  Политике обработки персональных данных
+                </Link>
+                .
+              </p>
+            </div>
+          )}
           <button
             className="flex w-full items-center justify-center rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground disabled:opacity-60"
             disabled={isPending}
@@ -153,13 +207,6 @@ export const LoginPage = () => {
             </button>
           )}
         </Form>
-        <p className="mt-5 text-center text-sm leading-6 text-muted-ui-foreground">
-          Входя в личный кабинет, вы соглашаетесь с{" "}
-          <Link className="font-semibold text-brand" to={ROUTES.privacy}>
-            политикой конфиденциальности
-          </Link>
-          .
-        </p>
       </section>
     </main>
   );

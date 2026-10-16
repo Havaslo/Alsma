@@ -5,6 +5,11 @@ export type LeadInput = {
   readonly checkInDate?: string;
   readonly checkOutDate?: string;
   readonly comment?: string;
+  readonly consents: {
+    readonly marketingChannels: string[];
+    readonly pageUrl: string;
+    readonly personalDataAccepted: true;
+  };
   readonly email?: string;
   readonly formCode: string;
   readonly formTitle: string;

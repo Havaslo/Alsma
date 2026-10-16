@@ -87,6 +87,7 @@ export const createServiceOrder = (input: {
   email: string;
   phone: string;
   returnUrl: string;
+  legalAcceptance: { accepted: true; pageUrl: string };
   items: ServiceCartItem[];
 }) =>
   apiClient.post<{

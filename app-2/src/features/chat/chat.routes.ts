@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
+import { createLegalAcceptance } from "../../lib/legal/consent.js";
 import {
   createRequireAdmin,
   createRequireAdminPermission,
@@ -21,6 +22,10 @@ const conversationSchema = z.object({
 });
 const guestMessageSchema = conversationSchema.extend({
   contact: z.string().trim().min(3).max(50),
+  legalAcceptance: z.object({
+    accepted: z.literal(true),
+    pageUrl: z.string().url().max(2_000),
+  }),
   requester: z.string().trim().min(2).max(255),
   text: z.string().trim().min(1).max(2_000),
 });
@@ -170,6 +175,27 @@ export const createChatRouter = (
       );
       if (existing && readDetails(existing.details).source !== "Сайт")
         throw new HttpError(403, "CHAT_ACCESS_DENIED", "Чат недоступен.");
+      const existingDetails = readDetails(existing?.details);
+      const legalAcceptances = Array.isArray(existingDetails.legalAcceptances)
+        ? existingDetails.legalAcceptances
+        : [];
+      const nextDetails = {
+        ...existingDetails,
+        ...(legalAcceptances.length === 0
+          ? {
+              legalAcceptances: [
+                createLegalAcceptance({
+                  action: "site_chat_message_submission",
+                  pageUrl: input.legalAcceptance.pageUrl,
+                  purpose: "respond_to_customer_chat_request",
+                  type: "personal_data_consent",
+                }),
+              ],
+            }
+          : {}),
+        channelType: "chat",
+        source: "Сайт",
+      };
       await database.client.adminRequest.upsert({
         where: { id: input.conversationId },
         create: {
@@ -177,7 +203,7 @@ export const createChatRouter = (
           category: "Сайт",
           contact: input.contact,
           description: input.text,
-          details: { channelType: "chat", source: "Сайт" },
+          details: nextDetails,
           requester: input.requester,
           status: "new",
           title: "Новое сообщение с сайта",
@@ -185,6 +211,7 @@ export const createChatRouter = (
         update: {
           contact: input.contact,
           description: input.text,
+          details: nextDetails,
           requester: input.requester,
           updatedAt: new Date(),
         },

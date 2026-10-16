@@ -7,6 +7,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 import { apiUrl } from "@/lib/api/api-base-url";
 import { apiClient } from "@/lib/api/api-client";
 import { cn } from "@/lib/cn";
+import { LEGAL_DOCUMENT_VERSION, currentPageUrl } from "@/lib/legal/consent";
 import { isRussianPhoneComplete } from "@/lib/phone-format";
 
 export type ChatMessage = {
@@ -18,7 +19,11 @@ export type ChatMessage = {
   createdAt: string;
   bookingUrl?: string;
 };
-type Identity = { requester: string; contact: string };
+type Identity = {
+  requester: string;
+  contact: string;
+  legalConsentVersion: string;
+};
 const STORAGE_KEY = "alsma-chat-conversation";
 const IDENTITY_KEY = "alsma-chat-identity";
 const LAST_READ_KEY = "alsma-chat-last-read";
@@ -44,7 +49,10 @@ const getIdentity = (): Identity | null => {
   const value = localStorage.getItem(IDENTITY_KEY);
   if (!value) return null;
   try {
-    return JSON.parse(value) as Identity;
+    const parsed = JSON.parse(value) as Identity;
+    if (parsed.legalConsentVersion === LEGAL_DOCUMENT_VERSION) return parsed;
+    localStorage.removeItem(IDENTITY_KEY);
+    return null;
   } catch {
     return null;
   }
@@ -72,6 +80,7 @@ export const ChatWidget = () => {
   );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [hasPersonalDataConsent, setHasPersonalDataConsent] = useState(false);
   const [identityError, setIdentityError] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const conversationId = useMemo(() => getConversationId(), []);
@@ -190,13 +199,23 @@ export const ChatWidget = () => {
   };
   const saveIdentity = (event: FormEvent) => {
     event.preventDefault();
-    const next = { requester: name.trim(), contact: phone.trim() };
+    const next = {
+      requester: name.trim(),
+      contact: phone.trim(),
+      legalConsentVersion: LEGAL_DOCUMENT_VERSION,
+    };
     if (next.requester.length < 2) {
       setIdentityError("Укажите имя — не менее двух символов.");
       return;
     }
     if (!isRussianPhoneComplete(next.contact)) {
       setIdentityError("Введите полный номер телефона в формате +7.");
+      return;
+    }
+    if (!hasPersonalDataConsent) {
+      setIdentityError(
+        "Дайте отдельное согласие на обработку персональных данных.",
+      );
       return;
     }
     localStorage.setItem(IDENTITY_KEY, JSON.stringify(next));
@@ -224,6 +243,10 @@ export const ChatWidget = () => {
         {
           conversationId,
           contact: identity.contact,
+          legalAcceptance: {
+            accepted: true,
+            pageUrl: currentPageUrl(),
+          },
           requester: identity.requester,
           text: value,
         },
@@ -285,6 +308,34 @@ export const ChatWidget = () => {
                 }}
                 value={phone}
               />
+              <label className="flex items-start gap-2 text-xs leading-5 text-muted-ui-foreground">
+                <input
+                  checked={hasPersonalDataConsent}
+                  className="mt-1 size-4 shrink-0 accent-brand"
+                  onChange={(event) => {
+                    setHasPersonalDataConsent(event.target.checked);
+                    setIdentityError("");
+                  }}
+                  type="checkbox"
+                />
+                <span>
+                  Даю отдельное согласие на обработку данных.{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/consent"
+                  >
+                    Текст согласия
+                  </a>{" "}
+                  ·{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/privacy"
+                  >
+                    Политика обработки персональных данных
+                  </a>
+                  .
+                </span>
+              </label>
               {identityError && (
                 <p className="text-sm text-destructive" role="alert">
                   {identityError}

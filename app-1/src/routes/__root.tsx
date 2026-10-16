@@ -9,6 +9,7 @@ import {
 
 import { AppProviders } from "@/app/AppProviders";
 import { ChatWidget } from "@/components/site/ChatWidget";
+import { CookieConsentProvider } from "@/components/site/CookieConsentProvider";
 import { SiteOfferPopup } from "@/components/site/HomeOfferPopup";
 import { ServiceCartWidget } from "@/components/site/ServiceCartWidget";
 import { ServicePaymentReturnNotice } from "@/components/site/ServicePaymentReturnNotice";
@@ -29,6 +30,12 @@ const publicRoutes = new Set<string>([
   ROUTES.blog,
   ROUTES.booking,
   ROUTES.bookingOld,
+  ROUTES.bookingCancellation,
+  ROUTES.cookies,
+  ROUTES.houseRules,
+  ROUTES.offer,
+  ROUTES.personalDataConsent,
+  ROUTES.terms,
   ROUTES.privacy,
   ROUTES.faq,
 ]);
@@ -49,16 +56,23 @@ const documentTitles: Record<string, string> = {
   [ROUTES.blog]: "Блог — АЛСМА",
   [ROUTES.booking]: "Бронирование — АЛСМА",
   [ROUTES.bookingOld]: "Бронирование — АЛСМА",
+  [ROUTES.bookingCancellation]: "Бронирование и отмена — АЛСМА",
+  [ROUTES.cookies]: "Cookie — АЛСМА",
   [ROUTES.celebrations]: "Торжества и корпоративный отдых — АЛСМА",
   [ROUTES.entertainment]: "Развлечения и анимация — АЛСМА",
   [ROUTES.hardwareProcedures]: "Аппаратные процедуры — АЛСМА",
   [ROUTES.home]: "Отель АЛСМА",
+  [ROUTES.houseRules]: "Правила проживания — АЛСМА",
   [ROUTES.login]: "Вход в личный кабинет",
   [ROUTES.news]: "Новости и события — АЛСМА",
+  [ROUTES.offer]: "Публичная оферта — АЛСМА",
   [ROUTES.offers]: "Акции — АЛСМА",
-  [ROUTES.privacy]: "Политика конфиденциальности — АЛСМА",
+  [ROUTES.personalDataConsent]:
+    "Согласие на обработку персональных данных — АЛСМА",
+  [ROUTES.privacy]: "Политика обработки персональных данных — АЛСМА",
   [ROUTES.rooms]: "Номера и отдельные дома — АЛСМА",
   [ROUTES.spa]: "SPA-центр — АЛСМА",
+  [ROUTES.terms]: "Пользовательское соглашение — АЛСМА",
   [ROUTES.faq]: "Частые вопросы — АЛСМА",
 };
 const RootLayout = () => {
@@ -72,24 +86,26 @@ const RootLayout = () => {
   }, [pathname]);
   return (
     <AppProviders>
-      <Suspense
-        fallback={
-          <div className="grid min-h-screen place-items-center bg-page text-brand">
-            Загружаем АЛСМА…
-          </div>
-        }
-      >
-        <Outlet />
-      </Suspense>
-      {publicRoutes.has(pathname) && (
-        <>
-          <SiteFooter />
-          <ServiceCartWidget />
-          <ChatWidget />
-        </>
-      )}
-      <ServicePaymentReturnNotice />
-      <SiteOfferPopup />
+      <CookieConsentProvider showControls={!pathname.startsWith("/admin")}>
+        <Suspense
+          fallback={
+            <div className="grid min-h-screen place-items-center bg-page text-brand">
+              Загружаем АЛСМА…
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
+        {publicRoutes.has(pathname) && (
+          <>
+            <SiteFooter />
+            <ServiceCartWidget />
+            <ChatWidget />
+          </>
+        )}
+        <ServicePaymentReturnNotice />
+        <SiteOfferPopup />
+      </CookieConsentProvider>
     </AppProviders>
   );
 };

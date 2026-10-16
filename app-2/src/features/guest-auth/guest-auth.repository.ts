@@ -1,4 +1,5 @@
 import type { Database } from "../../lib/database/database.js";
+import { createLegalAcceptance } from "../../lib/legal/consent.js";
 
 const guestInclude = {
   bonusProgram: true,
@@ -17,6 +18,7 @@ export const createGuestAuthRepository = (database: Database) => ({
     email: string;
     codeHash: string;
     expiresAt: Date;
+    legalAcceptances: ReturnType<typeof createLegalAcceptance>[];
     messageId: string;
     userId?: string;
   }) => database.client.guestEmailVerification.create({ data: input }),
@@ -25,6 +27,7 @@ export const createGuestAuthRepository = (database: Database) => ({
     input: {
       codeHash: string;
       expiresAt: Date;
+      legalAcceptances: ReturnType<typeof createLegalAcceptance>[];
     },
   ) =>
     database.client.guestEmailVerification.update({
@@ -34,6 +37,7 @@ export const createGuestAuthRepository = (database: Database) => ({
         codeHash: input.codeHash,
         expiresAt: input.expiresAt,
         lastSentAt: new Date(),
+        legalAcceptances: input.legalAcceptances,
         sentAt: null,
       },
     }),

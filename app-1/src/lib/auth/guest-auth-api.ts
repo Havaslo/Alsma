@@ -92,8 +92,10 @@ const authHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export const requestGuestCode = (input: { email: string }) =>
-  apiClient.post<{ sent: boolean }>("/auth/request-code", input);
+export const requestGuestCode = (input: {
+  email: string;
+  legalAcceptance: { accepted: true; pageUrl: string };
+}) => apiClient.post<{ sent: boolean }>("/auth/request-code", input);
 export const verifyGuestCode = (input: { email: string; code: string }) =>
   apiClient.post<VerifyGuestAuthState>("/auth/verify-code", input);
 

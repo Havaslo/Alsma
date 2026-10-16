@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
+import { createLegalAcceptance } from "../../lib/legal/consent.js";
 import {
   createRequireAdmin,
   createRequireAdminPermission,
@@ -94,6 +95,10 @@ const imageUrlSchema = z
 
 const orderSchema = z.object({
   checkoutRequestId: z.string().uuid(),
+  legalAcceptance: z.object({
+    accepted: z.literal(true),
+    pageUrl: z.string().url().max(2_000),
+  }),
   name: z.string().trim().min(1).max(120),
   email: z.string().email(),
   phone: z.string().trim().min(7).max(32),
@@ -415,6 +420,14 @@ export const createServicesRouter = (
             data: {
               checkoutRequestId: input.checkoutRequestId,
               email: input.email,
+              legalAcceptances: [
+                createLegalAcceptance({
+                  action: "service_order_submission",
+                  pageUrl: input.legalAcceptance.pageUrl,
+                  purpose: "accept_service_offer_and_booking_conditions",
+                  type: "public_offer_acceptance",
+                }),
+              ],
               name: input.name,
               paymentDeadlineAt: deadline,
               paymentProvider: "yookassa",

@@ -4,6 +4,14 @@ export const createLeadBodySchema = z.object({
   checkInDate: z.iso.date().optional(),
   checkOutDate: z.iso.date().optional(),
   comment: z.string().trim().max(2_000).optional(),
+  consents: z.object({
+    marketingChannels: z
+      .array(z.enum(["email", "sms", "phone_call"]))
+      .max(3)
+      .default([]),
+    pageUrl: z.string().url().max(2_000),
+    personalDataAccepted: z.literal(true),
+  }),
   email: z.email().max(320).optional(),
   appointmentTime: z
     .string()

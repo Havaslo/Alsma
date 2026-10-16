@@ -3,9 +3,14 @@ import { useForm } from "react-hook-form";
 import { Send } from "lucide-react";
 
 import { Form } from "@/components/Form";
+import {
+  LeadConsentFields,
+  type LeadConsentFormValues,
+} from "@/components/site/LeadConsentFields";
 import { Loader } from "@/components/ui/Loader";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { leadConsentPayload } from "@/lib/legal/consent";
 
 type LeadRequestFormProps = {
   readonly formCode: string;
@@ -16,7 +21,7 @@ type LeadRequestFormProps = {
   readonly variant?: "brand" | "panel";
 };
 
-type LeadFormValues = {
+type LeadFormValues = LeadConsentFormValues & {
   comment: string;
   email: string;
   name: string;
@@ -45,7 +50,14 @@ export const LeadRequestForm = ({
       ? "inline-flex items-center justify-center gap-2 rounded-full bg-brand px-7 py-4 font-semibold text-brand-foreground disabled:opacity-60"
       : "inline-flex items-center justify-center gap-2 rounded-full bg-panel px-7 py-4 font-semibold text-brand disabled:opacity-60";
   const form = useForm<LeadFormValues>({
-    defaultValues: { comment: "", email: "", name: "", phone: "" },
+    defaultValues: {
+      comment: "",
+      email: "",
+      marketingChannels: [],
+      name: "",
+      personalDataConsent: false,
+      phone: "",
+    },
   });
 
   return (
@@ -55,6 +67,7 @@ export const LeadRequestForm = ({
       onSubmit={(values) => {
         lead.mutate({
           comment: values.comment || undefined,
+          consents: leadConsentPayload(values.marketingChannels),
           email: values.email || undefined,
           formCode,
           formTitle,
@@ -88,6 +101,12 @@ export const LeadRequestForm = ({
           />
         </>
       )}
+      <LeadConsentFields
+        allowEmail={showDetails}
+        className="sm:col-span-3"
+        idPrefix={formCode}
+        variant={variant}
+      />
       <button
         className={buttonClassName}
         disabled={lead.isPending}

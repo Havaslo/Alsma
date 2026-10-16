@@ -15,17 +15,23 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AllInclusiveRouteImport } from './routes/all-inclusive'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BookingRouteImport } from './routes/booking'
+import { Route as BookingCancellationRouteImport } from './routes/booking-cancellation'
 import { Route as BookingOldRouteImport } from './routes/booking-old'
 import { Route as CelebrationsRouteImport } from './routes/celebrations'
+import { Route as ConsentRouteImport } from './routes/consent'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as EntertainmentRouteImport } from './routes/entertainment'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as HardwareProceduresRouteImport } from './routes/hardware-procedures'
+import { Route as HouseRulesRouteImport } from './routes/house-rules'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewsRouteImport } from './routes/news'
+import { Route as OfferRouteImport } from './routes/offer'
 import { Route as OffersRouteImport } from './routes/offers'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoomsRouteImport } from './routes/rooms'
 import { Route as SpaRouteImport } from './routes/spa'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AccountSetupNameRouteImport } from './routes/account/setup-name'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgentScenariosRouteImport } from './routes/admin/agent-scenarios'
@@ -92,6 +98,11 @@ const BookingRoute = BookingRouteImport.update({
   path: '/booking',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BookingCancellationRoute = BookingCancellationRouteImport.update({
+  id: '/booking-cancellation',
+  path: '/booking-cancellation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BookingOldRoute = BookingOldRouteImport.update({
   id: '/booking-old',
   path: '/booking-old',
@@ -100,6 +111,16 @@ const BookingOldRoute = BookingOldRouteImport.update({
 const CelebrationsRoute = CelebrationsRouteImport.update({
   id: '/celebrations',
   path: '/celebrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntertainmentRoute = EntertainmentRouteImport.update({
@@ -117,6 +138,11 @@ const HardwareProceduresRoute = HardwareProceduresRouteImport.update({
   path: '/hardware-procedures',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HouseRulesRoute = HouseRulesRouteImport.update({
+  id: '/house-rules',
+  path: '/house-rules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -125,6 +151,11 @@ const LoginRoute = LoginRouteImport.update({
 const NewsRoute = NewsRouteImport.update({
   id: '/news',
   path: '/news',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfferRoute = OfferRouteImport.update({
+  id: '/offer',
+  path: '/offer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OffersRoute = OffersRouteImport.update({
@@ -145,6 +176,11 @@ const RoomsRoute = RoomsRouteImport.update({
 const SpaRoute = SpaRouteImport.update({
   id: '/spa',
   path: '/spa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountSetupNameRoute = AccountSetupNameRouteImport.update({
@@ -340,17 +376,23 @@ export interface FileRoutesByFullPath {
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
   '/booking': typeof BookingRoute
+  '/booking-cancellation': typeof BookingCancellationRoute
   '/booking-old': typeof BookingOldRoute
   '/celebrations': typeof CelebrationsRoute
+  '/consent': typeof ConsentRoute
+  '/cookies': typeof CookiesRoute
   '/entertainment': typeof EntertainmentRoute
   '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
+  '/house-rules': typeof HouseRulesRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
+  '/offer': typeof OfferRoute
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
   '/spa': typeof SpaRoute
+  '/terms': typeof TermsRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
@@ -394,17 +436,23 @@ export interface FileRoutesByTo {
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
   '/booking': typeof BookingRoute
+  '/booking-cancellation': typeof BookingCancellationRoute
   '/booking-old': typeof BookingOldRoute
   '/celebrations': typeof CelebrationsRoute
+  '/consent': typeof ConsentRoute
+  '/cookies': typeof CookiesRoute
   '/entertainment': typeof EntertainmentRoute
   '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
+  '/house-rules': typeof HouseRulesRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
+  '/offer': typeof OfferRoute
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
   '/spa': typeof SpaRoute
+  '/terms': typeof TermsRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
@@ -449,17 +497,23 @@ export interface FileRoutesById {
   '/all-inclusive': typeof AllInclusiveRoute
   '/blog': typeof BlogRoute
   '/booking': typeof BookingRoute
+  '/booking-cancellation': typeof BookingCancellationRoute
   '/booking-old': typeof BookingOldRoute
   '/celebrations': typeof CelebrationsRoute
+  '/consent': typeof ConsentRoute
+  '/cookies': typeof CookiesRoute
   '/entertainment': typeof EntertainmentRoute
   '/faq': typeof FaqRoute
   '/hardware-procedures': typeof HardwareProceduresRoute
+  '/house-rules': typeof HouseRulesRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRoute
+  '/offer': typeof OfferRoute
   '/offers': typeof OffersRoute
   '/privacy': typeof PrivacyRoute
   '/rooms': typeof RoomsRoute
   '/spa': typeof SpaRoute
+  '/terms': typeof TermsRoute
   '/account/setup-name': typeof AccountSetupNameRoute
   '/admin/agent-scenarios': typeof AdminAgentScenariosRoute
   '/admin/booking-requests': typeof AdminBookingRequestsRoute
@@ -505,17 +559,23 @@ export interface FileRouteTypes {
     | '/all-inclusive'
     | '/blog'
     | '/booking'
+    | '/booking-cancellation'
     | '/booking-old'
     | '/celebrations'
+    | '/consent'
+    | '/cookies'
     | '/entertainment'
     | '/faq'
     | '/hardware-procedures'
+    | '/house-rules'
     | '/login'
     | '/news'
+    | '/offer'
     | '/offers'
     | '/privacy'
     | '/rooms'
     | '/spa'
+    | '/terms'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
@@ -559,17 +619,23 @@ export interface FileRouteTypes {
     | '/all-inclusive'
     | '/blog'
     | '/booking'
+    | '/booking-cancellation'
     | '/booking-old'
     | '/celebrations'
+    | '/consent'
+    | '/cookies'
     | '/entertainment'
     | '/faq'
     | '/hardware-procedures'
+    | '/house-rules'
     | '/login'
     | '/news'
+    | '/offer'
     | '/offers'
     | '/privacy'
     | '/rooms'
     | '/spa'
+    | '/terms'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
@@ -613,17 +679,23 @@ export interface FileRouteTypes {
     | '/all-inclusive'
     | '/blog'
     | '/booking'
+    | '/booking-cancellation'
     | '/booking-old'
     | '/celebrations'
+    | '/consent'
+    | '/cookies'
     | '/entertainment'
     | '/faq'
     | '/hardware-procedures'
+    | '/house-rules'
     | '/login'
     | '/news'
+    | '/offer'
     | '/offers'
     | '/privacy'
     | '/rooms'
     | '/spa'
+    | '/terms'
     | '/account/setup-name'
     | '/admin/agent-scenarios'
     | '/admin/booking-requests'
@@ -668,17 +740,23 @@ export interface RootRouteChildren {
   AllInclusiveRoute: typeof AllInclusiveRoute
   BlogRoute: typeof BlogRoute
   BookingRoute: typeof BookingRoute
+  BookingCancellationRoute: typeof BookingCancellationRoute
   BookingOldRoute: typeof BookingOldRoute
   CelebrationsRoute: typeof CelebrationsRoute
+  ConsentRoute: typeof ConsentRoute
+  CookiesRoute: typeof CookiesRoute
   EntertainmentRoute: typeof EntertainmentRoute
   FaqRoute: typeof FaqRoute
   HardwareProceduresRoute: typeof HardwareProceduresRoute
+  HouseRulesRoute: typeof HouseRulesRoute
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRoute
+  OfferRoute: typeof OfferRoute
   OffersRoute: typeof OffersRoute
   PrivacyRoute: typeof PrivacyRoute
   RoomsRoute: typeof RoomsRoute
   SpaRoute: typeof SpaRoute
+  TermsRoute: typeof TermsRoute
   AdminAgentScenariosRoute: typeof AdminAgentScenariosRoute
   AdminBookingRequestsRoute: typeof AdminBookingRequestsRoute
   AdminContentFactoryRoute: typeof AdminContentFactoryRoute
@@ -758,6 +836,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/booking-cancellation': {
+      id: '/booking-cancellation'
+      path: '/booking-cancellation'
+      fullPath: '/booking-cancellation'
+      preLoaderRoute: typeof BookingCancellationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/booking-old': {
       id: '/booking-old'
       path: '/booking-old'
@@ -770,6 +855,20 @@ declare module '@tanstack/react-router' {
       path: '/celebrations'
       fullPath: '/celebrations'
       preLoaderRoute: typeof CelebrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entertainment': {
@@ -793,6 +892,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HardwareProceduresRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/house-rules': {
+      id: '/house-rules'
+      path: '/house-rules'
+      fullPath: '/house-rules'
+      preLoaderRoute: typeof HouseRulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -805,6 +911,13 @@ declare module '@tanstack/react-router' {
       path: '/news'
       fullPath: '/news'
       preLoaderRoute: typeof NewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offer': {
+      id: '/offer'
+      path: '/offer'
+      fullPath: '/offer'
+      preLoaderRoute: typeof OfferRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/offers': {
@@ -833,6 +946,13 @@ declare module '@tanstack/react-router' {
       path: '/spa'
       fullPath: '/spa'
       preLoaderRoute: typeof SpaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/setup-name': {
@@ -1113,17 +1233,23 @@ const rootRouteChildren: RootRouteChildren = {
   AllInclusiveRoute: AllInclusiveRoute,
   BlogRoute: BlogRoute,
   BookingRoute: BookingRoute,
+  BookingCancellationRoute: BookingCancellationRoute,
   BookingOldRoute: BookingOldRoute,
   CelebrationsRoute: CelebrationsRoute,
+  ConsentRoute: ConsentRoute,
+  CookiesRoute: CookiesRoute,
   EntertainmentRoute: EntertainmentRoute,
   FaqRoute: FaqRoute,
   HardwareProceduresRoute: HardwareProceduresRoute,
+  HouseRulesRoute: HouseRulesRoute,
   LoginRoute: LoginRoute,
   NewsRoute: NewsRoute,
+  OfferRoute: OfferRoute,
   OffersRoute: OffersRoute,
   PrivacyRoute: PrivacyRoute,
   RoomsRoute: RoomsRoute,
   SpaRoute: SpaRoute,
+  TermsRoute: TermsRoute,
   AdminAgentScenariosRoute: AdminAgentScenariosRoute,
   AdminBookingRequestsRoute: AdminBookingRequestsRoute,
   AdminContentFactoryRoute: AdminContentFactoryRoute,

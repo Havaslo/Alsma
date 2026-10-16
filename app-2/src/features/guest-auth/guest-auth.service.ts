@@ -7,6 +7,7 @@ import {
 } from "node:crypto";
 
 import { HttpError } from "../../lib/http/http-error.js";
+import { createLegalAcceptance } from "../../lib/legal/consent.js";
 import type { GuestAuthRepository } from "./guest-auth.repository.js";
 import type {
   CompleteProfileBody,
@@ -217,15 +218,25 @@ export const createGuestAuthService = (
       );
     const code = String(randomInt(0, 10_000)).padStart(4, "0");
     const expiresAt = new Date(Date.now() + 10 * 60_000);
+    const legalAcceptances = [
+      createLegalAcceptance({
+        action: "request_guest_login_code",
+        pageUrl: input.legalAcceptance.pageUrl,
+        purpose: "access_guest_account",
+        type: "user_agreement",
+      }),
+    ];
     const verification = recent
       ? await repository.updateVerificationForResend(recent.id, {
           codeHash: hash(code),
           expiresAt,
+          legalAcceptances,
         })
       : await repository.createVerification({
           codeHash: hash(code),
           email,
           expiresAt,
+          legalAcceptances,
           messageId: randomUUID(),
         });
     try {

@@ -1,40 +1,10 @@
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { PRIVACY_SECTIONS } from "@/lib/site/privacy-policy";
-
-const normalizeBrandName = (value: string) =>
-  value.replace(/ALSMA|Алсма/gi, "АЛСМА");
+import { LegalDocumentPage } from "@/components/site/LegalDocumentPage";
+import content from "@/content/legal/privacy.md?raw";
 
 export const PrivacyPage = () => (
-  <main className="min-h-screen bg-page text-page-foreground">
-    <SiteHeader light transparentAtTop={false} />
-    <section className="mx-auto max-w-5xl px-5 pt-40 pb-20 sm:px-8 sm:pt-44">
-      <article className="rounded-4xl bg-brand-foreground px-6 py-10 shadow-lg sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-        <p className="text-sm font-semibold tracking-widest text-brand uppercase">
-          Документ
-        </p>
-        <h1 className="mt-4 font-heading text-4xl font-semibold text-brand sm:text-5xl">
-          Политика конфиденциальности
-        </h1>
-        <p className="mt-5 text-lg leading-8 text-muted-ui-foreground">
-          Актуальная редакция политики обработки персональных данных для
-          посетителей сайта АЛСМА.
-        </p>
-
-        <div className="mt-10 space-y-10">
-          {PRIVACY_SECTIONS.map((section) => (
-            <section className="scroll-mt-28" key={section.title}>
-              <h2 className="font-heading text-3xl font-semibold text-brand">
-                {section.title}
-              </h2>
-              <div className="mt-5 space-y-4 leading-7 text-muted-ui-foreground">
-                {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph}>{normalizeBrandName(paragraph)}</p>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      </article>
-    </section>
-  </main>
+  <LegalDocumentPage
+    content={content}
+    subtitle="Порядок обработки персональных данных на сайте alsma.ru."
+    title="Политика обработки персональных данных"
+  />
 );

@@ -1,10 +1,15 @@
 import { useForm } from "react-hook-form";
 
 import { Form } from "@/components/Form";
+import {
+  LeadConsentFields,
+  type LeadConsentFormValues,
+} from "@/components/site/LeadConsentFields";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { leadConsentPayload } from "@/lib/legal/consent";
 import { isRussianPhoneComplete } from "@/lib/phone-format";
 
 type LeadRequestModalProps = {
@@ -26,7 +31,7 @@ type LeadRequestModalProps = {
   readonly successMessage?: string;
 };
 
-type LeadRequestValues = {
+type LeadRequestValues = LeadConsentFormValues & {
   appointmentTime: string;
   comment: string;
   email: string;
@@ -61,7 +66,9 @@ export const LeadRequestModal = ({
       appointmentTime: "",
       comment: "",
       email: "",
+      marketingChannels: [],
       name: "",
+      personalDataConsent: false,
       phone: "",
     },
   });
@@ -116,6 +123,7 @@ export const LeadRequestModal = ({
             {
               comment,
               appointmentTime: values.appointmentTime || undefined,
+              consents: leadConsentPayload(values.marketingChannels),
               email: values.email || undefined,
               formCode,
               formTitle,
@@ -218,6 +226,7 @@ export const LeadRequestModal = ({
             {...form.register("comment")}
           />
         </label>
+        <LeadConsentFields idPrefix={formCode} />
         <button
           className="inline-flex min-h-16 w-full items-center justify-center rounded-full bg-brand px-7 py-4 text-lg font-semibold text-brand-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={lead.isPending}

@@ -3,16 +3,21 @@ import { useForm } from "react-hook-form";
 import { Send } from "lucide-react";
 
 import { Form } from "@/components/Form";
+import {
+  LeadConsentFields,
+  type LeadConsentFormValues,
+} from "@/components/site/LeadConsentFields";
 import { Loader } from "@/components/ui/Loader";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { leadConsentPayload } from "@/lib/legal/consent";
 
 const fieldClassName =
   "rounded-2xl border border-line bg-page px-5 py-4 text-page-foreground outline-none focus:border-focus";
 const labelClassName =
   "grid gap-2 text-sm font-semibold text-muted-ui-foreground";
 
-type TransferFormValues = {
+type TransferFormValues = LeadConsentFormValues & {
   comment: string;
   date: string;
   name: string;
@@ -28,9 +33,11 @@ export const TransferRequestForm = () => {
     defaultValues: {
       comment: "",
       date: "",
+      marketingChannels: [],
       name: "",
       origin: "",
       passengers: "1",
+      personalDataConsent: false,
       phone: "",
       time: "",
     },
@@ -43,6 +50,7 @@ export const TransferRequestForm = () => {
       onSubmit={(values) => {
         lead.mutate({
           comment: `Трансфер: ${values.origin}; дата: ${values.date}; время: ${values.time}; пассажиров: ${values.passengers}. ${values.comment}`,
+          consents: leadConsentPayload(values.marketingChannels),
           formCode: "about-transfer",
           formTitle: "Заявка на трансфер",
           name: values.name,
@@ -114,6 +122,11 @@ export const TransferRequestForm = () => {
           {...form.register("comment")}
         />
       </label>
+      <LeadConsentFields
+        className="md:col-span-2"
+        idPrefix="about-transfer"
+        allowEmail={false}
+      />
       <button
         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-7 py-4 font-semibold text-brand-foreground disabled:opacity-60 md:col-span-2"
         disabled={lead.isPending}

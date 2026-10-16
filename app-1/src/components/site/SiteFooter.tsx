@@ -5,6 +5,7 @@ import logoWhite from "@/assets/alsma/logo-white.svg";
 import maxLogo from "@/assets/alsma/max-logo.svg";
 import { ROUTES } from "@/route-constants";
 
+import { CookieSettingsButton } from "./CookieConsentProvider";
 import { VkontakteIcon } from "./SocialLinksSection";
 
 const navigation = [
@@ -27,10 +28,19 @@ const contacts = [
   ["+7 920 034-35-79", "групповые заезды", "tel:+79200343579"],
   ["+7 986 725-57-77", "бронирование", "tel:+79867255777"],
 ] as const;
+const legalDocuments = [
+  ["Согласие на обработку данных", ROUTES.personalDataConsent],
+  ["Политика обработки персональных данных", ROUTES.privacy],
+  ["Пользовательское соглашение", ROUTES.terms],
+  ["Публичная оферта", ROUTES.offer],
+  ["Cookie", ROUTES.cookies],
+  ["Бронирование и отмена", ROUTES.bookingCancellation],
+  ["Правила проживания", ROUTES.houseRules],
+] as const;
 
 export const SiteFooter = () => (
   <footer className="bg-brand py-16 text-brand-foreground">
-    <div className="mx-auto grid max-w-[100rem] gap-10 px-5 sm:px-8 lg:grid-cols-[1.1fr_1fr_0.9fr_1.2fr]">
+    <div className="mx-auto grid max-w-[100rem] gap-10 px-5 sm:px-8 lg:grid-cols-[1.1fr_1fr_1.15fr_1.1fr_1.2fr]">
       <div>
         <Link aria-label="АЛСМА" to={ROUTES.home}>
           <img
@@ -59,6 +69,21 @@ export const SiteFooter = () => (
       </div>
       <div>
         <p className="text-sm font-semibold tracking-widest text-brand-foreground/55 uppercase">
+          Документы
+        </p>
+        <ul className="mt-5 space-y-3 text-sm text-brand-foreground/80">
+          {legalDocuments.map(([label, to]) => (
+            <li key={to}>
+              <Link className="transition hover:text-brand-foreground" to={to}>
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <CookieSettingsButton />
+      </div>
+      <div>
+        <p className="text-sm font-semibold tracking-widest text-brand-foreground/55 uppercase">
           Связаться
         </p>
         <div className="mt-5 flex gap-3">
@@ -83,12 +108,6 @@ export const SiteFooter = () => (
             <img alt="" className="size-5" src={maxLogo} />
           </a>
         </div>
-        <Link
-          className="mt-6 block text-sm text-brand-foreground/80 transition hover:text-brand-foreground"
-          to={ROUTES.privacy}
-        >
-          Политика конфиденциальности
-        </Link>
       </div>
       <div>
         <p className="text-sm font-semibold tracking-widest text-brand-foreground/55 uppercase">

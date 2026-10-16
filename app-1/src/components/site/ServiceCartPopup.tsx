@@ -5,6 +5,7 @@ import { ShoppingCart } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
 import { PhoneInput } from "@/components/ui/PhoneInput";
+import { currentPageUrl } from "@/lib/legal/consent";
 import { isRussianPhoneComplete } from "@/lib/phone-format";
 import { useServiceCart } from "@/lib/services/service-cart";
 import { createServiceOrder } from "@/lib/services/services-api";
@@ -24,11 +25,16 @@ export const ServiceCartPopup = ({
   const [orderTotal, setOrderTotal] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [offerAccepted, setOfferAccepted] = useState(false);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
     if (!isRussianPhoneComplete(form.phone)) {
       setError("Введите полный номер телефона в формате +7.");
+      return;
+    }
+    if (!offerAccepted) {
+      setError("Примите условия публичной оферты, чтобы продолжить.");
       return;
     }
     setIsSubmitting(true);
@@ -40,6 +46,10 @@ export const ServiceCartPopup = ({
         checkoutRequestId: crypto.randomUUID(),
         ...form,
         items: cart.items,
+        legalAcceptance: {
+          accepted: true,
+          pageUrl: currentPageUrl(),
+        },
         returnUrl: returnUrl.toString(),
       });
       setOrderTotal(result.data.total);
@@ -171,6 +181,46 @@ export const ServiceCartPopup = ({
                   Добавьте услуги в корзину, чтобы продолжить.
                 </p>
               )}
+              <label className="flex items-start gap-3 text-sm leading-6 text-muted-ui-foreground">
+                <input
+                  checked={offerAccepted}
+                  className="mt-1 size-4 shrink-0 accent-brand"
+                  onChange={(event) => setOfferAccepted(event.target.checked)}
+                  required
+                  type="checkbox"
+                />
+                <span>
+                  Ознакомлен(а) и принимаю условия{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/offer"
+                  >
+                    публичной оферты
+                  </a>
+                  , включая условия бронирования и возврата. Ознакомлен(а) с{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/booking-cancellation"
+                  >
+                    условиями бронирования и отмены
+                  </a>{" "}
+                  и{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/house-rules"
+                  >
+                    правилами проживания
+                  </a>
+                  . Обработка данных — по{" "}
+                  <a
+                    className="font-semibold text-brand underline"
+                    href="/privacy"
+                  >
+                    Политике обработки персональных данных
+                  </a>
+                  .
+                </span>
+              </label>
               <button
                 className="w-full rounded-full bg-brand p-3 font-semibold text-brand-foreground"
                 disabled={!cart.items.length || isSubmitting}

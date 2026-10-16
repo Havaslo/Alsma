@@ -15,11 +15,16 @@ import spaPrograms from "@/assets/alsma/spa-programs-v2.jpg";
 import spaSteam from "@/assets/alsma/spa-steam.png";
 import spaceImage from "@/assets/alsma/space-top-view-new.webp";
 import { Form } from "@/components/Form";
+import {
+  LeadConsentFields,
+  type LeadConsentFormValues,
+} from "@/components/site/LeadConsentFields";
 import { TransferRequestForm } from "@/components/site/TransferRequestForm";
 import { Loader } from "@/components/ui/Loader";
 import { Modal } from "@/components/ui/Modal";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useCreateLead } from "@/lib/leads/useCreateLead";
+import { leadConsentPayload } from "@/lib/legal/consent";
 import { HOTEL_COORDINATES } from "@/lib/site/about";
 import { resolveMediaUrl } from "@/lib/site/media-url";
 import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
@@ -449,7 +454,7 @@ export const HomeContactSections = () => {
   );
 };
 
-type HomeInquiryFormValues = {
+type HomeInquiryFormValues = LeadConsentFormValues & {
   comment: string;
   email: string;
   phone: string;
@@ -464,7 +469,13 @@ const HomeInquiryModal = ({
 }) => {
   const lead = useCreateLead();
   const form = useForm<HomeInquiryFormValues>({
-    defaultValues: { comment: "", email: "", phone: "" },
+    defaultValues: {
+      comment: "",
+      email: "",
+      marketingChannels: [],
+      personalDataConsent: false,
+      phone: "",
+    },
   });
   const inputClassName =
     "min-h-16 w-full rounded-2xl border border-booking-line/10 bg-booking-control px-5 py-4 text-page-foreground shadow-sm shadow-page-foreground/5 outline-none placeholder:text-muted-ui-foreground focus:border-booking-line/30 focus:ring-4 focus:ring-focus/10";
@@ -500,6 +511,7 @@ const HomeInquiryModal = ({
           lead.mutate(
             {
               comment: values.comment || undefined,
+              consents: leadConsentPayload(values.marketingChannels),
               email: values.email,
               formCode: "home-inquiry-modal",
               formTitle: "Заявка с сайта — CTA-блок на главной странице",
@@ -534,6 +546,7 @@ const HomeInquiryModal = ({
             {...form.register("comment")}
           />
         </label>
+        <LeadConsentFields idPrefix="home-inquiry-modal" />
         <button
           className="inline-flex min-h-15 w-full items-center justify-center rounded-full bg-brand px-8 py-4 text-sm font-semibold text-brand-foreground transition hover:bg-brand/90 disabled:opacity-60"
           disabled={lead.isPending}
