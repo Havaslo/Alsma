@@ -197,7 +197,7 @@ export const CookieConsentProvider = ({
           <section
             aria-labelledby="cookie-settings-title"
             aria-modal="true"
-            className="w-full max-w-lg rounded-3xl bg-panel p-6 shadow-2xl sm:p-8"
+            className="w-full max-w-lg rounded-3xl bg-white p-6 text-gray-900 shadow-2xl sm:p-8"
             role="dialog"
           >
             <h2
@@ -207,20 +207,23 @@ export const CookieConsentProvider = ({
               Настройки cookie
             </h2>
             <div className="mt-6 space-y-5 text-sm leading-6">
-              <div className="flex items-start gap-3 rounded-2xl bg-page p-4">
-                <span
-                  aria-hidden="true"
-                  className="mt-1 size-4 shrink-0 rounded border-2 border-brand"
+              <label className="flex items-start gap-3 rounded-2xl bg-gray-50 p-4">
+                <input
+                  checked
+                  className="mt-1 size-5 shrink-0 accent-brand"
+                  disabled
+                  type="checkbox"
                 />
                 <span>
                   <strong className="block">Необходимые</strong>
                   Нужны для работы сайта и сохранения вашего выбора. Всегда
                   активны.
                 </span>
-              </div>
-              <label className="flex items-start gap-3 rounded-2xl bg-page p-4">
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-gray-50 p-4">
                 <input
                   checked={analyticsDraft}
+                  className="mt-1 size-5 shrink-0 accent-brand"
                   onChange={(event) => setAnalyticsDraft(event.target.checked)}
                   type="checkbox"
                 />
@@ -238,23 +241,23 @@ export const CookieConsentProvider = ({
                 </span>
               </label>
             </div>
-            <div className="mt-7 flex flex-wrap justify-end gap-2">
+            <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <button
-                className="rounded-full px-4 py-3 text-sm font-semibold text-brand"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full px-3 py-3 text-center text-sm font-semibold text-brand hover:bg-gray-50"
                 onClick={() => setSettingsOpen(false)}
                 type="button"
               >
                 Отмена
               </button>
               <button
-                className="rounded-full border border-line px-4 py-3 text-sm font-semibold text-brand"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-line px-3 py-3 text-center text-sm font-semibold text-brand"
                 onClick={() => savePreferences(false)}
                 type="button"
               >
                 Только необходимые
               </button>
               <button
-                className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-brand-foreground"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-brand px-3 py-3 text-center text-sm font-semibold text-brand-foreground"
                 onClick={() => savePreferences(analyticsDraft)}
                 type="button"
               >
