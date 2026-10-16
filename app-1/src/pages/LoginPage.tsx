@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -48,6 +48,7 @@ export const LoginPage = () => {
   });
 
   const email = form.getValues("email");
+  const acceptTerms = useWatch({ control: form.control, name: "acceptTerms" });
   const codeRegistration = form.register("code", {
     onChange: (event) => {
       event.target.value = event.target.value.replace(/\D/gu, "").slice(0, 4);
@@ -189,8 +190,8 @@ export const LoginPage = () => {
             </div>
           )}
           <button
-            className="flex w-full items-center justify-center rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground disabled:opacity-60"
-            disabled={isPending}
+            className="flex w-full items-center justify-center rounded-full bg-brand px-5 py-4 font-semibold text-brand-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isPending || (!isCodeStep && !acceptTerms)}
             type="submit"
           >
             {isPending && <Loader className="mr-2" size="sm" />}
