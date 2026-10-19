@@ -605,6 +605,7 @@ test("shows only approved rates and board combinations per room category", async
         makeRate("room-all-inclusive", "Все включено", "FB"),
         makeRate("room-autumn-hit", "Осенний хит", "Полный пансион"),
         makeRate("room-profitable-booking", "Выгодное бронирование", "FB"),
+        makeRate("room-new-year-2027", "Новый год 2027", "FB"),
         makeRate("room-other-rate", "Свободный", "FB"),
         makeRate("room-no-meal", "Выгодное бронирование", "Без питания"),
         makeRate(
@@ -615,6 +616,12 @@ test("shows only approved rates and board combinations per room category", async
         makeRate(
           "cottage-all-inclusive",
           "Все включено",
+          "FB",
+          "Коттедж Русская баня",
+        ),
+        makeRate(
+          "cottage-new-year-2027",
+          "Новый год 2027",
           "FB",
           "Коттедж Русская баня",
         ),
@@ -669,7 +676,9 @@ test("shows only approved rates and board combinations per room category", async
       "room-all-inclusive",
       "room-autumn-hit",
       "room-profitable-booking",
+      "room-new-year-2027",
       "cottage-all-inclusive",
+      "cottage-new-year-2027",
       "cottage-autumn-standard",
       "cottage-free-no-meal",
       "cottage-autumn-no-standard",

@@ -475,11 +475,13 @@ const STANDARD_FULL_BOARD_RATES = new Set([
   "все включено",
   "осенний хит",
   "выгодное бронирование",
+  "новый год 2027",
 ]);
 const BATH_COTTAGE_FULL_BOARD_RATES = new Set([
   "все включено",
   "осенний хит",
   "осенний хит стандарт",
+  "новый год 2027",
 ]);
 const BATH_COTTAGE_NO_MEAL_RATES = new Set([
   "свободный",
