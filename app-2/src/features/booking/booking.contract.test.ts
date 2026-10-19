@@ -606,6 +606,8 @@ test("shows only approved rates and board combinations per room category", async
         makeRate("room-autumn-hit", "Осенний хит", "Полный пансион"),
         makeRate("room-profitable-booking", "Выгодное бронирование", "FB"),
         makeRate("room-new-year-2027", "Новый год 2027", "FB"),
+        makeRate("room-new-year-no-meal", "Новый год 2027", "Без питания"),
+        makeRate("room-new-year-other-board", "Новый год 2027", "Завтрак"),
         makeRate("room-other-rate", "Свободный", "FB"),
         makeRate("room-no-meal", "Выгодное бронирование", "Без питания"),
         makeRate(
@@ -622,7 +624,7 @@ test("shows only approved rates and board combinations per room category", async
         makeRate(
           "cottage-new-year-2027",
           "Новый год 2027",
-          "FB",
+          "Без питания",
           "Коттедж Русская баня",
         ),
         makeRate(
@@ -677,6 +679,8 @@ test("shows only approved rates and board combinations per room category", async
       "room-autumn-hit",
       "room-profitable-booking",
       "room-new-year-2027",
+      "room-new-year-no-meal",
+      "room-new-year-other-board",
       "cottage-all-inclusive",
       "cottage-new-year-2027",
       "cottage-autumn-standard",
@@ -698,6 +702,20 @@ test("rejects server-side booking of a tariff hidden by the display filter", asy
   });
   assert.equal(harness.createReservationCalled, false);
   assert.equal(harness.findOrCreateGuestCalled, false);
+});
+
+test("allows New Year 2027 booking regardless of room category and board", async () => {
+  const harness = createHarness({
+    ...offer,
+    boardType: "Без питания",
+    rateType: "Новый год 2027",
+    roomType: "Коттедж Русская баня",
+  });
+
+  await harness.createReservation(reservationInput());
+
+  assert.equal(harness.getOffersCalled, true);
+  assert.equal(harness.createReservationCalled, true);
 });
 
 test("rejects an offer with fewer rooms to sell than requested", async () => {

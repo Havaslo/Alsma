@@ -475,13 +475,11 @@ const STANDARD_FULL_BOARD_RATES = new Set([
   "все включено",
   "осенний хит",
   "выгодное бронирование",
-  "новый год 2027",
 ]);
 const BATH_COTTAGE_FULL_BOARD_RATES = new Set([
   "все включено",
   "осенний хит",
   "осенний хит стандарт",
-  "новый год 2027",
 ]);
 const BATH_COTTAGE_NO_MEAL_RATES = new Set([
   "свободный",
@@ -490,6 +488,7 @@ const BATH_COTTAGE_NO_MEAL_RATES = new Set([
 const filterBookingOffers = (offers: readonly EpteraOffer[]): EpteraOffer[] =>
   offers.filter((offer) => {
     const rateType = normalizeRateType(offer.rateType);
+    if (rateType === "новый год 2027") return true;
     if (isRussianBathCottage(offer.roomType))
       return (
         (isFullBoard(offer.boardType) &&
