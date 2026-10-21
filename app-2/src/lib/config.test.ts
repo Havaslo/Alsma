@@ -32,3 +32,14 @@ test("production does not add the Amazi preview host to CORS", () => {
 
   assert.deepEqual(config.corsAllowedOrigins, ["https://alsma.ru"]);
 });
+
+test("blank optional Meta credentials do not prevent backend startup", () => {
+  const config = readConfig({
+    ...baseEnvironment,
+    META_INSTAGRAM_APP_ID: "",
+    META_INSTAGRAM_APP_SECRET: "   ",
+  });
+
+  assert.equal(config.instagramPublishing.appId, undefined);
+  assert.equal(config.instagramPublishing.appSecret, undefined);
+});

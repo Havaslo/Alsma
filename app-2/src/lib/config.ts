@@ -16,6 +16,12 @@ const databaseUrlSchema = z
     return protocol === "postgres:" || protocol === "postgresql:";
   }, "DATABASE_URL must use the postgres or postgresql protocol.");
 
+const optionalTrimmedEnvironmentValue = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim().length === 0 ? undefined : value,
+  z.string().trim().min(1).optional(),
+);
+
 const environmentSchema = z
   .object({
     AMAZI_STORAGE_API_URL: z.string().url(),
@@ -59,8 +65,8 @@ const environmentSchema = z
       .string()
       .regex(/^-?\d+$/u)
       .optional(),
-    META_INSTAGRAM_APP_ID: z.string().trim().min(1).optional(),
-    META_INSTAGRAM_APP_SECRET: z.string().trim().min(1).optional(),
+    META_INSTAGRAM_APP_ID: optionalTrimmedEnvironmentValue,
+    META_INSTAGRAM_APP_SECRET: optionalTrimmedEnvironmentValue,
     META_INSTAGRAM_TARGET_USERNAME: z
       .string()
       .trim()
