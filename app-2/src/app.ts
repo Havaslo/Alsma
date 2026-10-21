@@ -7,6 +7,7 @@ import type { AdminPushConfiguration } from "./features/admin-push/admin-push.ty
 import type { ContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
 import type { MaxBotClient } from "./features/max-bot/max-bot.client.js";
 import type { VkClient } from "./features/vk/vk.client.js";
+import type { InstagramPublishingConfiguration } from "./features/instagram-publishing/instagram-connection.service.js";
 import type { Database } from "./lib/database/database.js";
 import { publicCorsMiddleware } from "./lib/http/cors.js";
 import { errorHandler } from "./lib/http/error-handler.js";
@@ -62,6 +63,8 @@ type CreateAppOptions = {
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
   readonly mailRu: { readonly email?: string; readonly password?: string };
+  readonly instagramPublishing: InstagramPublishingConfiguration;
+  readonly environment: "development" | "production" | "test";
 };
 
 export const mangoExternalEventPaths = [
@@ -99,6 +102,8 @@ export const createApp = ({
   yooKassaSecretKey,
   yooKassaShopId,
   voiceIntegration,
+  instagramPublishing,
+  environment,
 }: CreateAppOptions): Express => {
   const app = express();
   app.disable("x-powered-by");
@@ -108,7 +113,9 @@ export const createApp = ({
     pinoHttp({
       autoLogging: {
         ignore: (request) =>
-          request.method === "GET" && request.url === "/health",
+          (request.method === "GET" && request.url === "/health") ||
+          request.url?.startsWith("/api/instagram-publishing/callback") ===
+            true,
       },
       logger,
     }),
@@ -152,6 +159,8 @@ export const createApp = ({
     yooKassaShopId,
     voiceIntegration,
     mailRu,
+    instagramPublishing,
+    environment,
   });
   // Mango appends event paths to the configured external-system origin. Keep
   // the bare origin and every documented event path on the same secured

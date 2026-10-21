@@ -42,6 +42,8 @@ test(
       maxClient,
       vkClient,
       contentPlanPublishing,
+      instagramPublishing: { graphApiVersion: "v26.0" },
+      environment: "test",
       vk: {},
       managedStorage: {} as never,
       openaiSip: { baseUrl: "https://unused.invalid" },

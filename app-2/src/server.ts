@@ -67,6 +67,8 @@ const start = async (): Promise<void> => {
     yooKassaShopId: config.yooKassaShopId,
     voiceIntegration: config.voiceIntegration,
     mailRu: config.mailRu,
+    instagramPublishing: config.instagramPublishing,
+    environment: config.nodeEnv,
   });
   const server = app.listen(config.port, host, () => {
     logger.info({ host, port: config.port }, "Backend server started");

@@ -720,6 +720,33 @@ model ContentPlanPost {
   @@map("content_plan_posts")
 }
 
+model InstagramOAuthState {
+  id           String    @id @default(uuid()) @db.Uuid
+  stateHash    String    @unique @map("state_hash") @db.VarChar(64)
+  redirectUri  String    @map("redirect_uri") @db.Text
+  returnOrigin String    @map("return_origin") @db.Text
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt   DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("instagram_oauth_states")
+}
+
+model InstagramChannelConnection {
+  id                   String    @id @default(uuid()) @db.Uuid
+  provider             String    @unique @default("instagram") @db.VarChar(32)
+  instagramUserId      String    @map("instagram_user_id") @db.VarChar(80)
+  username             String    @db.VarChar(120)
+  facebookPageId       String    @map("facebook_page_id") @db.VarChar(80)
+  encryptedAccessToken String    @map("encrypted_access_token") @db.Text
+  tokenExpiresAt       DateTime? @map("token_expires_at") @db.Timestamptz(3)
+  connectedAt          DateTime  @default(now()) @map("connected_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("instagram_channel_connections")
+}
+
 model SiteContent {
   id        String        @id @default(uuid()) @db.Uuid
   section   String

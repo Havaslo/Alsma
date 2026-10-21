@@ -21,6 +21,9 @@ const environmentSchema = z
     AMAZI_STORAGE_API_URL: z.string().url(),
     AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
     AMAZI_PREVIEW_FRONTEND_HOST: z.string().trim().min(1).optional(),
+    AMAZI_PREVIEW_HOST: z.string().trim().min(1).optional(),
+    AMAZI_PROXY_URL: z.string().url().optional(),
+    AMAZI_PROXY_KEY: z.string().min(1).optional(),
     CORS_ALLOWED_ORIGINS: z.string().min(1),
     DATABASE_URL: databaseUrlSchema,
     NODE_ENV: z
@@ -56,6 +59,15 @@ const environmentSchema = z
       .string()
       .regex(/^-?\d+$/u)
       .optional(),
+    META_INSTAGRAM_APP_ID: z.string().trim().min(1).optional(),
+    META_INSTAGRAM_APP_SECRET: z.string().trim().min(1).optional(),
+    META_INSTAGRAM_TARGET_USERNAME: z
+      .string()
+      .trim()
+      .regex(/^@?[A-Za-z0-9._]{1,30}$/u)
+      .optional(),
+    META_INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
+    INSTAGRAM_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
@@ -127,6 +139,17 @@ export type AppConfig = {
     readonly publicWebhookConfigured: boolean;
   };
   readonly mailRu: { readonly email?: string; readonly password?: string };
+  readonly instagramPublishing: {
+    readonly appId?: string;
+    readonly appSecret?: string;
+    readonly targetUsername?: string;
+    readonly redirectUri?: string;
+    readonly previewHost?: string;
+    readonly tokenEncryptionKey?: string;
+    readonly proxyUrl?: string;
+    readonly proxyKey?: string;
+    readonly graphApiVersion: string;
+  };
 };
 
 export const readConfig = (
@@ -203,6 +226,20 @@ export const readConfig = (
     mailRu: {
       email: parsed.MAIL_RU_EMAIL,
       password: parsed.MAIL_RU_APP_PASSWORD,
+    },
+    instagramPublishing: {
+      appId: parsed.META_INSTAGRAM_APP_ID,
+      appSecret: parsed.META_INSTAGRAM_APP_SECRET,
+      targetUsername: parsed.META_INSTAGRAM_TARGET_USERNAME?.replace(/^@/u, ""),
+      redirectUri: parsed.META_INSTAGRAM_REDIRECT_URI,
+      previewHost:
+        parsed.NODE_ENV === "development"
+          ? parsed.AMAZI_PREVIEW_HOST
+          : undefined,
+      tokenEncryptionKey: parsed.INSTAGRAM_TOKEN_ENCRYPTION_KEY,
+      proxyUrl: parsed.AMAZI_PROXY_URL,
+      proxyKey: parsed.AMAZI_PROXY_KEY,
+      graphApiVersion: "v26.0",
     },
   };
 };

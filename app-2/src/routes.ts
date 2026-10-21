@@ -28,6 +28,8 @@ import { createLeadsRouter } from "./features/leads/leads.routes.js";
 import type { MaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
+import { createInstagramPublishingRouter } from "./features/instagram-publishing/instagram-publishing.routes.js";
+import type { InstagramPublishingConfiguration } from "./features/instagram-publishing/instagram-connection.service.js";
 import { expireServicePaymentHolds } from "./features/services/service-payments.js";
 import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
@@ -88,6 +90,8 @@ type CreateApiRouterOptions = {
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
   readonly mailRu: { readonly email?: string; readonly password?: string };
+  readonly instagramPublishing: InstagramPublishingConfiguration;
+  readonly environment: "development" | "production" | "test";
 };
 
 export const createApiRouter = ({
@@ -114,6 +118,8 @@ export const createApiRouter = ({
   yooKassaShopId,
   voiceIntegration,
   mailRu,
+  instagramPublishing,
+  environment,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
   const chat = createChatService(database);
@@ -241,6 +247,16 @@ export const createApiRouter = ({
   );
   router.use("/site-leads", createLeadsRouter(database));
   router.use("/site-content", createSiteContentRouter(database));
+  router.use(
+    "/instagram-publishing",
+    createInstagramPublishingRouter({
+      allowedOrigins: corsAllowedOrigins,
+      configuration: instagramPublishing,
+      database,
+      environment,
+      logger,
+    }),
+  );
   router.use(
     "/services",
     createServicesRouter(database, yookassa, corsAllowedOrigins),

@@ -10,6 +10,7 @@ import { FactoryNotice } from "@/components/admin/content-factory/ContentFactory
 import { ContentFactoryStepper } from "@/components/admin/content-factory/ContentFactoryStepper";
 import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlanPanel";
 import { ContentPlanPostReviewDialog } from "@/components/admin/content-factory/ContentPlanPostReviewDialog";
+import { InstagramConnectionCard } from "@/components/admin/content-factory/InstagramConnectionCard";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import type {
@@ -320,39 +321,42 @@ export const ContentFactoryWorkspace = () => {
         )}
 
         {factory.activeSection === "plan" && (
-          <ContentPlanPanel
-            mediaItems={persistence.mediaItems}
-            onGeneratePlan={generatePlan}
-            onPreviewFile={plan.previewFile}
-            onOpenPost={openPlanPost}
-            onUpdatePost={(input) =>
-              void plan
-                .updatePost(input)
-                .catch((error: unknown) =>
-                  factory.setNotice(
-                    contentFactoryErrorMessage(
-                      error,
-                      "Не удалось изменить дату публикации.",
+          <div className="space-y-4">
+            <InstagramConnectionCard />
+            <ContentPlanPanel
+              mediaItems={persistence.mediaItems}
+              onGeneratePlan={generatePlan}
+              onPreviewFile={plan.previewFile}
+              onOpenPost={openPlanPost}
+              onUpdatePost={(input) =>
+                void plan
+                  .updatePost(input)
+                  .catch((error: unknown) =>
+                    factory.setNotice(
+                      contentFactoryErrorMessage(
+                        error,
+                        "Не удалось изменить дату публикации.",
+                      ),
                     ),
-                  ),
-                )
-            }
-            onCancelPost={(postId) =>
-              void plan
-                .cancelPost(postId)
-                .catch((error: unknown) =>
-                  factory.setNotice(
-                    contentFactoryErrorMessage(
-                      error,
-                      "Не удалось отменить публикацию.",
+                  )
+              }
+              onCancelPost={(postId) =>
+                void plan
+                  .cancelPost(postId)
+                  .catch((error: unknown) =>
+                    factory.setNotice(
+                      contentFactoryErrorMessage(
+                        error,
+                        "Не удалось отменить публикацию.",
+                      ),
                     ),
-                  ),
-                )
-            }
-            isLoading={plan.isLoading}
-            loadError={plan.error}
-            posts={plan.posts}
-          />
+                  )
+              }
+              isLoading={plan.isLoading}
+              loadError={plan.error}
+              posts={plan.posts}
+            />
+          </div>
         )}
 
         {factory.activeSection === "media" && (
