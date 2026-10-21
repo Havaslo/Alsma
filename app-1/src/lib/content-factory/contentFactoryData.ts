@@ -8,8 +8,16 @@ export const CONTENT_CHANNELS = [
 
 export type ContentChannel = (typeof CONTENT_CHANNELS)[number]["id"];
 
-export const getChannelLabel = (channel: ContentChannel) =>
-  CONTENT_CHANNELS.find((item) => item.id === channel)?.label ?? channel;
+export const CONTENT_PLAN_CHANNELS = [
+  ...CONTENT_CHANNELS,
+  { id: "blog", label: "Блог сайта", shortLabel: "Блог" },
+] as const;
+
+export type ContentPlanChannel =
+  (typeof CONTENT_PLAN_CHANNELS)[number]["id"];
+
+export const getChannelLabel = (channel: ContentPlanChannel) =>
+  CONTENT_PLAN_CHANNELS.find((item) => item.id === channel)?.label ?? channel;
 
 export interface FactoryMediaItem {
   id: string;
@@ -104,7 +112,7 @@ export interface PlanPublication {
   title: string;
   date: string;
   time: string;
-  channels: ContentChannel[];
+  channels: ContentPlanChannel[];
   status: PlanStatus;
   imageId: string;
   imageIds?: string[];

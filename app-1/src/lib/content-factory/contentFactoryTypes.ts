@@ -1,5 +1,6 @@
 import type {
   ContentChannel,
+  ContentPlanChannel,
   DraftVariant,
   FactoryMediaItem,
 } from "@/lib/content-factory/contentFactoryData";
@@ -47,7 +48,7 @@ export interface ContentPlanPostInput {
   date: string;
   time: string;
   postType: string;
-  channel: ContentChannel;
+  channel: ContentPlanChannel;
   format: string;
   topic: string;
   audience: string;
@@ -97,6 +98,7 @@ export interface ContentPlanPublishingStatus {
   enabled: boolean;
   vk: { configured: boolean };
   max: { configured: boolean; targetConfigured: boolean };
+  blog: { configured: boolean };
 }
 
 export interface ContentPlanPreview {
@@ -111,7 +113,7 @@ export interface UploadedContentFactoryMedia extends FactoryMediaItem {
 }
 
 export interface ContentFactoryChannelGuideline {
-  id: ContentChannel;
+  id: ContentPlanChannel;
   label: string;
   copy: string;
   image: {

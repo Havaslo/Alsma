@@ -6,6 +6,7 @@ export const contentPlanChannelSchema = z.enum([
   "max",
   "instagram",
   "zen",
+  "blog",
 ]);
 
 export const contentPlanImageSourceModeSchema = z.enum([

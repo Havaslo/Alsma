@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, List, Plus } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import {
-  CONTENT_CHANNELS,
+  CONTENT_PLAN_CHANNELS,
   type FactoryMediaItem,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
@@ -199,7 +199,7 @@ export const ContentPlanPanel = ({
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-1.5 sm:flex">
-              {CONTENT_CHANNELS.map((channel) => (
+              {CONTENT_PLAN_CHANNELS.map((channel) => (
                 <ChannelBadge channel={channel.id} compact key={channel.id} />
               ))}
             </div>

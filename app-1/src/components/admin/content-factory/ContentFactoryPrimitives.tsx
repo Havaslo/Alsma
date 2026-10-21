@@ -6,27 +6,28 @@ import { Check, ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import {
-  CONTENT_CHANNELS,
-  type ContentChannel,
+  CONTENT_PLAN_CHANNELS,
+  type ContentPlanChannel,
   type PlanStatus,
 } from "@/lib/content-factory/contentFactoryData";
 
-const channelTone: Record<ContentChannel, string> = {
+const channelTone: Record<ContentPlanChannel, string> = {
   vk: "bg-blue-50 text-blue-700 ring-blue-100",
   telegram: "bg-sky-50 text-sky-700 ring-sky-100",
   max: "bg-violet-50 text-violet-700 ring-violet-100",
   instagram: "bg-pink-50 text-pink-700 ring-pink-100",
   zen: "bg-orange-50 text-orange-800 ring-orange-100",
+  blog: "bg-emerald-50 text-emerald-800 ring-emerald-100",
 };
 
 export const ChannelBadge = ({
   channel,
   compact = false,
 }: {
-  channel: ContentChannel;
+  channel: ContentPlanChannel;
   compact?: boolean;
 }) => {
-  const item = CONTENT_CHANNELS.find((option) => option.id === channel);
+  const item = CONTENT_PLAN_CHANNELS.find((option) => option.id === channel);
   return (
     <span
       className={cn(

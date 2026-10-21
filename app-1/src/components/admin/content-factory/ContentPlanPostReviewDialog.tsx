@@ -117,7 +117,9 @@ export const ContentPlanPostReviewDialog = ({
       : primaryChannel === "max"
         ? publishingStatus?.max.configured === true &&
           publishingStatus.max.targetConfigured
-        : false);
+        : primaryChannel === "blog"
+          ? publishingStatus?.blog.configured === true
+          : false);
   const canSchedule =
     !hasChanges &&
     (post.sourceStatus === "approved" ||
