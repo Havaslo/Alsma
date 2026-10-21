@@ -24,11 +24,18 @@ export const BlogPage = () => {
   const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
-  const allBlogItems = getSiteCollection<EditorialItem>(
+  const editorialItems = getSiteCollection<EditorialItem>(
     content.data?.items,
     "items",
     BLOG_ITEMS,
-  )
+  );
+  const contentPlanItems = (content.data?.items ?? [])
+    .filter(
+      (item) =>
+        item.status === "published" && item.itemKey.startsWith("content-plan-"),
+    )
+    .map((item) => item.content as unknown as EditorialItem);
+  const allBlogItems = [...contentPlanItems, ...editorialItems]
     .filter((item) => item.isActive !== false)
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
   const items =

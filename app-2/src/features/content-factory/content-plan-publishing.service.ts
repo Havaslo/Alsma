@@ -5,6 +5,7 @@ import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { MaxApiError, type MaxBotClient } from "../max-bot/max-bot.client.js";
 import { VkApiError, type VkClient } from "../vk/vk.client.js";
+import { createContentPlanBlogPublisher } from "./content-plan-blog-publisher.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 
 const publishingTimeZone = "Europe/Moscow";
@@ -84,6 +85,7 @@ export const createContentPlanPublishingService = (options: {
   readonly vkGroupId?: string;
 }) => {
   const repository = createContentPlanRepository(options.database);
+  const publishBlogPost = createContentPlanBlogPublisher(options.database);
   let tickInProgress = false;
 
   const channelStatus = () => ({
@@ -95,6 +97,7 @@ export const createContentPlanPublishingService = (options: {
       configured: options.max.configured,
       targetConfigured: Boolean(options.maxPublishChatId),
     },
+    blog: { configured: true },
   });
 
   const verifyTarget = async (channel: string) => {
@@ -128,6 +131,7 @@ export const createContentPlanPublishingService = (options: {
       }
       return;
     }
+    if (channel === "blog") return;
     throw new HttpError(
       409,
       "CONTENT_PLAN_CHANNEL_NOT_SUPPORTED",
@@ -255,11 +259,13 @@ export const createContentPlanPublishingService = (options: {
               images,
               text: post.generatedCopy,
             })
-          : await options.max.publishChannelPost({
-              chatId: options.maxPublishChatId!,
-              images,
-              text: post.generatedCopy,
-            });
+          : post.channel === "max"
+            ? await options.max.publishChannelPost({
+                chatId: options.maxPublishChatId!,
+                images,
+                text: post.generatedCopy,
+              })
+            : await publishBlogPost(post);
       providerSucceeded = true;
       const completed = await repository.completePublishing(postId, {
         externalId: result.externalId,

@@ -273,8 +273,11 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       imageSourceMode: post.imageSourceMode ?? "generate",
       sourceImageRecommendation: post.sourceImageRecommendation ?? "",
     });
-    setSelectedChannels(post.channels);
-    setActiveChannel(post.channels[0] ?? "vk");
+    const editableChannels = post.channels.filter(
+      (channel): channel is ContentChannel => channel !== "blog",
+    );
+    setSelectedChannels(editableChannels.length ? editableChannels : ["vk"]);
+    setActiveChannel(editableChannels[0] ?? "vk");
     const postImageIds = [
       ...new Set(
         (post.imageIds?.length
@@ -288,13 +291,13 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     const channelImageIds = Object.fromEntries(
       CONTENT_CHANNELS.map(({ id }) => [
         id,
-        post.channels.includes(id) ? (postImageIds[0] ?? "") : "",
+        editableChannels.includes(id) ? (postImageIds[0] ?? "") : "",
       ]),
     ) as Record<ContentChannel, string>;
     const channelImageGalleryIds = Object.fromEntries(
       CONTENT_CHANNELS.map(({ id }) => [
         id,
-        post.channels.includes(id) ? postImageIds : [],
+        editableChannels.includes(id) ? postImageIds : [],
       ]),
     ) as Record<ContentChannel, string[]>;
     setVariants((current) =>

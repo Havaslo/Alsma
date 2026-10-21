@@ -18,6 +18,7 @@ test("publishing schedule is unavailable outside production", async () => {
   });
 
   assert.equal(service.channelStatus().enabled, false);
+  assert.deepEqual(service.channelStatus().blog, { configured: true });
   await assert.rejects(service.schedulePost("post-id"), {
     code: "CONTENT_PLAN_PUBLISHING_DISABLED",
     status: 409,
