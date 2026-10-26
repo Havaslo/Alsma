@@ -51,3 +51,11 @@ test("blank optional Meta credentials do not prevent backend startup", () => {
   assert.equal(config.instagramPublishing.appId, undefined);
   assert.equal(config.instagramPublishing.appSecret, undefined);
 });
+
+test("Instagram discovery uses the explicitly selected Facebook Page ID", () => {
+  const config = readConfig({
+    ...baseEnvironment,
+    META_INSTAGRAM_TARGET_PAGE_ID: "443534006217972",
+  });
+  assert.equal(config.instagramPublishing.targetPageId, "443534006217972");
+});

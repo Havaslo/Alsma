@@ -73,6 +73,7 @@ const environmentSchema = z
       .trim()
       .regex(/^@?[A-Za-z0-9._]{1,30}$/u)
       .optional(),
+    META_INSTAGRAM_TARGET_PAGE_ID: z.string().regex(/^\d+$/u).optional(),
     META_INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
     INSTAGRAM_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
@@ -151,6 +152,7 @@ export type AppConfig = {
     readonly appId?: string;
     readonly appSecret?: string;
     readonly targetUsername?: string;
+    readonly targetPageId?: string;
     readonly redirectUri?: string;
     readonly previewHost?: string;
     readonly tokenEncryptionKey?: string;
@@ -240,6 +242,7 @@ export const readConfig = (
       appId: parsed.META_INSTAGRAM_APP_ID,
       appSecret: parsed.META_INSTAGRAM_APP_SECRET,
       targetUsername: parsed.META_INSTAGRAM_TARGET_USERNAME?.replace(/^@/u, ""),
+      targetPageId: parsed.META_INSTAGRAM_TARGET_PAGE_ID,
       redirectUri: parsed.META_INSTAGRAM_REDIRECT_URI,
       previewHost:
         parsed.NODE_ENV === "development"

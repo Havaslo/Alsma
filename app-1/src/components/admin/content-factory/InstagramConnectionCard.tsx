@@ -27,14 +27,24 @@ export const InstagramConnectionCard = () => {
     outcome === "connected"
       ? "Instagram подключён. Проверьте название профиля ниже."
       : outcome === "target_account_not_found"
-        ? "Meta подтвердила вход, но приложение не смогло распознать связанный Instagram-профиль или право на публикацию."
-        : outcome === "authorization_cancelled"
-          ? "Авторизация отменена. Подключение не изменено."
-          : outcome === "provider_error"
-            ? "Meta не завершила подключение. Проверьте настройки приложения и попробуйте ещё раз."
-            : outcome === "invalid_state"
-              ? "Ссылка авторизации устарела. Запустите подключение заново."
-              : "";
+        ? "Meta подтвердила вход, но не вернула нужный Instagram-профиль через API. Мы проверяем причину на нашей стороне."
+        : outcome === "instagram_permissions_missing"
+          ? "Meta подтвердила вход, но не выдала приложению все запрошенные права. Связь аккаунтов менять не нужно — требуется проверить разрешения приложения."
+          : outcome === "facebook_page_not_visible"
+            ? "Meta не показала приложению нужную Facebook-Страницу через API. Профиль для входа менять пока не нужно — требуется проверить доступ приложения к Странице."
+            : outcome === "instagram_profile_not_visible"
+              ? "Facebook-Страница доступна приложению, но Meta не показывает связанный Instagram через API. Связь в кабинете Meta не удаляйте."
+              : outcome === "page_token_not_returned"
+                ? "Meta показала Страницу и Instagram, но не выдала приложению доступ к Странице. Проверьте разрешения приложения в Meta."
+                : outcome === "instagram_username_mismatch"
+                  ? "Meta вернула Instagram с другим именем. Подключение не сохранено, чтобы не связать другой профиль."
+                  : outcome === "authorization_cancelled"
+                    ? "Авторизация отменена. Подключение не изменено."
+                    : outcome === "provider_error"
+                      ? "При проверке ответа Meta произошла ошибка. Не меняйте настройки и не повторяйте вход: причина записана на сервере, её нужно разобрать."
+                      : outcome === "invalid_state"
+                        ? "Ссылка авторизации устарела. Запустите подключение заново."
+                        : "";
   const errorMessage = connect.error
     ? contentFactoryErrorMessage(
         connect.error,

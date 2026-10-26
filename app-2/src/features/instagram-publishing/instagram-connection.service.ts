@@ -7,6 +7,10 @@ import {
 import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
+import {
+  MetaGraphRequestError,
+  findTargetInstagram,
+} from "./instagram-page-discovery.js";
 
 const stateLifetimeMilliseconds = 10 * 60_000;
 const authorizationScopes = [
@@ -14,12 +18,14 @@ const authorizationScopes = [
   "instagram_basic",
   "instagram_content_publish",
   "pages_read_engagement",
+  "business_management",
 ] as const;
 
 export type InstagramPublishingConfiguration = {
   readonly appId?: string;
   readonly appSecret?: string;
   readonly targetUsername?: string;
+  readonly targetPageId?: string;
   readonly redirectUri?: string;
   readonly previewHost?: string;
   readonly tokenEncryptionKey?: string;
@@ -51,25 +57,6 @@ const isConfigured = (configuration: InstagramPublishingConfiguration) =>
     configuration.proxyKey &&
     (configuration.redirectUri || configuration.previewHost),
   );
-
-type InstagramPageCandidate = {
-  readonly instagramId: string;
-  readonly pageId: string;
-  readonly pageToken: string;
-};
-
-export const getInstagramPageCandidate = (
-  value: unknown,
-): InstagramPageCandidate | null => {
-  const page = record(value);
-  const instagram = record(page?.instagram_business_account);
-  const pageToken = text(page?.access_token);
-  const pageId = text(page?.id);
-  const instagramId = text(instagram?.id);
-  return pageToken && pageId && instagramId
-    ? { instagramId, pageId, pageToken }
-    : null;
-};
 
 const encryptionKey = (value: string | undefined): Buffer => {
   if (!value) throw new Error("Instagram token encryption is not configured");
@@ -163,11 +150,14 @@ export const createInstagramConnectionService = (options: {
       signal: AbortSignal.timeout(30_000),
     });
     const payload: unknown = await response.json().catch(() => null);
-    if (!response.ok)
-      throw new Error(`Meta API returned HTTP ${response.status}`);
     const data = record(payload);
+    const providerError = record(data?.error);
+    if (!response.ok || data?.error)
+      throw new MetaGraphRequestError(
+        response.status,
+        typeof providerError?.code === "number" ? providerError.code : null,
+      );
     if (!data) throw new Error("Meta API returned an invalid response");
-    if (data.error) throw new Error("Meta API rejected the connection request");
     return data;
   };
 
@@ -176,9 +166,16 @@ export const createInstagramConnectionService = (options: {
       `https://graph.facebook.com/${configuration.graphApiVersion}/${path}`,
     );
 
-  const graphGet = (path: string, accessToken: string, fields?: string) => {
+  const graphGet = (
+    path: string,
+    accessToken: string,
+    fields?: string,
+    parameters?: Record<string, string>,
+  ) => {
     const url = graphUrl(path);
     if (fields) url.searchParams.set("fields", fields);
+    for (const [key, value] of Object.entries(parameters ?? {}))
+      url.searchParams.set(key, value);
     return requestMeta(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -253,29 +250,35 @@ export const createInstagramConnectionService = (options: {
     };
   };
 
-  const findTargetInstagram = async (userToken: string) => {
-    const pages = await graphGet(
-      "me/accounts",
-      userToken,
-      "name,access_token,tasks,instagram_business_account{id}",
-    );
-    const pageValues = Array.isArray(pages.data) ? pages.data : [];
-    const targetUsername = configuration
-      .targetUsername!.replace(/^@/u, "")
-      .toLocaleLowerCase("en-US");
-    for (const value of pageValues) {
-      const candidate = getInstagramPageCandidate(value);
-      if (!candidate) continue;
-      const profile = await graphGet(
-        encodeURIComponent(candidate.instagramId),
-        candidate.pageToken,
-        "id,username",
+  const missingGrantedScopes = async (userToken: string) => {
+    try {
+      const result = await graphGet(
+        "me/permissions",
+        userToken,
+        "permission,status",
+        { limit: "100" },
       );
-      const username = text(profile.username);
-      if (username?.toLocaleLowerCase("en-US") === targetUsername)
-        return { ...candidate, username };
+      if (!Array.isArray(result.data)) return null;
+      const granted = new Set(
+        result.data
+          .map(record)
+          .filter((item) => item?.status === "granted")
+          .map((item) => text(item?.permission)),
+      );
+      return authorizationScopes.filter((scope) => !granted.has(scope));
+    } catch (error) {
+      options.logger.warn(
+        {
+          stage: "permissions_lookup",
+          httpStatus:
+            error instanceof MetaGraphRequestError ? error.httpStatus : null,
+          providerCode:
+            error instanceof MetaGraphRequestError ? error.providerCode : null,
+        },
+        "Instagram grant diagnostics could not be read",
+      );
+      return null;
     }
-    return null;
   };
 
   const complete = async (input: {
@@ -313,12 +316,35 @@ export const createInstagramConnectionService = (options: {
     if (!input.code || !isConfigured(configuration))
       return { returnOrigin, result: "not_configured" as const };
 
+    let stage = "code_exchange";
     try {
       const shortLivedToken = await exchangeCode(input.code, state.redirectUri);
+      stage = "long_lived_token";
       const longLived = await exchangeLongLivedToken(shortLivedToken);
-      const target = await findTargetInstagram(longLived.accessToken);
-      if (!target)
-        return { returnOrigin, result: "target_account_not_found" as const };
+      stage = "page_discovery";
+      const discovered = await findTargetInstagram({
+        graphGet,
+        logger: options.logger,
+        targetPageId: configuration.targetPageId,
+        targetUsername: configuration.targetUsername!,
+        userToken: longLived.accessToken,
+      });
+      if (!discovered.target) {
+        const missingScopes = await missingGrantedScopes(longLived.accessToken);
+        options.logger.warn(
+          { ...discovered, missingScopes, stage },
+          "Instagram account was not visible after Meta authorization",
+        );
+        return {
+          returnOrigin,
+          result:
+            missingScopes && missingScopes.length > 0
+              ? ("instagram_permissions_missing" as const)
+              : discovered.reason,
+        };
+      }
+      const target = discovered.target;
+      stage = "saving_connection";
       const encryptedAccessToken = encryptInstagramToken(
         target.pageToken,
         configuration.tokenEncryptionKey!,
@@ -345,7 +371,14 @@ export const createInstagramConnectionService = (options: {
       return { returnOrigin, result: "connected" as const };
     } catch (error) {
       options.logger.warn(
-        { errorName: error instanceof Error ? error.name : "UnknownError" },
+        {
+          stage,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          httpStatus:
+            error instanceof MetaGraphRequestError ? error.httpStatus : null,
+          providerCode:
+            error instanceof MetaGraphRequestError ? error.providerCode : null,
+        },
         "Instagram account connection failed",
       );
       return { returnOrigin, result: "provider_error" as const };
