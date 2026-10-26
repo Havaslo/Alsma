@@ -52,20 +52,24 @@ const isConfigured = (configuration: InstagramPublishingConfiguration) =>
     (configuration.redirectUri || configuration.previewHost),
   );
 
-const instagramPublishingPageTasks = new Set([
-  "CREATE_CONTENT",
-  "MANAGE",
-  "PROFILE_PLUS_CREATE_CONTENT",
-  "PROFILE_PLUS_FULL_CONTROL",
-  "PROFILE_PLUS_MANAGE",
-]);
+type InstagramPageCandidate = {
+  readonly instagramId: string;
+  readonly pageId: string;
+  readonly pageToken: string;
+};
 
-export const hasInstagramPublishingPageTask = (tasks: unknown): boolean =>
-  Array.isArray(tasks) &&
-  tasks.some(
-    (task) =>
-      typeof task === "string" && instagramPublishingPageTasks.has(task),
-  );
+export const getInstagramPageCandidate = (
+  value: unknown,
+): InstagramPageCandidate | null => {
+  const page = record(value);
+  const instagram = record(page?.instagram_business_account);
+  const pageToken = text(page?.access_token);
+  const pageId = text(page?.id);
+  const instagramId = text(instagram?.id);
+  return pageToken && pageId && instagramId
+    ? { instagramId, pageId, pageToken }
+    : null;
+};
 
 const encryptionKey = (value: string | undefined): Buffer => {
   if (!value) throw new Error("Instagram token encryption is not configured");
@@ -260,26 +264,16 @@ export const createInstagramConnectionService = (options: {
       .targetUsername!.replace(/^@/u, "")
       .toLocaleLowerCase("en-US");
     for (const value of pageValues) {
-      const page = record(value);
-      const instagram = record(page?.instagram_business_account);
-      const pageToken = text(page?.access_token);
-      const pageId = text(page?.id);
-      const instagramId = text(instagram?.id);
-      if (
-        !pageToken ||
-        !pageId ||
-        !instagramId ||
-        !hasInstagramPublishingPageTask(page?.tasks)
-      )
-        continue;
+      const candidate = getInstagramPageCandidate(value);
+      if (!candidate) continue;
       const profile = await graphGet(
-        encodeURIComponent(instagramId),
-        pageToken,
+        encodeURIComponent(candidate.instagramId),
+        candidate.pageToken,
         "id,username",
       );
       const username = text(profile.username);
       if (username?.toLocaleLowerCase("en-US") === targetUsername)
-        return { instagramId, pageId, pageToken, username };
+        return { ...candidate, username };
     }
     return null;
   };

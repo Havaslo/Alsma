@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   decryptInstagramToken,
   encryptInstagramToken,
-  hasInstagramPublishingPageTask,
+  getInstagramPageCandidate,
 } from "./instagram-connection.service.js";
 
 const key = Buffer.alloc(32, 19).toString("base64");
@@ -24,19 +24,30 @@ test("Instagram token ciphertext cannot be opened with a different key", () => {
   assert.throws(() => decryptInstagramToken(encrypted, otherKey));
 });
 
-test("Instagram publishing accepts legacy and current Meta Page task names", () => {
-  for (const task of [
-    "CREATE_CONTENT",
-    "MANAGE",
-    "PROFILE_PLUS_CREATE_CONTENT",
-    "PROFILE_PLUS_FULL_CONTROL",
-    "PROFILE_PLUS_MANAGE",
-  ]) {
-    assert.equal(hasInstagramPublishingPageTask([task]), true, task);
-  }
+test("Instagram connection accepts the explicitly linked account without Page tasks", () => {
+  assert.deepEqual(
+    getInstagramPageCandidate({
+      id: "page-id",
+      access_token: "page-token",
+      instagram_business_account: { id: "instagram-id" },
+      tasks: ["ANALYZE"],
+    }),
+    {
+      pageId: "page-id",
+      pageToken: "page-token",
+      instagramId: "instagram-id",
+    },
+  );
 });
 
-test("Instagram publishing rejects Page tasks without content access", () => {
-  assert.equal(hasInstagramPublishingPageTask(["ANALYZE", "MODERATE"]), false);
-  assert.equal(hasInstagramPublishingPageTask(undefined), false);
+test("Instagram connection still requires a linked account and Page token", () => {
+  assert.equal(
+    getInstagramPageCandidate({
+      id: "page-id",
+      access_token: "page-token",
+      tasks: ["CREATE_CONTENT"],
+    }),
+    null,
+  );
+  assert.equal(getInstagramPageCandidate(null), null);
 });
