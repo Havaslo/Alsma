@@ -27,7 +27,7 @@ export const InstagramConnectionCard = () => {
     outcome === "connected"
       ? "Instagram подключён. Проверьте название профиля ниже."
       : outcome === "target_account_not_found"
-        ? "Facebook-аккаунт авторизован, но нужный Instagram-профиль не найден среди связанных Страниц с правом создания контента."
+        ? "Meta подтвердила вход, но приложение не смогло распознать связанный Instagram-профиль или право на публикацию."
         : outcome === "authorization_cancelled"
           ? "Авторизация отменена. Подключение не изменено."
           : outcome === "provider_error"

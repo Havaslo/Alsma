@@ -4,7 +4,6 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
-
 import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
@@ -51,6 +50,21 @@ const isConfigured = (configuration: InstagramPublishingConfiguration) =>
     configuration.proxyUrl &&
     configuration.proxyKey &&
     (configuration.redirectUri || configuration.previewHost),
+  );
+
+const instagramPublishingPageTasks = new Set([
+  "CREATE_CONTENT",
+  "MANAGE",
+  "PROFILE_PLUS_CREATE_CONTENT",
+  "PROFILE_PLUS_FULL_CONTROL",
+  "PROFILE_PLUS_MANAGE",
+]);
+
+export const hasInstagramPublishingPageTask = (tasks: unknown): boolean =>
+  Array.isArray(tasks) &&
+  tasks.some(
+    (task) =>
+      typeof task === "string" && instagramPublishingPageTasks.has(task),
   );
 
 const encryptionKey = (value: string | undefined): Buffer => {
@@ -251,12 +265,11 @@ export const createInstagramConnectionService = (options: {
       const pageToken = text(page?.access_token);
       const pageId = text(page?.id);
       const instagramId = text(instagram?.id);
-      const tasks = Array.isArray(page?.tasks) ? page.tasks : [];
       if (
         !pageToken ||
         !pageId ||
         !instagramId ||
-        !tasks.includes("CREATE_CONTENT")
+        !hasInstagramPublishingPageTask(page?.tasks)
       )
         continue;
       const profile = await graphGet(
