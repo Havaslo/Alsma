@@ -145,10 +145,10 @@ export const createVoiceAgentService = (
 
   const executeTool = async (input: ToolBody) => {
     if (input.name === "check_availability" || input.name === "compare_rooms") {
-      if (!eptera)
+      if (!eptera || eptera.enabled === false)
         return {
           available: false,
-          reason: "eptera_not_configured",
+          reason: eptera ? "integration_disabled" : "eptera_not_configured",
           readOnly: true,
         };
       try {

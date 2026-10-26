@@ -654,6 +654,13 @@ export const BookingPage = () => {
                     <div className="grid place-items-center py-20 text-brand">
                       <LoaderCircle className="size-8 animate-spin" />
                     </div>
+                  ) : offersQuery.data?.disabled ? (
+                    <p
+                      className="rounded-2xl border border-line bg-page p-6 text-muted-ui-foreground"
+                      role="status"
+                    >
+                      Проверка актуальных тарифов и наличия временно отключена.
+                    </p>
                   ) : rooms.length ? (
                     <div className="space-y-4">
                       {rooms.map((item) => (

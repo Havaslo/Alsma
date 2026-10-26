@@ -29,8 +29,10 @@ const offer = {
 const createHarness = (
   options: {
     emptyOffersFirst?: boolean;
+    epteraEnabled?: boolean;
     gatewayFailure?: boolean;
     initialDetails?: Record<string, unknown>;
+    initialAgentMessage?: string;
     initialContact?: string;
     initialRequester?: string;
     malformedConfirmation?: boolean;
@@ -47,7 +49,15 @@ const createHarness = (
     author: string;
     conversationId: string;
     text: string;
-  }> = [];
+  }> = options.initialAgentMessage
+    ? [
+        {
+          author: "agent",
+          conversationId: "conversation-eptera-disabled",
+          text: options.initialAgentMessage,
+        },
+      ]
+    : [];
   const bookingSearches: unknown[] = [];
   const requestBodies: Array<{
     messages?: Array<{ content?: string; role?: string }>;
@@ -328,6 +338,7 @@ const createHarness = (
     bookingUrl: "/booking",
     chat: chat as never,
     database: { client } as unknown as Database,
+    epteraEnabled: options.epteraEnabled,
     logger: {
       warn: (fields: Record<string, unknown>, message: string) =>
         warnings.push({ fields, message }),
@@ -422,6 +433,50 @@ test("lets the model choose Eptera availability and use its verified result", as
       /Выбранный сценарий для этого сообщения/u,
     );
     assert.equal(harness.details().availabilityOffers instanceof Array, true);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("does not pass saved Eptera offers or prior agent quotes to the model while disabled", async () => {
+  const harness = createHarness({
+    epteraEnabled: false,
+    initialAgentMessage: "Раньше предлагал тариф за 987654 ₽.",
+    initialDetails: {
+      availabilityOffers: [
+        {
+          ...offer,
+          discountedPrice: 987_654,
+          id: "cached-eptera-offer",
+          price: 987_654,
+          roomType: "Эптера-старый номер",
+        },
+      ],
+      bookingContext: {
+        adults: 1,
+        checkInDate: "2026-10-13",
+        checkOutDate: "2026-10-15",
+        offerId: "cached-eptera-offer",
+        roomCount: 1,
+      },
+      bookingPreparation: "awaiting_confirmation",
+    },
+  });
+  try {
+    await harness.service.reply(
+      "conversation-eptera-disabled",
+      "Нужен номер с 2026-10-13 по 2026-10-15, 1 взрослый",
+    );
+    assert.equal(harness.bookingSearches.length, 0);
+    assert.doesNotMatch(
+      harness.prompts[0] ?? "",
+      /987654|cached-eptera-offer|Эптера-старый номер/u,
+    );
+    assert.deepEqual(harness.details().availabilityOffers, []);
+    assert.equal(
+      (harness.details().bookingContext as { offerId?: string }).offerId,
+      undefined,
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }

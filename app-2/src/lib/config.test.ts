@@ -33,6 +33,14 @@ test("production does not add the Amazi preview host to CORS", () => {
   assert.deepEqual(config.corsAllowedOrigins, ["https://alsma.ru"]);
 });
 
+test("Eptera remains enabled by default and can be paused by configuration", () => {
+  assert.equal(readConfig(baseEnvironment).epteraEnabled, true);
+  assert.equal(
+    readConfig({ ...baseEnvironment, EPTERA_ENABLED: "false" }).epteraEnabled,
+    false,
+  );
+});
+
 test("blank optional Meta credentials do not prevent backend startup", () => {
   const config = readConfig({
     ...baseEnvironment,

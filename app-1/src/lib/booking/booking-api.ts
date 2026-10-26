@@ -112,10 +112,14 @@ export type BookingPaymentStatus = {
 };
 
 export const loadBookingOffers = (input: BookingSearch, signal: AbortSignal) =>
-  apiClient.get<{ offers: BookingOffer[]; search: BookingSearch }>(
-    "/booking/offers",
-    { params: { ...input, childAges: input.childAges.join(",") }, signal },
-  );
+  apiClient.get<{
+    disabled?: boolean;
+    offers: BookingOffer[];
+    search: BookingSearch;
+  }>("/booking/offers", {
+    params: { ...input, childAges: input.childAges.join(",") },
+    signal,
+  });
 
 export const loadBookingCalendarPrices = (
   input: Pick<

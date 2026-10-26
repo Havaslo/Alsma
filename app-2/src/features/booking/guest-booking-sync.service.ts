@@ -32,7 +32,7 @@ const snapshotJson = (snapshot: EpteraReservationSnapshot) =>
 
 export const createGuestBookingSyncService = (
   database: Database,
-  eptera: Pick<EpteraClient, "getReservation">,
+  eptera: Pick<EpteraClient, "enabled" | "getReservation">,
   logger: Logger,
 ) => {
   let running = false;
@@ -40,6 +40,7 @@ export const createGuestBookingSyncService = (
   const syncBooking = async (
     bookingId: string,
   ): Promise<"succeeded" | "not_found" | "failed" | "skipped"> => {
+    if (eptera.enabled === false) return "skipped";
     const booking = await database.client.guestBooking.findUnique({
       select: {
         epteraLastSyncedAt: true,
@@ -134,6 +135,7 @@ export const createGuestBookingSyncService = (
   };
 
   const syncUserBookings = async (userId: string): Promise<void> => {
+    if (eptera.enabled === false) return;
     const bookings = await database.client.guestBooking.findMany({
       select: { id: true },
       where: { epteraReservationId: { not: null }, userId },
@@ -143,6 +145,7 @@ export const createGuestBookingSyncService = (
   };
 
   const syncAll = async (): Promise<void> => {
+    if (eptera.enabled === false) return;
     if (running) return;
     running = true;
     try {

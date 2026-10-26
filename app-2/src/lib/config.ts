@@ -38,6 +38,7 @@ const environmentSchema = z
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
     EPTERA_API_KEY: z.string().min(1).optional(),
     EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
+    EPTERA_ENABLED: z.stringbool().default(true),
     EPTERA_PAYMENT_LOGIN_TOKEN: z.string().min(1).optional(),
     EPTERA_RESERVATION_LOGIN_TOKEN: z.string().min(1).optional(),
     OPENAI_API_KEY: z.string().min(1).optional(),
@@ -98,6 +99,7 @@ export type AppConfig = {
   };
   readonly databaseUrl: string;
   readonly corsAllowedOrigins: readonly string[];
+  readonly epteraEnabled: boolean;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly epteraPaymentLoginToken?: string;
@@ -174,6 +176,7 @@ export const readConfig = (
         ? parsed.AMAZI_PREVIEW_FRONTEND_HOST
         : undefined,
     ),
+    epteraEnabled: parsed.EPTERA_ENABLED,
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
     epteraPaymentLoginToken: parsed.EPTERA_PAYMENT_LOGIN_TOKEN,

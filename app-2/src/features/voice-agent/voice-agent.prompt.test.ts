@@ -190,6 +190,7 @@ test("exposes only read-only lodging tools and callback requests to voice", asyn
     undefined,
     undefined,
     {
+      enabled: true,
       getOffers: async () => [
         {
           benefits: [],
@@ -232,6 +233,39 @@ test("exposes only read-only lodging tools and callback requests to voice", asyn
   });
   assert.equal((result as { readOnly?: boolean }).readOnly, true);
   assert.equal((result as { available?: boolean }).available, true);
+});
+
+test("voice agent returns no Eptera data while the booking integration is disabled", async () => {
+  let lookupCount = 0;
+  const service = createVoiceAgentService(
+    {} as VoiceAgentRepository,
+    {} as Database,
+    undefined,
+    undefined,
+    {
+      enabled: false,
+      getOffers: async () => {
+        lookupCount += 1;
+        return [];
+      },
+    } as unknown as EpteraClient,
+  );
+
+  const result = await service.tool({
+    adults: 1,
+    checkIn: "2026-08-13",
+    checkOut: "2026-08-15",
+    childAges: [],
+    name: "check_availability",
+    roomCount: 1,
+  });
+
+  assert.deepEqual(result, {
+    available: false,
+    reason: "integration_disabled",
+    readOnly: true,
+  });
+  assert.equal(lookupCount, 0);
 });
 
 test("uses the current Moscow year without asking guests to confirm it", () => {

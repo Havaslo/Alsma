@@ -50,7 +50,11 @@ export const attachVoiceAgentRealtime = (
     readonly database: Database;
     readonly logger: Logger;
     readonly openaiBaseUrl?: string;
-    readonly eptera?: { readonly apiKey?: string; readonly hotelId?: string };
+    readonly eptera?: {
+      readonly apiKey?: string;
+      readonly enabled?: boolean;
+      readonly hotelId?: string;
+    };
   },
 ): void => {
   const eptera = createEpteraClient(options.eptera ?? {});
@@ -197,25 +201,33 @@ export const attachVoiceAgentRealtime = (
                       functionEvent.name === "check_availability" ||
                       functionEvent.name === "compare_rooms"
                     ) {
-                      const result = await eptera.getOffers({
-                        adults: Number(args.adults),
-                        checkIn: String(args.checkIn ?? ""),
-                        checkOut: String(args.checkOut ?? ""),
-                        childAges: Array.isArray(args.childAges)
-                          ? args.childAges.filter(
-                              (age): age is number => typeof age === "number",
-                            )
-                          : [],
-                        currency: "RUB",
-                        language: "ru",
-                        nationality: "RU",
-                        roomCount: Number(args.roomCount ?? 1),
-                      });
-                      output = {
-                        available: result.length > 0,
-                        offers: result.slice(0, 8),
-                        readOnly: true,
-                      };
+                      if (!eptera.enabled) {
+                        output = {
+                          available: false,
+                          reason: "integration_disabled",
+                          readOnly: true,
+                        };
+                      } else {
+                        const result = await eptera.getOffers({
+                          adults: Number(args.adults),
+                          checkIn: String(args.checkIn ?? ""),
+                          checkOut: String(args.checkOut ?? ""),
+                          childAges: Array.isArray(args.childAges)
+                            ? args.childAges.filter(
+                                (age): age is number => typeof age === "number",
+                              )
+                            : [],
+                          currency: "RUB",
+                          language: "ru",
+                          nationality: "RU",
+                          roomCount: Number(args.roomCount ?? 1),
+                        });
+                        output = {
+                          available: result.length > 0,
+                          offers: result.slice(0, 8),
+                          readOnly: true,
+                        };
+                      }
                     }
                   } catch {
                     // Return a safe tool result; the model will explain the failure and offer a transfer.

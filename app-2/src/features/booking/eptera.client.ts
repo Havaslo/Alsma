@@ -11,6 +11,7 @@ const MAX_TRANSIENT_RETRIES = 2;
 
 type EpteraClientOptions = {
   readonly apiKey?: string;
+  readonly enabled?: boolean;
   readonly hotelId?: string;
   readonly paymentLoginToken?: string;
   readonly reservationLoginToken?: string;
@@ -367,6 +368,7 @@ const addDays = (value: string, days: number): string => {
 
 export const createEpteraClient = ({
   apiKey,
+  enabled = true,
   hotelId,
   paymentLoginToken,
   reservationLoginToken,
@@ -376,7 +378,17 @@ export const createEpteraClient = ({
   let definitions:
     { expiresAt: number; rooms: Map<number, RoomDefinition> } | undefined;
 
+  const requireEnabled = (): void => {
+    if (!enabled)
+      throw new HttpError(
+        503,
+        "EPTERA_DISABLED",
+        "Проверка и оформление бронирования временно отключены.",
+      );
+  };
+
   const requireConfiguration = (): { apiKey: string; hotelId: string } => {
+    requireEnabled();
     const normalizedApiKey = apiKey?.trim();
     const normalizedHotelId = hotelId?.trim();
     const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
@@ -400,6 +412,7 @@ export const createEpteraClient = ({
     hotelId: number;
     loginToken: string;
   } => {
+    requireEnabled();
     const normalizedHotelId = hotelId?.trim();
     const normalizedLoginToken = paymentLoginToken?.trim();
     const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
@@ -426,6 +439,7 @@ export const createEpteraClient = ({
     hotelId: number;
     loginToken: string;
   } => {
+    requireEnabled();
     const normalizedHotelId = hotelId?.trim();
     const normalizedLoginToken = reservationLoginToken?.trim();
     const hotelNumber = normalizedHotelId ? Number(normalizedHotelId) : NaN;
@@ -591,6 +605,7 @@ export const createEpteraClient = ({
   };
 
   return {
+    enabled,
     checkAvailability: async (input: AvailabilityRequest) => {
       const offers = await (async () => {
         const result = await (async () => {

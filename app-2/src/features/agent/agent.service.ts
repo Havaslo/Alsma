@@ -100,6 +100,7 @@ type AgentOptions = {
   readonly booking: BookingService;
   readonly chat: ChatService;
   readonly database: Database;
+  readonly epteraEnabled?: boolean;
   readonly logger: Logger;
 };
 const asSettings = (value: unknown) => ({
@@ -430,6 +431,7 @@ const findOfferMentionedByGuest = (
   return undefined;
 };
 export const createAiAgentService = (options: AgentOptions) => {
+  const epteraEnabled = options.epteraEnabled ?? true;
   const knowledge = createKnowledgeBaseService(
     createKnowledgeBaseRepository(options.database),
   );
@@ -552,6 +554,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       await options.chat.list(conversationId)
     ).slice(-20);
     const history = conversationMessages
+      .filter((item) => epteraEnabled || item.author !== "agent")
       .map(
         (item) =>
           `${item.author === "guest" ? "Гость" : item.author === "manager" ? "Менеджер" : "AI-ассистент"}: ${item.text}`,
@@ -561,7 +564,21 @@ export const createAiAgentService = (options: AgentOptions) => {
       where: { id: conversationId },
       select: { contact: true, details: true, requester: true },
     });
-    const previousState = asConversationState(requestState?.details);
+    const storedState = asConversationState(requestState?.details);
+    const previousState = epteraEnabled
+      ? storedState
+      : {
+          ...storedState,
+          booking: storedState.booking
+            ? {
+                ...storedState.booking,
+                lastCheckedDates: undefined,
+                offerId: undefined,
+              }
+            : undefined,
+          bookingPreparation: undefined,
+          availabilityOffers: [],
+        };
     const initialContact =
       typeof requestState?.contact === "string" ? requestState.contact : "";
     const initialPhone = phoneFromText(initialContact);
@@ -638,9 +655,10 @@ export const createAiAgentService = (options: AgentOptions) => {
         : { ...previousState.booking, ...entities };
     const nextServiceContext =
       serviceMention(message) ?? previousState.serviceContext;
-    const nextAvailabilityOffers = requestedOtherDates
-      ? undefined
-      : previousState.availabilityOffers;
+    const nextAvailabilityOffers =
+      epteraEnabled && !requestedOtherDates
+        ? (previousState.availabilityOffers ?? [])
+        : [];
     await options.database.client.adminRequest.update({
       where: { id: conversationId },
       data: {
@@ -649,9 +667,10 @@ export const createAiAgentService = (options: AgentOptions) => {
             ? requestState.details
             : {}),
           bookingContext: nextBooking,
-          ...(nextAvailabilityOffers
-            ? { availabilityOffers: nextAvailabilityOffers }
-            : {}),
+          availabilityOffers: nextAvailabilityOffers,
+          bookingPreparation: epteraEnabled
+            ? previousState.bookingPreparation
+            : null,
           serviceContext: nextServiceContext,
           ...(Object.keys(contactRequestDetails).length
             ? { contactRequest: contactRequestDetails }
@@ -691,7 +710,9 @@ export const createAiAgentService = (options: AgentOptions) => {
       );
     const globalInstructions = [
       settings.globalInstructions.trim() || DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
-      `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`,
+      epteraEnabled
+        ? `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`
+        : `Проверка наличия и тарифов, а также оформление брони через систему бронирования временно отключены. Не называй цены, тарифы или наличие из прошлых сообщений; сообщи гостю, что сейчас не можешь проверить актуальные варианты. Регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта остаются доступны.`,
       "Выбирай инструмент самостоятельно по контексту разговора. После результата инструмента сформулируй для гостя естественный ответ; не подменяй ответ готовой репликой и не утверждай, что действие завершено, пока его результат не подтверждён.",
       "При подготовке бронирования не выдумывай контактные данные и не используй контакты, которых гость сам не сообщил или которые не сохранены в обращении. После выбора номера и тарифа проверь обязательные данные: имя, фамилию, телефон и email. Запроси все отсутствующие данные одним сообщением, не спрашивай по одному и не проси повторно уже известные поля. Email нужен для чека ЮKassa и входа в личный кабинет. Только когда весь набор данных собран, покажи итог и попроси одно явное подтверждение; бронирование создавай только после него.",
       "Технический формат ответа: верни только JSON без markdown: {action:'answer'|'open_page'|'check_availability'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'about'|'all-inclusive'|'celebrations'|'entertainment'|'faq'|'hardware-procedures'|'offers'|'rooms'|'spa', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page укажи page; для check_availability передай параметры в booking.",
@@ -700,7 +721,9 @@ export const createAiAgentService = (options: AgentOptions) => {
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Опубликованные акции:\n${offersContext || "Нет опубликованных акций."}`,
       `Опубликованные мероприятия${calendarDateInMessage(message) ? ` на ${calendarDateInMessage(message)}` : ""}:\n${eventsContext || "Нет данных из публичного календаря."}`,
-      `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`,
+      epteraEnabled
+        ? `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`
+        : "Актуальные цены и наличие сейчас не проверяются; подтверждённых вариантов нет.",
       `Уже известные контакты для брони: ${JSON.stringify(nextBookingContact)}. Контакты для заявки: ${JSON.stringify(contactRequestDetails)}.`,
       `Обязательные контакты для брони: имя, фамилия, телефон и email. Сейчас не хватает: ${missingBookingContactFields(nextBookingContact).join(", ") || "ничего"}. Используй только данные, сообщённые гостем, и контакты, сохранённые в обращении; не заполняй недостающие поля самостоятельно.`,
       `Состояние диалога: ${JSON.stringify({ availabilityOffers, booking: nextBooking, bookingPreparation: previousState.bookingPreparation, serviceContext: nextServiceContext })}`,
@@ -764,9 +787,12 @@ export const createAiAgentService = (options: AgentOptions) => {
             typeof requestState.details === "object"
               ? requestState.details
               : {}),
-            ...(availabilityOffers.length ? { availabilityOffers } : {}),
+            availabilityOffers: epteraEnabled ? availabilityOffers : [],
             bookingContext: bookingState,
             bookingContact: effectiveBookingContact,
+            bookingPreparation: epteraEnabled
+              ? previousState.bookingPreparation
+              : null,
             serviceContext: nextServiceContext,
           },
         },
@@ -776,6 +802,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       effectiveBookingContact,
     );
     const canCompleteBooking = Boolean(
+      epteraEnabled &&
       settings.canCreateBooking &&
       confirmationReceived &&
       bookingFromContext(bookingState) &&
@@ -839,7 +866,7 @@ export const createAiAgentService = (options: AgentOptions) => {
             typeof requestState.details === "object"
               ? requestState.details
               : {}),
-            ...(availabilityOffers.length ? { availabilityOffers } : {}),
+            availabilityOffers: epteraEnabled ? availabilityOffers : [],
             bookingContext: bookingState,
             bookingContact: effectiveBookingContact,
             bookingPreparation: nextPreparation,
@@ -862,6 +889,13 @@ export const createAiAgentService = (options: AgentOptions) => {
         actionOutcome = {
           tool: "check_availability",
           status: "unavailable",
+          reason: "availability_checks_disabled",
+        };
+      } else if (!epteraEnabled) {
+        actionOutcome = {
+          tool: "check_availability",
+          status: "unavailable",
+          reason: "booking_integration_disabled",
         };
       } else if (!searchCriteria) {
         actionOutcome = {
@@ -975,19 +1009,21 @@ export const createAiAgentService = (options: AgentOptions) => {
         (/^https?:\/\//iu.test(settings.bookingUrl)
           ? new URL("/booking/return", settings.bookingUrl).toString()
           : undefined);
-      const bookingFailure = !settings.canCreateBooking
-        ? "booking_disabled"
-        : !confirmationReceived
-          ? "guest_confirmation_required"
-          : !canCompleteBooking
-            ? "booking_requirements_incomplete"
-            : !selectedOffer
-              ? "no_confirmed_offer"
-              : !bookingData.success
-                ? "invalid_booking_details"
-                : !returnUrl
-                  ? "return_url_unavailable"
-                  : undefined;
+      const bookingFailure = !epteraEnabled
+        ? "booking_integration_disabled"
+        : !settings.canCreateBooking
+          ? "booking_disabled"
+          : !confirmationReceived
+            ? "guest_confirmation_required"
+            : !canCompleteBooking
+              ? "booking_requirements_incomplete"
+              : !selectedOffer
+                ? "no_confirmed_offer"
+                : !bookingData.success
+                  ? "invalid_booking_details"
+                  : !returnUrl
+                    ? "return_url_unavailable"
+                    : undefined;
       if (bookingFailure || !bookingData.success || !returnUrl) {
         if (!bookingData.success) {
           options.logger.warn(
@@ -1038,7 +1074,7 @@ export const createAiAgentService = (options: AgentOptions) => {
                   typeof requestState.details === "object"
                     ? requestState.details
                     : {}),
-                  ...(availabilityOffers.length ? { availabilityOffers } : {}),
+                  availabilityOffers: epteraEnabled ? availabilityOffers : [],
                   bookingContext: bookingState,
                   bookingContact: nextBookingContact,
                   bookingPreparation: null,

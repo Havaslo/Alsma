@@ -518,9 +518,12 @@ export const createBookingService = (
           "Дата выезда должна быть позже даты заезда.",
         );
       }
+      if (eptera.enabled === false)
+        return { disabled: true, offers: [], search: input };
       return { offers: await getBookableOffers(input), search: input };
     },
     calendarPrices: async (input: CalendarPricesQuery) => {
+      if (eptera.enabled === false) return { items: [] };
       const cacheKey = JSON.stringify(input);
       const cached = calendarCache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now())
@@ -588,6 +591,12 @@ export const createBookingService = (
       return { items };
     },
     createReservation: async (input: CreateReservationBody) => {
+      if (eptera.enabled === false)
+        throw new HttpError(
+          503,
+          "EPTERA_DISABLED",
+          "Оформление бронирования временно отключено.",
+        );
       if (
         !isValidDate(input.checkIn) ||
         !isValidDate(input.checkOut) ||
@@ -1167,6 +1176,8 @@ export const createBookingService = (
         readonly limit?: number;
       } = {},
     ) => {
+      if (eptera.enabled === false)
+        return { cancelled: 0, failed: 0, skipped: 0 };
       const now = input.now ?? new Date();
       const groupCandidates =
         typeof repository.findExpiredUnpaidGroups === "function"

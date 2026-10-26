@@ -48,6 +48,7 @@ const start = async (): Promise<void> => {
     corsAllowedOrigins: config.corsAllowedOrigins,
     database,
     logger,
+    epteraEnabled: config.epteraEnabled,
     epteraApiKey: config.epteraApiKey,
     epteraHotelId: config.epteraHotelId,
     epteraPaymentLoginToken: config.epteraPaymentLoginToken,
@@ -85,6 +86,7 @@ const start = async (): Promise<void> => {
     database,
     eptera: {
       apiKey: config.epteraApiKey,
+      enabled: config.epteraEnabled,
       hotelId: config.epteraHotelId,
     },
     logger,

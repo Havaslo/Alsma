@@ -23,13 +23,13 @@ import { createChatService } from "./features/chat/chat.service.js";
 import { createContentFactoryRouter } from "./features/content-factory/content-factory.routes.js";
 import type { ContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
 import { createGuestAuthRouter } from "./features/guest-auth/guest-auth.routes.js";
+import type { InstagramPublishingConfiguration } from "./features/instagram-publishing/instagram-connection.service.js";
+import { createInstagramPublishingRouter } from "./features/instagram-publishing/instagram-publishing.routes.js";
 import { createKnowledgeBaseRouter } from "./features/knowledge-base/knowledge-base.routes.js";
 import { createLeadsRouter } from "./features/leads/leads.routes.js";
 import type { MaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createMaxBotRouter } from "./features/max-bot/max-bot.routes.js";
 import { createMediaRouter } from "./features/media/media.routes.js";
-import { createInstagramPublishingRouter } from "./features/instagram-publishing/instagram-publishing.routes.js";
-import type { InstagramPublishingConfiguration } from "./features/instagram-publishing/instagram-connection.service.js";
 import { expireServicePaymentHolds } from "./features/services/service-payments.js";
 import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
@@ -49,6 +49,7 @@ type CreateApiRouterOptions = {
   };
   readonly corsAllowedOrigins: readonly string[];
   readonly database: Database;
+  readonly epteraEnabled?: boolean;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
   readonly epteraPaymentLoginToken?: string;
@@ -98,6 +99,7 @@ export const createApiRouter = ({
   aiGatewayOpenai,
   corsAllowedOrigins,
   database,
+  epteraEnabled = true,
   epteraApiKey,
   epteraHotelId,
   epteraPaymentLoginToken,
@@ -125,6 +127,7 @@ export const createApiRouter = ({
   const chat = createChatService(database);
   const eptera = createEpteraClient({
     apiKey: epteraApiKey,
+    enabled: epteraEnabled,
     hotelId: epteraHotelId,
     paymentLoginToken: epteraPaymentLoginToken,
     reservationLoginToken: epteraReservationLoginToken,
@@ -147,6 +150,7 @@ export const createApiRouter = ({
     apiKey: openaiApiKey,
     baseUrl: openaiBaseUrl,
     bookingUrl: "",
+    epteraEnabled,
     chat,
     database,
     booking,
@@ -190,7 +194,7 @@ export const createApiRouter = ({
     "/admin/integrations",
     createAdminIntegrationsStatusRouter(database, {
       ai: Boolean(openaiApiKey && openaiBaseUrl),
-      eptera: Boolean(epteraApiKey && epteraHotelId),
+      eptera: epteraEnabled && Boolean(epteraApiKey && epteraHotelId),
       max: Boolean(maxBot.token),
       vk: Boolean(
         vk.accessToken &&
@@ -294,7 +298,11 @@ export const createApiRouter = ({
       database,
       openaiApiKey,
       openaiBaseUrl,
-      { apiKey: epteraApiKey, hotelId: epteraHotelId },
+      {
+        apiKey: epteraApiKey,
+        enabled: epteraEnabled,
+        hotelId: epteraHotelId,
+      },
       {
         mangoApiKey: voiceIntegration.mangoApiKey,
         mangoApiSalt: voiceIntegration.mangoApiSalt,

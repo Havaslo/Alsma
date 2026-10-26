@@ -42,7 +42,7 @@ export const createVoiceAgentRouter = (
   database: Database,
   apiKey?: string,
   openaiBaseUrl?: string,
-  eptera?: { apiKey?: string; hotelId?: string },
+  eptera?: { apiKey?: string; enabled?: boolean; hotelId?: string },
   mango?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;
