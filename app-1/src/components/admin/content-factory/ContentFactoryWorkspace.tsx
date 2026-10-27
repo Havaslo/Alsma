@@ -150,7 +150,9 @@ export const ContentFactoryWorkspace = () => {
     try {
       const scheduled = await plan.schedulePost(postId);
       factory.setNotice(
-        `Пост добавлен в расписание на ${scheduled.date} в ${scheduled.time} по московскому времени.`,
+        import.meta.env.DEV
+          ? `Пост добавлен в общую очередь на ${scheduled.date} в ${scheduled.time} по московскому времени. Его отправит основной сайт.`
+          : `Пост добавлен в расписание на ${scheduled.date} в ${scheduled.time} по московскому времени.`,
       );
       setReviewingPost(null);
     } catch (error) {

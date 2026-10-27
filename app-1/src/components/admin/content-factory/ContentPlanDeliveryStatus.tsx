@@ -100,6 +100,23 @@ export const ContentPlanDeliveryStatus = ({
         </p>
       )}
 
+      {primaryChannel === "zen" && channelReady && (
+        <p className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
+          Дзен уже связан с Telegram через синхробота. При планировании пост
+          сначала выйдет в Telegram, затем синхробот перенесёт его в Дзен.
+        </p>
+      )}
+
+      {import.meta.env.DEV &&
+        (post.sourceStatus === "approved" ||
+          post.sourceStatus === "publish_failed") && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+            Внимание: предпросмотр и основной сайт используют общую очередь.
+            После подтверждения это будет реальная публикация в подключённом
+            канале; в назначенное время её отправит рабочий сайт.
+          </p>
+        )}
+
       {post.sourceStatus === "scheduled" && (
         <p className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-800">
           Пост поставлен в расписание на {post.date} в {post.time} по
@@ -170,11 +187,13 @@ export const ContentPlanDeliveryStatus = ({
               ? "Для MAX ещё не выбран канал публикации. Добавьте MAX-бота администратором целевого канала с правом публикации; адрес канала будет определён через подключённый webhook."
               : primaryChannel === "telegram"
                 ? "Для Telegram задайте адрес целевого канала и добавьте бота администратором с правом публикации."
-                : primaryChannel === "vk"
-                  ? "Публикация в VK пока не настроена."
-                  : primaryChannel === "blog"
-                    ? "Публикация в блог сайта пока не настроена."
-                    : "Автоматическая отправка для этой площадки пока не подключена."}
+                : primaryChannel === "zen"
+                  ? "Для публикации в Дзене подключите Telegram-бота и целевой канал: синхробот перенесёт сообщение в Дзен."
+                  : primaryChannel === "vk"
+                    ? "Публикация в VK пока не настроена."
+                    : primaryChannel === "blog"
+                      ? "Публикация в блог сайта пока не настроена."
+                      : "Автоматическая отправка для этой площадки пока не подключена."}
           </p>
         )}
 
@@ -195,8 +214,10 @@ export const ContentPlanDeliveryStatus = ({
           <p className="font-semibold">Поставить пост в расписание?</p>
           {scheduleTimeIsFuture ? (
             <p className="mt-1 leading-5">
-              Пост будет опубликован в {primaryChannel?.toUpperCase()} {date} в{" "}
-              {time} по московскому времени. Подтверждая, вы разрешаете
+              {primaryChannel === "zen"
+                ? "Пост будет отправлен в Telegram и автоматически перенесён в Дзен синхроботом"
+                : `Пост будет опубликован в ${primaryChannel?.toUpperCase()}`}{" "}
+              {date} в {time} по московскому времени. Подтверждая, вы разрешаете
               отправить его в указанный канал в это время.
             </p>
           ) : (

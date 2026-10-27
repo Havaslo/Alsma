@@ -196,9 +196,10 @@ export const createContentPlanRepository = (database: Database) => ({
       where: { id: postId },
     });
   },
-  schedulePost: async (postId: string) => {
+  schedulePost: async (postId: string, channel?: string) => {
     const updated = await database.client.contentPlanPost.updateMany({
       data: {
+        ...(channel ? { channel } : {}),
         publicationAttemptedAt: null,
         publicationError: null,
         status: "scheduled",

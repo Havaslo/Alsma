@@ -40,7 +40,9 @@ const start = async (): Promise<void> => {
   });
   const contentPlanPublishing = createContentPlanPublishingService({
     database,
-    enabled: config.nodeEnv === "production",
+    // Scheduling is available in preview, but only production starts the
+    // delivery worker. Both environments share the queue/database.
+    enabled: true,
     logger,
     managedStorage,
     max: maxClient,

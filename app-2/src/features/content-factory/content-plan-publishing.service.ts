@@ -16,6 +16,10 @@ const publishingTimeZone = "Europe/Moscow";
 const schedulerIntervalMilliseconds = 15_000;
 const stalePublishingMilliseconds = 5 * 60_000;
 const maximumImageSize = 50 * 1_024 * 1_024;
+const maximumTelegramTextLength = 4_096;
+
+const deliveryChannel = (channel: string) =>
+  channel === "zen" ? "telegram" : channel;
 
 type SocialImage = {
   readonly content: Uint8Array;
@@ -117,6 +121,8 @@ export const createContentPlanPublishingService = (options: {
   });
 
   const verifyTarget = async (channel: string) => {
+    const targetChannel = deliveryChannel(channel);
+    if (targetChannel !== channel) return verifyTarget(targetChannel);
     if (channel === "vk") {
       if (!options.vk.configured || !options.vkGroupId)
         throw new HttpError(
@@ -180,7 +186,18 @@ export const createContentPlanPublishingService = (options: {
             "TELEGRAM_PUBLISH_TARGET_INVALID",
             "Проверьте адрес канала и добавление бота в целевой канал или группу.",
           );
-        throw error;
+        options.logger.warn(
+          {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+            telegramStatus: isTelegramApiError(error) ? error.status : null,
+          },
+          "Telegram target verification failed",
+        );
+        throw new HttpError(
+          502,
+          "TELEGRAM_VERIFICATION_FAILED",
+          "Не удалось проверить Telegram-канал. Пост не добавлен в очередь. Проверьте подключение и повторите позже.",
+        );
       }
       return;
     }
@@ -224,6 +241,15 @@ export const createContentPlanPublishingService = (options: {
         "MAX_POST_TEXT_TOO_LONG",
         "Для MAX текст поста должен быть не длиннее 4 000 символов.",
       );
+    if (
+      post.channel === "zen" &&
+      post.generatedCopy.trim().length > maximumTelegramTextLength
+    )
+      throw new HttpError(
+        409,
+        "ZEN_TELEGRAM_CROSSPOST_TEXT_TOO_LONG",
+        "Связка с Дзена публикует через Telegram. Сократите текст до 4 096 символов для отправки.",
+      );
     const imageLimit = post.channel === "max" ? 12 : 10;
     if (post.imageIds.length > imageLimit)
       throw new HttpError(
@@ -245,7 +271,10 @@ export const createContentPlanPublishingService = (options: {
       );
     await verifyTarget(post.channel);
 
-    const scheduled = await repository.schedulePost(postId);
+    const scheduled = await repository.schedulePost(
+      postId,
+      deliveryChannel(post.channel),
+    );
     if (!scheduled)
       throw new HttpError(
         409,
@@ -301,24 +330,25 @@ export const createContentPlanPublishingService = (options: {
     let providerRequestStarted = false;
     let providerSucceeded = false;
     try {
-      await verifyTarget(post.channel);
+      const targetChannel = deliveryChannel(post.channel);
+      await verifyTarget(targetChannel);
       const images = await loadImages(post.imageIds);
       providerRequestStarted = true;
       const result =
-        post.channel === "vk"
+        targetChannel === "vk"
           ? await options.vk.publishWallPost({
               groupId: options.vkGroupId!,
               idempotencyKey: post.id,
               images,
               text: post.generatedCopy,
             })
-          : post.channel === "max"
+          : targetChannel === "max"
             ? await options.max.publishChannelPost({
                 chatId: options.maxPublishChatId!,
                 images,
                 text: post.generatedCopy,
               })
-            : post.channel === "telegram"
+            : targetChannel === "telegram"
               ? await options.telegram.publishChannelPost({
                   chatId: options.telegramPublishChatId!,
                   images,
