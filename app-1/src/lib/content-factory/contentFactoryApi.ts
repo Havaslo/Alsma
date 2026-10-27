@@ -156,11 +156,9 @@ export const generateContentFactoryText = async (input: {
   selectedChannels: ContentChannel[];
   brief: ContentFactoryBrief;
 }) => {
-  const response = await apiClient.post<{
-    model: string;
-    variants: Array<
-      Pick<DraftVariant, "title" | "concept" | "text" | "adaptations">
-    >;
+  const submitted = await apiClient.post<{
+    jobId: string;
+    status: "pending";
   }>(
     "/admin/content-factory/generate/task",
     {
@@ -168,12 +166,49 @@ export const generateContentFactoryText = async (input: {
       selectedChannels: input.selectedChannels,
       brief: input.brief,
     },
-    {
-      headers: headers(),
-      timeout: 180_000,
-    },
+    { headers: headers(), timeout: 8_000 },
   );
-  return response.data;
+  const deadline = Date.now() + 120_000;
+
+  while (Date.now() < deadline) {
+    let status: {
+      status: "pending" | "processing" | "completed" | "failed";
+      result?: {
+        model: string;
+        variants: Array<
+          Pick<DraftVariant, "title" | "concept" | "text" | "adaptations">
+        >;
+      };
+      message?: string;
+    };
+    try {
+      const response = await apiClient.get<typeof status>(
+        `/admin/content-factory/generate/task/${submitted.data.jobId}`,
+        { headers: headers(), timeout: 8_000 },
+      );
+      status = response.data;
+    } catch (error) {
+      const shouldRetry =
+        axios.isAxiosError(error) &&
+        (!error.response || error.response.status >= 500);
+      if (!shouldRetry) throw error;
+      await new Promise((resolve) => window.setTimeout(resolve, 1_200));
+      continue;
+    }
+
+    if (status.status === "completed" && status.result) return status.result;
+    if (status.status === "failed") {
+      throw new Error(
+        status.message ||
+          "Не удалось создать текстовые варианты. Повторите запрос.",
+      );
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1_200));
+  }
+
+  throw new Error(
+    "Генерация всё ещё выполняется. Обновите страницу немного позже, чтобы проверить черновик.",
+  );
 };
 
 export const refineContentFactoryText = async (input: {

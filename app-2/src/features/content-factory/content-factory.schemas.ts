@@ -67,6 +67,10 @@ export const contentFactoryImageGenerationJobParamsSchema = z.object({
   jobId: z.uuid(),
 });
 
+export const contentFactoryTextGenerationJobParamsSchema = z.object({
+  jobId: z.uuid(),
+});
+
 export const contentFactoryDraftBodySchema = z.object({
   title: z.string().trim().min(1).max(255),
   snapshot: z.object({

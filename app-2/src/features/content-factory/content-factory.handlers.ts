@@ -5,6 +5,7 @@ import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
 import type { ContentFactoryImageGenerationJobsService } from "./content-factory-image-generation-jobs.service.js";
+import type { ContentFactoryTextGenerationJobsService } from "./content-factory-text-generation-jobs.service.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 
 const allowedImageTypes = new Set([
@@ -156,10 +157,23 @@ export const createGenerateContentFactoryTextHandler =
   };
 
 export const createGenerateContentFactoryTaskHandler =
-  (ai: ContentFactoryAiService): RequestHandler =>
+  (jobs: ContentFactoryTextGenerationJobsService): RequestHandler =>
   async (_request, response) => {
-    const result = await ai.generateText(response.locals.input.body);
-    response.json(result);
+    const job = await jobs.submit(
+      response.locals.admin.id,
+      response.locals.input.body,
+    );
+    response.status(202).json(job);
+  };
+
+export const createGetContentFactoryTextGenerationJobHandler =
+  (jobs: ContentFactoryTextGenerationJobsService): RequestHandler =>
+  async (_request, response) => {
+    const job = await jobs.getStatus(
+      response.locals.input.params.jobId,
+      response.locals.admin.id,
+    );
+    response.json(job);
   };
 
 export const createRefineContentFactoryTextHandler =

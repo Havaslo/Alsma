@@ -75,6 +75,7 @@ model AdminUser {
   contentFactoryDrafts              ContentFactoryDraft[]
   contentFactoryMedia               ContentFactoryMedia[]
   contentFactoryImageGenerationJobs ContentFactoryImageGenerationJob[]
+  contentFactoryTextGenerationJobs  ContentFactoryTextGenerationJob[]
   contentPlanImports                ContentPlanImport[]
   contentPlanPostsCreated           ContentPlanPost[]                  @relation("ContentPlanPostCreator")
   contentPlanPostsApproved          ContentPlanPost[]                  @relation("ContentPlanPostApprover")
@@ -662,6 +663,22 @@ model ContentFactoryImageGenerationJob {
   @@index([createdById, createdAt(sort: Desc)])
   @@index([status, updatedAt])
   @@map("content_factory_image_generation_jobs")
+}
+
+model ContentFactoryTextGenerationJob {
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String    @map("created_by_id") @db.Uuid
+  createdBy    AdminUser @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  status       String    @default("pending") @db.VarChar(24)
+  input        Json
+  result       Json?
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([createdById, createdAt(sort: Desc)])
+  @@index([status, updatedAt])
+  @@map("content_factory_text_generation_jobs")
 }
 
 model ContentPlanImport {

@@ -13,11 +13,13 @@ import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { createContentFactoryAiService } from "./content-factory-ai.service.js";
 import { contentFactoryGuidelinesResponse } from "./content-factory-guidelines.js";
 import { createContentFactoryImageGenerationJobsService } from "./content-factory-image-generation-jobs.service.js";
+import { createContentFactoryTextGenerationJobsService } from "./content-factory-text-generation-jobs.service.js";
 import {
   contentFactoryUploadLimit,
   createGenerateContentFactoryTaskHandler,
   createGenerateContentFactoryTextHandler,
   createGetContentFactoryImageGenerationJobHandler,
+  createGetContentFactoryTextGenerationJobHandler,
   createListContentFactoryDraftsHandler,
   createListContentFactoryMediaHandler,
   createRefineContentFactoryTextHandler,
@@ -31,6 +33,7 @@ import {
   contentFactoryImageGenerationBodySchema,
   contentFactoryImageGenerationJobParamsSchema,
   contentFactoryTextGenerationBodySchema,
+  contentFactoryTextGenerationJobParamsSchema,
   contentFactoryTextGenerationQuerySchema,
   contentFactoryTextRefinementBodySchema,
   contentFactoryUploadQuerySchema,
@@ -77,6 +80,11 @@ export const createContentFactoryRouter = (
     database,
     logger,
     managedStorage,
+  });
+  const textGenerationJobs = createContentFactoryTextGenerationJobsService({
+    ai,
+    database,
+    logger,
   });
   const contentPlanGeneration = createContentPlanGenerationService({
     ai,
@@ -150,7 +158,12 @@ export const createContentFactoryRouter = (
   router.post(
     "/generate/task",
     validateRequest({ body: contentFactoryTextGenerationBodySchema }),
-    createGenerateContentFactoryTaskHandler(ai),
+    createGenerateContentFactoryTaskHandler(textGenerationJobs),
+  );
+  router.get(
+    "/generate/task/:jobId",
+    validateRequest({ params: contentFactoryTextGenerationJobParamsSchema }),
+    createGetContentFactoryTextGenerationJobHandler(textGenerationJobs),
   );
   router.post(
     "/generate/text",

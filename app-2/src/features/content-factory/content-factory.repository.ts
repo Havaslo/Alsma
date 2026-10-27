@@ -115,6 +115,38 @@ export const createContentFactoryRepository = (database: Database) => ({
       select: { id: true },
       where: { status: "pending" },
     }),
+  createTextGenerationJob: (input: {
+    readonly createdById: string;
+    readonly input: Prisma.InputJsonValue;
+  }) =>
+    database.client.contentFactoryTextGenerationJob.create({
+      data: input,
+    }),
+  findTextGenerationJob: (jobId: string) =>
+    database.client.contentFactoryTextGenerationJob.findUnique({
+      where: { id: jobId },
+    }),
+  findTextGenerationJobForAdmin: (jobId: string, adminId: string) =>
+    database.client.contentFactoryTextGenerationJob.findFirst({
+      where: { createdById: adminId, id: jobId },
+    }),
+  claimTextGenerationJob: (jobId: string) =>
+    database.client.contentFactoryTextGenerationJob.updateMany({
+      data: { status: "processing" },
+      where: { id: jobId, status: "pending" },
+    }),
+  updateTextGenerationJob: (
+    jobId: string,
+    input: {
+      readonly errorMessage?: string | null;
+      readonly result?: Prisma.InputJsonValue;
+      readonly status: string;
+    },
+  ) =>
+    database.client.contentFactoryTextGenerationJob.update({
+      data: input,
+      where: { id: jobId },
+    }),
 });
 
 export type ContentFactoryRepository = ReturnType<
