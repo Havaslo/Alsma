@@ -14,6 +14,7 @@ test("publishing schedule is unavailable outside production", async () => {
     logger: pino({ level: "silent" }),
     managedStorage: {} as never,
     max: {} as never,
+    telegram: {} as never,
     vk: {} as never,
   });
 

@@ -28,6 +28,7 @@ test(
       logger,
       managedStorage: {} as never,
       max: maxClient,
+      telegram: {} as never,
       vk: vkClient,
     });
     const apiKey = "regression-key";

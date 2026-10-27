@@ -4,6 +4,10 @@ import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { MaxApiError, type MaxBotClient } from "../max-bot/max-bot.client.js";
+import {
+  TelegramApiError,
+  type TelegramBotClient,
+} from "../telegram/telegram-bot.client.js";
 import { VkApiError, type VkClient } from "../vk/vk.client.js";
 import { createContentPlanBlogPublisher } from "./content-plan-blog-publisher.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
@@ -55,11 +59,15 @@ const isMaxApiError = (error: unknown): error is MaxApiError =>
   error instanceof Error && error.name === "MaxApiError";
 const isVkApiError = (error: unknown): error is VkApiError =>
   error instanceof Error && error.name === "VkApiError";
+const isTelegramApiError = (error: unknown): error is TelegramApiError =>
+  error instanceof TelegramApiError;
 
 const isAmbiguousProviderError = (error: unknown) => {
   if (error instanceof TypeError) return true;
   if (error instanceof Error && error.name === "TimeoutError") return true;
   if (isMaxApiError(error)) return error.status >= 500;
+  if (isTelegramApiError(error))
+    return error.partialPublication || error.status >= 500;
   if (isVkApiError(error)) return error.code === 10;
   return false;
 };
@@ -71,6 +79,8 @@ const safePublicationError = (error: unknown, uncertain: boolean) => {
     return `VK отклонил публикацию (код ${error.code}). Проверьте права токена, текст и изображения.`;
   if (isMaxApiError(error))
     return `MAX отклонил публикацию (HTTP ${error.status}). Проверьте права бота, канал и изображения.`;
+  if (isTelegramApiError(error))
+    return `Telegram отклонил публикацию (HTTP ${error.status}). Проверьте права бота, канал и изображения.`;
   return "Не удалось подготовить публикацию. Проверьте, что изображения доступны в медиатеке.";
 };
 
@@ -81,6 +91,8 @@ export const createContentPlanPublishingService = (options: {
   readonly managedStorage: ManagedStorage;
   readonly max: MaxBotClient;
   readonly maxPublishChatId?: string;
+  readonly telegram: TelegramBotClient;
+  readonly telegramPublishChatId?: string;
   readonly vk: VkClient;
   readonly vkGroupId?: string;
 }) => {
@@ -96,6 +108,10 @@ export const createContentPlanPublishingService = (options: {
     max: {
       configured: options.max.configured,
       targetConfigured: Boolean(options.maxPublishChatId),
+    },
+    telegram: {
+      configured: options.telegram.configured,
+      targetConfigured: Boolean(options.telegramPublishChatId),
     },
     blog: { configured: true },
   });
@@ -131,11 +147,48 @@ export const createContentPlanPublishingService = (options: {
       }
       return;
     }
+    if (channel === "telegram") {
+      if (!options.telegram.configured || !options.telegramPublishChatId)
+        throw new HttpError(
+          409,
+          "TELEGRAM_PUBLISH_TARGET_NOT_CONFIGURED",
+          "Настройте Telegram-бота и адрес целевого канала перед публикацией.",
+        );
+      try {
+        await options.telegram.verifyChannelPublishing(
+          options.telegramPublishChatId,
+        );
+      } catch (error) {
+        if (isTelegramApiError(error) && error.status === 401)
+          throw new HttpError(
+            409,
+            "TELEGRAM_BOT_TOKEN_INVALID",
+            "Telegram не принял токен бота. Проверьте подключённый токен.",
+          );
+        if (isTelegramApiError(error) && error.status === 403)
+          throw new HttpError(
+            409,
+            "TELEGRAM_CHANNEL_WRITE_PERMISSION_REQUIRED",
+            "Добавьте Telegram-бота администратором канала с правом публикации.",
+          );
+        if (
+          isTelegramApiError(error) &&
+          (error.status === 400 || error.status === 409)
+        )
+          throw new HttpError(
+            409,
+            "TELEGRAM_PUBLISH_TARGET_INVALID",
+            "Проверьте адрес канала и добавление бота в целевой канал или группу.",
+          );
+        throw error;
+      }
+      return;
+    }
     if (channel === "blog") return;
     throw new HttpError(
       409,
       "CONTENT_PLAN_CHANNEL_NOT_SUPPORTED",
-      "Автоматическая публикация пока подключена только для VK и MAX.",
+      "Автоматическая публикация пока подключена только для VK, MAX, Telegram и блога.",
     );
   };
 
@@ -265,7 +318,13 @@ export const createContentPlanPublishingService = (options: {
                 images,
                 text: post.generatedCopy,
               })
-            : await publishBlogPost(post);
+            : post.channel === "telegram"
+              ? await options.telegram.publishChannelPost({
+                  chatId: options.telegramPublishChatId!,
+                  images,
+                  text: post.generatedCopy,
+                })
+              : await publishBlogPost(post);
       providerSucceeded = true;
       const completed = await repository.completePublishing(postId, {
         externalId: result.externalId,

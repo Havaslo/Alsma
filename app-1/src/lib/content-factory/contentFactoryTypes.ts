@@ -98,6 +98,7 @@ export interface ContentPlanPublishingStatus {
   enabled: boolean;
   vk: { configured: boolean };
   max: { configured: boolean; targetConfigured: boolean };
+  telegram: { configured: boolean; targetConfigured: boolean };
   blog: { configured: boolean };
 }
 

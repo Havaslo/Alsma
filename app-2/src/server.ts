@@ -3,6 +3,7 @@ import { createAdminPushRepository } from "./features/admin-push/admin-push.repo
 import { createAdminPushService } from "./features/admin-push/admin-push.service.js";
 import { createContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
+import { createTelegramBotClient } from "./features/telegram/telegram-bot.client.js";
 import { createVkClient } from "./features/vk/vk.client.js";
 import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
@@ -29,6 +30,10 @@ const start = async (): Promise<void> => {
     logger,
     token: config.maxBot.token,
   });
+  const telegramClient = createTelegramBotClient({
+    logger,
+    token: config.telegram.token,
+  });
   const vkClient = createVkClient({
     accessToken: config.vk.accessToken,
     logger,
@@ -40,6 +45,8 @@ const start = async (): Promise<void> => {
     managedStorage,
     max: maxClient,
     maxPublishChatId: config.maxBot.publishChatId,
+    telegram: telegramClient,
+    telegramPublishChatId: config.telegram.publishChatId,
     vk: vkClient,
     vkGroupId: config.vk.groupId,
   });

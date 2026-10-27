@@ -66,6 +66,8 @@ const environmentSchema = z
       .string()
       .regex(/^-?\d+$/u)
       .optional(),
+    TELEGRAM_BOT_TOKEN: z.string().trim().min(1).optional(),
+    TELEGRAM_PUBLISH_CHAT_ID: optionalTrimmedEnvironmentValue,
     META_INSTAGRAM_APP_ID: optionalTrimmedEnvironmentValue,
     META_INSTAGRAM_APP_SECRET: optionalTrimmedEnvironmentValue,
     META_INSTAGRAM_TARGET_USERNAME: z
@@ -130,6 +132,10 @@ export type AppConfig = {
     readonly webhookSecret?: string;
     readonly webhookUrl?: string;
     readonly siteUrl?: string;
+    readonly publishChatId?: string;
+  };
+  readonly telegram: {
+    readonly token?: string;
     readonly publishChatId?: string;
   };
   readonly vk: {
@@ -213,6 +219,10 @@ export const readConfig = (
       webhookUrl: parsed.MAX_BOT_WEBHOOK_URL,
       siteUrl: parsed.MAX_BOT_SITE_URL,
       publishChatId: parsed.MAX_PUBLISH_CHAT_ID,
+    },
+    telegram: {
+      token: parsed.TELEGRAM_BOT_TOKEN,
+      publishChatId: parsed.TELEGRAM_PUBLISH_CHAT_ID,
     },
     vk: {
       accessToken: parsed.VK_ACCESS_TOKEN,

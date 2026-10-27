@@ -117,9 +117,12 @@ export const ContentPlanPostReviewDialog = ({
       : primaryChannel === "max"
         ? publishingStatus?.max.configured === true &&
           publishingStatus.max.targetConfigured
-        : primaryChannel === "blog"
-          ? publishingStatus?.blog.configured === true
-          : false);
+        : primaryChannel === "telegram"
+          ? publishingStatus?.telegram.configured === true &&
+            publishingStatus.telegram.targetConfigured
+          : primaryChannel === "blog"
+            ? publishingStatus?.blog.configured === true
+            : false);
   const canSchedule =
     !hasChanges &&
     (post.sourceStatus === "approved" ||
