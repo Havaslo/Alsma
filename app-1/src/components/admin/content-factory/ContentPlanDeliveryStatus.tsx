@@ -8,10 +8,27 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
 import type { ContentPlanPublishingStatus } from "@/lib/content-factory/contentFactoryTypes";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
+
+const isFutureMoscowDateTime = (date: string, time: string) => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const currentDateTime = `${value("year")}-${value("month")}-${value("day")} ${value("hour")}:${value("minute")}`;
+  return `${date} ${time}` > currentDateTime;
+};
 
 type Props = {
   post: PlanPublication;
@@ -43,6 +60,8 @@ export const ContentPlanDeliveryStatus = ({
   onRetry,
 }: Props) => {
   const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState("");
+  const scheduleTimeIsFuture = isFutureMoscowDateTime(date, time);
 
   return (
     <>
@@ -174,11 +193,25 @@ export const ContentPlanDeliveryStatus = ({
           role="alert"
         >
           <p className="font-semibold">Поставить пост в расписание?</p>
-          <p className="mt-1 leading-5">
-            Пост будет опубликован в {primaryChannel?.toUpperCase()} {date} в{" "}
-            {time} по московскому времени. Подтверждая, вы разрешаете отправить
-            его в указанный канал в это время.
-          </p>
+          {scheduleTimeIsFuture ? (
+            <p className="mt-1 leading-5">
+              Пост будет опубликован в {primaryChannel?.toUpperCase()} {date} в{" "}
+              {time} по московскому времени. Подтверждая, вы разрешаете
+              отправить его в указанный канал в это время.
+            </p>
+          ) : (
+            <p className="mt-1 leading-5 text-amber-900">
+              Выбранное время уже прошло по Москве. Укажите будущее время ниже.
+            </p>
+          )}
+          {scheduleError && (
+            <p
+              className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-rose-800"
+              role="alert"
+            >
+              {scheduleError}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <QuietButton
               disabled={isScheduling}
@@ -188,11 +221,25 @@ export const ContentPlanDeliveryStatus = ({
             </QuietButton>
             <Button
               className="min-h-9 rounded-xl bg-brand px-3 text-white hover:bg-brand/90"
-              disabled={isScheduling}
+              disabled={isScheduling || !scheduleTimeIsFuture}
               onClick={() => {
+                if (!isFutureMoscowDateTime(date, time)) {
+                  setScheduleError(
+                    "Выбранное время уже прошло по Москве. Укажите будущее время ниже.",
+                  );
+                  return;
+                }
+                setScheduleError("");
                 setIsScheduling(true);
                 void onSchedule(post.id)
-                  .catch(() => undefined)
+                  .catch((error: unknown) => {
+                    setScheduleError(
+                      contentFactoryErrorMessage(
+                        error,
+                        "Не удалось поставить пост в расписание. Проверьте подключение канала и повторите попытку.",
+                      ),
+                    );
+                  })
                   .finally(() => setIsScheduling(false));
               }}
               type="button"
