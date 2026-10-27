@@ -6,6 +6,7 @@ const contentChannelSchema = z.enum([
   "max",
   "instagram",
   "zen",
+  "blog",
 ]);
 
 const channelTextSchema = z.object({
@@ -14,6 +15,7 @@ const channelTextSchema = z.object({
   max: z.string().max(20_000),
   instagram: z.string().max(20_000),
   zen: z.string().max(20_000),
+  blog: z.string().max(20_000).optional(),
 });
 
 const contentFactoryBriefSchema = z.object({
@@ -43,6 +45,7 @@ const draftVariantSchema = z.object({
       max: z.array(z.string().max(120)).max(4),
       instagram: z.array(z.string().max(120)).max(4),
       zen: z.array(z.string().max(120)).max(4),
+      blog: z.array(z.string().max(120)).max(4).optional(),
     })
     .optional(),
   channelImageIds: z.object({
@@ -51,6 +54,7 @@ const draftVariantSchema = z.object({
     max: z.string().max(120),
     instagram: z.string().max(120),
     zen: z.string().max(120),
+    blog: z.string().max(120).optional(),
   }),
   adaptations: channelTextSchema,
 });
@@ -69,7 +73,7 @@ export const contentFactoryDraftBodySchema = z.object({
     prompt: z.string().max(4_000),
     selectedChannels: z
       .array(contentChannelSchema)
-      .max(5)
+      .max(6)
       .refine((channels) => new Set(channels).size === channels.length),
     variantIndex: z.number().int().min(0).max(9),
     variants: z.array(draftVariantSchema).min(1).max(10),
@@ -90,7 +94,7 @@ const channelListQuerySchema = z
     z
       .array(contentChannelSchema)
       .min(1)
-      .max(5)
+      .max(6)
       .refine((channels) => new Set(channels).size === channels.length),
   );
 
@@ -124,7 +128,7 @@ export const contentFactoryTextGenerationBodySchema = z.object({
   selectedChannels: z
     .array(contentChannelSchema)
     .min(1)
-    .max(5)
+    .max(6)
     .refine((channels) => new Set(channels).size === channels.length),
   brief: contentFactoryBriefSchema.optional(),
 });
@@ -147,7 +151,7 @@ export const contentFactoryTextRefinementBodySchema = z
     selectedChannels: z
       .array(contentChannelSchema)
       .min(1)
-      .max(5)
+      .max(6)
       .refine((channels) => new Set(channels).size === channels.length),
     sourceTitle: sourcePhotoDescriptionFields.sourceTitle.optional(),
     sourceCategory: sourcePhotoDescriptionFields.sourceCategory.optional(),
@@ -186,7 +190,7 @@ export const contentFactoryImageGenerationBodySchema = z
     selectedChannels: z
       .array(contentChannelSchema)
       .min(1)
-      .max(5)
+      .max(6)
       .refine((channels) => new Set(channels).size === channels.length),
     referencePhotos: z.array(contentFactoryImageSourceSchema).max(4).optional(),
     // Keep the one-photo request shape accepted while older previews are still open.

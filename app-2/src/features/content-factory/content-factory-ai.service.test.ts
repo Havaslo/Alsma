@@ -45,6 +45,7 @@ const createTextResponse = () => ({
               telegram: `Telegram ${number}`,
               vk: `VK ${number}`,
               zen: `Дзен ${number}`,
+              blog: `Статья для блога ${number}`,
             },
             concept: `Идея ${number}`,
             text: `Текст ${number}`,
@@ -85,7 +86,7 @@ test("generates three structured draft variants through the Gateway", async () =
 
   const result = await service.generateText({
     prompt: "Пост о спокойном отдыхе",
-    selectedChannels: ["vk", "telegram"],
+    selectedChannels: ["vk", "telegram", "blog"],
     sourceTitle: "Тёплая вода и тишина",
     sourceCategory: "SPA",
     sourceTags: ["бассейн", "релакс"],
@@ -97,6 +98,7 @@ test("generates three structured draft variants through the Gateway", async () =
   assert.equal(requestBody.model, "gpt-4.1-mini");
   assert.equal(result.variants.length, 3);
   assert.equal(result.variants[0]?.adaptations.max, "MAX 1");
+  assert.equal(result.variants[0]?.adaptations.blog, "Статья для блога 1");
   const messages = requestBody.messages as Array<Record<string, unknown>>;
   assert.match(String(messages[0]?.content), /2–10/u);
   const userContent = messages[1]?.content as Array<Record<string, unknown>>;
@@ -366,6 +368,7 @@ test("refines the publication through the Gateway with task, photo, and custom i
                   max: "MAX-версия",
                   instagram: "Instagram-версия",
                   zen: "Версия для Дзена",
+                  blog: "Полноценная статья для блога",
                 },
               }),
             },

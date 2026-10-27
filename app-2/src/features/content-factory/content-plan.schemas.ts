@@ -91,7 +91,7 @@ export const manualContentPlanPostSchema = z.object({
       }),
     )
     .min(1)
-    .max(5)
+    .max(6)
     .refine(
       (posts) =>
         new Set(posts.map((post) => post.channel)).size === posts.length,

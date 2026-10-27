@@ -17,6 +17,7 @@ const contentChannelSchema = z.enum([
   "max",
   "instagram",
   "zen",
+  "blog",
 ]);
 
 const storedReferencePhotosSchema = z.array(
@@ -118,7 +119,7 @@ export const createContentFactoryImageGenerationJobsService = (options: {
       const selectedChannels = z
         .array(contentChannelSchema)
         .min(1)
-        .max(5)
+        .max(6)
         .parse(job.selectedChannels);
       const imageCount = z.number().int().min(1).max(4).parse(job.imageCount);
 

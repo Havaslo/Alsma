@@ -2,6 +2,7 @@ import {
   CONTENT_CHANNELS,
   type ContentChannel,
   type DraftVariant,
+  normalizeDraftVariant,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryBrief,
@@ -39,7 +40,11 @@ const isChannel = (value: unknown): value is ContentChannel =>
 
 const isChannelStringRecord = (value: unknown): boolean =>
   isRecord(value) &&
-  CONTENT_CHANNELS.every(({ id }) => typeof value[id] === "string");
+  CONTENT_CHANNELS.every(
+    ({ id }) =>
+      (id === "blog" && value[id] === undefined) ||
+      typeof value[id] === "string",
+  );
 
 const isDraftVariant = (value: unknown): value is DraftVariant => {
   if (!isRecord(value)) return false;
@@ -67,6 +72,7 @@ const isDraftVariant = (value: unknown): value is DraftVariant => {
   if (!isRecord(galleries)) return false;
   return CONTENT_CHANNELS.every(({ id }) => {
     const gallery = galleries[id];
+    if (id === "blog" && gallery === undefined) return true;
     return (
       Array.isArray(gallery) &&
       gallery.length <= 4 &&
@@ -128,6 +134,7 @@ const parseCachedWorkspace = (
   return {
     snapshot: {
       ...typedSnapshot,
+      variants: typedSnapshot.variants.map(normalizeDraftVariant),
       variantIndex: Math.min(
         Math.max(0, typedSnapshot.variantIndex),
         typedSnapshot.variants.length - 1,

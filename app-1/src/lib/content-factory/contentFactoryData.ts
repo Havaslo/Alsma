@@ -4,17 +4,14 @@ export const CONTENT_CHANNELS = [
   { id: "max", label: "Max", shortLabel: "M" },
   { id: "instagram", label: "Instagram", shortLabel: "IG" },
   { id: "zen", label: "Яндекс.Дзен", shortLabel: "Д" },
+  { id: "blog", label: "Блог сайта", shortLabel: "Блог" },
 ] as const;
 
 export type ContentChannel = (typeof CONTENT_CHANNELS)[number]["id"];
 
-export const CONTENT_PLAN_CHANNELS = [
-  ...CONTENT_CHANNELS,
-  { id: "blog", label: "Блог сайта", shortLabel: "Блог" },
-] as const;
+export const CONTENT_PLAN_CHANNELS = CONTENT_CHANNELS;
 
-export type ContentPlanChannel =
-  (typeof CONTENT_PLAN_CHANNELS)[number]["id"];
+export type ContentPlanChannel = (typeof CONTENT_PLAN_CHANNELS)[number]["id"];
 
 export const getChannelLabel = (channel: ContentPlanChannel) =>
   CONTENT_PLAN_CHANNELS.find((item) => item.id === channel)?.label ?? channel;
@@ -58,6 +55,7 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     max: "",
     instagram: "",
     zen: "",
+    blog: "",
   },
   channelImageGalleryIds: {
     vk: [],
@@ -65,6 +63,7 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     max: [],
     instagram: [],
     zen: [],
+    blog: [],
   },
   adaptations: {
     vk: "",
@@ -72,7 +71,25 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     max: "",
     instagram: "",
     zen: "",
+    blog: "",
   },
+});
+
+export const normalizeDraftVariant = (variant: DraftVariant): DraftVariant => ({
+  ...variant,
+  channelImageIds: {
+    ...variant.channelImageIds,
+    blog: variant.channelImageIds.blog ?? "",
+  },
+  channelImageGalleryIds: {
+    vk: variant.channelImageGalleryIds?.vk ?? [],
+    telegram: variant.channelImageGalleryIds?.telegram ?? [],
+    max: variant.channelImageGalleryIds?.max ?? [],
+    instagram: variant.channelImageGalleryIds?.instagram ?? [],
+    zen: variant.channelImageGalleryIds?.zen ?? [],
+    blog: variant.channelImageGalleryIds?.blog ?? [],
+  },
+  adaptations: { ...variant.adaptations, blog: variant.adaptations.blog ?? "" },
 });
 
 export const getDraftVariantSourceImageIds = (variant: DraftVariant) => {

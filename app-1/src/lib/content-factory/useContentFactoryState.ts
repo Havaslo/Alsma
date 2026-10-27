@@ -8,6 +8,7 @@ import {
   type PlanPublication,
   createEmptyDraftVariant,
   getDraftVariantSourceImageIds,
+  normalizeDraftVariant,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
   ContentFactoryBrief,
@@ -155,6 +156,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
           max: media.id,
           instagram: media.id,
           zen: media.id,
+          blog: media.id,
         },
         channelImageGalleryIds: {
           vk: [media.id],
@@ -162,6 +164,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
           max: [media.id],
           instagram: [media.id],
           zen: [media.id],
+          blog: [media.id],
         },
       };
     });
@@ -273,9 +276,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       imageSourceMode: post.imageSourceMode ?? "generate",
       sourceImageRecommendation: post.sourceImageRecommendation ?? "",
     });
-    const editableChannels = post.channels.filter(
-      (channel): channel is ContentChannel => channel !== "blog",
-    );
+    const editableChannels = post.channels;
     setSelectedChannels(editableChannels.length ? editableChannels : ["vk"]);
     setActiveChannel(editableChannels[0] ?? "vk");
     const postImageIds = [
@@ -338,7 +339,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
     );
     setImageCount(draft.snapshot.imageCount ?? 1);
     setImageSourceMode(draft.snapshot.imageSourceMode ?? "automatic");
-    setVariants(draft.snapshot.variants);
+    setVariants(draft.snapshot.variants.map(normalizeDraftVariant));
     setVariantIndex(
       Math.min(draft.snapshot.variantIndex, draft.snapshot.variants.length - 1),
     );
