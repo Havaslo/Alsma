@@ -32,6 +32,8 @@ const start = async (): Promise<void> => {
   });
   const telegramClient = createTelegramBotClient({
     logger,
+    proxyKey: config.telegram.proxyKey,
+    proxyUrl: config.telegram.proxyUrl,
     token: config.telegram.token,
   });
   const vkClient = createVkClient({

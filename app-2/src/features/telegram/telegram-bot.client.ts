@@ -64,23 +64,54 @@ const messageId = (message: TelegramMessage) =>
 
 export const createTelegramBotClient = (options: {
   readonly logger: Logger;
+  readonly fetch?: typeof fetch;
+  readonly proxyKey?: string;
+  readonly proxyUrl?: string;
   readonly token?: string;
 }) => {
   const token = options.token?.trim();
+  const fetcher = options.fetch ?? fetch;
 
   const request = async <T>(method: string, body: unknown): Promise<T> => {
     if (!token) throw new Error("Telegram bot token is not configured");
     const isMultipart = body instanceof FormData;
     let response: Response;
     try {
-      response = await fetch(`${apiBaseUrl}/bot${token}/${method}`, {
-        body: isMultipart ? body : JSON.stringify(body),
-        headers: isMultipart
-          ? undefined
-          : { "Content-Type": "application/json" },
-        method: "POST",
-        signal: AbortSignal.timeout(isMultipart ? 30_000 : 15_000),
-      });
+      const url = `${apiBaseUrl}/bot${token}/${method}`;
+      if (options.proxyUrl && options.proxyKey) {
+        const multipartRequest = isMultipart
+          ? new Request(url, { body: body as FormData, method: "POST" })
+          : undefined;
+        const contentType =
+          multipartRequest?.headers.get("content-type") ?? "application/json";
+        const proxyBody = multipartRequest
+          ? Buffer.from(await multipartRequest.arrayBuffer()).toString("base64")
+          : JSON.stringify(body);
+        response = await fetcher(options.proxyUrl, {
+          body: JSON.stringify({
+            url,
+            method: "POST",
+            headers: { "Content-Type": contentType },
+            body: proxyBody,
+            ...(multipartRequest ? { bodyEncoding: "base64" } : {}),
+          }),
+          headers: {
+            Authorization: `Bearer ${options.proxyKey}`,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          signal: AbortSignal.timeout(isMultipart ? 60_000 : 20_000),
+        });
+      } else {
+        response = await fetcher(url, {
+          body: isMultipart ? body : JSON.stringify(body),
+          headers: isMultipart
+            ? undefined
+            : { "Content-Type": "application/json" },
+          method: "POST",
+          signal: AbortSignal.timeout(isMultipart ? 30_000 : 15_000),
+        });
+      }
     } catch (error) {
       options.logger.warn(
         { errorName: error instanceof Error ? error.name : "UnknownError" },

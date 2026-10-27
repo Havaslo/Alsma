@@ -93,6 +93,15 @@ const environmentSchema = z
       message:
         "ADMIN_WEB_PUSH_VAPID_PUBLIC_KEY and ADMIN_WEB_PUSH_VAPID_PRIVATE_KEY must be configured together.",
     },
+  )
+  .refine(
+    (environment) =>
+      Boolean(environment.AMAZI_PROXY_URL) ===
+      Boolean(environment.AMAZI_PROXY_KEY),
+    {
+      message:
+        "AMAZI_PROXY_URL and AMAZI_PROXY_KEY must be configured together.",
+    },
   );
 
 export type AppConfig = {
@@ -137,6 +146,8 @@ export type AppConfig = {
   readonly telegram: {
     readonly token?: string;
     readonly publishChatId?: string;
+    readonly proxyUrl?: string;
+    readonly proxyKey?: string;
   };
   readonly vk: {
     readonly accessToken?: string;
@@ -223,6 +234,8 @@ export const readConfig = (
     telegram: {
       token: parsed.TELEGRAM_BOT_TOKEN,
       publishChatId: parsed.TELEGRAM_PUBLISH_CHAT_ID,
+      proxyUrl: parsed.AMAZI_PROXY_URL,
+      proxyKey: parsed.AMAZI_PROXY_KEY,
     },
     vk: {
       accessToken: parsed.VK_ACCESS_TOKEN,
