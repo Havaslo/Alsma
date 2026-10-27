@@ -23,7 +23,7 @@ const generatedAdaptationsSchema = z.object({
   max: z.string().trim().min(1).max(20_000),
   instagram: z.string().trim().min(1).max(20_000),
   zen: z.string().trim().min(1).max(20_000),
-  blog: z.string().trim().min(1).max(20_000),
+  blog: z.string().trim().max(20_000).optional(),
 });
 
 const generatedTextSchema = z.object({
@@ -404,7 +404,16 @@ export const createContentFactoryAiService = (options: {
       }
       return {
         model: contentFactoryModels.text,
-        variants: result.data.variants,
+        variants: result.data.variants.map((variant) => ({
+          ...variant,
+          adaptations: {
+            ...variant.adaptations,
+            blog:
+              variant.adaptations.blog?.trim() ||
+              variant.adaptations.zen ||
+              variant.text,
+          },
+        })),
       };
     },
 

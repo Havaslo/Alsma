@@ -33,7 +33,7 @@ const createSolidImage = (width: number, height: number, color: string) => {
   return canvas.toBuffer("image/png");
 };
 
-const createTextResponse = () => ({
+const createTextResponse = (includeBlog = true) => ({
   choices: [
     {
       message: {
@@ -45,7 +45,7 @@ const createTextResponse = () => ({
               telegram: `Telegram ${number}`,
               vk: `VK ${number}`,
               zen: `Дзен ${number}`,
-              blog: `Статья для блога ${number}`,
+              ...(includeBlog ? { blog: `Статья для блога ${number}` } : {}),
             },
             concept: `Идея ${number}`,
             text: `Текст ${number}`,
@@ -104,6 +104,27 @@ test("generates three structured draft variants through the Gateway", async () =
   const userContent = messages[1]?.content as Array<Record<string, unknown>>;
   const imageUrl = userContent[1]?.image_url as { url?: unknown };
   assert.match(String(imageUrl.url), /data:image\/png;base64,/u);
+});
+
+test("falls back to the article adaptation when Gateway omits the new blog field", async () => {
+  const service = createContentFactoryAiService({
+    apiKey: "gateway-test-key",
+    baseUrl: "https://gateway.example/v1",
+    database: {} as Database,
+    fetchImplementation: async () => Response.json(createTextResponse(false)),
+    logger,
+    managedStorage: emptyStorage,
+  });
+
+  const result = await service.generateText({
+    prompt: "Полезная статья для сайта",
+    selectedChannels: ["blog"],
+    sourceTitle: "",
+    sourceCategory: "",
+    sourceTags: [],
+  });
+
+  assert.equal(result.variants[0]?.adaptations.blog, "Дзен 1");
 });
 
 test("generates and stores each requested image for every selected channel format", async () => {
@@ -368,7 +389,6 @@ test("refines the publication through the Gateway with task, photo, and custom i
                   max: "MAX-версия",
                   instagram: "Instagram-версия",
                   zen: "Версия для Дзена",
-                  blog: "Полноценная статья для блога",
                 },
               }),
             },
@@ -395,6 +415,7 @@ test("refines the publication through the Gateway with task, photo, and custom i
   assert.equal(result.model, "gpt-4.1-mini");
   assert.equal(result.text, "Новый короткий текст");
   assert.equal(result.adaptations.telegram, "Telegram-версия");
+  assert.equal(result.adaptations.blog, "Версия для Дзена");
   const messages = requestBody.messages as Array<Record<string, unknown>>;
   const content = messages[1]?.content as Array<Record<string, unknown>>;
   assert.match(String(content[0]?.text), /спокойный призыв к бронированию/u);

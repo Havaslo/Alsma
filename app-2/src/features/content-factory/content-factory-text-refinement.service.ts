@@ -25,7 +25,7 @@ const refinedTextSchema = z.object({
     max: z.string().trim().min(1).max(20_000),
     instagram: z.string().trim().min(1).max(20_000),
     zen: z.string().trim().min(1).max(20_000),
-    blog: z.string().trim().min(1).max(20_000),
+    blog: z.string().trim().max(20_000).optional(),
   }),
 });
 
@@ -166,5 +166,15 @@ export const createContentFactoryTextRefinementService =
         "AI-сервис подготовил текст в неожиданном формате. Повторите запрос.",
       );
     }
-    return { model: contentFactoryModels.text, ...result.data };
+    return {
+      model: contentFactoryModels.text,
+      ...result.data,
+      adaptations: {
+        ...result.data.adaptations,
+        blog:
+          result.data.adaptations.blog?.trim() ||
+          result.data.adaptations.zen ||
+          result.data.text,
+      },
+    };
   };
