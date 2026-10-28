@@ -39,6 +39,80 @@ const generatedTextSchema = z.object({
     .length(3),
 });
 
+const parseGeneratedTextResponse = (
+  payload: unknown,
+): {
+  readonly failure:
+    "invalid_json" | "invalid_schema" | "missing_content" | null;
+  readonly finishReason: string | null;
+  readonly responseLength: number;
+  readonly result: z.infer<typeof generatedTextSchema> | null;
+  readonly validationIssueCount: number;
+} => {
+  const root =
+    typeof payload === "object" && payload
+      ? (payload as Record<string, unknown>)
+      : null;
+  const choices = Array.isArray(root?.choices) ? root.choices : [];
+  const choice =
+    choices[0] && typeof choices[0] === "object"
+      ? (choices[0] as Record<string, unknown>)
+      : null;
+  const message =
+    typeof choice?.message === "object" && choice.message
+      ? (choice.message as Record<string, unknown>)
+      : null;
+  const content = message?.content;
+  const finishReason =
+    typeof choice?.finish_reason === "string" ? choice.finish_reason : null;
+
+  if (typeof content !== "string") {
+    return {
+      failure: "missing_content" as const,
+      finishReason,
+      responseLength: 0,
+      result: null,
+      validationIssueCount: 0,
+    };
+  }
+
+  const trimmedContent = content.trim();
+  const fencedJson = trimmedContent.match(
+    /^```(?:json)?\s*([\s\S]*?)\s*```$/iu,
+  );
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fencedJson?.[1] ?? trimmedContent);
+  } catch {
+    return {
+      failure: "invalid_json" as const,
+      finishReason,
+      responseLength: content.length,
+      result: null,
+      validationIssueCount: 0,
+    };
+  }
+
+  const result = generatedTextSchema.safeParse(parsed);
+  if (!result.success) {
+    return {
+      failure: "invalid_schema" as const,
+      finishReason,
+      responseLength: content.length,
+      result: null,
+      validationIssueCount: result.error.issues.length,
+    };
+  }
+
+  return {
+    failure: null,
+    finishReason,
+    responseLength: content.length,
+    result: result.data,
+    validationIssueCount: 0,
+  };
+};
+
 const generatedPlanCopySchema = z.object({
   title: z.string().trim().min(1).max(255),
   text: z.string().trim().min(1).max(20_000),
@@ -309,102 +383,104 @@ export const createContentFactoryAiService = (options: {
           )
         : null;
       const channelContext = buildContentFactoryChannelPromptContext();
-      const payload = await requestJson(
-        "/chat/completions",
-        {
-          model: contentFactoryModels.text,
-          max_tokens: 3_500,
-          response_format: { type: "json_object" },
-          temperature: 0.7,
-          messages: [
+      const systemPrompt = `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string,"blog":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех шести подготовь самостоятельные адаптации. Для блога сайта пиши как для полноценной статьи с заголовком, полезным контекстом и последовательными абзацами, а не как короткую подпись. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если задача просит карусель, не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Если приложено фото, используй его только как визуальный ориентир и опирайся на видимые детали; отсутствие фото — нормальный режим, не требующий догадок о содержимом изображения. Метаданные фото помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и подтверждённых сведений. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`;
+      const userContent = referencePhoto
+        ? [
             {
-              role: "system",
-              content: `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string,"blog":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех шести подготовь самостоятельные адаптации. Для блога сайта пиши как для полноценной статьи с заголовком, полезным контекстом и последовательными абзацами, а не как короткую подпись. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если задача просит карусель, не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Если приложено фото, используй его только как визуальный ориентир и опирайся на видимые детали; отсутствие фото — нормальный режим, не требующий догадок о содержимом изображения. Метаданные фото помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и подтверждённых сведений. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`,
+              type: "text",
+              text: JSON.stringify({
+                task: input.prompt,
+                brief: input.brief,
+                selectedChannels: input.selectedChannels,
+                referencePhoto: {
+                  title: input.sourceTitle,
+                  category: input.sourceCategory,
+                  tags: input.sourceTags,
+                  instruction:
+                    "Сверь текст с фактическим содержимым фото; не считай название и теги доказательством скрытых свойств.",
+                },
+              }),
             },
             {
-              role: "user",
-              content: referencePhoto
-                ? [
-                    {
-                      type: "text",
-                      text: JSON.stringify({
-                        task: input.prompt,
-                        brief: input.brief,
-                        selectedChannels: input.selectedChannels,
-                        referencePhoto: {
-                          title: input.sourceTitle,
-                          category: input.sourceCategory,
-                          tags: input.sourceTags,
-                          instruction:
-                            "Сверь текст с фактическим содержимым фото; не считай название и теги доказательством скрытых свойств.",
-                        },
-                      }),
-                    },
-                    {
-                      type: "image_url",
-                      image_url: {
-                        url: `data:${input.referencePhotoContentType};base64,${referencePhoto.toString("base64")}`,
-                      },
-                    },
-                  ]
-                : JSON.stringify({
-                    task: input.prompt,
-                    brief: input.brief,
-                    selectedChannels: input.selectedChannels,
-                    referencePhoto: null,
-                  }),
+              type: "image_url",
+              image_url: {
+                url: `data:${input.referencePhotoContentType};base64,${referencePhoto.toString("base64")}`,
+              },
             },
-          ],
-        },
-        "content_factory_text",
-      );
+          ]
+        : JSON.stringify({
+            task: input.prompt,
+            brief: input.brief,
+            selectedChannels: input.selectedChannels,
+            referencePhoto: null,
+          });
+      const retryFormatInstruction =
+        "Проверь формат особенно внимательно: верни ровно 3 варианта. У каждого обязательны непустые title, concept, text и adaptations; в adaptations обязательны непустые строки vk, telegram, max, instagram, zen и blog. Верни только JSON без Markdown.";
+      let generatedResult: z.infer<typeof generatedTextSchema> | null = null;
+      let lastAttempt: ReturnType<typeof parseGeneratedTextResponse> | null =
+        null;
 
-      const root =
-        typeof payload === "object" && payload
-          ? (payload as Record<string, unknown>)
-          : null;
-      const choices = Array.isArray(root?.choices) ? root.choices : [];
-      const message =
-        choices[0] && typeof choices[0] === "object"
-          ? (choices[0] as Record<string, unknown>).message
-          : null;
-      const content =
-        typeof message === "object" && message
-          ? (message as Record<string, unknown>).content
-          : null;
-      if (typeof content !== "string") {
-        throw new HttpError(
-          502,
-          "CONTENT_FACTORY_AI_RESPONSE_INVALID",
-          "AI-сервис вернул ответ без текста. Повторите запрос.",
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const payload = await requestJson(
+          "/chat/completions",
+          {
+            model: contentFactoryModels.text,
+            max_tokens: attempt === 0 ? 8_000 : 10_000,
+            response_format: { type: "json_object" },
+            temperature: attempt === 0 ? 0.7 : 0.4,
+            messages: [
+              {
+                role: "system",
+                content:
+                  attempt === 0
+                    ? systemPrompt
+                    : `${systemPrompt}\n\n${retryFormatInstruction}`,
+              },
+              { role: "user", content: userContent },
+            ],
+          },
+          "content_factory_text",
         );
+        const parsedResponse = parseGeneratedTextResponse(payload);
+        if (parsedResponse.result) {
+          generatedResult = parsedResponse.result;
+          if (attempt > 0) {
+            options.logger.warn(
+              {
+                attempt: attempt + 1,
+                finishReason: parsedResponse.finishReason,
+                responseLength: parsedResponse.responseLength,
+              },
+              "Content factory text response recovered after retry",
+            );
+          }
+          break;
+        }
+
+        lastAttempt = parsedResponse;
+        if (attempt === 0) continue;
       }
 
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        throw new HttpError(
-          502,
-          "CONTENT_FACTORY_AI_RESPONSE_INVALID",
-          "AI-сервис вернул ответ в неподдерживаемом формате. Повторите запрос.",
-        );
-      }
-      const result = generatedTextSchema.safeParse(parsed);
-      if (!result.success) {
+      if (!generatedResult) {
         options.logger.warn(
-          { validationIssueCount: result.error.issues.length },
-          "Content factory AI response did not match the expected format",
+          {
+            attempts: 2,
+            failure: lastAttempt?.failure,
+            finishReason: lastAttempt?.finishReason,
+            responseLength: lastAttempt?.responseLength,
+            validationIssueCount: lastAttempt?.validationIssueCount,
+          },
+          "Content factory AI response remained invalid after retry",
         );
         throw new HttpError(
           502,
           "CONTENT_FACTORY_AI_RESPONSE_INVALID",
-          "AI-сервис подготовил варианты в неожиданном формате. Повторите запрос.",
+          "Не удалось получить три варианта в рабочем формате даже после автоматического повтора. Попробуйте упростить описание и отправить запрос ещё раз.",
         );
       }
       return {
         model: contentFactoryModels.text,
-        variants: result.data.variants.map((variant) => ({
+        variants: generatedResult.variants.map((variant) => ({
           ...variant,
           adaptations: {
             ...variant.adaptations,

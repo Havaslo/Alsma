@@ -57,6 +57,21 @@ const createTextResponse = (includeBlog = true) => ({
   ],
 });
 
+const createInvalidTextResponse = () => {
+  const response = createTextResponse();
+  const parsed = JSON.parse(response.choices[0]!.message.content) as {
+    variants: Array<{ adaptations: Record<string, string> }>;
+  };
+  delete parsed.variants[0]?.adaptations.max;
+  return {
+    choices: [
+      {
+        message: { content: JSON.stringify(parsed) },
+      },
+    ],
+  };
+};
+
 test("generates three structured draft variants through the Gateway", async () => {
   let requestedUrl = "";
   let requestBody: Record<string, unknown> = {};
@@ -125,6 +140,78 @@ test("falls back to the article adaptation when Gateway omits the new blog field
   });
 
   assert.equal(result.variants[0]?.adaptations.blog, "Дзен 1");
+});
+
+test("retries one invalid text response with a stricter format and larger output budget", async () => {
+  const requestBodies: Array<Record<string, unknown>> = [];
+  const service = createContentFactoryAiService({
+    apiKey: "gateway-test-key",
+    baseUrl: "https://gateway.example/v1",
+    database: {} as Database,
+    fetchImplementation: async (_url, init) => {
+      requestBodies.push(
+        JSON.parse(String(init?.body)) as Record<string, unknown>,
+      );
+      return Response.json(
+        requestBodies.length === 1
+          ? createInvalidTextResponse()
+          : createTextResponse(),
+      );
+    },
+    logger,
+    managedStorage: emptyStorage,
+  });
+
+  const result = await service.generateText({
+    prompt: "Пост о спокойном отдыхе",
+    selectedChannels: ["telegram"],
+    sourceTitle: "",
+    sourceCategory: "",
+    sourceTags: [],
+  });
+
+  assert.equal(requestBodies.length, 2);
+  assert.equal(requestBodies[0]?.max_tokens, 8_000);
+  assert.equal(requestBodies[1]?.max_tokens, 10_000);
+  const retryMessages = requestBodies[1]?.messages as Array<
+    Record<string, unknown>
+  >;
+  assert.match(
+    String(retryMessages[0]?.content),
+    /Проверь формат особенно внимательно/u,
+  );
+  assert.equal(result.variants.length, 3);
+});
+
+test("stops after one automatic retry when the AI response remains invalid", async () => {
+  let requestCount = 0;
+  const service = createContentFactoryAiService({
+    apiKey: "gateway-test-key",
+    baseUrl: "https://gateway.example/v1",
+    database: {} as Database,
+    fetchImplementation: async () => {
+      requestCount += 1;
+      return Response.json(createInvalidTextResponse());
+    },
+    logger,
+    managedStorage: emptyStorage,
+  });
+
+  await assert.rejects(
+    service.generateText({
+      prompt: "Пост о спокойном отдыхе",
+      selectedChannels: ["telegram"],
+      sourceTitle: "",
+      sourceCategory: "",
+      sourceTags: [],
+    }),
+    (error: unknown) =>
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "CONTENT_FACTORY_AI_RESPONSE_INVALID",
+  );
+
+  assert.equal(requestCount, 2);
 });
 
 test("generates and stores each requested image for every selected channel format", async () => {
