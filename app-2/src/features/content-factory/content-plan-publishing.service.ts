@@ -375,12 +375,25 @@ export const createContentPlanPublishingService = (options: {
       providerRequestStarted = true;
       const result =
         targetChannel === "vk"
-          ? await options.vk.publishWallPost({
-              groupId: options.vkGroupId!,
-              idempotencyKey: post.id,
-              images,
-              text: post.generatedCopy,
-            })
+          ? await options.vk
+              .publishWallPost({
+                groupId: options.vkGroupId!,
+                idempotencyKey: post.id,
+                images,
+                text: post.generatedCopy,
+              })
+              .then((published) => {
+                if (published.skippedImages > 0)
+                  options.logger.warn(
+                    {
+                      channel: post.channel,
+                      postId,
+                      vkSkippedImages: published.skippedImages,
+                    },
+                    "VK post published without images",
+                  );
+                return published;
+              })
           : targetChannel === "max"
             ? await options.max.publishChannelPost({
                 chatId: options.maxPublishChatId!,

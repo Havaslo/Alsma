@@ -576,6 +576,7 @@ export const createVkRouter = ({
                 ? null
                 : access.canPublish,
       publishingProbe: access?.probe ?? null,
+      publishingCanAttachPhotos: access?.canAttachPhotos ?? null,
       tokenKind: access?.tokenKind ?? null,
       tokenPermissions: access?.permissions ?? [],
       callbackProtectionConfigured: Boolean(callbackSecret),

@@ -41,9 +41,30 @@ export type VkPublishingAccess = {
   readonly tokenKind: "user" | "community" | "unknown";
   readonly permissions: readonly string[];
   readonly canPublish: boolean;
+  readonly canAttachPhotos: boolean;
   readonly missing: readonly string[];
   readonly probe: "ok" | "denied" | "unavailable";
 };
+
+const permissionNames = (value: unknown): string[] => {
+  const source = Array.isArray(value)
+    ? value
+    : (value as { permissions?: unknown } | null)?.permissions;
+  if (!Array.isArray(source)) return [];
+  const names: string[] = [];
+  for (const permission of source) {
+    if (typeof permission === "string") names.push(permission);
+    else {
+      const name = (permission as { name?: unknown } | null)?.name;
+      if (typeof name === "string") names.push(name);
+    }
+  }
+  return names;
+};
+
+const isGroupAuthPhotoDenial = (error: unknown) =>
+  error instanceof VkApiError &&
+  /unavailable with group auth/iu.test(error.message);
 
 export const createVkClient = ({
   accessToken,
@@ -108,27 +129,31 @@ export const createVkClient = ({
     }
     if (tokenKind === "unknown") {
       try {
-        const result = (await request("groups.getTokenPermissions", {})) as
-          { permissions?: unknown } | unknown[];
-        const permissionSource = Array.isArray(result)
-          ? result
-          : result?.permissions;
-        permissions = Array.isArray(permissionSource)
-          ? permissionSource.filter(
-              (permission): permission is string =>
-                typeof permission === "string",
-            )
-          : [];
+        permissions = permissionNames(
+          await request("groups.getTokenPermissions", {}),
+        );
         tokenKind = "community";
-        scopeMissing =
-          permissions.length > 0 && !permissions.includes("wall")
-            ? ["wall"]
-            : [];
       } catch {
         tokenKind = "unknown";
       }
     }
-    if (groupId) {
+    if (tokenKind === "community") {
+      // VK answers `photos.getWallUploadServer` with "method is unavailable
+      // with group auth" for every community token, so wall photo uploads are
+      // not a permission signal here. `wall` in the token permission list is
+      // the gate for publishing text posts from the community.
+      const missing =
+        permissions.length > 0 && !permissions.includes("wall") ? ["wall"] : [];
+      return {
+        tokenKind,
+        permissions,
+        canPublish: missing.length === 0,
+        canAttachPhotos: false,
+        missing,
+        probe: permissions.length > 0 ? "ok" : "unavailable",
+      };
+    }
+    if (tokenKind === "user" && groupId) {
       try {
         // This prepares a wall photo upload but does not upload or publish
         // anything. It proves that the token can actually attach a photo to a
@@ -138,6 +163,7 @@ export const createVkClient = ({
           tokenKind,
           permissions,
           canPublish: true,
+          canAttachPhotos: true,
           missing: [],
           probe: "ok",
         };
@@ -146,10 +172,19 @@ export const createVkClient = ({
           error instanceof VkApiError &&
           (error.code === 5 || error.code === 15 || error.code === 27)
         ) {
+          logger.warn(
+            {
+              vkCode: error.code,
+              vkCommunityId: groupId,
+              vkProbeMessage: error.message,
+            },
+            "VK photo upload probe denied",
+          );
           return {
             tokenKind,
             permissions,
             canPublish: false,
+            canAttachPhotos: false,
             missing: scopeMissing.length > 0 ? scopeMissing : ["wall/photos"],
             probe: "denied",
           };
@@ -157,26 +192,28 @@ export const createVkClient = ({
         return {
           tokenKind,
           permissions,
-          canPublish: tokenKind !== "unknown" && scopeMissing.length === 0,
+          canPublish: scopeMissing.length === 0,
+          canAttachPhotos: false,
           missing: scopeMissing,
           probe: "unavailable",
         };
       }
     }
-    if (tokenKind === "unknown") {
+    if (tokenKind === "user")
       return {
-        tokenKind: "unknown",
+        tokenKind,
         permissions,
-        canPublish: false,
-        missing: [],
+        canPublish: scopeMissing.length === 0,
+        canAttachPhotos: false,
+        missing: scopeMissing,
         probe: "unavailable",
       };
-    }
     return {
-      tokenKind,
+      tokenKind: "unknown",
       permissions,
-      canPublish: scopeMissing.length === 0,
-      missing: scopeMissing,
+      canPublish: false,
+      canAttachPhotos: false,
+      missing: [],
       probe: "unavailable",
     };
   };
@@ -257,10 +294,24 @@ export const createVkClient = ({
         throw new Error("VK post has too many images");
 
       const photoAttachments: string[] = [];
-      for (const image of input.images) {
-        const upload = (await request("photos.getWallUploadServer", {
-          group_id: groupId,
-        })) as { upload_url?: unknown };
+      let skippedImages = 0;
+      for (const [index, image] of input.images.entries()) {
+        let upload: { upload_url?: unknown };
+        try {
+          upload = (await request("photos.getWallUploadServer", {
+            group_id: groupId,
+          })) as { upload_url?: unknown };
+        } catch (error) {
+          if (!isGroupAuthPhotoDenial(error)) throw error;
+          // A community token cannot upload wall photos at all, so the text
+          // post is still published instead of failing the whole publication.
+          skippedImages = input.images.length - index;
+          logger.warn(
+            { vkCommunityId: groupId, vkSkippedImages: skippedImages },
+            "VK community token cannot upload wall photos; publishing text only",
+          );
+          break;
+        }
         if (typeof upload.upload_url !== "string")
           throw new Error("VK photo upload URL is missing");
 
@@ -333,6 +384,8 @@ export const createVkClient = ({
       return {
         externalId: postId,
         url: `https://vk.com/wall-${groupId}_${postId}`,
+        attachedImages: photoAttachments.length,
+        skippedImages,
       };
     },
     logConfigurationError: () => logger.warn("VK API client is not configured"),
