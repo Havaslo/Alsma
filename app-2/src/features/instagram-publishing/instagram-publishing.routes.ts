@@ -9,8 +9,8 @@ import {
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import {
-  createInstagramConnectionService,
   type InstagramPublishingConfiguration,
+  createInstagramConnectionService,
 } from "./instagram-connection.service.js";
 
 export const createInstagramPublishingRouter = (options: {

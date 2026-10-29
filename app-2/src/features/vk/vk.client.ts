@@ -85,6 +85,56 @@ export const createVkClient = ({
     verifyCredentials: async (groupId: string) => {
       await request("groups.getById", { group_id: groupId });
     },
+    verifyPublishingRights: async () => {
+      try {
+        const mask = Number(await request("account.getAppPermissions", {}));
+        if (Number.isFinite(mask)) {
+          const hasWall = (mask & 8_192) !== 0;
+          const hasManage = (mask & 1_073_741_824) !== 0;
+          if (!hasWall || !hasManage) {
+            logger.warn(
+              { vkHasManage: hasManage, vkHasWall: hasWall },
+              "VK user token cannot publish to a community",
+            );
+            throw new VkApiError(
+              27,
+              "Group authorization failed: the token lacks wall or manage scope",
+            );
+          }
+          return;
+        }
+      } catch (error) {
+        // account.getAppPermissions is unavailable for community tokens.
+        if (error instanceof VkApiError && error.code === 27) throw error;
+        if (!(error instanceof VkApiError)) throw error;
+      }
+      try {
+        const result = (await request("groups.getTokenPermissions", {})) as {
+          permissions?: unknown;
+        };
+        const permissions = Array.isArray(result?.permissions)
+          ? result.permissions.filter(
+              (permission): permission is string =>
+                typeof permission === "string",
+            )
+          : [];
+        if (permissions.length > 0 && !permissions.includes("wall")) {
+          logger.warn(
+            { vkCommunityPermissions: permissions },
+            "VK community token cannot publish to its wall",
+          );
+          throw new VkApiError(
+            27,
+            "Group authorization failed: the community token lacks wall permission",
+          );
+        }
+      } catch (error) {
+        // If the method is unavailable, the actual publish still reports VK's
+        // provider error; avoid a false block at scheduling time.
+        if (error instanceof VkApiError && error.code === 27) throw error;
+        if (!(error instanceof VkApiError)) throw error;
+      }
+    },
     getHistory: async (
       peerId: string,
       full = false,

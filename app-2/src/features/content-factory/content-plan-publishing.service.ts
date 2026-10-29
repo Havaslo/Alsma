@@ -3,6 +3,7 @@ import type { Logger } from "pino";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import type { InstagramPublishingService } from "../instagram-publishing/instagram-publishing.service.js";
 import { MaxApiError, type MaxBotClient } from "../max-bot/max-bot.client.js";
 import {
   TelegramApiError,
@@ -10,9 +11,13 @@ import {
 } from "../telegram/telegram-bot.client.js";
 import { VkApiError, type VkClient } from "../vk/vk.client.js";
 import { createContentPlanBlogPublisher } from "./content-plan-blog-publisher.js";
+import {
+  isAmbiguousProviderError,
+  safePublicationError,
+} from "./content-plan-publication-errors.js";
+import { getMoscowDateTime, isFutureInMoscow } from "./content-plan-time.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 
-const publishingTimeZone = "Europe/Moscow";
 const schedulerIntervalMilliseconds = 15_000;
 const stalePublishingMilliseconds = 5 * 60_000;
 const maximumImageSize = 50 * 1_024 * 1_024;
@@ -24,39 +29,8 @@ const deliveryChannel = (channel: string) =>
 type SocialImage = {
   readonly content: Uint8Array;
   readonly contentType: string;
+  readonly downloadUrl: string;
   readonly fileName: string;
-};
-
-const formattedPart = (
-  date: Date,
-  type: Intl.DateTimeFormatPartTypes,
-): string =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-    minute: "2-digit",
-    month: "2-digit",
-    timeZone: publishingTimeZone,
-    year: "numeric",
-  })
-    .formatToParts(date)
-    .find((part) => part.type === type)?.value ?? "";
-
-export const getMoscowDateTime = (date: Date) => ({
-  date: `${formattedPart(date, "year")}-${formattedPart(date, "month")}-${formattedPart(date, "day")}`,
-  time: `${formattedPart(date, "hour")}:${formattedPart(date, "minute")}`,
-});
-
-const isFutureInMoscow = (
-  scheduledDate: string,
-  scheduledTime: string,
-  now: Date,
-) => {
-  const current = getMoscowDateTime(now);
-  return (
-    `${scheduledDate} ${scheduledTime}` > `${current.date} ${current.time}`
-  );
 };
 
 const isMaxApiError = (error: unknown): error is MaxApiError =>
@@ -66,31 +40,10 @@ const isVkApiError = (error: unknown): error is VkApiError =>
 const isTelegramApiError = (error: unknown): error is TelegramApiError =>
   error instanceof TelegramApiError;
 
-const isAmbiguousProviderError = (error: unknown) => {
-  if (error instanceof TypeError) return true;
-  if (error instanceof Error && error.name === "TimeoutError") return true;
-  if (isMaxApiError(error)) return error.status >= 500;
-  if (isTelegramApiError(error))
-    return error.partialPublication || error.status >= 500;
-  if (isVkApiError(error)) return error.code === 10;
-  return false;
-};
-
-const safePublicationError = (error: unknown, uncertain: boolean) => {
-  if (uncertain)
-    return "Платформа не подтвердила результат. Проверьте пост в соцсети перед повтором.";
-  if (isVkApiError(error))
-    return `VK отклонил публикацию (код ${error.code}). Проверьте права токена, текст и изображения.`;
-  if (isMaxApiError(error))
-    return `MAX отклонил публикацию (HTTP ${error.status}). Проверьте права бота, канал и изображения.`;
-  if (isTelegramApiError(error))
-    return `Telegram отклонил публикацию (HTTP ${error.status}). Проверьте права бота, канал и изображения.`;
-  return "Не удалось подготовить публикацию. Проверьте, что изображения доступны в медиатеке.";
-};
-
 export const createContentPlanPublishingService = (options: {
   readonly database: Database;
   readonly enabled: boolean;
+  readonly instagram: InstagramPublishingService;
   readonly logger: Logger;
   readonly managedStorage: ManagedStorage;
   readonly max: MaxBotClient;
@@ -104,7 +57,7 @@ export const createContentPlanPublishingService = (options: {
   const publishBlogPost = createContentPlanBlogPublisher(options.database);
   let tickInProgress = false;
 
-  const channelStatus = () => ({
+  const channelStatus = async () => ({
     enabled: options.enabled,
     vk: {
       configured: Boolean(options.vk.configured && options.vkGroupId),
@@ -116,6 +69,9 @@ export const createContentPlanPublishingService = (options: {
     telegram: {
       configured: options.telegram.configured,
       targetConfigured: Boolean(options.telegramPublishChatId),
+    },
+    instagram: {
+      configured: (await options.instagram.status()).connected,
     },
     blog: { configured: true },
   });
@@ -130,7 +86,39 @@ export const createContentPlanPublishingService = (options: {
           "VK_PUBLISHING_NOT_CONFIGURED",
           "Для VK ещё не настроено сообщество и подключение публикации.",
         );
-      await options.vk.verifyCredentials(options.vkGroupId);
+      try {
+        await options.vk.verifyCredentials(options.vkGroupId);
+        await options.vk.verifyPublishingRights();
+      } catch (error) {
+        if (isVkApiError(error) && error.code === 27)
+          throw new HttpError(
+            409,
+            "VK_PUBLISH_PERMISSION_REQUIRED",
+            error.message.includes("community token")
+              ? "У подключённого токена сообщества VK нет права wall. Создайте новый токен сообщества с правом публикации и обновите подключение VK."
+              : error.message.includes("wall or manage")
+                ? "У подключённого токена VK нет прав публикации в сообщество. Нужны права wall и manage, а для картинок — photos; создайте новый токен и обновите подключение VK."
+                : "VK не разрешает публикацию в это сообщество. Подключите токен с правами управления сообществом (manage) и публикации (wall) или токен сообщества с правом wall.",
+          );
+        if (isVkApiError(error) && (error.code === 5 || error.code === 15))
+          throw new HttpError(
+            409,
+            "VK_TOKEN_INVALID",
+            "VK не принял сохранённый токен. Обновите подключение VK и повторите публикацию.",
+          );
+        options.logger.warn(
+          {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+            vkCode: isVkApiError(error) ? error.code : null,
+          },
+          "VK target verification failed",
+        );
+        throw new HttpError(
+          502,
+          "VK_CHECK_FAILED",
+          "Не удалось проверить сообщество VK. Пост не добавлен в очередь; повторите позже.",
+        );
+      }
       return;
     }
     if (channel === "max") {
@@ -149,7 +137,24 @@ export const createContentPlanPublishingService = (options: {
             "MAX_CHANNEL_WRITE_PERMISSION_REQUIRED",
             "Добавьте MAX-бота администратором канала и выдайте ему право публикации.",
           );
-        throw error;
+        if (isMaxApiError(error) && error.status === 409)
+          throw new HttpError(
+            409,
+            "MAX_CHANNEL_INVALID",
+            "MAX не подтвердил, что указанная цель — активный канал или групповой чат. Проверьте адрес и права бота.",
+          );
+        options.logger.warn(
+          {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+            maxStatus: isMaxApiError(error) ? error.status : null,
+          },
+          "MAX target verification failed",
+        );
+        throw new HttpError(
+          502,
+          "MAX_CHECK_FAILED",
+          "Не удалось связаться с MAX для проверки канала. Пост не добавлен в очередь; повторите позже.",
+        );
       }
       return;
     }
@@ -201,11 +206,30 @@ export const createContentPlanPublishingService = (options: {
       }
       return;
     }
+    if (channel === "instagram") {
+      try {
+        await options.instagram.verifyConnection();
+      } catch (error) {
+        if (error instanceof HttpError) throw error;
+        options.logger.warn(
+          {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+          },
+          "Instagram target verification failed",
+        );
+        throw new HttpError(
+          502,
+          "INSTAGRAM_CHECK_FAILED",
+          "Не удалось проверить подключение Instagram. Пост не добавлен в очередь; повторите позже.",
+        );
+      }
+      return;
+    }
     if (channel === "blog") return;
     throw new HttpError(
       409,
       "CONTENT_PLAN_CHANNEL_NOT_SUPPORTED",
-      "Автоматическая публикация пока подключена только для VK, MAX, Telegram и блога.",
+      "Автоматическая публикация пока подключена только для VK, MAX, Telegram, Instagram и блога.",
     );
   };
 
@@ -250,6 +274,20 @@ export const createContentPlanPublishingService = (options: {
         "ZEN_TELEGRAM_CROSSPOST_TEXT_TOO_LONG",
         "Связка с Дзена публикует через Telegram. Сократите текст до 4 096 символов для отправки.",
       );
+    if (post.channel === "instagram") {
+      if (post.generatedCopy.trim().length > 2_200)
+        throw new HttpError(
+          409,
+          "INSTAGRAM_POST_TEXT_TOO_LONG",
+          "Для Instagram текст поста должен быть не длиннее 2 200 символов.",
+        );
+      if (post.imageIds.length === 0)
+        throw new HttpError(
+          409,
+          "INSTAGRAM_IMAGE_REQUIRED",
+          "Для публикации в Instagram добавьте хотя бы одно изображение.",
+        );
+    }
     const imageLimit = post.channel === "max" ? 12 : 10;
     if (post.imageIds.length > imageLimit)
       throw new HttpError(
@@ -315,6 +353,7 @@ export const createContentPlanPublishingService = (options: {
       images.push({
         content,
         contentType: item.contentType,
+        downloadUrl: download.downloadUrl,
         fileName: item.fileName,
       });
     }
@@ -354,7 +393,12 @@ export const createContentPlanPublishingService = (options: {
                   images,
                   text: post.generatedCopy,
                 })
-              : await publishBlogPost(post);
+              : targetChannel === "instagram"
+                ? await options.instagram.publish({
+                    images,
+                    text: post.generatedCopy,
+                  })
+                : await publishBlogPost(post);
       providerSucceeded = true;
       const completed = await repository.completePublishing(postId, {
         externalId: result.externalId,

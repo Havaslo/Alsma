@@ -25,6 +25,9 @@ test(
     const contentPlanPublishing = createContentPlanPublishingService({
       database,
       enabled: false,
+      instagram: {
+        status: async () => ({ connected: false }),
+      } as never,
       logger,
       managedStorage: {} as never,
       max: maxClient,

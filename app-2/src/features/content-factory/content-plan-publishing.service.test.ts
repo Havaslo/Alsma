@@ -3,15 +3,16 @@ import test from "node:test";
 import pino from "pino";
 
 import { TelegramApiError } from "../telegram/telegram-bot.client.js";
-import {
-  createContentPlanPublishingService,
-  getMoscowDateTime,
-} from "./content-plan-publishing.service.js";
+import { createContentPlanPublishingService } from "./content-plan-publishing.service.js";
+import { getMoscowDateTime } from "./content-plan-time.js";
 
 test("publishing schedule is unavailable outside production", async () => {
   const service = createContentPlanPublishingService({
     database: {} as never,
     enabled: false,
+    instagram: {
+      status: async () => ({ connected: false }),
+    } as never,
     logger: pino({ level: "silent" }),
     managedStorage: {} as never,
     max: {} as never,
@@ -19,8 +20,11 @@ test("publishing schedule is unavailable outside production", async () => {
     vk: {} as never,
   });
 
-  assert.equal(service.channelStatus().enabled, false);
-  assert.deepEqual(service.channelStatus().blog, { configured: true });
+  assert.equal((await service.channelStatus()).enabled, false);
+  assert.deepEqual((await service.channelStatus()).blog, { configured: true });
+  assert.deepEqual((await service.channelStatus()).instagram, {
+    configured: false,
+  });
   await assert.rejects(service.schedulePost("post-id"), {
     code: "CONTENT_PLAN_PUBLISHING_DISABLED",
     status: 409,
@@ -70,6 +74,9 @@ test("Zen scheduling queues through the verified Telegram destination", async ()
   const service = createContentPlanPublishingService({
     database,
     enabled: true,
+    instagram: {
+      status: async () => ({ connected: false }),
+    } as never,
     logger: pino({ level: "silent" }),
     managedStorage: {} as never,
     max: {} as never,
@@ -106,6 +113,9 @@ test("Telegram verification outages return a safe actionable error", async () =>
   const service = createContentPlanPublishingService({
     database,
     enabled: true,
+    instagram: {
+      status: async () => ({ connected: false }),
+    } as never,
     logger: pino({ level: "silent" }),
     managedStorage: {} as never,
     max: {} as never,

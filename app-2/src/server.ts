@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { createAdminPushRepository } from "./features/admin-push/admin-push.repository.js";
 import { createAdminPushService } from "./features/admin-push/admin-push.service.js";
 import { createContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
+import { createInstagramPublishingService } from "./features/instagram-publishing/instagram-publishing.service.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createTelegramBotClient } from "./features/telegram/telegram-bot.client.js";
 import { createVkClient } from "./features/vk/vk.client.js";
@@ -40,11 +41,18 @@ const start = async (): Promise<void> => {
     accessToken: config.vk.accessToken,
     logger,
   });
+  const instagramPublishing = createInstagramPublishingService({
+    configuration: config.instagramPublishing,
+    database,
+    logger,
+    managedStorage,
+  });
   const contentPlanPublishing = createContentPlanPublishingService({
     database,
     // Scheduling is available in preview, but only production starts the
     // delivery worker. Both environments share the queue/database.
     enabled: true,
+    instagram: instagramPublishing,
     logger,
     managedStorage,
     max: maxClient,

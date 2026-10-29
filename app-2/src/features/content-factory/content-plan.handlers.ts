@@ -183,8 +183,8 @@ export const createApproveContentPlanPostHandler =
 
 export const createGetContentPlanPublishingStatusHandler =
   (publishing: ContentPlanPublishingService): RequestHandler =>
-  (_request, response) => {
-    response.json(publishing.channelStatus());
+  async (_request, response) => {
+    response.json(await publishing.channelStatus());
   };
 
 export const createScheduleContentPlanPostHandler =

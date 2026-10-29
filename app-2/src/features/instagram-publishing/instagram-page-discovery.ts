@@ -1,14 +1,8 @@
 import type { Logger } from "pino";
 
-export class MetaGraphRequestError extends Error {
-  constructor(
-    readonly httpStatus: number,
-    readonly providerCode: number | null,
-  ) {
-    super("Meta Graph API request failed");
-    this.name = "MetaGraphRequestError";
-  }
-}
+import { MetaGraphRequestError } from "./instagram-graph.client.js";
+
+export { MetaGraphRequestError } from "./instagram-graph.client.js";
 
 type GraphGet = (
   path: string,

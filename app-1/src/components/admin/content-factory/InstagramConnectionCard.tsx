@@ -87,11 +87,6 @@ export const InstagramConnectionCard = () => {
               {errorMessage || "Не удалось проверить подключение Instagram."}
             </p>
           )}
-          {status.data && !status.data.publishingEnabled && (
-            <p className="mt-1 text-xs text-muted-ui-foreground">
-              Авторизация профиля ещё не включает автопубликацию.
-            </p>
-          )}
         </div>
       </div>
       <Button

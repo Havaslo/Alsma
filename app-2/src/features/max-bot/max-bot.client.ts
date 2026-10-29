@@ -178,8 +178,21 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
           method: "GET",
         }),
       );
-      if (chat.type !== "channel" || chat.status !== "active")
+      const chatStatus =
+        typeof chat.status === "string" ? chat.status : "active";
+      const chatType = typeof chat.type === "string" ? chat.type : null;
+      const broadcastTarget =
+        chatType === null || chatType === "channel" || chatType === "chat";
+      if (!broadcastTarget || chatStatus !== "active") {
+        logger.warn(
+          {
+            maxChatStatus: chatStatus,
+            maxChatType: chatType,
+          },
+          "MAX publish target is not an active broadcast chat",
+        );
         throw new MaxApiError(409, "channel_inactive_or_invalid");
+      }
       const member = await readObject(
         await request(
           `/chats/${encodeURIComponent(normalizedChatId)}/members/me`,
@@ -189,8 +202,23 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
       const permissions = Array.isArray(member.permissions)
         ? member.permissions
         : [];
-      if (member.is_admin !== true || !permissions.includes("write"))
+      const canWrite =
+        member.is_admin === true ||
+        permissions.includes("write") ||
+        permissions.includes("admin");
+      if (!canWrite) {
+        logger.warn(
+          {
+            maxIsAdmin: member.is_admin === true,
+            maxPermissions: permissions.filter(
+              (permission): permission is string =>
+                typeof permission === "string",
+            ),
+          },
+          "MAX bot cannot write to the publish target",
+        );
         throw new MaxApiError(403, "channel_write_permission_required");
+      }
       return { title: typeof chat.title === "string" ? chat.title : null };
     },
     registerWebhook: async ({ secret, url }: MaxSubscription) => {

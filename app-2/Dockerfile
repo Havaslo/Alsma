@@ -36,6 +36,7 @@ FROM node:22-alpine AS production
 
 ENV COREPACK_HOME=/opt/corepack
 ENV NODE_ENV=production
+ENV NODE_EXTRA_CA_CERTS=/app/certificates/russian-trusted-root-ca.pem
 
 WORKDIR /app
 

@@ -401,7 +401,9 @@ export const createInstagramConnectionService = (options: {
       username: connection?.username ?? null,
       targetUsername: configuration.targetUsername ?? null,
       connectedAt: connection?.connectedAt?.toISOString() ?? null,
-      publishingEnabled: false,
+      publishingEnabled: Boolean(
+        connection && !expired && isConfigured(configuration),
+      ),
     };
   };
 
