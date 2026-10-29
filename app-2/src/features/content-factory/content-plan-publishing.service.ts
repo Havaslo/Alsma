@@ -88,7 +88,7 @@ export const createContentPlanPublishingService = (options: {
         );
       try {
         await options.vk.verifyCredentials(options.vkGroupId);
-        await options.vk.verifyPublishingRights();
+        await options.vk.verifyPublishingRights(options.vkGroupId);
       } catch (error) {
         if (isVkApiError(error) && error.code === 27)
           throw new HttpError(

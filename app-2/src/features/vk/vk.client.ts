@@ -37,6 +37,14 @@ export type VkPublishImage = {
   readonly fileName: string;
 };
 
+export type VkPublishingAccess = {
+  readonly tokenKind: "user" | "community" | "unknown";
+  readonly permissions: readonly string[];
+  readonly canPublish: boolean;
+  readonly missing: readonly string[];
+  readonly probe: "ok" | "denied" | "unavailable";
+};
+
 export const createVkClient = ({
   accessToken,
   logger,
@@ -80,60 +88,127 @@ export const createVkClient = ({
     }
     throw new Error("VK API request failed");
   };
+  const inspectPublishingAccess = async (
+    groupId?: string,
+  ): Promise<VkPublishingAccess> => {
+    let tokenKind: VkPublishingAccess["tokenKind"] = "unknown";
+    let permissions: string[] = [];
+    let scopeMissing: string[] = [];
+    try {
+      const mask = Number(await request("account.getAppPermissions", {}));
+      if (Number.isFinite(mask)) {
+        tokenKind = "user";
+        scopeMissing = [
+          ...((mask & 8_192) === 0 ? ["wall"] : []),
+          ...((mask & 1_073_741_824) === 0 ? ["manage"] : []),
+        ];
+      }
+    } catch {
+      // account.getAppPermissions is unavailable for community tokens.
+    }
+    if (tokenKind === "unknown") {
+      try {
+        const result = (await request("groups.getTokenPermissions", {})) as
+          { permissions?: unknown } | unknown[];
+        const permissionSource = Array.isArray(result)
+          ? result
+          : result?.permissions;
+        permissions = Array.isArray(permissionSource)
+          ? permissionSource.filter(
+              (permission): permission is string =>
+                typeof permission === "string",
+            )
+          : [];
+        tokenKind = "community";
+        scopeMissing =
+          permissions.length > 0 && !permissions.includes("wall")
+            ? ["wall"]
+            : [];
+      } catch {
+        tokenKind = "unknown";
+      }
+    }
+    if (groupId) {
+      try {
+        // This prepares a wall photo upload but does not upload or publish
+        // anything. It proves that the token can actually attach a photo to a
+        // community post, which is the operation the content factory needs.
+        await request("photos.getWallUploadServer", { group_id: groupId });
+        return {
+          tokenKind,
+          permissions,
+          canPublish: true,
+          missing: [],
+          probe: "ok",
+        };
+      } catch (error) {
+        if (
+          error instanceof VkApiError &&
+          (error.code === 5 || error.code === 15 || error.code === 27)
+        ) {
+          return {
+            tokenKind,
+            permissions,
+            canPublish: false,
+            missing: scopeMissing.length > 0 ? scopeMissing : ["wall/photos"],
+            probe: "denied",
+          };
+        }
+        return {
+          tokenKind,
+          permissions,
+          canPublish: tokenKind !== "unknown" && scopeMissing.length === 0,
+          missing: scopeMissing,
+          probe: "unavailable",
+        };
+      }
+    }
+    if (tokenKind === "unknown") {
+      return {
+        tokenKind: "unknown",
+        permissions,
+        canPublish: false,
+        missing: [],
+        probe: "unavailable",
+      };
+    }
+    return {
+      tokenKind,
+      permissions,
+      canPublish: scopeMissing.length === 0,
+      missing: scopeMissing,
+      probe: "unavailable",
+    };
+  };
   return {
     configured: Boolean(token),
     verifyCredentials: async (groupId: string) => {
       await request("groups.getById", { group_id: groupId });
     },
-    verifyPublishingRights: async () => {
-      try {
-        const mask = Number(await request("account.getAppPermissions", {}));
-        if (Number.isFinite(mask)) {
-          const hasWall = (mask & 8_192) !== 0;
-          const hasManage = (mask & 1_073_741_824) !== 0;
-          if (!hasWall || !hasManage) {
-            logger.warn(
-              { vkHasManage: hasManage, vkHasWall: hasWall },
-              "VK user token cannot publish to a community",
-            );
-            throw new VkApiError(
-              27,
-              "Group authorization failed: the token lacks wall or manage scope",
-            );
-          }
-          return;
-        }
-      } catch (error) {
-        // account.getAppPermissions is unavailable for community tokens.
-        if (error instanceof VkApiError && error.code === 27) throw error;
-        if (!(error instanceof VkApiError)) throw error;
+    inspectPublishingAccess,
+    verifyPublishingRights: async (groupId: string) => {
+      const access = await inspectPublishingAccess(groupId);
+      if (access.canPublish) return;
+      if (access.probe === "unavailable" && access.tokenKind === "unknown") {
+        // The actual publish still reports VK's provider error; avoid a false
+        // block at scheduling time when permission inspection is unavailable.
+        logger.warn("VK publishing access could not be inspected");
+        return;
       }
-      try {
-        const result = (await request("groups.getTokenPermissions", {})) as {
-          permissions?: unknown;
-        };
-        const permissions = Array.isArray(result?.permissions)
-          ? result.permissions.filter(
-              (permission): permission is string =>
-                typeof permission === "string",
-            )
-          : [];
-        if (permissions.length > 0 && !permissions.includes("wall")) {
-          logger.warn(
-            { vkCommunityPermissions: permissions },
-            "VK community token cannot publish to its wall",
-          );
-          throw new VkApiError(
-            27,
-            "Group authorization failed: the community token lacks wall permission",
-          );
-        }
-      } catch (error) {
-        // If the method is unavailable, the actual publish still reports VK's
-        // provider error; avoid a false block at scheduling time.
-        if (error instanceof VkApiError && error.code === 27) throw error;
-        if (!(error instanceof VkApiError)) throw error;
-      }
+      logger.warn(
+        {
+          vkTokenKind: access.tokenKind,
+          vkMissingPermissions: access.missing,
+          vkCommunityPermissions: access.permissions,
+        },
+        "VK token cannot publish to a community",
+      );
+      throw new VkApiError(
+        27,
+        access.tokenKind === "community"
+          ? `Group authorization failed: the community token lacks ${access.missing.join(", ")} permission`
+          : `Group authorization failed: the token lacks ${access.missing.join(" or ")} scope`,
+      );
     },
     getHistory: async (
       peerId: string,

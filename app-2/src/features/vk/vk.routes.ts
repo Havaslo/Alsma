@@ -556,11 +556,28 @@ export const createVkRouter = ({
         /* status only */
       }
     }
+    const access =
+      vk.configured && groupId
+        ? await vk.inspectPublishingAccess(groupId)
+        : null;
     response.json({
       provider: "vk",
       paused: await isPaused(),
       configured: vk.configured && Boolean(groupId),
       credentialsVerified,
+      publishingVerified:
+        access === null
+          ? null
+          : access.probe === "ok"
+            ? true
+            : access.probe === "denied"
+              ? false
+              : access.tokenKind === "unknown"
+                ? null
+                : access.canPublish,
+      publishingProbe: access?.probe ?? null,
+      tokenKind: access?.tokenKind ?? null,
+      tokenPermissions: access?.permissions ?? [],
       callbackProtectionConfigured: Boolean(callbackSecret),
       confirmationConfigured: Boolean(confirmationCode),
     });

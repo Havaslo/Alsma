@@ -79,9 +79,11 @@ const environmentSchema = z
     META_INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
     INSTAGRAM_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
+    VK_ACCESS_TOKEN_OVERRIDE: optionalTrimmedEnvironmentValue,
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
     VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
+    VK_CALLBACK_CONFIRMATION_RESPONSE: optionalTrimmedEnvironmentValue,
     MAIL_RU_EMAIL: z.string().email().optional(),
     MAIL_RU_APP_PASSWORD: z.string().min(1).optional(),
   })
@@ -238,10 +240,21 @@ export const readConfig = (
       proxyKey: parsed.AMAZI_PROXY_KEY,
     },
     vk: {
-      accessToken: parsed.VK_ACCESS_TOKEN,
+      // The connected VK integration cannot have its credential edited in
+      // place. An explicit token value lets the project use a newly issued
+      // community key without disconnecting the integration and losing its
+      // group, callback secret, and confirmation settings.
+      accessToken: parsed.VK_ACCESS_TOKEN_OVERRIDE ?? parsed.VK_ACCESS_TOKEN,
       groupId: parsed.VK_GROUP_ID,
       callbackSecret: parsed.VK_CALLBACK_SECRET,
-      confirmationCode: parsed.VK_CALLBACK_CONFIRMATION_CODE,
+      // VK compares the confirmation body byte-for-byte with the string shown
+      // in the community Callback API settings. The integration value can be
+      // stale after the server is re-created, and connected integration
+      // credentials cannot be edited in place, so an explicit response value
+      // takes precedence when present.
+      confirmationCode:
+        parsed.VK_CALLBACK_CONFIRMATION_RESPONSE ??
+        parsed.VK_CALLBACK_CONFIRMATION_CODE,
     },
     yooKassaSecretKey: parsed.YOOKASSA_SECRET_KEY,
     yooKassaShopId: parsed.YOOKASSA_SHOP_ID,
