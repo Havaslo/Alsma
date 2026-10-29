@@ -82,6 +82,7 @@ const environmentSchema = z
     VK_ACCESS_TOKEN_OVERRIDE: optionalTrimmedEnvironmentValue,
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
+    VK_CALLBACK_SECRET_OVERRIDE: optionalTrimmedEnvironmentValue,
     VK_CALLBACK_CONFIRMATION_CODE: z.string().min(1).optional(),
     VK_CALLBACK_CONFIRMATION_RESPONSE: optionalTrimmedEnvironmentValue,
     MAIL_RU_EMAIL: z.string().email().optional(),
@@ -246,7 +247,10 @@ export const readConfig = (
       // group, callback secret, and confirmation settings.
       accessToken: parsed.VK_ACCESS_TOKEN_OVERRIDE ?? parsed.VK_ACCESS_TOKEN,
       groupId: parsed.VK_GROUP_ID,
-      callbackSecret: parsed.VK_CALLBACK_SECRET,
+      // A re-created Callback API server brings a new secret that cannot be
+      // edited inside the connected integration, so an explicit value wins.
+      callbackSecret:
+        parsed.VK_CALLBACK_SECRET_OVERRIDE ?? parsed.VK_CALLBACK_SECRET,
       // VK compares the confirmation body byte-for-byte with the string shown
       // in the community Callback API settings. The integration value can be
       // stale after the server is re-created, and connected integration
