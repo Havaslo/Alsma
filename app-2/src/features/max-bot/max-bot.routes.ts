@@ -7,6 +7,10 @@ import type { Database } from "../../lib/database/database.js";
 import type { AiAgentService } from "../agent/agent.service.js";
 import type { ChatEvent, ChatService } from "../chat/chat.service.js";
 import { MaxApiError, type MaxBotClient } from "./max-bot.client.js";
+import {
+  readMaxDiscoveredChannel,
+  saveMaxDiscoveredChannel,
+} from "./max-publish-target.js";
 
 const updateSchema = z.record(z.string(), z.unknown());
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -150,9 +154,26 @@ export const createMaxBotRouter = ({
   const handleUpdate = async (payload: Record<string, unknown>) => {
     const { chatId, eventId, senderId, text, updateType } =
       extractMessage(payload);
-    if (updateType === "bot_added" && payload.is_channel === true && chatId) {
+    if (updateType === "bot_added" && chatId) {
+      const title = firstString(
+        asRecord(payload.chat).title,
+        payload.title,
+        asRecord(payload.message).title,
+      );
+      await saveMaxDiscoveredChannel(database, {
+        chatId,
+        ...(title ? { title } : {}),
+      }).catch((error: unknown) =>
+        logger.error(
+          {
+            channelId: chatId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          "MAX publishing channel could not be stored",
+        ),
+      );
       logger.info(
-        { channelId: chatId },
+        { channelId: chatId, channelTitle: title ?? null },
         "MAX publishing channel discovered; bot was added",
       );
       return;
@@ -331,16 +352,20 @@ export const createMaxBotRouter = ({
         // The response intentionally exposes configuration state only.
       }
     }
-    const publishTargetConfigured = Boolean(publishChatId);
+    const discoveredChannel = await readMaxDiscoveredChannel(database).catch(
+      () => null,
+    );
+    const effectivePublishChatId = publishChatId ?? discoveredChannel?.chatId;
+    const publishTargetConfigured = Boolean(effectivePublishChatId);
     if (
       max.configured &&
-      publishChatId &&
+      effectivePublishChatId &&
       (request.query.publish === "1" || request.query.publish === "true")
     ) {
       // Deep publish-target diagnostics run only on request to keep the
       // routine readiness probe fast and free of provider load.
       try {
-        await max.verifyChannelPublishing(publishChatId);
+        await max.verifyChannelPublishing(effectivePublishChatId);
         publishTargetVerified = true;
       } catch (error) {
         publishTargetStatus =
@@ -361,7 +386,7 @@ export const createMaxBotRouter = ({
           publishTargetNetworkCode = cause.code;
         if (request.query.probe === "1") {
           const probes = await max
-            .probePublishTarget(publishChatId)
+            .probePublishTarget(effectivePublishChatId)
             .catch(() => null);
           logger.warn({ maxProbes: probes }, "MAX publish target probe");
         }
@@ -375,6 +400,9 @@ export const createMaxBotRouter = ({
       credentialsError,
       credentialsNetworkCode,
       publishTargetConfigured,
+      discoveredPublishChatId: discoveredChannel?.chatId ?? null,
+      discoveredPublishChatTitle: discoveredChannel?.title ?? null,
+      discoveredPublishChatAt: discoveredChannel?.discoveredAt ?? null,
       publishTargetVerified,
       publishTargetStatus,
       publishTargetError,

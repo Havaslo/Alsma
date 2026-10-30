@@ -5,6 +5,7 @@ import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { InstagramPublishingService } from "../instagram-publishing/instagram-publishing.service.js";
 import { MaxApiError, type MaxBotClient } from "../max-bot/max-bot.client.js";
+import { readMaxDiscoveredChannel } from "../max-bot/max-publish-target.js";
 import {
   TelegramApiError,
   type TelegramBotClient,
@@ -21,9 +22,6 @@ import { createContentPlanRepository } from "./content-plan.repository.js";
 const schedulerIntervalMilliseconds = 15_000;
 const stalePublishingMilliseconds = 5 * 60_000;
 const maximumImageSize = 50 * 1_024 * 1_024;
-// MAX reports the chat_id only through the bot_added update, so the channel
-// discovered there is stored and used when the configured ID is unknown.
-const maxPublishChannelSettingKey = "max.publishChannel";
 const maximumTelegramTextLength = 4_096;
 
 const deliveryChannel = (channel: string) =>
@@ -60,6 +58,25 @@ export const createContentPlanPublishingService = (options: {
   const repository = createContentPlanRepository(options.database);
   const publishBlogPost = createContentPlanBlogPublisher(options.database);
   let tickInProgress = false;
+  // MAX reports a chat_id only through the bot_added update, so the channel
+  // discovered there is used when the configured ID is unknown or stale.
+  let resolvedMaxPublishChatId: string | null = null;
+
+  const maxPublishChatIdCandidates = async (): Promise<string[]> => {
+    const discovered = await readMaxDiscoveredChannel(options.database).catch(
+      (error: unknown) => {
+        options.logger.warn(
+          { error: error instanceof Error ? error.message : "UnknownError" },
+          "MAX discovered channel could not be read",
+        );
+        return null;
+      },
+    );
+    const candidates = [options.maxPublishChatId, discovered?.chatId]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value));
+    return [...new Set(candidates)];
+  };
 
   const channelStatus = async () => ({
     enabled: options.enabled,
@@ -68,7 +85,7 @@ export const createContentPlanPublishingService = (options: {
     },
     max: {
       configured: options.max.configured,
-      targetConfigured: Boolean(options.maxPublishChatId),
+      targetConfigured: (await maxPublishChatIdCandidates()).length > 0,
     },
     telegram: {
       configured: options.telegram.configured,
@@ -126,15 +143,34 @@ export const createContentPlanPublishingService = (options: {
       return;
     }
     if (channel === "max") {
-      if (!options.max.configured || !options.maxPublishChatId)
+      if (!options.max.configured)
         throw new HttpError(
           409,
           "MAX_PUBLISH_TARGET_NOT_CONFIGURED",
           "Подключите MAX-бота к нужному каналу с правом публикации, чтобы настроить его как место размещения.",
         );
-      try {
-        await options.max.verifyChannelPublishing(options.maxPublishChatId);
-      } catch (error) {
+      const candidates = await maxPublishChatIdCandidates();
+      if (candidates.length === 0)
+        throw new HttpError(
+          409,
+          "MAX_PUBLISH_TARGET_NOT_CONFIGURED",
+          "Подключите MAX-бота к нужному каналу с правом публикации, чтобы настроить его как место размещения.",
+        );
+      let error: unknown;
+      for (const candidate of candidates) {
+        try {
+          await options.max.verifyChannelPublishing(candidate);
+          resolvedMaxPublishChatId = candidate;
+          return;
+        } catch (candidateError) {
+          error = candidateError;
+          // A stale configured ID is skipped in favour of a channel that the
+          // bot reported itself through a bot_added update.
+          if (!(isMaxApiError(candidateError) && candidateError.status === 404))
+            break;
+        }
+      }
+      if (error !== undefined) {
         if (isMaxApiError(error) && error.status === 403)
           throw new HttpError(
             409,
@@ -151,7 +187,7 @@ export const createContentPlanPublishingService = (options: {
           throw new HttpError(
             409,
             "MAX_PUBLISH_TARGET_NOT_FOUND",
-            "MAX не нашёл указанный канал. Добавьте MAX-бота в канал и проверьте адрес места размещения.",
+            "MAX не нашёл указанный канал. Добавьте MAX-бота в канал с правом публикации — сервис определит канал автоматически после добавления бота.",
           );
         const networkCause = error instanceof Error ? error.cause : undefined;
         options.logger.warn(
@@ -420,7 +456,7 @@ export const createContentPlanPublishingService = (options: {
               })
           : targetChannel === "max"
             ? await options.max.publishChannelPost({
-                chatId: options.maxPublishChatId!,
+                chatId: resolvedMaxPublishChatId ?? options.maxPublishChatId!,
                 images,
                 text: post.generatedCopy,
               })

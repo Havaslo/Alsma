@@ -53,6 +53,19 @@ const providerCodeOf = (error: unknown): number | null =>
 const httpStatusOf = (error: unknown): number | null =>
   error instanceof MetaGraphRequestError ? error.httpStatus : null;
 
+// Public media URLs are built as `${origin}/api/media/managed/${token}`.
+// The configured value is usually the API base of the backend, so a trailing
+// `/api` segment has to be removed; otherwise Meta receives `/api/api/...`
+// and answers with "Only photo or video can be accepted as media type".
+export const resolvePublicMediaBaseUrl = (
+  value: string | undefined,
+): string | undefined => {
+  let base = value?.trim().replace(/\/+$/u, "");
+  if (!base) return undefined;
+  while (/\/api$/iu.test(base)) base = base.replace(/\/api$/iu, "");
+  return base || undefined;
+};
+
 export const createInstagramPublishingService = (options: {
   readonly configuration: InstagramGraphConfiguration & {
     readonly publicMediaBaseUrl?: string;
@@ -170,7 +183,7 @@ export const createInstagramPublishingService = (options: {
   };
 
   const publicMediaUrl = (objectId: string) => {
-    const base = configuration.publicMediaBaseUrl?.replace(/\/+$/u, "");
+    const base = resolvePublicMediaBaseUrl(configuration.publicMediaBaseUrl);
     if (!base) return undefined;
     const token = Buffer.from(objectId, "utf8").toString("base64url");
     return `${base}/api/media/managed/${token}`;
