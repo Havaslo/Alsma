@@ -39,6 +39,7 @@ const start = async (): Promise<void> => {
   });
   const vkClient = createVkClient({
     accessToken: config.vk.accessToken,
+    photoUploadAccessToken: config.vk.photoUploadAccessToken,
     logger,
   });
   const instagramPublishing = createInstagramPublishingService({

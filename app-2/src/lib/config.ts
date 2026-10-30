@@ -83,6 +83,7 @@ const environmentSchema = z
     INSTAGRAM_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
     VK_ACCESS_TOKEN_OVERRIDE: optionalTrimmedEnvironmentValue,
+    VK_PHOTO_UPLOAD_ACCESS_TOKEN: optionalTrimmedEnvironmentValue,
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
     VK_CALLBACK_SECRET_OVERRIDE: optionalTrimmedEnvironmentValue,
@@ -157,6 +158,7 @@ export type AppConfig = {
   };
   readonly vk: {
     readonly accessToken?: string;
+    readonly photoUploadAccessToken?: string;
     readonly groupId?: string;
     readonly callbackSecret?: string;
     readonly confirmationCode?: string;
@@ -250,6 +252,9 @@ export const readConfig = (
       // community key without disconnecting the integration and losing its
       // group, callback secret, and confirmation settings.
       accessToken: parsed.VK_ACCESS_TOKEN_OVERRIDE ?? parsed.VK_ACCESS_TOKEN,
+      // VK photo-upload methods require user authorization. Keep that token
+      // separate so the community credential continues to handle bot traffic.
+      photoUploadAccessToken: parsed.VK_PHOTO_UPLOAD_ACCESS_TOKEN,
       groupId: parsed.VK_GROUP_ID,
       // A re-created Callback API server brings a new secret that cannot be
       // edited inside the connected integration, so an explicit value wins.

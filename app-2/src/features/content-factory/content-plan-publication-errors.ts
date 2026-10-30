@@ -53,6 +53,8 @@ export const safePublicationError = (error: unknown, uncertain: boolean) => {
   }
   if (isNamedError(error, "VkApiError")) {
     const code = Number((error as NamedError & { code?: number }).code);
+    if ([5, 15, 27].includes(code) && /photo upload/iu.test(error.message))
+      return "VK не разрешил загрузить фото. Проверьте отдельный пользовательский ключ VK: он должен действовать, быть авторизован администратором сообщества и иметь доступ к фотографиям.";
     return code === 27
       ? "VK не разрешил публикацию в сообщество. Нужен токен с правами управления сообществом (manage) и публикации (wall) либо токен сообщества с правом wall."
       : `VK отклонил публикацию (код ${code}). Проверьте права токена, текст и изображения.`;
