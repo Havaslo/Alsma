@@ -26,7 +26,11 @@ type MaxSubscription = {
   readonly secret: string;
   readonly url: string;
 };
-type MaxBotIdentity = { readonly userId: string };
+type MaxBotIdentity = {
+  readonly name?: string;
+  readonly userId: string;
+  readonly username?: string;
+};
 
 export class MaxApiError extends Error {
   readonly status: number;
@@ -161,9 +165,15 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
               ? (data.user as Record<string, unknown>)
               : data;
           const value = user.user_id ?? user.id;
-          return typeof value === "string" || typeof value === "number"
-            ? { userId: String(value) }
-            : undefined;
+          if (typeof value !== "string" && typeof value !== "number")
+            return undefined;
+          return {
+            userId: String(value),
+            ...(typeof user.username === "string"
+              ? { username: user.username }
+              : {}),
+            ...(typeof user.name === "string" ? { name: user.name } : {}),
+          };
         },
       );
       return identityPromise;

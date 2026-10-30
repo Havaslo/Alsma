@@ -109,6 +109,7 @@ test("stores an uploaded image and returns a media-library URL", async () => {
       fileName: "фото.png",
       id: "00000000-0000-4000-8000-000000000003",
       image: `/api/media/managed/${Buffer.from("managed-image-id").toString("base64url")}?contentType=image%2Fpng`,
+      origin: "uploaded",
       sizeBytes: 4,
       subtitle: "1 КБ",
       title: "фото.png",

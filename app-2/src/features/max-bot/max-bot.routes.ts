@@ -355,6 +355,9 @@ export const createMaxBotRouter = ({
     const discoveredChannel = await readMaxDiscoveredChannel(database).catch(
       () => null,
     );
+    const botIdentity = max.configured
+      ? await max.getBotIdentity().catch(() => undefined)
+      : undefined;
     const effectivePublishChatId = publishChatId ?? discoveredChannel?.chatId;
     const publishTargetConfigured = Boolean(effectivePublishChatId);
     if (
@@ -400,6 +403,8 @@ export const createMaxBotRouter = ({
       credentialsError,
       credentialsNetworkCode,
       publishTargetConfigured,
+      botUsername: botIdentity?.username ?? null,
+      botName: botIdentity?.name ?? null,
       discoveredPublishChatId: discoveredChannel?.chatId ?? null,
       discoveredPublishChatTitle: discoveredChannel?.title ?? null,
       discoveredPublishChatAt: discoveredChannel?.discoveredAt ?? null,
