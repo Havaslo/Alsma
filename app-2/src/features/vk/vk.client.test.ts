@@ -159,6 +159,32 @@ test("community-only token does not silently publish an image post without its p
   assert.deepEqual(calls, ["photos.getWallUploadServer"]);
 });
 
+test("photo preflight uses the separate token and requires an upload URL", async () => {
+  const originalFetch = globalThis.fetch;
+  const tokens: Array<string | null> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = new URL(String(input));
+    tokens.push(url.searchParams.get("access_token"));
+    return new Response(JSON.stringify({ response: { upload_url: "" } }), {
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const client = createVkClient({
+      accessToken: "community-token",
+      photoUploadAccessToken: "photo-token",
+      logger,
+    });
+    await assert.rejects(
+      client.verifyWallPhotoUpload("177090031"),
+      /URL is missing/u,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(tokens, ["photo-token"]);
+});
+
 test("user token uploads photos while community token publishes the wall post", async () => {
   const originalFetch = globalThis.fetch;
   const apiCalls: Array<{ method: string; token: string | null }> = [];

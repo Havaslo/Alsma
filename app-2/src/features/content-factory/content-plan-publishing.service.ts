@@ -17,6 +17,7 @@ import {
   safePublicationError,
 } from "./content-plan-publication-errors.js";
 import { getMoscowDateTime, isFutureInMoscow } from "./content-plan-time.js";
+import { verifyVkPhotoTarget } from "./content-plan-vk-photo-check.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 
 const schedulerIntervalMilliseconds = 15_000;
@@ -367,6 +368,8 @@ export const createContentPlanPublishingService = (options: {
         "Укажите будущие дату и время, затем снова одобрите пост.",
       );
     await verifyTarget(post.channel);
+    if (post.channel === "vk" && post.imageIds.length > 0)
+      await verifyVkPhotoTarget(options.vk, options.vkGroupId!);
 
     const scheduled = await repository.schedulePost(
       postId,

@@ -263,6 +263,13 @@ export const createVkClient = ({
       await request("groups.getById", { group_id: groupId });
     },
     inspectPublishingAccess,
+    verifyWallPhotoUpload: async (groupId: string) => {
+      const upload = (await requestPhotoUpload("photos.getWallUploadServer", {
+        group_id: groupId,
+      })) as { upload_url?: unknown };
+      if (typeof upload?.upload_url !== "string" || !upload.upload_url)
+        throw new Error("VK photo upload URL is missing");
+    },
     verifyPublishingRights: async (groupId: string) => {
       const access = await inspectPublishingAccess(groupId);
       if (access.canPublish) return;
