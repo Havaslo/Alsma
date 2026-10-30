@@ -79,6 +79,7 @@ export const createMaxBotRouter = ({
   database,
   logger,
   max,
+  publishChatId,
   siteUrl,
   webhookSecret,
   webhookUrl,
@@ -88,6 +89,7 @@ export const createMaxBotRouter = ({
   readonly database: Database;
   readonly logger: Logger;
   readonly max: MaxBotClient;
+  readonly publishChatId?: string;
   readonly siteUrl?: string;
   readonly webhookSecret?: string;
   readonly webhookUrl?: string;
@@ -297,11 +299,15 @@ export const createMaxBotRouter = ({
     }
   };
 
-  router.get("/readiness", async (_request, response) => {
+  router.get("/readiness", async (request, response) => {
     let credentialsVerified = false;
     let credentialsStatus: number | null = null;
     let credentialsError: string | null = null;
     let credentialsNetworkCode: string | null = null;
+    let publishTargetVerified = false;
+    let publishTargetStatus: number | null = null;
+    let publishTargetError: string | null = null;
+    let publishTargetNetworkCode: string | null = null;
     if (max.configured) {
       try {
         await max.verifyCredentials();
@@ -325,6 +331,42 @@ export const createMaxBotRouter = ({
         // The response intentionally exposes configuration state only.
       }
     }
+    const publishTargetConfigured = Boolean(publishChatId);
+    if (
+      max.configured &&
+      publishChatId &&
+      (request.query.publish === "1" || request.query.publish === "true")
+    ) {
+      // Deep publish-target diagnostics run only on request to keep the
+      // routine readiness probe fast and free of provider load.
+      try {
+        await max.verifyChannelPublishing(publishChatId);
+        publishTargetVerified = true;
+      } catch (error) {
+        publishTargetStatus =
+          error instanceof MaxApiError ? error.status : null;
+        publishTargetError =
+          error instanceof MaxApiError
+            ? "http"
+            : error instanceof TypeError
+              ? "network"
+              : "unknown";
+        const cause = error instanceof Error ? error.cause : undefined;
+        if (
+          cause &&
+          typeof cause === "object" &&
+          "code" in cause &&
+          typeof cause.code === "string"
+        )
+          publishTargetNetworkCode = cause.code;
+        if (request.query.probe === "1") {
+          const probes = await max
+            .probePublishTarget(publishChatId)
+            .catch(() => null);
+          logger.warn({ maxProbes: probes }, "MAX publish target probe");
+        }
+      }
+    }
     response.json({
       provider: "max",
       configured: max.configured,
@@ -332,6 +374,11 @@ export const createMaxBotRouter = ({
       credentialsStatus,
       credentialsError,
       credentialsNetworkCode,
+      publishTargetConfigured,
+      publishTargetVerified,
+      publishTargetStatus,
+      publishTargetError,
+      publishTargetNetworkCode,
       webhookProtectionConfigured: Boolean(webhookSecret),
       webhookUrlConfigured: Boolean(webhookUrl),
       siteLinksConfigured: Boolean(siteUrl),

@@ -231,6 +231,7 @@ export const createApiRouter = ({
       database,
       logger,
       max: maxClient,
+      publishChatId: maxBot.publishChatId,
       webhookSecret: maxBot.webhookSecret,
       webhookUrl: maxBot.webhookUrl,
       siteUrl: maxBot.siteUrl,

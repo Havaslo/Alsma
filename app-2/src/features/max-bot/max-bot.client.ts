@@ -104,6 +104,26 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
       ? (value as Record<string, unknown>)
       : {};
   };
+  const listChats = async () => {
+    const payload = await readObject(
+      await request("/chats", { method: "GET" }),
+    );
+    const chats = Array.isArray(payload.chats) ? payload.chats : [];
+    return chats.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const chat = entry as Record<string, unknown>;
+      const rawId = chat.chat_id ?? chat.id;
+      if (typeof rawId !== "string" && typeof rawId !== "number") return [];
+      return [
+        {
+          chatId: String(rawId),
+          status: typeof chat.status === "string" ? chat.status : null,
+          title: typeof chat.title === "string" ? chat.title : null,
+          type: typeof chat.type === "string" ? chat.type : null,
+        },
+      ];
+    });
+  };
   const uploadImage = async (image: MaxPublishImage) => {
     const uploadResponse = await request("/uploads?type=image", {
       method: "POST",
@@ -171,13 +191,86 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
     verifyCredentials: async () => {
       await request("/me", { method: "GET" });
     },
+    listChats,
+    probePublishTarget: async (chatId: string) => {
+      const normalizedChatId = maxChatId(chatId);
+      const attempt = async (label: string, path: string) => {
+        try {
+          const response = await request(
+            path,
+            { method: "GET" },
+            { retry: false },
+          );
+          return {
+            label,
+            ok: true,
+            providerCode: null,
+            status: response.status,
+          };
+        } catch (error) {
+          return {
+            label,
+            ok: false,
+            providerCode:
+              error instanceof MaxApiError
+                ? (error.providerCode ?? null)
+                : error instanceof Error
+                  ? error.name
+                  : "unknown",
+            status: error instanceof MaxApiError ? error.status : null,
+          };
+        }
+      };
+      return [
+        await attempt("chat", `/chats/${encodeURIComponent(normalizedChatId)}`),
+        await attempt(
+          "membersMe",
+          `/chats/${encodeURIComponent(normalizedChatId)}/members/me`,
+        ),
+        await attempt("subscriptions", "/subscriptions"),
+      ];
+    },
     verifyChannelPublishing: async (chatId: string) => {
       const normalizedChatId = maxChatId(chatId);
-      const chat = await readObject(
-        await request(`/chats/${encodeURIComponent(normalizedChatId)}`, {
-          method: "GET",
-        }),
-      );
+      let chat: Record<string, unknown>;
+      try {
+        chat = await readObject(
+          await request(`/chats/${encodeURIComponent(normalizedChatId)}`, {
+            method: "GET",
+          }),
+        );
+      } catch (error) {
+        if (
+          error instanceof MaxApiError &&
+          (error.status === 404 || error.status === 403)
+        ) {
+          const availableChats = await listChats().catch((listError) => {
+            logger.warn(
+              {
+                errorName:
+                  listError instanceof Error ? listError.name : "UnknownError",
+                maxProviderCode:
+                  listError instanceof MaxApiError
+                    ? (listError.providerCode ?? null)
+                    : null,
+                maxStatus:
+                  listError instanceof MaxApiError ? listError.status : null,
+              },
+              "MAX chat list is unavailable",
+            );
+            return null;
+          });
+          logger.warn(
+            {
+              maxChatId: normalizedChatId,
+              maxAvailableChats: availableChats,
+              maxStatus: error.status,
+            },
+            "MAX publish target is not available to the bot",
+          );
+        }
+        throw error;
+      }
       const chatStatus =
         typeof chat.status === "string" ? chat.status : "active";
       const chatType = typeof chat.type === "string" ? chat.type : null;

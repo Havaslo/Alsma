@@ -21,6 +21,9 @@ import { createContentPlanRepository } from "./content-plan.repository.js";
 const schedulerIntervalMilliseconds = 15_000;
 const stalePublishingMilliseconds = 5 * 60_000;
 const maximumImageSize = 50 * 1_024 * 1_024;
+// MAX reports the chat_id only through the bot_added update, so the channel
+// discovered there is stored and used when the configured ID is unknown.
+const maxPublishChannelSettingKey = "max.publishChannel";
 const maximumTelegramTextLength = 4_096;
 
 const deliveryChannel = (channel: string) =>
@@ -31,6 +34,7 @@ type SocialImage = {
   readonly contentType: string;
   readonly downloadUrl: string;
   readonly fileName: string;
+  readonly objectId: string;
 };
 
 const isMaxApiError = (error: unknown): error is MaxApiError =>
@@ -143,10 +147,29 @@ export const createContentPlanPublishingService = (options: {
             "MAX_CHANNEL_INVALID",
             "MAX не подтвердил, что указанная цель — активный канал или групповой чат. Проверьте адрес и права бота.",
           );
+        if (isMaxApiError(error) && error.status === 404)
+          throw new HttpError(
+            409,
+            "MAX_PUBLISH_TARGET_NOT_FOUND",
+            "MAX не нашёл указанный канал. Добавьте MAX-бота в канал и проверьте адрес места размещения.",
+          );
+        const networkCause = error instanceof Error ? error.cause : undefined;
         options.logger.warn(
           {
             errorName: error instanceof Error ? error.name : "UnknownError",
             maxStatus: isMaxApiError(error) ? error.status : null,
+            maxErrorKind: isMaxApiError(error)
+              ? "http"
+              : error instanceof TypeError
+                ? "network"
+                : "unknown",
+            maxNetworkCode:
+              networkCause &&
+              typeof networkCause === "object" &&
+              "code" in networkCause &&
+              typeof networkCause.code === "string"
+                ? networkCause.code
+                : null,
           },
           "MAX target verification failed",
         );
@@ -355,6 +378,7 @@ export const createContentPlanPublishingService = (options: {
         contentType: item.contentType,
         downloadUrl: download.downloadUrl,
         fileName: item.fileName,
+        objectId: item.objectId,
       });
     }
     return images;

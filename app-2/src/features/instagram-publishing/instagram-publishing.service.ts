@@ -16,12 +16,17 @@ const captionLimit = 2_200;
 const carouselItemLimit = 10;
 const containerPollIntervalMilliseconds = 2_000;
 const containerWaitMilliseconds = 90_000;
+// Meta rejects feed images outside 4:5 … 1.91:1 with a generic
+// "could not download the image" error, so every upload is cropped in range.
+const minFeedAspect = 4 / 5;
+const maxFeedAspect = 1.91;
 
 export type InstagramPublishImage = {
   readonly content: Uint8Array;
   readonly contentType: string;
   readonly downloadUrl?: string;
   readonly fileName: string;
+  readonly objectId?: string;
 };
 
 export class InstagramPublishError extends Error {
@@ -50,6 +55,7 @@ const httpStatusOf = (error: unknown): number | null =>
 
 export const createInstagramPublishingService = (options: {
   readonly configuration: InstagramGraphConfiguration & {
+    readonly publicMediaBaseUrl?: string;
     readonly tokenEncryptionKey?: string;
   };
   readonly database: Database;
@@ -163,31 +169,84 @@ export const createInstagramPublishingService = (options: {
     }
   };
 
-  const toJpeg = async (image: InstagramPublishImage) => {
-    const source = await loadImage(Buffer.from(image.content));
-    const canvas = createCanvas(source.width, source.height);
+  const publicMediaUrl = (objectId: string) => {
+    const base = configuration.publicMediaBaseUrl?.replace(/\/+$/u, "");
+    if (!base) return undefined;
+    const token = Buffer.from(objectId, "utf8").toString("base64url");
+    return `${base}/api/media/managed/${token}`;
+  };
+
+  const normalizeForFeed = async (
+    image: InstagramPublishImage,
+  ): Promise<{ readonly changed: boolean; readonly content: Uint8Array }> => {
+    let source;
+    try {
+      source = await loadImage(Buffer.from(image.content));
+    } catch {
+      // The bytes could not be decoded; let Meta decide instead of failing here.
+      return { changed: false, content: image.content };
+    }
+    const aspect = source.width / source.height;
+    const fitsFeed =
+      aspect >= minFeedAspect - 1e-3 && aspect <= maxFeedAspect + 1e-3;
+    if (fitsFeed && image.contentType === "image/jpeg")
+      return { changed: false, content: image.content };
+    let sourceX = 0;
+    let sourceY = 0;
+    let width = source.width;
+    let height = source.height;
+    if (aspect < minFeedAspect) {
+      height = Math.max(1, Math.round(source.width / minFeedAspect));
+      sourceY = Math.max(0, Math.round((source.height - height) / 2));
+    } else if (aspect > maxFeedAspect) {
+      width = Math.max(1, Math.round(source.height * maxFeedAspect));
+      sourceX = Math.max(0, Math.round((source.width - width) / 2));
+    }
+    const canvas = createCanvas(width, height);
     const context = canvas.getContext("2d");
     context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, source.width, source.height);
-    context.drawImage(source, 0, 0);
-    return new Uint8Array(canvas.toBuffer("image/jpeg", 0.92));
+    context.fillRect(0, 0, width, height);
+    context.drawImage(
+      source,
+      sourceX,
+      sourceY,
+      width,
+      height,
+      0,
+      0,
+      width,
+      height,
+    );
+    return {
+      changed: true,
+      content: new Uint8Array(canvas.toBuffer("image/jpeg", 0.92)),
+    };
   };
 
   const prepareMedia = async (images: readonly InstagramPublishImage[]) => {
     const temporaryObjectIds: string[] = [];
     const urls: string[] = [];
     for (const image of images) {
-      if (image.contentType === "image/jpeg" && image.downloadUrl) {
-        urls.push(image.downloadUrl);
+      const normalized = await normalizeForFeed(image);
+      const directUrl = image.objectId
+        ? publicMediaUrl(image.objectId)
+        : undefined;
+      const reusableUrl = directUrl ?? image.downloadUrl;
+      if (!normalized.changed && reusableUrl) {
+        urls.push(reusableUrl);
         continue;
       }
-      const jpeg = await toJpeg(image);
       const uploaded = await options.managedStorage.upload({
-        content: jpeg,
+        content: normalized.content,
         contentType: "image/jpeg",
         name: `instagram-${randomUUID()}.jpg`,
       });
       temporaryObjectIds.push(uploaded.objectId);
+      const uploadedUrl = publicMediaUrl(uploaded.objectId);
+      if (uploadedUrl) {
+        urls.push(uploadedUrl);
+        continue;
+      }
       const download = await options.managedStorage.getDownload(
         uploaded.objectId,
       );

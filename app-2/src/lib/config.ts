@@ -26,6 +26,9 @@ const environmentSchema = z
   .object({
     AMAZI_STORAGE_API_URL: z.string().url(),
     AMAZI_STORAGE_PROJECT_TOKEN: z.string().min(32),
+    PUBLIC_MEDIA_BASE_URL: z.string().url().optional(),
+    VITE_API_DEVELOPMENT_URL: z.string().url().optional(),
+    VITE_API_PRODUCTION_URL: z.string().url().optional(),
     AMAZI_PREVIEW_FRONTEND_HOST: z.string().trim().min(1).optional(),
     AMAZI_PREVIEW_HOST: z.string().trim().min(1).optional(),
     AMAZI_PROXY_URL: z.string().url().optional(),
@@ -178,6 +181,7 @@ export type AppConfig = {
     readonly tokenEncryptionKey?: string;
     readonly proxyUrl?: string;
     readonly proxyKey?: string;
+    readonly publicMediaBaseUrl?: string;
     readonly graphApiVersion: string;
   };
 };
@@ -291,6 +295,12 @@ export const readConfig = (
       tokenEncryptionKey: parsed.INSTAGRAM_TOKEN_ENCRYPTION_KEY,
       proxyUrl: parsed.AMAZI_PROXY_URL,
       proxyKey: parsed.AMAZI_PROXY_KEY,
+      // Meta downloads feed images from the public internet, so the shared
+      // storage URL is replaced by this project's public media endpoint.
+      publicMediaBaseUrl:
+        parsed.PUBLIC_MEDIA_BASE_URL ??
+        parsed.VITE_API_PRODUCTION_URL ??
+        parsed.VITE_API_DEVELOPMENT_URL,
       graphApiVersion: "v26.0",
     },
   };
