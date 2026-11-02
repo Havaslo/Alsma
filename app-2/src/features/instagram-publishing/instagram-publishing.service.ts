@@ -69,6 +69,7 @@ export const resolvePublicMediaBaseUrl = (
 export const createInstagramPublishingService = (options: {
   readonly configuration: InstagramGraphConfiguration & {
     readonly publicMediaBaseUrl?: string;
+    readonly mediaProxyUrl?: string;
     readonly tokenEncryptionKey?: string;
   };
   readonly database: Database;
@@ -183,9 +184,11 @@ export const createInstagramPublishingService = (options: {
   };
 
   const publicMediaUrl = (objectId: string) => {
+    const token = Buffer.from(objectId, "utf8").toString("base64url");
+    const proxy = configuration.mediaProxyUrl?.trim().replace(/\/+$/u, "");
+    if (proxy) return `${proxy}/${token}`;
     const base = resolvePublicMediaBaseUrl(configuration.publicMediaBaseUrl);
     if (!base) return undefined;
-    const token = Buffer.from(objectId, "utf8").toString("base64url");
     return `${base}/api/media/managed/${token}`;
   };
 
@@ -244,7 +247,11 @@ export const createInstagramPublishingService = (options: {
       const directUrl = image.objectId
         ? publicMediaUrl(image.objectId)
         : undefined;
-      const reusableUrl = directUrl ?? image.downloadUrl;
+      // With an inbound proxy configured, never fall back to a storage URL
+      // that Meta may not be able to reach. Upload a temporary copy instead.
+      const reusableUrl =
+        directUrl ??
+        (configuration.mediaProxyUrl ? undefined : image.downloadUrl);
       if (!normalized.changed && reusableUrl) {
         urls.push(reusableUrl);
         continue;

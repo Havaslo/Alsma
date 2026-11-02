@@ -14,6 +14,7 @@ const accessToken = "page-access-token";
 
 const createService = (options: {
   readonly mediaBaseUrl?: string;
+  readonly mediaProxyUrl?: string;
   readonly onFetch: (request: Record<string, unknown>) => Response;
   readonly storage?: {
     readonly deleteObject: (objectId: string) => Promise<void>;
@@ -33,6 +34,7 @@ const createService = (options: {
       proxyKey: "proxy-key",
       proxyUrl: "https://proxy.example",
       publicMediaBaseUrl: options.mediaBaseUrl,
+      mediaProxyUrl: options.mediaProxyUrl,
       tokenEncryptionKey: encryptionKey,
     },
     database: {
@@ -238,6 +240,86 @@ test("feed image link is served from a reachable media URL", async () => {
     ),
   );
   assert.doesNotMatch(String(creation?.body), /api%2Fapi/u);
+});
+
+test("Instagram uses the inbound proxy for existing and temporary images", async () => {
+  const canvas = createCanvas(40, 40);
+  canvas.getContext("2d").fillRect(0, 0, 40, 40);
+  const jpeg = new Uint8Array(canvas.toBuffer("image/jpeg"));
+  const png = new Uint8Array(canvas.toBuffer("image/png"));
+  const proxy = "https://gateway.example/v1/inbound-proxy/route-id";
+  const requests: Array<Record<string, unknown>> = [];
+  const uploaded: string[] = [];
+  const deleted: string[] = [];
+  let container = 0;
+  const service = createService({
+    mediaBaseUrl: "https://backend.example/api",
+    mediaProxyUrl: `${proxy}/`,
+    onFetch: (request) => {
+      requests.push(request);
+      const url = String(request.url);
+      if (url.endsWith("/media"))
+        return json({ id: `container-${++container}` });
+      if (url.includes("/media_publish")) return json({ id: "media-1" });
+      if (url.includes("container-")) return json({ status_code: "FINISHED" });
+      if (url.includes("/media-1?")) return json({ permalink: null });
+      throw new Error(`unexpected Instagram request ${url}`);
+    },
+    storage: {
+      upload: async () => {
+        const id = `temporary-${uploaded.length + 1}`;
+        uploaded.push(id);
+        return { objectId: id };
+      },
+      getDownload: async () => {
+        throw new Error("proxy must not fall back to a storage download URL");
+      },
+      deleteObject: async (id) => {
+        deleted.push(id);
+      },
+    },
+  });
+
+  await service.publish({
+    images: [
+      {
+        content: jpeg,
+        contentType: "image/jpeg",
+        fileName: "existing.jpg",
+        objectId: "existing-id",
+      },
+      {
+        content: png,
+        contentType: "image/png",
+        fileName: "converted.png",
+        objectId: "original-id",
+      },
+      {
+        content: jpeg,
+        contentType: "image/jpeg",
+        fileName: "no-id.jpg",
+        downloadUrl: "https://storage.example/photo.jpg",
+      },
+    ],
+    text: "Карусель",
+  });
+
+  const mediaRequests = requests.filter((request) =>
+    String(request.url).endsWith("/media"),
+  );
+  const imageUrls = mediaRequests
+    .map((request) =>
+      new URLSearchParams(String(request.body)).get("image_url"),
+    )
+    .filter((url): url is string => Boolean(url));
+  assert.deepEqual(
+    imageUrls,
+    ["existing-id", "temporary-1", "temporary-2"].map(
+      (id) => `${proxy}/${Buffer.from(id).toString("base64url")}`,
+    ),
+  );
+  assert.deepEqual(uploaded, ["temporary-1", "temporary-2"]);
+  assert.deepEqual(deleted, uploaded);
 });
 
 test("Instagram scheduling fails clearly without a connected account", async () => {

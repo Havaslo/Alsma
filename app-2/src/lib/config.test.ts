@@ -59,3 +59,15 @@ test("Instagram discovery uses the explicitly selected Facebook Page ID", () => 
   });
   assert.equal(config.instagramPublishing.targetPageId, "443534006217972");
 });
+
+test("Instagram image proxy is read separately from the Graph outbound proxy", () => {
+  const config = readConfig({
+    ...baseEnvironment,
+    INSTAGRAM_MEDIA_PROXY_URL: "https://gateway.example/v1/inbound-proxy/route",
+  });
+  assert.equal(
+    config.instagramPublishing.mediaProxyUrl,
+    "https://gateway.example/v1/inbound-proxy/route",
+  );
+  assert.equal(config.instagramPublishing.proxyUrl, undefined);
+});
