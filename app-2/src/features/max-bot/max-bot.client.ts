@@ -44,6 +44,13 @@ export class MaxApiError extends Error {
   }
 }
 
+export class MaxImageUploadError extends Error {
+  constructor() {
+    super("MAX did not confirm the image upload");
+    this.name = "MaxImageUploadError";
+  }
+}
+
 const shouldRetry = (status: number) => status === 429 || status >= 500;
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -113,12 +120,8 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
       method: "POST",
     });
     const upload = await readObject(uploadResponse);
-    if (
-      typeof upload.url !== "string" ||
-      typeof upload.token !== "string" ||
-      !upload.token.trim()
-    )
-      throw new Error("MAX did not return image-upload details");
+    if (typeof upload.url !== "string" || !upload.url.trim())
+      throw new MaxImageUploadError();
     const uploadUrl = new URL(upload.url);
     if (uploadUrl.protocol !== "https:")
       throw new Error("MAX returned an insecure image-upload URL");
@@ -137,7 +140,23 @@ export const createMaxBotClient = ({ logger, token }: MaxClientOptions) => {
       signal: AbortSignal.timeout(30_000),
     });
     if (!fileResponse.ok) throw new MaxApiError(fileResponse.status);
-    return upload.token;
+    const result = await readObject(fileResponse).catch(() => {
+      throw new MaxImageUploadError();
+    });
+    const photos = result.photos;
+    if (!photos || typeof photos !== "object" || Array.isArray(photos))
+      throw new MaxImageUploadError();
+    for (const photo of Object.values(photos)) {
+      if (
+        photo &&
+        typeof photo === "object" &&
+        "token" in photo &&
+        typeof photo.token === "string" &&
+        photo.token.trim()
+      )
+        return photo.token;
+    }
+    throw new MaxImageUploadError();
   };
   const enqueue = async <T>(operation: () => Promise<T>): Promise<T> => {
     const current = outgoing.then(operation, operation);

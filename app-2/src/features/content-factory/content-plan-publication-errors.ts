@@ -63,9 +63,11 @@ export const safePublicationError = (error: unknown, uncertain: boolean) => {
     const status = Number((error as NamedError & { status?: number }).status);
     return `MAX отклонил публикацию (HTTP ${status}). Проверьте права бота, канал и изображения.`;
   }
+  if (isNamedError(error, "MaxImageUploadError"))
+    return "MAX не подтвердил загрузку изображения. Попробуйте повторить публикацию позже.";
   if (isNamedError(error, "TelegramApiError")) {
     const status = Number((error as NamedError & { status?: number }).status);
     return `Telegram отклонил публикацию (HTTP ${status}). Проверьте права бота, канал и изображения.`;
   }
-  return "Не удалось подготовить публикацию. Проверьте, что изображения доступны в медиатеке.";
+  return "Не удалось подготовить публикацию. Проверьте настройки и повторите попытку позже.";
 };
