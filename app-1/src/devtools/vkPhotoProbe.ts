@@ -62,11 +62,8 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
 async function checkAccess() {
   if (!button || !isTrustedVkFrame()) return;
   button.disabled = true;
-  let stage = "инициализация";
+  let stage = "разрешение на фотографии";
   try {
-    setStatus("Подключаемся к VK…");
-    await withTimeout(bridge.send("VKWebAppInit"));
-    stage = "разрешение на фотографии";
     setStatus("Подтвердите доступ к фотографиям в окне VK.");
     const authorization = await withTimeout(
       bridge.send("VKWebAppGetAuthToken", { app_id: APP_ID, scope: "photos" }),
@@ -112,14 +109,39 @@ async function checkAccess() {
   }
 }
 
-if (!import.meta.env.DEV) {
-  setStatus("Проверка доступна только в предпросмотре.");
-} else if (!isTrustedVkFrame()) {
-  setStatus(
-    "Откройте мини-приложение внутри VK с аккаунта администратора. С этой страницы напрямую проверку запускать нельзя.",
-  );
-} else {
+async function initialize() {
+  if (!import.meta.env.DEV) {
+    setStatus("Проверка доступна только в предпросмотре.");
+    return;
+  }
+  if (window.parent === window) {
+    setStatus(
+      "Откройте мини-приложение внутри VK с аккаунта администратора. С этой страницы напрямую проверку запускать нельзя.",
+    );
+    return;
+  }
+
+  // VK keeps its loading screen visible until the embedded app sends Init.
+  // Initialization does not request access or publish anything.
+  setStatus("Подключаемся к VK…");
+  try {
+    await withTimeout(bridge.send("VKWebAppInit"));
+  } catch {
+    setStatus(
+      "Не удалось подключиться к VK. Обновите приложение и попробуйте снова.",
+    );
+    return;
+  }
+
+  if (!button || !isTrustedVkFrame()) {
+    setStatus(
+      "Не удалось подтвердить безопасный запуск внутри VK. Пришлите скрин этого сообщения. Проверка доступа не запускалась.",
+    );
+    return;
+  }
   button.disabled = false;
   setStatus("Нажмите кнопку, чтобы проверить доступ. Публикаций не будет.");
   button.addEventListener("click", () => void checkAccess());
 }
+
+void initialize();
