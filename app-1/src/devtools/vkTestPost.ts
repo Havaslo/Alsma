@@ -1,5 +1,7 @@
 import type bridge from "@vkontakte/vk-bridge";
 
+import { apiUrl } from "../lib/api/api-base-url";
+
 type VkBridge = typeof bridge;
 
 export type TestPostStage =
@@ -85,39 +87,22 @@ export async function publishTestPost({
     throw new Error("Unexpected upload host");
 
   onStage("загрузка фотографии");
-  let photo: Response;
-  try {
-    photo = await fetch("/src/assets/alsma/spa-river-aerial.jpg", {
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch {
-    throw new PhotoUploadError(
-      "Не удалось получить тестовое изображение с сайта.",
-    );
-  }
-  if (!photo.ok)
-    throw new PhotoUploadError(
-      `Изображение недоступно (HTTP ${photo.status}).`,
-    );
-  const form = new FormData();
-  form.append("photo", await photo.blob(), "test.jpg");
   let uploaded: Response;
   try {
-    uploaded = await fetch(uploadUrl, {
+    uploaded = await fetch(apiUrl("/api/vk-test-photo-upload"), {
       method: "POST",
-      body: form,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uploadUrl: uploadUrl.href }),
       credentials: "omit",
       redirect: "error",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(40_000),
     });
   } catch {
-    throw new PhotoUploadError(
-      "Браузер не получил ответ сервера загрузки VK. Возможны ограничения браузера, сети или перенаправление; точная причина неизвестна.",
-    );
+    throw new PhotoUploadError("Не удалось связаться с сервером проверки.");
   }
   if (!uploaded.ok)
     throw new PhotoUploadError(
-      `Сервер загрузки VK вернул HTTP ${uploaded.status}.`,
+      `Сервер проверки вернул HTTP ${uploaded.status}.`,
     );
   let upload: {
     server?: unknown;

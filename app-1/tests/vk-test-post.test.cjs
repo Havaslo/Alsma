@@ -5,10 +5,12 @@ const test = require("node:test");
 const vm = require("node:vm");
 const ts = require("typescript");
 
-const source = fs.readFileSync(
-  path.join(__dirname, "../src/devtools/vkTestPost.ts"),
-  "utf8",
-);
+const source = fs
+  .readFileSync(path.join(__dirname, "../src/devtools/vkTestPost.ts"), "utf8")
+  .replace(
+    'import { apiUrl } from "../lib/api/api-base-url";',
+    "const apiUrl = (path: string) => path;",
+  );
 const javascript = ts.transpileModule(source, {
   compilerOptions: {
     target: ts.ScriptTarget.ES2022,
@@ -21,7 +23,6 @@ function scenario({
   wrongPhotoOwner = false,
   failPost = false,
   badHost = false,
-  imageStatus = 200,
   uploadStatus = 200,
 } = {}) {
   const bridgeCalls = [];
@@ -37,7 +38,7 @@ function scenario({
           response: {
             upload_url: badHost
               ? "https://evil.example/upload"
-              : "https://pu.vk.com/upload",
+              : "https://pu.vk.ru/c1/ss1/upload.php?act=do_add&gid=138003065&hash=sample&rhash=sample",
           },
         };
       if (params.method === "photos.saveWallPhoto")
@@ -53,10 +54,6 @@ function scenario({
   };
   const fakeFetch = async (url, options) => {
     fetchCalls.push({ url: String(url), options });
-    if (String(url).startsWith("/src/assets/"))
-      return new Response(new Blob(["test"], { type: "image/jpeg" }), {
-        status: imageStatus,
-      });
     if (failUpload) throw new Error("network failure");
     return new Response(
       JSON.stringify({ server: 1, photo: '[{"id":1}]', hash: "hash" }),
@@ -101,15 +98,15 @@ test("uploads a photo and posts only to the approved group", async () => {
     s.bridgeCalls[3].params.params.attachments,
     "photo-138003065_77",
   );
-  assert.equal(s.fetchCalls.length, 2);
-  assert.equal(s.fetchCalls[1].options.body.get("photo").name, "test.jpg");
+  assert.equal(s.fetchCalls.length, 1);
+  assert.equal(s.fetchCalls[0].url, "/api/vk-test-photo-upload");
+  assert.doesNotMatch(s.fetchCalls[0].options.body, /synthetic-secret/);
 });
 
 test("reports a safe, distinct diagnostic for image and upload failures", async () => {
   for (const [options, expected] of [
-    [{ imageStatus: 404 }, /Изображение недоступно \(HTTP 404\)/],
-    [{ failUpload: true }, /Браузер не получил ответ сервера загрузки VK/],
-    [{ uploadStatus: 403 }, /Сервер загрузки VK вернул HTTP 403/],
+    [{ failUpload: true }, /Не удалось связаться с сервером проверки/],
+    [{ uploadStatus: 403 }, /Сервер проверки вернул HTTP 403/],
   ]) {
     const s = scenario(options);
     await assert.rejects(s.run(), (error) => {
