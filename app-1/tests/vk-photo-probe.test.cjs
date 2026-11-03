@@ -23,6 +23,14 @@ function launch({
     },
   };
   const status = { textContent: "" };
+  const publishButton = {
+    disabled: true,
+    listener: null,
+    addEventListener(_event, listener) {
+      this.listener = listener;
+    },
+  };
+  const publishStatus = { textContent: "" };
   const window = {};
   window.parent = top ? window : {};
   const bridge = {
@@ -53,6 +61,10 @@ function launch({
       'import bridge from "@vkontakte/vk-bridge";',
       "const bridge = globalThis.__bridge;",
     )
+    .replace(
+      'import { publishTestPost } from "./vkTestPost";',
+      "const publishTestPost = globalThis.__publishTestPost;",
+    )
     .replace("import.meta.env.DEV", String(dev));
   const javascript = ts.transpileModule(source, {
     compilerOptions: {
@@ -61,12 +73,20 @@ function launch({
     },
   }).outputText;
   const context = vm.createContext({
+    exports: {},
     __bridge: bridge,
+    __publishTestPost: async () => 123,
     window,
     location: { search: `?vk_app_id=${appId}` },
     document: {
       referrer,
-      querySelector: (selector) => (selector === "#check" ? button : status),
+      querySelector: (selector) =>
+        ({
+          "#check": button,
+          "#status": status,
+          "#publish": publishButton,
+          "#publish-status": publishStatus,
+        })[selector],
     },
     URL,
     URLSearchParams,
@@ -75,7 +95,7 @@ function launch({
     Promise,
   });
   vm.runInContext(javascript, context);
-  return { button, status, calls };
+  return { button, status, publishButton, publishStatus, calls };
 }
 
 async function settle() {
@@ -139,6 +159,8 @@ test("does not request credentials for unsafe launches", async () => {
     await settle();
     assert.equal(page.button.disabled, true);
     assert.equal(page.button.listener, null);
+    assert.equal(page.publishButton.disabled, true);
+    assert.equal(page.publishButton.listener, null);
     assert.equal(
       page.calls.some((call) => call.method !== "VKWebAppInit"),
       false,

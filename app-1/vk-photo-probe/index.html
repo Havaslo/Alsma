@@ -43,6 +43,16 @@
         opacity: 0.55;
         cursor: not-allowed;
       }
+      .test-photo {
+        display: block;
+        width: 100%;
+        max-width: 320px;
+        border-radius: 8px;
+        margin: 14px 0;
+      }
+      .publish-button {
+        background: #294c73;
+      }
       #status {
         white-space: pre-line;
         padding: 14px;
@@ -55,8 +65,8 @@
     <main>
       <h1>Проверка доступа к фото VK</h1>
       <p>
-        Тестируем группу Black Turtle (ID 138003065). Посты и фотографии не
-        публикуются.
+        Тестируем группу Black Turtle (ID 138003065). Проверка доступа сама по
+        себе не публикует посты и не загружает фотографии.
       </p>
       <p>
         VK попросит разрешить доступ к фотографиям. Ключ остаётся в памяти этой
@@ -65,6 +75,23 @@
       <button id="check" type="button" disabled>Проверить доступ</button>
       <p id="status" role="status" aria-live="polite">
         Подготавливаем проверку…
+      </p>
+      <hr />
+      <h2>Пробная публикация</h2>
+      <p>
+        Эта кнопка попытается опубликовать тестовый пост с фотографией только в
+        группе Black Turtle. Рабочую группу «Алсма» она не затрагивает.
+      </p>
+      <img
+        class="test-photo"
+        src="/src/assets/alsma/spa-river-aerial.jpg"
+        alt="Тестовая фотография реки и леса"
+      />
+      <button id="publish" class="publish-button" type="button" disabled>
+        Опубликовать тестовый пост
+      </button>
+      <p id="publish-status" role="status" aria-live="polite">
+        При успешной отправке пост увидят участники тестовой группы.
       </p>
     </main>
     <script type="module" src="/src/devtools/vkPhotoProbe.ts"></script>

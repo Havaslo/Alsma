@@ -1,12 +1,18 @@
 import bridge from "@vkontakte/vk-bridge";
 
+import { publishTestPost } from "./vkTestPost";
+import type { TestPostStage } from "./vkTestPost";
+
 const APP_ID = 54873380;
 const TEST_GROUP_ID = 138003065;
 const TRUSTED_VK_HOSTS = new Set(["vk.com", "vk.ru", "m.vk.com", "m.vk.ru"]);
 
 const button = document.querySelector<HTMLButtonElement>("#check");
 const status = document.querySelector<HTMLElement>("#status");
-if (!button || !status) throw new Error("VK probe page is incomplete");
+const publishButton = document.querySelector<HTMLButtonElement>("#publish");
+const publishStatus = document.querySelector<HTMLElement>("#publish-status");
+if (!button || !status || !publishButton || !publishStatus)
+  throw new Error("VK probe page is incomplete");
 
 function setStatus(message: string) {
   if (status) status.textContent = message;
@@ -109,6 +115,33 @@ async function checkAccess() {
   }
 }
 
+async function publishPost() {
+  if (!publishButton || !publishStatus || !isTrustedVkFrame()) return;
+  publishButton.disabled = true;
+  let stage: TestPostStage = "разрешение VK";
+  try {
+    const postId = await publishTestPost({
+      appId: APP_ID,
+      groupId: TEST_GROUP_ID,
+      bridge,
+      onStage(nextStage) {
+        stage = nextStage;
+        publishStatus.textContent = `Выполняется этап: ${nextStage}…`;
+      },
+    });
+    publishStatus.textContent = `VK подтвердил публикацию в Black Turtle. Ссылка: https://vk.ru/wall-${TEST_GROUP_ID}_${postId}`;
+  } catch (error) {
+    const code = errorCode(error);
+    const detail = code === null ? "" : `; код VK: ${code}`;
+    if (stage === "публикация поста") {
+      publishStatus.textContent = `VK не подтвердил результат${detail}. Проверьте стену Black Turtle, прежде чем повторять: пост мог быть опубликован. Пришлите скрин.`;
+    } else {
+      publishStatus.textContent = `Проверка остановилась на этапе «${stage}»${detail}. Пост не отправлялся. Пришлите скрин результата.`;
+      publishButton.disabled = false;
+    }
+  }
+}
+
 async function initialize() {
   if (!import.meta.env.DEV) {
     setStatus("Проверка доступна только в предпросмотре.");
@@ -142,6 +175,10 @@ async function initialize() {
   button.disabled = false;
   setStatus("Нажмите кнопку, чтобы проверить доступ. Публикаций не будет.");
   button.addEventListener("click", () => void checkAccess());
+  if (publishButton) {
+    publishButton.disabled = false;
+    publishButton.addEventListener("click", () => void publishPost());
+  }
 }
 
 void initialize();
