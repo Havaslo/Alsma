@@ -118,14 +118,14 @@ async function checkAccess() {
 async function publishPost() {
   if (!publishButton || !publishStatus || !isTrustedVkFrame()) return;
   publishButton.disabled = true;
-  let stage: TestPostStage = "разрешение VK";
+  const progress: { stage: TestPostStage } = { stage: "разрешение VK" };
   try {
     const postId = await publishTestPost({
       appId: APP_ID,
       groupId: TEST_GROUP_ID,
       bridge,
       onStage(nextStage) {
-        stage = nextStage;
+        progress.stage = nextStage;
         publishStatus.textContent = `Выполняется этап: ${nextStage}…`;
       },
     });
@@ -133,10 +133,10 @@ async function publishPost() {
   } catch (error) {
     const code = errorCode(error);
     const detail = code === null ? "" : `; код VK: ${code}`;
-    if (stage === "публикация поста") {
+    if (progress.stage === "публикация поста") {
       publishStatus.textContent = `VK не подтвердил результат${detail}. Проверьте стену Black Turtle, прежде чем повторять: пост мог быть опубликован. Пришлите скрин.`;
     } else {
-      publishStatus.textContent = `Проверка остановилась на этапе «${stage}»${detail}. Пост не отправлялся. Пришлите скрин результата.`;
+      publishStatus.textContent = `Проверка остановилась на этапе «${progress.stage}»${detail}. Пост не отправлялся. Пришлите скрин результата.`;
       publishButton.disabled = false;
     }
   }
