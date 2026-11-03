@@ -18,6 +18,13 @@ type TestPostOptions = {
 
 type VkResponse = { error?: unknown };
 
+export class PhotoUploadError extends Error {
+  constructor(public readonly explanation: string) {
+    super(explanation);
+    this.name = "PhotoUploadError";
+  }
+}
+
 async function withTimeout<T>(promise: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -78,26 +85,54 @@ export async function publishTestPost({
     throw new Error("Unexpected upload host");
 
   onStage("загрузка фотографии");
-  const photo = await fetch("/src/assets/alsma/spa-river-aerial.jpg", {
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!photo.ok) throw new Error("Test image unavailable");
+  let photo: Response;
+  try {
+    photo = await fetch("/src/assets/alsma/spa-river-aerial.jpg", {
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    throw new PhotoUploadError(
+      "Не удалось получить тестовое изображение с сайта.",
+    );
+  }
+  if (!photo.ok)
+    throw new PhotoUploadError(
+      `Изображение недоступно (HTTP ${photo.status}).`,
+    );
   const form = new FormData();
   form.append("photo", await photo.blob(), "test.jpg");
-  const uploaded = await fetch(uploadUrl, {
-    method: "POST",
-    body: form,
-    credentials: "omit",
-    redirect: "error",
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!uploaded.ok) throw new Error("VK upload failed");
-  const upload = (await uploaded.json()) as {
+  let uploaded: Response;
+  try {
+    uploaded = await fetch(uploadUrl, {
+      method: "POST",
+      body: form,
+      credentials: "omit",
+      redirect: "error",
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    throw new PhotoUploadError(
+      "Браузер не получил ответ сервера загрузки VK. Возможны ограничения браузера, сети или перенаправление; точная причина неизвестна.",
+    );
+  }
+  if (!uploaded.ok)
+    throw new PhotoUploadError(
+      `Сервер загрузки VK вернул HTTP ${uploaded.status}.`,
+    );
+  let upload: {
     server?: unknown;
     photo?: unknown;
     hash?: unknown;
   };
+  try {
+    upload = (await uploaded.json()) as typeof upload;
+  } catch {
+    throw new PhotoUploadError(
+      "Сервер загрузки VK вернул нераспознаваемый ответ.",
+    );
+  }
   if (
+    !upload ||
     (typeof upload.server !== "number" && typeof upload.server !== "string") ||
     typeof upload.photo !== "string" ||
     upload.photo === "[]" ||
@@ -105,7 +140,7 @@ export async function publishTestPost({
     typeof upload.hash !== "string" ||
     !upload.hash
   )
-    throw new Error("VK upload response was incomplete");
+    throw new PhotoUploadError("Ответ сервера загрузки VK неполный.");
 
   onStage("сохранение фотографии");
   const saved = (await call("photos.saveWallPhoto", {

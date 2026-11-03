@@ -1,6 +1,6 @@
 import bridge from "@vkontakte/vk-bridge";
 
-import { publishTestPost } from "./vkTestPost";
+import { PhotoUploadError, publishTestPost } from "./vkTestPost";
 import type { TestPostStage } from "./vkTestPost";
 
 const APP_ID = 54873380;
@@ -132,7 +132,12 @@ async function publishPost() {
     publishStatus.textContent = `VK подтвердил публикацию в Black Turtle. Ссылка: https://vk.ru/wall-${TEST_GROUP_ID}_${postId}`;
   } catch (error) {
     const code = errorCode(error);
-    const detail = code === null ? "" : `; код VK: ${code}`;
+    const detail =
+      error instanceof PhotoUploadError
+        ? ` ${error.explanation}`
+        : code === null
+          ? ""
+          : `; код VK: ${code}`;
     if (progress.stage === "публикация поста") {
       publishStatus.textContent = `VK не подтвердил результат${detail}. Проверьте стену Black Turtle, прежде чем повторять: пост мог быть опубликован. Пришлите скрин.`;
     } else {

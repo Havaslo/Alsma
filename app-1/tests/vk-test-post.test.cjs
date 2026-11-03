@@ -21,6 +21,8 @@ function scenario({
   wrongPhotoOwner = false,
   failPost = false,
   badHost = false,
+  imageStatus = 200,
+  uploadStatus = 200,
 } = {}) {
   const bridgeCalls = [];
   const fetchCalls = [];
@@ -52,10 +54,13 @@ function scenario({
   const fakeFetch = async (url, options) => {
     fetchCalls.push({ url: String(url), options });
     if (String(url).startsWith("/src/assets/"))
-      return new Response(new Blob(["test"], { type: "image/jpeg" }));
+      return new Response(new Blob(["test"], { type: "image/jpeg" }), {
+        status: imageStatus,
+      });
     if (failUpload) throw new Error("network failure");
     return new Response(
       JSON.stringify({ server: 1, photo: '[{"id":1}]', hash: "hash" }),
+      { status: uploadStatus },
     );
   };
   const exports = {};
@@ -98,6 +103,25 @@ test("uploads a photo and posts only to the approved group", async () => {
   );
   assert.equal(s.fetchCalls.length, 2);
   assert.equal(s.fetchCalls[1].options.body.get("photo").name, "test.jpg");
+});
+
+test("reports a safe, distinct diagnostic for image and upload failures", async () => {
+  for (const [options, expected] of [
+    [{ imageStatus: 404 }, /Изображение недоступно \(HTTP 404\)/],
+    [{ failUpload: true }, /Браузер не получил ответ сервера загрузки VK/],
+    [{ uploadStatus: 403 }, /Сервер загрузки VK вернул HTTP 403/],
+  ]) {
+    const s = scenario(options);
+    await assert.rejects(s.run(), (error) => {
+      assert.match(error.message, expected);
+      assert.doesNotMatch(error.message, /synthetic-secret/);
+      return true;
+    });
+    assert.equal(
+      s.bridgeCalls.some((call) => call.params?.method === "wall.post"),
+      false,
+    );
+  }
 });
 
 test("stops before posting if the upload fails or the host is unexpected", async () => {

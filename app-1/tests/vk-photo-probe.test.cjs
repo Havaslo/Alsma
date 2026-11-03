@@ -62,8 +62,8 @@ function launch({
       "const bridge = globalThis.__bridge;",
     )
     .replace(
-      'import { publishTestPost } from "./vkTestPost";',
-      "const publishTestPost = globalThis.__publishTestPost;",
+      'import { PhotoUploadError, publishTestPost } from "./vkTestPost";',
+      "const publishTestPost = globalThis.__publishTestPost; class PhotoUploadError extends Error {}",
     )
     .replace("import.meta.env.DEV", String(dev));
   const javascript = ts.transpileModule(source, {
