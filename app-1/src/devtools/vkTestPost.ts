@@ -55,6 +55,9 @@ export async function publishTestPost({
     }),
   );
   if (!auth.access_token) throw new Error("VK did not return a token");
+  const user = await withTimeout(bridge.send("VKWebAppGetUserInfo"));
+  if (!Number.isSafeInteger(user.id) || user.id <= 0)
+    throw new Error("VK did not return the current user ID");
 
   async function call(method: string, params: Record<string, string | number>) {
     const result = await withTimeout(
@@ -137,12 +140,19 @@ export async function publishTestPost({
   const savedPhoto = Array.isArray(saved) ? saved[0] : undefined;
   if (
     !savedPhoto ||
-    !Number.isInteger(savedPhoto.owner_id) ||
-    savedPhoto.owner_id !== -groupId ||
-    !Number.isInteger(savedPhoto.id) ||
-    savedPhoto.id <= 0
+    !Number.isSafeInteger(savedPhoto.owner_id) ||
+    (savedPhoto.owner_id !== -groupId && savedPhoto.owner_id !== user.id) ||
+    !Number.isSafeInteger(savedPhoto.id) ||
+    savedPhoto.id <= 0 ||
+    (savedPhoto.access_key !== undefined &&
+      (typeof savedPhoto.access_key !== "string" ||
+        !/^[a-zA-Z0-9]+$/.test(savedPhoto.access_key)))
   )
-    throw new Error("VK did not return a photo for the test group");
+    throw new Error(
+      "VK did not return a photo for the test group or current user",
+    );
+
+  const accessKey = savedPhoto.access_key ? `_${savedPhoto.access_key}` : "";
 
   onStage("публикация поста");
   const post = (await call("wall.post", {
@@ -150,7 +160,7 @@ export async function publishTestPost({
     from_group: 1,
     message:
       "Тестовая публикация: проверяем подключение VK и загрузку фотографии.",
-    attachments: `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
+    attachments: `photo${savedPhoto.owner_id}_${savedPhoto.id}${accessKey}`,
   })) as { post_id?: unknown };
   if (!Number.isInteger(post.post_id) || (post.post_id as number) <= 0)
     throw new Error("VK did not confirm the publication");

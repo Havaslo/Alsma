@@ -21,6 +21,8 @@ const javascript = ts.transpileModule(source, {
 function scenario({
   failUpload = false,
   wrongPhotoOwner = false,
+  personalPhoto = false,
+  invalidAccessKey = false,
   failPost = false,
   badHost = false,
   uploadStatus = 200,
@@ -33,6 +35,7 @@ function scenario({
       bridgeCalls.push({ method, params });
       if (method === "VKWebAppGetAuthToken")
         return { access_token: "synthetic-secret" };
+      if (method === "VKWebAppGetUserInfo") return { id: 321 };
       if (params.method === "photos.getWallUploadServer")
         return {
           response: {
@@ -43,7 +46,19 @@ function scenario({
         };
       if (params.method === "photos.saveWallPhoto")
         return {
-          response: [{ owner_id: wrongPhotoOwner ? -999 : -138003065, id: 77 }],
+          response: [
+            {
+              owner_id: wrongPhotoOwner
+                ? 999
+                : personalPhoto
+                  ? 321
+                  : -138003065,
+              id: 77,
+              ...(personalPhoto
+                ? { access_key: invalidAccessKey ? "bad,key" : "synthetickey" }
+                : {}),
+            },
+          ],
         };
       if (params.method === "wall.post") {
         if (failPost) throw { error_data: { error: { error_code: 15 } } };
@@ -88,19 +103,33 @@ test("uploads a photo and posts only to the approved group", async () => {
   assert.equal(await s.run(), 123);
   assert.equal(s.bridgeCalls[0].params.scope, "photos,wall");
   assert.deepEqual(
-    s.bridgeCalls.slice(1).map((call) => call.params.method),
+    s.bridgeCalls.slice(2).map((call) => call.params.method),
     ["photos.getWallUploadServer", "photos.saveWallPhoto", "wall.post"],
   );
-  assert.equal(s.bridgeCalls[1].params.params.group_id, 138003065);
   assert.equal(s.bridgeCalls[2].params.params.group_id, 138003065);
-  assert.equal(s.bridgeCalls[3].params.params.owner_id, -138003065);
+  assert.equal(s.bridgeCalls[3].params.params.group_id, 138003065);
+  assert.equal(s.bridgeCalls[4].params.params.owner_id, -138003065);
   assert.equal(
-    s.bridgeCalls[3].params.params.attachments,
+    s.bridgeCalls[4].params.params.attachments,
     "photo-138003065_77",
   );
   assert.equal(s.fetchCalls.length, 1);
   assert.equal(s.fetchCalls[0].url, "/api/vk-test-photo-upload");
   assert.doesNotMatch(s.fetchCalls[0].options.body, /synthetic-secret/);
+});
+
+test("can attach the signed-in user's saved photo, only to the test group", async () => {
+  const s = scenario({ personalPhoto: true });
+  assert.equal(await s.run(), 123);
+  const post = s.bridgeCalls.find(
+    (call) => call.params?.method === "wall.post",
+  );
+  assert.equal(post.params.params.owner_id, -138003065);
+  assert.equal(post.params.params.attachments, "photo321_77_synthetickey");
+  assert.doesNotMatch(
+    s.fetchCalls[0].options.body,
+    /synthetickey|synthetic-secret/,
+  );
 });
 
 test("reports a safe, distinct diagnostic for image and upload failures", async () => {
@@ -126,6 +155,7 @@ test("stops before posting if the upload fails or the host is unexpected", async
     { failUpload: true },
     { badHost: true },
     { wrongPhotoOwner: true },
+    { personalPhoto: true, invalidAccessKey: true },
   ]) {
     const s = scenario(options);
     await assert.rejects(s.run());
