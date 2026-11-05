@@ -208,16 +208,3 @@ test("keeps access disabled when initialization fails", async () => {
   assert.equal(page.button.listener, null);
   assert.match(page.status.textContent, /Не удалось.*VK/);
 });
-
-test("factory test runs only after an explicit click in the trusted VK frame", async () => {
-  const page = launch();
-  await settle();
-  assert.equal(page.factoryButton.disabled, false);
-  assert.equal(page.factoryCalls.length, 0);
-  page.factoryButton.listener();
-  await settle();
-  assert.equal(page.factoryCalls.length, 1);
-  assert.match(page.factoryStatus.textContent, /wall-138003065_123/);
-  assert.equal(page.factoryCode.value, "");
-  assert.equal(page.factoryButton.disabled, true);
-});

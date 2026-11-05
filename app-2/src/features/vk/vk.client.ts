@@ -70,10 +70,14 @@ export const createVkClient = ({
   accessToken,
   photoUploadAccessToken,
   logger,
+  singleAttempt = false,
+  validatePhotoUploadUrl,
 }: {
   readonly accessToken?: string;
   readonly photoUploadAccessToken?: string;
   readonly logger: Logger;
+  readonly singleAttempt?: boolean;
+  readonly validatePhotoUploadUrl?: (url: string) => boolean;
 }) => {
   const token = accessToken?.trim();
   const photoToken = photoUploadAccessToken?.trim();
@@ -83,7 +87,8 @@ export const createVkClient = ({
     authToken: string | undefined,
   ) => {
     if (!authToken) throw new Error("VK access token is not configured");
-    for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    const maxAttempts = singleAttempt ? 0 : retryDelays.length;
+    for (let attempt = 0; attempt <= maxAttempts; attempt += 1) {
       const query = new URLSearchParams({
         ...parameters,
         access_token: authToken,
@@ -103,11 +108,10 @@ export const createVkClient = ({
           payload?.error?.error_code ?? response.status,
           payload?.error?.error_msg ?? "VK API request failed",
         );
-        if (!shouldRetry(error.code) || attempt === retryDelays.length)
-          throw error;
+        if (!shouldRetry(error.code) || attempt === maxAttempts) throw error;
       } catch (error) {
         if (error instanceof VkApiError) throw error;
-        if (attempt === retryDelays.length) throw error;
+        if (attempt === maxAttempts) throw error;
       }
       await wait(retryDelays[attempt]!);
     }
@@ -267,8 +271,12 @@ export const createVkClient = ({
       const upload = (await requestPhotoUpload("photos.getWallUploadServer", {
         group_id: groupId,
       })) as { upload_url?: unknown };
-      if (typeof upload?.upload_url !== "string" || !upload.upload_url)
-        throw new Error("VK photo upload URL is missing");
+      if (
+        typeof upload?.upload_url !== "string" ||
+        !upload.upload_url ||
+        (validatePhotoUploadUrl && !validatePhotoUploadUrl(upload.upload_url))
+      )
+        throw new Error("VK photo upload URL is missing or invalid");
     },
     verifyPublishingRights: async (groupId: string) => {
       const access = await inspectPublishingAccess(groupId);
@@ -355,8 +363,11 @@ export const createVkClient = ({
             );
           throw error;
         }
-        if (typeof upload.upload_url !== "string")
-          throw new Error("VK photo upload URL is missing");
+        if (
+          typeof upload.upload_url !== "string" ||
+          (validatePhotoUploadUrl && !validatePhotoUploadUrl(upload.upload_url))
+        )
+          throw new Error("VK photo upload URL is invalid");
 
         const form = new FormData();
         const bytes = new ArrayBuffer(image.content.byteLength);
@@ -369,6 +380,7 @@ export const createVkClient = ({
         const uploadedResponse = await fetch(upload.upload_url, {
           body: form,
           method: "POST",
+          ...(validatePhotoUploadUrl ? { redirect: "error" as const } : {}),
           signal: AbortSignal.timeout(30_000),
         });
         if (!uploadedResponse.ok)

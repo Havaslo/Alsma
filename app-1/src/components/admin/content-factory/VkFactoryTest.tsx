@@ -1,7 +1,11 @@
 import { useState } from "react";
 
-import { readAdminSession } from "@/lib/admin/admin-session";
-import { apiClient } from "@/lib/api/api-client";
+import axios from "axios";
+
+import {
+  checkVkTestAccess,
+  sendVkTest,
+} from "@/lib/content-factory/vkFactoryTestApi";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
 
@@ -12,79 +16,130 @@ export const VkFactoryTest = ({
   postId: string;
   disabled: boolean;
 }) => {
-  const [code, setCode] = useState("");
+  const [ready, setReady] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const prepare = async () => {
-    setBusy(true);
+  const [url, setUrl] = useState("");
+  const check = async () => {
+    setChecking(true);
     setMessage("");
-    setCode("");
+    setReady(false);
     try {
-      const response = await apiClient.post<{ code: string }>(
-        "/vk-factory-test/prepare",
-        { postId },
-        { headers: { Authorization: `Bearer ${readAdminSession() ?? ""}` } },
-      );
-      setCode(response.data.code);
-    } catch {
+      const status = await checkVkTestAccess();
+      setReady(status.ready);
       setMessage(
-        "Не удалось подготовить тест. Убедитесь, что пост сохранён, выбран VK и приложено одно изображение из медиатеки до 10 МБ.",
+        status.ready
+          ? "Проверка доступа пройдена. Можно отправить тестовый пост."
+          : status.reason === "PHOTO_TOKEN_MISSING"
+            ? "Не подключён пользовательский доступ VK для загрузки фото. Тест пока не отправится."
+            : status.reason === "GROUP_TOKEN_MISSING"
+              ? "Не подключён ключ тестовой группы."
+              : `VK не подтвердил доступ к загрузке фото${status.code ? ` (код ${status.code})` : ""}. Пост не отправлялся.`,
       );
+    } catch {
+      setMessage("Не удалось проверить доступ. Пост не отправлялся.");
     } finally {
-      setBusy(false);
+      setChecking(false);
+    }
+  };
+  const publish = async () => {
+    setSending(true);
+    setConfirming(false);
+    setMessage("");
+    setUrl("");
+    try {
+      const result = await sendVkTest(postId);
+      setUrl(result.url);
+      setReady(false);
+      setMessage(
+        "VK подтвердил отправку. Проверьте пост и фотографию в группе.",
+      );
+    } catch (error) {
+      const code = axios.isAxiosError(error)
+        ? error.response?.data?.error
+        : undefined;
+      if (
+        code === "TEST_PREFLIGHT_FAILED" ||
+        code === "TEST_ACCESS_MISSING" ||
+        code === "INVALID_POST" ||
+        code === "INVALID_PHOTO"
+      ) {
+        setReady(false);
+        setMessage(
+          "Отправка остановлена до публикации. Проверьте доступ и сохранённый пост с одним фото.",
+        );
+      } else {
+        setUncertain(true);
+        setMessage(
+          "Результат не подтверждён. Сначала проверьте стену Black Turtle — пост мог появиться. Не повторяйте отправку.",
+        );
+      }
+    } finally {
+      setSending(false);
     }
   };
   return (
     <section className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-800">
-      <h3 className="font-semibold">Тест в группе Black Turtle</h3>
+      <h3 className="font-semibold">Тестовая отправка в Black Turtle</h3>
       <p>
-        Отправим сохранённый текст и одно фото только в тестовую группу. Рабочая
-        группа и расписание не изменятся. Пост увидят участники Black Turtle.
+        Пост с одним фото отправляется прямо из фабрики только в тестовую
+        группу. Рабочая группа и расписание не изменяются. Пост увидят участники
+        Black Turtle.
       </p>
-      <QuietButton disabled={disabled || busy} onClick={() => void prepare()}>
-        {busy ? "Подготовка…" : "Подготовить тест"}
-      </QuietButton>
-      {disabled && <p>Сохраните изменения и выберите пост VK с одним фото.</p>}
-      {message && (
-        <p role="alert" className="text-rose-700">
-          {message}
-        </p>
-      )}
-      {code && (
-        <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <QuietButton
+          disabled={checking || sending || uncertain}
+          onClick={() => void check()}
+        >
+          {checking ? "Проверяем…" : "Проверить доступ"}
+        </QuietButton>
+        <QuietButton
+          disabled={!ready || disabled || sending || uncertain || Boolean(url)}
+          onClick={() => setConfirming(true)}
+        >
+          Отправить тестовый пост
+        </QuietButton>
+      </div>
+      {disabled && <p>Сохраните пост VK с одним фото из медиатеки.</p>}
+      {confirming && (
+        <div role="alert" className="space-y-2">
           <p>
-            Скопируйте одноразовый код, затем откройте{" "}
-            <a
-              className="font-semibold underline"
-              href="https://vk.ru/app54873380"
-              target="_blank"
-              rel="noreferrer"
-            >
-              тестовое приложение VK
-            </a>
-            , вставьте код и подтвердите отправку. Код действует 15 минут;
-            никому его не передавайте.
+            Опубликовать сохранённый текст и фото в Black Turtle прямо сейчас?
           </p>
-          <input
-            aria-label="Одноразовый код теста"
-            readOnly
-            value={code}
-            onFocus={(e) => e.currentTarget.select()}
-            className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 font-mono text-xs"
-          />
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={() =>
-              void navigator.clipboard.writeText(code).then(
-                () => setMessage("Код скопирован."),
-                () => setMessage("Выделите и скопируйте код вручную."),
-              )
-            }
-          >
-            Скопировать код
-          </button>
+          <div className="flex gap-2">
+            <QuietButton disabled={sending} onClick={() => void publish()}>
+              Да, отправить
+            </QuietButton>
+            <QuietButton onClick={() => setConfirming(false)}>
+              Отмена
+            </QuietButton>
+          </div>
         </div>
+      )}
+      {sending && <p role="status">Отправляем пост и фото…</p>}
+      {message && <p role="status">{message}</p>}
+      {url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold underline"
+        >
+          Открыть тестовый пост
+        </a>
+      )}
+      {uncertain && (
+        <a
+          href="https://vk.ru/club138003065"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold underline"
+        >
+          Проверить стену Black Turtle
+        </a>
       )}
     </section>
   );
