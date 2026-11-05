@@ -34,6 +34,7 @@ import { expireServicePaymentHolds } from "./features/services/service-payments.
 import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
+import { createVkFactoryTestRouter } from "./features/vk/vk-factory-test.js";
 import { createVkTestPhotoUploadRouter } from "./features/vk/vk-test-photo-upload.js";
 import type { VkClient } from "./features/vk/vk.client.js";
 import { createVkRouter } from "./features/vk/vk.routes.js";
@@ -127,6 +128,10 @@ export const createApiRouter = ({
   const router = Router();
   if (environment === "development") {
     router.use("/vk-test-photo-upload", createVkTestPhotoUploadRouter());
+    router.use(
+      "/vk-factory-test",
+      createVkFactoryTestRouter(database, managedStorage),
+    );
   }
   const chat = createChatService(database);
   const eptera = createEpteraClient({

@@ -31,6 +31,16 @@ function launch({
     },
   };
   const publishStatus = { textContent: "" };
+  const factoryButton = {
+    disabled: true,
+    listener: null,
+    addEventListener(_event, listener) {
+      this.listener = listener;
+    },
+  };
+  const factoryCode = { value: "a".repeat(64) };
+  const factoryStatus = { textContent: "" };
+  const factoryCalls = [];
   const window = {};
   window.parent = top ? window : {};
   const bridge = {
@@ -65,6 +75,10 @@ function launch({
       'import { PhotoUploadError, publishTestPost } from "./vkTestPost";',
       "const publishTestPost = globalThis.__publishTestPost; class PhotoUploadError extends Error {}",
     )
+    .replace(
+      'import { publishFactoryTest } from "./vkFactoryTest";',
+      "const publishFactoryTest = globalThis.__publishFactoryTest;",
+    )
     .replace("import.meta.env.DEV", String(dev));
   const javascript = ts.transpileModule(source, {
     compilerOptions: {
@@ -76,6 +90,10 @@ function launch({
     exports: {},
     __bridge: bridge,
     __publishTestPost: async () => 123,
+    __publishFactoryTest: async (code) => {
+      factoryCalls.push(code);
+      return 123;
+    },
     window,
     location: { search: `?vk_app_id=${appId}` },
     document: {
@@ -86,6 +104,9 @@ function launch({
           "#status": status,
           "#publish": publishButton,
           "#publish-status": publishStatus,
+          "#factory-publish": factoryButton,
+          "#factory-code": factoryCode,
+          "#factory-status": factoryStatus,
         })[selector],
     },
     URL,
@@ -95,7 +116,17 @@ function launch({
     Promise,
   });
   vm.runInContext(javascript, context);
-  return { button, status, publishButton, publishStatus, calls };
+  return {
+    button,
+    status,
+    publishButton,
+    publishStatus,
+    factoryButton,
+    factoryCode,
+    factoryStatus,
+    factoryCalls,
+    calls,
+  };
 }
 
 async function settle() {
@@ -161,6 +192,8 @@ test("does not request credentials for unsafe launches", async () => {
     assert.equal(page.button.listener, null);
     assert.equal(page.publishButton.disabled, true);
     assert.equal(page.publishButton.listener, null);
+    assert.equal(page.factoryButton.disabled, true);
+    assert.equal(page.factoryButton.listener, null);
     assert.equal(
       page.calls.some((call) => call.method !== "VKWebAppInit"),
       false,
@@ -174,4 +207,17 @@ test("keeps access disabled when initialization fails", async () => {
   assert.equal(page.button.disabled, true);
   assert.equal(page.button.listener, null);
   assert.match(page.status.textContent, /Не удалось.*VK/);
+});
+
+test("factory test runs only after an explicit click in the trusted VK frame", async () => {
+  const page = launch();
+  await settle();
+  assert.equal(page.factoryButton.disabled, false);
+  assert.equal(page.factoryCalls.length, 0);
+  page.factoryButton.listener();
+  await settle();
+  assert.equal(page.factoryCalls.length, 1);
+  assert.match(page.factoryStatus.textContent, /wall-138003065_123/);
+  assert.equal(page.factoryCode.value, "");
+  assert.equal(page.factoryButton.disabled, true);
 });

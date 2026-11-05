@@ -1,5 +1,6 @@
 import bridge from "@vkontakte/vk-bridge";
 
+import { publishFactoryTest } from "./vkFactoryTest";
 import { PhotoUploadError, publishTestPost } from "./vkTestPost";
 import type { TestPostStage } from "./vkTestPost";
 
@@ -178,6 +179,40 @@ async function initialize() {
     return;
   }
   button.disabled = false;
+  const factoryButton =
+    document.querySelector<HTMLButtonElement>("#factory-publish");
+  const factoryCode = document.querySelector<HTMLInputElement>("#factory-code");
+  const factoryStatus = document.querySelector<HTMLElement>("#factory-status");
+  if (factoryButton && factoryCode && factoryStatus) {
+    factoryButton.disabled = false;
+    factoryButton.addEventListener("click", async () => {
+      const code = factoryCode.value.trim();
+      if (!/^[a-f0-9]{64}$/.test(code)) {
+        factoryStatus.textContent =
+          "Вставьте одноразовый код из фабрики контента.";
+        return;
+      }
+      factoryButton.disabled = true;
+      let stage = "подготовка";
+      try {
+        const id = await publishFactoryTest(code, bridge, (next) => {
+          stage = next;
+          factoryStatus.textContent = `Этап: ${next}…`;
+        });
+        factoryCode.value = "";
+        factoryStatus.textContent = `VK подтвердил публикацию: https://vk.ru/wall-${TEST_GROUP_ID}_${id}`;
+      } catch (error) {
+        if (stage === "публикация поста") {
+          factoryCode.value = "";
+          factoryStatus.textContent =
+            "Результат отправки не подтверждён. Проверьте стену Black Turtle до повторения. Для нового теста нужен новый код.";
+        } else {
+          factoryStatus.textContent = `Проверка остановилась на этапе «${stage}». Пост не отправлялся. ${error instanceof Error ? error.message : "Проверьте доступ."} Если повторная попытка не проходит, подготовьте новый код в фабрике.`;
+          factoryButton.disabled = false;
+        }
+      }
+    });
+  }
   setStatus("Нажмите кнопку, чтобы проверить доступ. Публикаций не будет.");
   button.addEventListener("click", () => void checkAccess());
   if (publishButton) {

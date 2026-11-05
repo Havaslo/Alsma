@@ -26,6 +26,7 @@ import {
 } from "./ContentFactoryPrimitives";
 import { ContentPlanDeliveryStatus } from "./ContentPlanDeliveryStatus";
 import { ContentPlanMediaPickerDialog } from "./ContentPlanMediaPickerDialog";
+import { VkFactoryTest } from "./VkFactoryTest";
 
 export const ContentPlanPostReviewDialog = ({
   post,
@@ -216,6 +217,18 @@ export const ContentPlanPostReviewDialog = ({
             showScheduleConfirmation={showScheduleConfirmation}
             time={time}
           />
+
+          {import.meta.env.DEV && primaryChannel === "vk" && (
+            <VkFactoryTest
+              postId={post.id}
+              disabled={
+                hasChanges ||
+                !canEdit ||
+                selectedImageIds.length !== 1 ||
+                !text.trim()
+              }
+            />
+          )}
 
           {showCancelConfirmation && (
             <div
