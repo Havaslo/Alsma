@@ -95,9 +95,19 @@ export const createVkClient = ({
         v: apiVersion,
       });
       try {
-        const response = await fetch(`${apiBaseUrl}/${method}?${query}`, {
-          signal: AbortSignal.timeout(15_000),
-        });
+        const response = await fetch(
+          singleAttempt
+            ? `${apiBaseUrl}/${method}`
+            : `${apiBaseUrl}/${method}?${query}`,
+          singleAttempt
+            ? {
+                method: "POST",
+                body: query,
+                redirect: "error",
+                signal: AbortSignal.timeout(15_000),
+              }
+            : { signal: AbortSignal.timeout(15_000) },
+        );
         const payload = (await response.json().catch(() => null)) as {
           response?: unknown;
           error?: { error_code?: number; error_msg?: string };

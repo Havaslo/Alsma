@@ -18,3 +18,18 @@ export const sendVkTest = async (postId: string) => {
   );
   return response.data;
 };
+
+export const createVkPhotoPair = async () => {
+  const response = await apiClient.post<{
+    code: string;
+    expiresInMinutes: number;
+  }>("/vk-factory-test/pair", {}, { headers: headers() });
+  return response.data;
+};
+export const disconnectVkPhotoTest = async () => {
+  await apiClient.post(
+    "/vk-factory-test/disconnect",
+    {},
+    { headers: headers() },
+  );
+};

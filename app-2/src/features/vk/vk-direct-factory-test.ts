@@ -10,6 +10,7 @@ import {
 } from "../admin-auth/admin-auth.middleware.js";
 import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.js";
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
+import { createVkPhotoTestConnection } from "./vk-photo-test-connection.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import { VkApiError, createVkClient } from "./vk.client.js";
 
@@ -25,9 +26,70 @@ export function createVkDirectFactoryTestRouter(
   const router = Router();
   const inProgress = new Set<string>();
   const unknown = new Set<string>();
+  const connection = createVkPhotoTestConnection();
   router.use((_request, response, next) => {
     response.setHeader("Cache-Control", "no-store");
     next();
+  });
+  // A one-use, high-entropy pairing code is created by a signed-in admin.
+  // Neither code nor VK credential is accepted in URLs or returned to callers.
+  router.post("/connect", async (req, res) => {
+    const input = z
+      .object({
+        code: z.string().regex(/^[a-f0-9]{64}$/),
+        token: z.string().trim().min(20).max(2048),
+      })
+      .strict()
+      .safeParse(req.body);
+    if (!input.success) {
+      res.status(400).json({ error: "INVALID_CONNECTION" });
+      return;
+    }
+    const pair = connection.consume(input.data.code);
+    if (!pair) {
+      res.status(400).json({ error: "PAIR_EXPIRED" });
+      return;
+    }
+    try {
+      // Send credentials in the body, never query strings or logs.
+      const payload = new URLSearchParams({
+        group_id: groupId,
+        access_token: input.data.token,
+        v: "5.199",
+      });
+      const response = await fetch(
+        "https://api.vk.com/method/photos.getWallUploadServer",
+        {
+          method: "POST",
+          body: payload,
+          redirect: "error",
+          signal: AbortSignal.timeout(15000),
+        },
+      );
+      const result = (await response.json()) as {
+        response?: { upload_url?: unknown };
+        error?: { error_code?: number };
+      };
+      if (
+        !response.ok ||
+        typeof result.response?.upload_url !== "string" ||
+        !validateTestUploadUrl(result.response.upload_url)
+      ) {
+        const code =
+          typeof result.error?.error_code === "number"
+            ? result.error.error_code
+            : null;
+        res.status(400).json({ error: "VK_ACCESS_DENIED", code });
+        return;
+      }
+      if (!connection.set(pair.adminId, input.data.token, pair.expiresAt)) {
+        res.status(400).json({ error: "PAIR_EXPIRED" });
+        return;
+      }
+      res.json({ ok: true, expiresInMinutes: 15 });
+    } catch {
+      res.status(502).json({ error: "VK_ACCESS_UNAVAILABLE" });
+    }
   });
   router.use(
     createRequireAdmin(
@@ -35,9 +97,21 @@ export function createVkDirectFactoryTestRouter(
     ),
     createRequireAdminPermission("site.access", "site.manage"),
   );
+  router.post("/pair", (_req, res) => {
+    const code = connection.start(res.locals.admin.id);
+    if (!code) {
+      res.status(429).json({ error: "PAIR_LIMIT" });
+      return;
+    }
+    res.status(201).json({ code, expiresInMinutes: 5 });
+  });
+  router.post("/disconnect", (_req, res) => {
+    connection.clear(res.locals.admin.id);
+    res.json({ ok: true });
+  });
   router.get("/status", async (_req, res) => {
     const groupToken = process.env.VK_BLACK_TURTLE_TEST_TOKEN?.trim();
-    const photoToken = process.env.VK_BLACK_TURTLE_TEST_PHOTO_TOKEN?.trim();
+    const photoToken = connection.get(res.locals.admin.id);
     if (!groupToken || !photoToken) {
       res.json({
         ready: false,
@@ -76,7 +150,7 @@ export function createVkDirectFactoryTestRouter(
       return;
     }
     const groupToken = process.env.VK_BLACK_TURTLE_TEST_TOKEN?.trim();
-    const photoToken = process.env.VK_BLACK_TURTLE_TEST_PHOTO_TOKEN?.trim();
+    const photoToken = connection.get(res.locals.admin.id);
     if (!groupToken || !photoToken) {
       res.status(409).json({ error: "TEST_ACCESS_MISSING" });
       return;

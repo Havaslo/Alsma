@@ -71,27 +71,30 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
       return Response.json({ server: 1, photo: "data", hash: "hash" });
     }
     const method = url.pathname.split("/").pop()!;
+    const params =
+      init?.body instanceof URLSearchParams ? init.body : url.searchParams;
+    assert.equal(url.searchParams.has("access_token"), false);
     calls.push(method);
     if (method === "groups.getById") {
-      assert.equal(url.searchParams.get("access_token"), "group-secret");
-      assert.equal(url.searchParams.get("group_id"), "138003065");
+      assert.equal(params.get("access_token"), "group-secret");
+      assert.equal(params.get("group_id"), "138003065");
       return Response.json({ response: [{ id: 138003065 }] });
     }
     if (method === "photos.getWallUploadServer") {
-      assert.equal(url.searchParams.get("access_token"), "photo-secret");
-      assert.equal(url.searchParams.get("group_id"), "138003065");
+      assert.equal(params.get("access_token"), "photo-secret-xxxxxxxxxxxxxxxx");
+      assert.equal(params.get("group_id"), "138003065");
       return Response.json({ response: { upload_url: uploadUrl } });
     }
     if (method === "photos.saveWallPhoto") {
-      assert.equal(url.searchParams.get("access_token"), "photo-secret");
+      assert.equal(params.get("access_token"), "photo-secret-xxxxxxxxxxxxxxxx");
       return Response.json({
         response: [{ owner_id: 123, id: 456, access_key: "key" }],
       });
     }
     if (method === "wall.post") {
-      assert.equal(url.searchParams.get("access_token"), "group-secret");
-      assert.equal(url.searchParams.get("owner_id"), "-138003065");
-      assert.equal(url.searchParams.get("attachments"), "photo123_456_key");
+      assert.equal(params.get("access_token"), "group-secret");
+      assert.equal(params.get("owner_id"), "-138003065");
+      assert.equal(params.get("attachments"), "photo123_456_key");
       if (failPost) throw new TypeError("network lost");
       return Response.json({ response: { post_id: 99 } });
     }
@@ -112,14 +115,14 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
   await once(server, "listening");
   const a = server.address();
   if (!a || typeof a === "string") throw Error("no server");
-  const request = (path: string, auth = true) =>
+  const request = (path: string, auth = true, body: unknown = { postId }) =>
     realFetch(`http://127.0.0.1:${a.port}${path}`, {
       method: path === "/status" ? "GET" : "POST",
       headers: {
         "Content-Type": "application/json",
         ...(auth ? { Authorization: "Bearer admin" } : {}),
       },
-      ...(path === "/status" ? {} : { body: JSON.stringify({ postId }) }),
+      ...(path === "/status" ? {} : { body: JSON.stringify(body) }),
     });
   try {
     assert.notEqual((await request("/publish", false)).status, 200);
@@ -130,7 +133,22 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     });
     assert.equal((await request("/publish")).status, 409);
     assert.equal(calls.length, 0);
-    process.env.VK_BLACK_TURTLE_TEST_PHOTO_TOKEN = "photo-secret";
+    const pair = await request("/pair");
+    assert.equal(pair.status, 201);
+    const { code } = (await pair.json()) as { code: string };
+    assert.match(code, /^[a-f0-9]{64}$/);
+    const token = "photo-secret-xxxxxxxxxxxxxxxx";
+    const bad = await request("/connect", false, {
+      code: "f".repeat(64),
+      token,
+    });
+    assert.equal(bad.status, 400);
+    const connect = await request("/connect", false, { code, token });
+    assert.equal(connect.status, 200);
+    assert.equal(
+      (await request("/connect", false, { code, token })).status,
+      400,
+    );
     status = await request("/status");
     assert.deepEqual(await status.json(), { ready: true });
     assert.ok(!calls.includes("wall.post"));

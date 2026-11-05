@@ -4,6 +4,8 @@ import axios from "axios";
 
 import {
   checkVkTestAccess,
+  createVkPhotoPair,
+  disconnectVkPhotoTest,
   sendVkTest,
 } from "@/lib/content-factory/vkFactoryTestApi";
 
@@ -17,6 +19,7 @@ export const VkFactoryTest = ({
   disabled: boolean;
 }) => {
   const [ready, setReady] = useState(false);
+  const [pairCode, setPairCode] = useState("");
   const [checking, setChecking] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
@@ -41,6 +44,34 @@ export const VkFactoryTest = ({
       );
     } catch {
       setMessage("Не удалось проверить доступ. Пост не отправлялся.");
+    } finally {
+      setChecking(false);
+    }
+  };
+  const pair = async () => {
+    setChecking(true);
+    setPairCode("");
+    setMessage("");
+    try {
+      const result = await createVkPhotoPair();
+      setPairCode(result.code);
+    } catch {
+      setMessage("Не удалось подготовить подключение. Попробуйте снова.");
+    } finally {
+      setChecking(false);
+    }
+  };
+  const disconnect = async () => {
+    setChecking(true);
+    setPairCode("");
+    try {
+      await disconnectVkPhotoTest();
+      setReady(false);
+      setMessage("Временный доступ удалён из памяти сервера.");
+    } catch {
+      setMessage(
+        "Не удалось отключить доступ. Он удалится автоматически через 15 минут.",
+      );
     } finally {
       setChecking(false);
     }
@@ -90,6 +121,15 @@ export const VkFactoryTest = ({
         Black Turtle.
       </p>
       <div className="flex flex-wrap gap-2">
+        <QuietButton disabled={checking || sending} onClick={() => void pair()}>
+          Подключить фото VK
+        </QuietButton>
+        <QuietButton
+          disabled={checking || sending}
+          onClick={() => void disconnect()}
+        >
+          Отключить доступ
+        </QuietButton>
         <QuietButton
           disabled={checking || sending || uncertain}
           onClick={() => void check()}
@@ -103,6 +143,46 @@ export const VkFactoryTest = ({
           Отправить тестовый пост
         </QuietButton>
       </div>
+      {pairCode && (
+        <div className="space-y-2 rounded-xl border border-blue-200 bg-white p-3">
+          <p>
+            Скопируйте код и откройте{" "}
+            <a
+              className="font-semibold underline"
+              href="https://vk.ru/app54873380"
+              target="_blank"
+              rel="noreferrer"
+            >
+              тестовое приложение VK
+            </a>
+            . В разделе «Подключение фабрики» вставьте код и разрешите
+            фотографии. Код действует 5 минут; не отправляйте его никому.
+          </p>
+          <input
+            aria-label="Код подключения"
+            readOnly
+            value={pairCode}
+            onFocus={(event) => event.currentTarget.select()}
+            className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 font-mono text-xs"
+          />
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={() =>
+              void navigator.clipboard.writeText(pairCode).then(
+                () => setMessage("Код скопирован."),
+                () => setMessage("Выделите код и скопируйте вручную."),
+              )
+            }
+          >
+            Скопировать код
+          </button>
+          <p>
+            После подключения вернитесь сюда и нажмите «Проверить доступ». Он
+            хранится только в памяти сервера до 15 минут.
+          </p>
+        </div>
+      )}
       {disabled && <p>Сохраните пост VK с одним фото из медиатеки.</p>}
       {confirming && (
         <div role="alert" className="space-y-2">

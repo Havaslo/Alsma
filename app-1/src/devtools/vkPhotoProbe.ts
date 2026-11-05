@@ -1,5 +1,6 @@
 import bridge from "@vkontakte/vk-bridge";
 
+import { connectVkPhotoTest } from "./vkPhotoConnection";
 import { PhotoUploadError, publishTestPost } from "./vkTestPost";
 import type { TestPostStage } from "./vkTestPost";
 
@@ -176,6 +177,37 @@ async function initialize() {
       "Не удалось подтвердить безопасный запуск внутри VK. Пришлите скрин этого сообщения. Проверка доступа не запускалась.",
     );
     return;
+  }
+  const connectButton = document.querySelector<HTMLButtonElement>("#connect");
+  const connectCode =
+    document.querySelector<HTMLInputElement>("#connection-code");
+  const connectStatus = document.querySelector<HTMLElement>("#connect-status");
+  if (connectButton && connectCode && connectStatus) {
+    connectButton.disabled = false;
+    connectButton.addEventListener("click", async () => {
+      if (!isTrustedVkFrame()) return;
+      const code = connectCode.value.trim();
+      if (!/^[a-f0-9]{64}$/.test(code)) {
+        connectStatus.textContent = "Вставьте код подключения из фабрики.";
+        return;
+      }
+      connectButton.disabled = true;
+      connectStatus.textContent = "Подтвердите доступ к фотографиям в окне VK…";
+      try {
+        await connectVkPhotoTest(code, bridge);
+        connectCode.value = "";
+        connectStatus.textContent =
+          "Сервер подтвердил первый этап доступа к фото. Вернитесь в фабрику и нажмите «Проверить доступ». Постов не было.";
+      } catch (error) {
+        connectCode.value = "";
+        const text = error instanceof Error ? error.message : "";
+        const match = /^VK_ACCESS_DENIED_(\d+)$/.exec(text);
+        connectStatus.textContent = text.startsWith("VK_ACCESS_DENIED")
+          ? `VK не разрешил серверу доступ к загрузке фото${match ? ` (код ${match[1]})` : ""}. Постов не было. Пришлите скрин этого сообщения.`
+          : "Подключение не удалось или код истёк. Постов не было. Для новой попытки получите новый код в фабрике.";
+      }
+      connectButton.disabled = false;
+    });
   }
   button.disabled = false;
   setStatus("Нажмите кнопку, чтобы проверить доступ. Публикаций не будет.");
