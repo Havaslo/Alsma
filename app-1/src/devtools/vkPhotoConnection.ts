@@ -9,6 +9,8 @@ export async function connectVkPhotoTest(code: string, vkBridge: Bridge) {
     scope: "photos",
   });
   if (!auth.access_token) throw new Error("ACCESS_NOT_GRANTED");
+  // Only the shape of the token is reported, never its value.
+  const shape = `${auth.access_token.length}-${auth.access_token.includes(".") ? "jwt" : "plain"}`;
   const response = await fetch(apiUrl("/api/vk-factory-test/connect"), {
     method: "POST",
     credentials: "omit",
@@ -25,7 +27,7 @@ export async function connectVkPhotoTest(code: string, vkBridge: Bridge) {
     if (data?.error === "VK_ACCESS_DENIED")
       throw new Error(
         typeof data.code === "number"
-          ? `VK_ACCESS_DENIED_${data.code}`
+          ? `VK_ACCESS_DENIED_${data.code}_${shape}`
           : "VK_ACCESS_DENIED",
       );
     if (data?.error === "PAIR_EXPIRED") throw new Error("PAIR_EXPIRED");
