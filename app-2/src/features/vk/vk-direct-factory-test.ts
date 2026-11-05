@@ -12,6 +12,7 @@ import { createAdminAuthRepository } from "../admin-auth/admin-auth.repository.j
 import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { extractVkAccessToken } from "./vk-access-token-input.js";
 import { createVkPhotoAccessStore } from "./vk-photo-access-store.js";
+import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import { VkApiError, createVkClient } from "./vk.client.js";
 
@@ -66,8 +67,12 @@ export function createVkDirectFactoryTestRouter(
       await client.verifyWallPhotoUpload(groupId);
     } catch (error) {
       const code = error instanceof VkApiError ? error.code : null;
-      logger.warn({ vkCode: code }, "VK photo upload access was rejected");
-      res.status(400).json({ error: "VK_ACCESS_DENIED", code });
+      const reason = photoAuthDiagnostic(error);
+      logger.warn(
+        { vkCode: code, reason },
+        "VK photo upload access was rejected",
+      );
+      res.status(400).json({ error: "VK_ACCESS_DENIED", code, reason });
       return;
     }
     connection.set(res.locals.admin.id, token);

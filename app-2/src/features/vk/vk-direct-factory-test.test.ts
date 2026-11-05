@@ -22,6 +22,7 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
   const realFetch = globalThis.fetch;
   const calls: string[] = [];
   let failPost = false;
+  let denyPhoto = false;
   const db = {
     client: {
       adminSession: {
@@ -83,6 +84,14 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     if (method === "photos.getWallUploadServer") {
       assert.equal(params.get("access_token"), "photo-secret-xxxxxxxxxxxxxxxx");
       assert.equal(params.get("group_id"), "138003065");
+      if (denyPhoto)
+        return Response.json({
+          error: {
+            error_code: 5,
+            error_msg:
+              "access_token was given to another ip address. secret-value",
+          },
+        });
       return Response.json({ response: { upload_url: uploadUrl } });
     }
     if (method === "photos.saveWallPhoto") {
@@ -139,6 +148,19 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     });
     const bad = await request("/token", true, access("short"));
     assert.equal(bad.status, 400);
+    denyPhoto = true;
+    const rejected = await request("/token", true, access(token));
+    assert.equal(rejected.status, 400);
+    assert.deepEqual(await rejected.json(), {
+      error: "VK_ACCESS_DENIED",
+      code: 5,
+      reason: "IP_MISMATCH",
+    });
+    assert.deepEqual(await (await request("/status")).json(), {
+      ready: false,
+      reason: "PHOTO_TOKEN_MISSING",
+    });
+    denyPhoto = false;
     const saved = await request("/token", true, access(token));
     assert.equal(saved.status, 200);
     status = await request("/status");

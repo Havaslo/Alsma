@@ -26,7 +26,7 @@ const primaryLinkClass =
 
 type Status = { tone: "info" | "ok" | "error"; text: string };
 
-type VkErrorData = { error?: string; code?: number };
+type VkErrorData = { error?: string; code?: number; reason?: string };
 
 const payloadOf = (error: unknown): VkErrorData | undefined =>
   axios.isAxiosError(error)
@@ -58,6 +58,24 @@ const saveFailure = (error: unknown): Status => {
     };
   }
   if (data?.error === "VK_ACCESS_DENIED") {
+    if (code === 5 && data.reason === "IP_MISMATCH") {
+      return {
+        tone: "error",
+        text: "VK отклонил ключ: адрес сети при входе отличается от адреса сервера. Повторный вход сам по себе не решит проблему; требуется другой способ подключения.",
+      };
+    }
+    if (code === 5 && data.reason === "INVALID_SESSION") {
+      return {
+        tone: "error",
+        text: "VK сообщил, что сессия авторизации недействительна. Пост не отправлялся; причина этого ответа требует проверки.",
+      };
+    }
+    if (code === 5 && data.reason === "EXPIRED") {
+      return {
+        tone: "error",
+        text: "VK сообщил, что срок действия ключа истёк. Пост не отправлялся.",
+      };
+    }
     if (code === 7 || code === 15 || code === 200 || code === 203) {
       return {
         tone: "error",
@@ -66,7 +84,7 @@ const saveFailure = (error: unknown): Status => {
     }
     return {
       tone: "error",
-      text: `VK не принял ключ${codeSuffix(code)}: он уже не действует. Откройте доступ VK заново — после нового входа старый ключ перестаёт работать.`,
+      text: `VK не подтвердил доступ${codeSuffix(code)}. Причину по одному коду определить нельзя; пост не отправлялся.`,
     };
   }
   return {
@@ -151,6 +169,7 @@ export const VkFactoryTest = ({
       setStep("start");
       setStatus(await verify());
     } catch (error) {
+      setAccessUrl("");
       setStatus(saveFailure(error));
     } finally {
       setSaving(false);
@@ -253,7 +272,8 @@ export const VkFactoryTest = ({
               Доступ VK подтверждён
             </p>
             <p>
-              Ключ действует 60 минут. Нажмите «Отправить тестовый пост» ниже.
+              Сервер хранит ключ не более 60 минут. Нажмите «Отправить тестовый
+              пост» ниже.
             </p>
             <QuietButton
               disabled={busy}
@@ -353,7 +373,7 @@ export const VkFactoryTest = ({
                   }}
                   placeholder="https://oauth.vk.com/blank.html#access_token=…"
                   spellCheck={false}
-                  type="text"
+                  type="password"
                   value={accessUrl}
                 />
                 <QuietButton
@@ -365,8 +385,8 @@ export const VkFactoryTest = ({
               </div>
             )}
             <p className="text-xs text-slate-600">
-              Адрес содержит ключ доступа. Он хранится только в памяти сервера
-              час и никуда не записывается.
+              Адрес содержит ключ доступа. Сервер хранит его в памяти не более
+              часа. Не делитесь им и не показывайте на скриншотах.
             </p>
           </div>
         )}
