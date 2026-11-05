@@ -68,7 +68,7 @@ export function createVkDirectFactoryTestRouter(
       );
       const result = (await response.json()) as {
         response?: { upload_url?: unknown };
-        error?: { error_code?: number };
+        error?: { error_code?: number; error_msg?: unknown };
       };
       if (
         !response.ok ||
@@ -79,6 +79,15 @@ export function createVkDirectFactoryTestRouter(
           typeof result.error?.error_code === "number"
             ? result.error.error_code
             : null;
+        const detail =
+          typeof result.error?.error_msg === "string"
+            ? result.error.error_msg.slice(0, 200)
+            : null;
+        // The message never contains the token; it explains which VK rule failed.
+        logger.warn(
+          { vkCode: code, vkMessage: detail },
+          "VK photo upload access was rejected",
+        );
         res.status(400).json({ error: "VK_ACCESS_DENIED", code });
         return;
       }

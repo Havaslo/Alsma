@@ -203,7 +203,11 @@ async function initialize() {
         const text = error instanceof Error ? error.message : "";
         const match = /^VK_ACCESS_DENIED_(\d+)$/.exec(text);
         connectStatus.textContent = text.startsWith("VK_ACCESS_DENIED")
-          ? `VK не разрешил серверу доступ к загрузке фото${match ? ` (код ${match[1]})` : ""}. Постов не было. Пришлите скрин этого сообщения.`
+          ? `VK не разрешил серверу доступ к загрузке фото${match ? ` (код ${match[1]})` : ""}.${
+              match?.[1] === "5"
+                ? " Похоже, приложению нужен «Прямой доступ» к API в настройках VK."
+                : ""
+            } Постов не было. Пришлите скрин этого сообщения.`
           : "Подключение не удалось или код истёк. Постов не было. Для новой попытки получите новый код в фабрике.";
       }
       connectButton.disabled = false;
