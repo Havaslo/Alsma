@@ -50,31 +50,7 @@ export default defineConfig(() => {
         },
       },
     },
-    plugins: [
-      {
-        name: "vk-photo-probe-preview-security",
-        apply: "serve",
-        configureServer(server) {
-          server.middlewares.use((request, response, next) => {
-            const pathname = request.url?.split("?")[0];
-            if (
-              pathname === "/vk-photo-probe" ||
-              pathname?.startsWith("/vk-photo-probe/")
-            ) {
-              response.setHeader("Cache-Control", "no-store");
-              response.setHeader(
-                "Content-Security-Policy",
-                "frame-ancestors https://vk.com https://*.vk.com https://vk.ru https://*.vk.ru",
-              );
-            }
-            next();
-          });
-        },
-      },
-      tanstackRouter(),
-      react(),
-      tailwindcss(),
-    ],
+    plugins: [tanstackRouter(), react(), tailwindcss()],
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),

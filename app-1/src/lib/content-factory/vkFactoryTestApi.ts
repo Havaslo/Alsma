@@ -19,11 +19,12 @@ export const sendVkTest = async (postId: string) => {
   return response.data;
 };
 
-export const createVkPhotoPair = async () => {
-  const response = await apiClient.post<{
-    code: string;
-    expiresInMinutes: number;
-  }>("/vk-factory-test/pair", {}, { headers: headers() });
+export const saveVkPhotoAccess = async (url: string) => {
+  const response = await apiClient.post<{ ok: true; expiresInMinutes: number }>(
+    "/vk-factory-test/token",
+    { url },
+    { headers: headers(), timeout: 30000 },
+  );
   return response.data;
 };
 export const disconnectVkPhotoTest = async () => {

@@ -133,22 +133,14 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     });
     assert.equal((await request("/publish")).status, 409);
     assert.equal(calls.length, 0);
-    const pair = await request("/pair");
-    assert.equal(pair.status, 201);
-    const { code } = (await pair.json()) as { code: string };
-    assert.match(code, /^[a-f0-9]{64}$/);
     const token = "photo-secret-xxxxxxxxxxxxxxxx";
-    const bad = await request("/connect", false, {
-      code: "f".repeat(64),
-      token,
+    const access = (value: string) => ({
+      url: `https://oauth.vk.com/blank.html#access_token=${value}&expires_in=86400&user_id=1`,
     });
+    const bad = await request("/token", true, access("short"));
     assert.equal(bad.status, 400);
-    const connect = await request("/connect", false, { code, token });
-    assert.equal(connect.status, 200);
-    assert.equal(
-      (await request("/connect", false, { code, token })).status,
-      400,
-    );
+    const saved = await request("/token", true, access(token));
+    assert.equal(saved.status, 200);
     status = await request("/status");
     assert.deepEqual(await status.json(), { ready: true });
     assert.ok(!calls.includes("wall.post"));
@@ -268,13 +260,10 @@ test("a VK rejection of wall.post is final and allows a retry", async () => {
       ...(path === "/status" ? {} : { body: JSON.stringify(body) }),
     });
   try {
-    const pair = await request("/pair");
-    const { code } = (await pair.json()) as { code: string };
-    const connect = await request("/connect", false, {
-      code,
-      token: "photo-secret-xxxxxxxxxxxxxxxx",
+    const saved = await request("/token", true, {
+      url: "https://oauth.vk.com/blank.html#access_token=photo-secret-xxxxxxxxxxxxxxxx&expires_in=86400",
     });
-    assert.equal(connect.status, 200);
+    assert.equal(saved.status, 200);
     const denied = await request("/publish");
     assert.equal(denied.status, 502);
     assert.deepEqual(await denied.json(), {

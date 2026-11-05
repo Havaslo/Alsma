@@ -4,12 +4,16 @@ import axios from "axios";
 
 import {
   checkVkTestAccess,
-  createVkPhotoPair,
   disconnectVkPhotoTest,
+  saveVkPhotoAccess,
   sendVkTest,
 } from "@/lib/content-factory/vkFactoryTestApi";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
+
+// Standard VK authorisation for a server-side key: photos and wall, one day.
+const accessLink =
+  "https://oauth.vk.com/authorize?client_id=54873380&display=page&redirect_uri=https%3A%2F%2Foauth.vk.com%2Fblank.html&scope=photos%2Cwall&response_type=token&revoke=1&v=5.199";
 
 export const VkFactoryTest = ({
   postId,
@@ -19,13 +23,15 @@ export const VkFactoryTest = ({
   disabled: boolean;
 }) => {
   const [ready, setReady] = useState(false);
-  const [pairCode, setPairCode] = useState("");
+  const [accessUrl, setAccessUrl] = useState("");
   const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
   const [url, setUrl] = useState("");
+  const busy = checking || saving || sending;
   const check = async () => {
     setChecking(true);
     setMessage("");
@@ -37,14 +43,10 @@ export const VkFactoryTest = ({
         status.ready
           ? "Проверка доступа пройдена. Можно отправить тестовый пост."
           : status.reason === "PHOTO_TOKEN_MISSING"
-            ? "Не подключён пользовательский доступ VK для загрузки фото. Тест пока не отправится."
+            ? "Ключ VK для загрузки фото не сохранён или истёк. Вставьте ссылку из VK заново."
             : status.reason === "GROUP_TOKEN_MISSING"
               ? "Не подключён ключ тестовой группы."
-              : `VK не подтвердил доступ к загрузке фото${status.code ? ` (код ${status.code})` : ""}.${
-                  status.code === 5
-                    ? " VK не принял ключ, выданный внутри приложения: приложению нужен «Прямой доступ» к API в настройках VK."
-                    : ""
-                } Пост не отправлялся.`,
+              : `VK не подтвердил доступ к загрузке фото${status.code ? ` (код ${status.code})` : ""}. Пост не отправлялся.`,
       );
     } catch {
       setMessage("Не удалось проверить доступ. Пост не отправлялся.");
@@ -52,29 +54,48 @@ export const VkFactoryTest = ({
       setChecking(false);
     }
   };
-  const pair = async () => {
-    setChecking(true);
-    setPairCode("");
+  const save = async () => {
+    setSaving(true);
     setMessage("");
+    setReady(false);
     try {
-      const result = await createVkPhotoPair();
-      setPairCode(result.code);
-    } catch {
-      setMessage("Не удалось подготовить подключение. Попробуйте снова.");
+      const result = await saveVkPhotoAccess(accessUrl);
+      setAccessUrl("");
+      setMessage(
+        `VK принял ключ и подтвердил загрузку фото. Доступ действует ${result.expiresInMinutes} минут — нажмите «Проверить доступ».`,
+      );
+    } catch (error) {
+      const data = axios.isAxiosError(error)
+        ? (error.response?.data as
+            { error?: string; code?: number } | undefined)
+        : undefined;
+      if (data?.error === "VK_ACCESS_DENIED")
+        setMessage(
+          `VK не принял ключ из этой ссылки${typeof data.code === "number" ? ` (код ${data.code})` : ""}. Скопируйте адрес из адресной строки целиком.`,
+        );
+      else if (data?.error === "INVALID_ACCESS_URL")
+        setMessage(
+          "В ссылке не найден ключ доступа. Нужен полный адрес со страницы VK, включая часть после знака #.",
+        );
+      else if (data?.error === "GROUP_TOKEN_MISSING")
+        setMessage("Не подключён ключ тестовой группы.");
+      else
+        setMessage(
+          "Не удалось сохранить доступ. Получите ссылку в VK заново и повторите.",
+        );
     } finally {
-      setChecking(false);
+      setSaving(false);
     }
   };
   const disconnect = async () => {
     setChecking(true);
-    setPairCode("");
     try {
       await disconnectVkPhotoTest();
       setReady(false);
-      setMessage("Временный доступ удалён из памяти сервера.");
+      setMessage("Доступ удалён из памяти сервера.");
     } catch {
       setMessage(
-        "Не удалось отключить доступ. Он удалится автоматически через 15 минут.",
+        "Не удалось удалить доступ. Он исчезнет автоматически через час.",
       );
     } finally {
       setChecking(false);
@@ -94,25 +115,23 @@ export const VkFactoryTest = ({
       );
     } catch (error) {
       const data = axios.isAxiosError(error)
-        ? error.response?.data?.error
-        : undefined;
-      const vkCode = axios.isAxiosError(error)
-        ? error.response?.data?.code
+        ? (error.response?.data as
+            { error?: string; code?: number } | undefined)
         : undefined;
       if (
-        data === "TEST_PREFLIGHT_FAILED" ||
-        data === "TEST_ACCESS_MISSING" ||
-        data === "INVALID_POST" ||
-        data === "INVALID_PHOTO"
+        data?.error === "TEST_PREFLIGHT_FAILED" ||
+        data?.error === "TEST_ACCESS_MISSING" ||
+        data?.error === "INVALID_POST" ||
+        data?.error === "INVALID_PHOTO"
       ) {
         setReady(false);
         setMessage(
           "Отправка остановлена до публикации. Проверьте доступ и сохранённый пост с одним фото.",
         );
-      } else if (data === "TEST_POST_DENIED") {
+      } else if (data?.error === "TEST_POST_DENIED") {
         setReady(false);
         setMessage(
-          `VK отклонил публикацию${typeof vkCode === "number" ? ` (код ${vkCode})` : ""}. Пост не создан, можно повторить после проверки доступа.`,
+          `VK отклонил публикацию${typeof data.code === "number" ? ` (код ${data.code})` : ""}. Пост не создан, можно повторить после проверки доступа.`,
         );
       } else {
         setUncertain(true);
@@ -132,69 +151,60 @@ export const VkFactoryTest = ({
         группу. Рабочая группа и расписание не изменяются. Пост увидят участники
         Black Turtle.
       </p>
+      <div className="space-y-2 rounded-xl border border-blue-200 bg-white p-3">
+        <p>
+          1.{" "}
+          <a
+            className="font-semibold underline"
+            href={accessLink}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Откройте доступ VK
+          </a>{" "}
+          и подтвердите «Фотографии» и «Стену».
+        </p>
+        <p>
+          2. После подтверждения откроется пустая страница VK. Скопируйте её
+          адрес из адресной строки целиком и вставьте ниже.
+        </p>
+        <input
+          aria-label="Адрес страницы VK с ключом доступа"
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="https://oauth.vk.com/blank.html#access_token=…"
+          value={accessUrl}
+          onChange={(event) => setAccessUrl(event.currentTarget.value)}
+          className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 font-mono text-xs"
+        />
+        <div className="flex flex-wrap gap-2">
+          <QuietButton
+            disabled={busy || accessUrl.trim().length < 10}
+            onClick={() => void save()}
+          >
+            {saving ? "Сохраняем…" : "Сохранить доступ"}
+          </QuietButton>
+          <QuietButton disabled={busy} onClick={() => void disconnect()}>
+            Удалить доступ
+          </QuietButton>
+        </div>
+        <p>
+          Адрес содержит ключ доступа: он сохраняется только в памяти сервера на
+          час и никуда не записывается. Не пересылайте его никому.
+        </p>
+      </div>
       <div className="flex flex-wrap gap-2">
-        <QuietButton disabled={checking || sending} onClick={() => void pair()}>
-          Подключить фото VK
-        </QuietButton>
-        <QuietButton
-          disabled={checking || sending}
-          onClick={() => void disconnect()}
-        >
-          Отключить доступ
-        </QuietButton>
-        <QuietButton
-          disabled={checking || sending || uncertain}
-          onClick={() => void check()}
-        >
+        <QuietButton disabled={busy || uncertain} onClick={() => void check()}>
           {checking ? "Проверяем…" : "Проверить доступ"}
         </QuietButton>
         <QuietButton
-          disabled={!ready || disabled || sending || uncertain || Boolean(url)}
+          disabled={!ready || disabled || busy || uncertain || Boolean(url)}
           onClick={() => setConfirming(true)}
         >
           Отправить тестовый пост
         </QuietButton>
       </div>
-      {pairCode && (
-        <div className="space-y-2 rounded-xl border border-blue-200 bg-white p-3">
-          <p>
-            Скопируйте код и откройте{" "}
-            <a
-              className="font-semibold underline"
-              href="https://vk.ru/app54873380"
-              target="_blank"
-              rel="noreferrer"
-            >
-              тестовое приложение VK
-            </a>
-            . В разделе «Подключение фабрики» вставьте код и разрешите
-            фотографии. Код действует 5 минут; не отправляйте его никому.
-          </p>
-          <input
-            aria-label="Код подключения"
-            readOnly
-            value={pairCode}
-            onFocus={(event) => event.currentTarget.select()}
-            className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 font-mono text-xs"
-          />
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={() =>
-              void navigator.clipboard.writeText(pairCode).then(
-                () => setMessage("Код скопирован."),
-                () => setMessage("Выделите код и скопируйте вручную."),
-              )
-            }
-          >
-            Скопировать код
-          </button>
-          <p>
-            После подключения вернитесь сюда и нажмите «Проверить доступ». Он
-            хранится только в памяти сервера до 15 минут.
-          </p>
-        </div>
-      )}
       {disabled && <p>Сохраните пост VK с одним фото из медиатеки.</p>}
       {confirming && (
         <div role="alert" className="space-y-2">
