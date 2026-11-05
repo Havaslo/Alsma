@@ -175,3 +175,118 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     else process.env.VK_BLACK_TURTLE_TEST_PHOTO_TOKEN = priorPhoto;
   }
 });
+
+test("a VK rejection of wall.post is final and allows a retry", async () => {
+  const priorGroup = process.env.VK_BLACK_TURTLE_TEST_TOKEN;
+  process.env.VK_BLACK_TURTLE_TEST_TOKEN = "group-secret";
+  const realFetch = globalThis.fetch;
+  let denyPost = true;
+  const db = {
+    client: {
+      adminSession: {
+        findFirst: async ({ where }: { where: { tokenHash: string } }) =>
+          where.tokenHash === createHash("sha256").update("admin").digest("hex")
+            ? {
+                user: {
+                  id: "admin",
+                  displayName: "Admin",
+                  email: "admin@example.com",
+                  permissionOverrides: {},
+                  role: { name: "admin", permissions: ["site.manage"] },
+                },
+              }
+            : null,
+      },
+      contentPlanPost: {
+        findUnique: async () => ({
+          channel: "vk",
+          status: "approved",
+          generatedCopy: "Тест фабрики",
+          imageIds: [photoId],
+        }),
+      },
+      contentFactoryMedia: {
+        findUnique: async () => ({
+          objectId: "img",
+          fileName: "img.jpg",
+          sizeBytes: 3,
+          contentType: "image/jpeg",
+        }),
+      },
+    },
+  } as unknown as Database;
+  const storage = {
+    getDownload: async () => ({
+      downloadUrl: "https://storage.example/image",
+      sizeBytes: 3,
+    }),
+  } as unknown as ManagedStorage;
+  globalThis.fetch = (async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname === "storage.example")
+      return new Response(new Uint8Array([1, 2, 3]));
+    if (url.hostname === "pu.vk.ru")
+      return Response.json({ server: 1, photo: "data", hash: "hash" });
+    const method = url.pathname.split("/").pop()!;
+    if (method === "groups.getById") return Response.json({ response: [] });
+    if (method === "photos.getWallUploadServer")
+      return Response.json({ response: { upload_url: uploadUrl } });
+    if (method === "photos.saveWallPhoto")
+      return Response.json({
+        response: [{ owner_id: 123, id: 456, access_key: "key" }],
+      });
+    if (method === "wall.post")
+      return denyPost
+        ? Response.json({
+            error: { error_code: 100, error_msg: "invalid photo" },
+          })
+        : Response.json({ response: { post_id: 77 } });
+    throw Error("unexpected method");
+  }) as typeof fetch;
+  const app = express();
+  app.use(express.json());
+  app.use(createVkDirectFactoryTestRouter(db, storage, logger));
+  app.use(
+    (
+      error: { statusCode?: number },
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => res.status(error.statusCode ?? 401).json({ error: "unauthorized" }),
+  );
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const a = server.address();
+  if (!a || typeof a === "string") throw Error("no server");
+  const request = (path: string, auth = true, body: unknown = { postId }) =>
+    realFetch(`http://127.0.0.1:${a.port}${path}`, {
+      method: path === "/status" ? "GET" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(auth ? { Authorization: "Bearer admin" } : {}),
+      },
+      ...(path === "/status" ? {} : { body: JSON.stringify(body) }),
+    });
+  try {
+    const pair = await request("/pair");
+    const { code } = (await pair.json()) as { code: string };
+    const connect = await request("/connect", false, {
+      code,
+      token: "photo-secret-xxxxxxxxxxxxxxxx",
+    });
+    assert.equal(connect.status, 200);
+    const denied = await request("/publish");
+    assert.equal(denied.status, 502);
+    assert.deepEqual(await denied.json(), {
+      error: "TEST_POST_DENIED",
+      code: 100,
+    });
+    denyPost = false;
+    assert.equal((await request("/publish")).status, 200);
+  } finally {
+    server.close();
+    globalThis.fetch = realFetch;
+    if (priorGroup === undefined) delete process.env.VK_BLACK_TURTLE_TEST_TOKEN;
+    else process.env.VK_BLACK_TURTLE_TEST_TOKEN = priorGroup;
+  }
+});

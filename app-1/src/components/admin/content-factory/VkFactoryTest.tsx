@@ -89,18 +89,26 @@ export const VkFactoryTest = ({
         "VK подтвердил отправку. Проверьте пост и фотографию в группе.",
       );
     } catch (error) {
-      const code = axios.isAxiosError(error)
+      const data = axios.isAxiosError(error)
         ? error.response?.data?.error
         : undefined;
+      const vkCode = axios.isAxiosError(error)
+        ? error.response?.data?.code
+        : undefined;
       if (
-        code === "TEST_PREFLIGHT_FAILED" ||
-        code === "TEST_ACCESS_MISSING" ||
-        code === "INVALID_POST" ||
-        code === "INVALID_PHOTO"
+        data === "TEST_PREFLIGHT_FAILED" ||
+        data === "TEST_ACCESS_MISSING" ||
+        data === "INVALID_POST" ||
+        data === "INVALID_PHOTO"
       ) {
         setReady(false);
         setMessage(
           "Отправка остановлена до публикации. Проверьте доступ и сохранённый пост с одним фото.",
+        );
+      } else if (data === "TEST_POST_DENIED") {
+        setReady(false);
+        setMessage(
+          `VK отклонил публикацию${typeof vkCode === "number" ? ` (код ${vkCode})` : ""}. Пост не создан, можно повторить после проверки доступа.`,
         );
       } else {
         setUncertain(true);

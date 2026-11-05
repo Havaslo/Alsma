@@ -165,6 +165,7 @@ export function createVkDirectFactoryTestRouter(
         !post ||
         post.channel !== "vk" ||
         !["needs_review", "approved", "publish_failed"].includes(post.status) ||
+        typeof post.generatedCopy !== "string" ||
         !post.generatedCopy.trim() ||
         post.imageIds.length !== 1
       ) {
@@ -222,14 +223,21 @@ export function createVkDirectFactoryTestRouter(
       });
       res.json({ url: result.url, postId: result.externalId });
     } catch (error) {
-      if (providerStarted) {
-        unknown.add(postId);
-        res.status(502).json({ error: "PUBLICATION_UNKNOWN" });
-      } else
+      if (!providerStarted)
         res.status(502).json({
           error: "TEST_PREFLIGHT_FAILED",
           code: error instanceof VkApiError ? error.code : null,
         });
+      else if (error instanceof VkApiError)
+        // VK answered with an error, so nothing was published and a retry is safe.
+        res.status(502).json({
+          error: "TEST_POST_DENIED",
+          code: error.code,
+        });
+      else {
+        unknown.add(postId);
+        res.status(502).json({ error: "PUBLICATION_UNKNOWN" });
+      }
     } finally {
       inProgress.delete(postId);
     }
