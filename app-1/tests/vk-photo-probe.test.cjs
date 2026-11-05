@@ -31,16 +31,16 @@ function launch({
     },
   };
   const publishStatus = { textContent: "" };
-  const factoryButton = {
+  const connectButton = {
     disabled: true,
     listener: null,
     addEventListener(_event, listener) {
       this.listener = listener;
     },
   };
-  const factoryCode = { value: "a".repeat(64) };
-  const factoryStatus = { textContent: "" };
-  const factoryCalls = [];
+  const connectCode = { value: "a".repeat(64) };
+  const connectStatus = { textContent: "" };
+  const connectCalls = [];
   const window = {};
   window.parent = top ? window : {};
   const bridge = {
@@ -76,8 +76,8 @@ function launch({
       "const publishTestPost = globalThis.__publishTestPost; class PhotoUploadError extends Error {}",
     )
     .replace(
-      'import { publishFactoryTest } from "./vkFactoryTest";',
-      "const publishFactoryTest = globalThis.__publishFactoryTest;",
+      'import { connectVkPhotoTest } from "./vkPhotoConnection";',
+      "const connectVkPhotoTest = globalThis.__connectVkPhotoTest;",
     )
     .replace("import.meta.env.DEV", String(dev));
   const javascript = ts.transpileModule(source, {
@@ -90,8 +90,8 @@ function launch({
     exports: {},
     __bridge: bridge,
     __publishTestPost: async () => 123,
-    __publishFactoryTest: async (code) => {
-      factoryCalls.push(code);
+    __connectVkPhotoTest: async (code) => {
+      connectCalls.push(code);
       return 123;
     },
     window,
@@ -104,9 +104,9 @@ function launch({
           "#status": status,
           "#publish": publishButton,
           "#publish-status": publishStatus,
-          "#factory-publish": factoryButton,
-          "#factory-code": factoryCode,
-          "#factory-status": factoryStatus,
+          "#connect": connectButton,
+          "#connection-code": connectCode,
+          "#connect-status": connectStatus,
         })[selector],
     },
     URL,
@@ -121,10 +121,10 @@ function launch({
     status,
     publishButton,
     publishStatus,
-    factoryButton,
-    factoryCode,
-    factoryStatus,
-    factoryCalls,
+    connectButton,
+    connectCode,
+    connectStatus,
+    connectCalls,
     calls,
   };
 }
@@ -192,8 +192,8 @@ test("does not request credentials for unsafe launches", async () => {
     assert.equal(page.button.listener, null);
     assert.equal(page.publishButton.disabled, true);
     assert.equal(page.publishButton.listener, null);
-    assert.equal(page.factoryButton.disabled, true);
-    assert.equal(page.factoryButton.listener, null);
+    assert.equal(page.connectButton.disabled, true);
+    assert.equal(page.connectButton.listener, null);
     assert.equal(
       page.calls.some((call) => call.method !== "VKWebAppInit"),
       false,
@@ -207,4 +207,25 @@ test("keeps access disabled when initialization fails", async () => {
   assert.equal(page.button.disabled, true);
   assert.equal(page.button.listener, null);
   assert.match(page.status.textContent, /Не удалось.*VK/);
+});
+
+test("temporary access is connected only after explicit action in trusted VK frame", async () => {
+  const page = launch();
+  await settle();
+  assert.equal(page.connectButton.disabled, false);
+  assert.equal(page.connectCalls.length, 0);
+  await page.connectButton.listener();
+  assert.equal(page.connectCalls.length, 1);
+  assert.equal(page.connectCode.value, "");
+  assert.match(page.connectStatus.textContent, /Сервер подтвердил/);
+  assert.doesNotMatch(page.connectStatus.textContent, /synthetic-secret/);
+});
+
+test("invalid pairing code never initiates access", async () => {
+  const page = launch();
+  await settle();
+  page.connectCode.value = "invalid";
+  await page.connectButton.listener();
+  assert.equal(page.connectCalls.length, 0);
+  assert.match(page.connectStatus.textContent, /Вставьте код/);
 });

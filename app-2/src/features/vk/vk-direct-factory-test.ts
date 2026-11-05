@@ -82,7 +82,7 @@ export function createVkDirectFactoryTestRouter(
         res.status(400).json({ error: "VK_ACCESS_DENIED", code });
         return;
       }
-      if (!connection.set(pair.adminId, input.data.token, pair.expiresAt)) {
+      if (!connection.set(pair, input.data.token)) {
         res.status(400).json({ error: "PAIR_EXPIRED" });
         return;
       }
