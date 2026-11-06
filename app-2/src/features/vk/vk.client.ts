@@ -333,6 +333,40 @@ export const createVkClient = ({
     };
   };
   return {
+    readWallPost: async (groupId: string, postId: string) => {
+      if (!/^\d+$/.test(groupId) || !/^\d+$/.test(postId))
+        throw new Error("Invalid wall post ID");
+      const result = await requestPhotoUpload("wall.getById", {
+        posts: `-${groupId}_${postId}`,
+      });
+      const items = Array.isArray(result)
+        ? result
+        : (result as { items?: unknown[] })?.items;
+      const post = items?.find(
+        (item) =>
+          String((item as { id?: unknown }).id) === postId &&
+          String((item as { owner_id?: unknown }).owner_id) === `-${groupId}`,
+      ) as
+        | {
+            attachments?: Array<{
+              type?: string;
+              photo?: { id?: unknown; owner_id?: unknown; sizes?: unknown[] };
+            }>;
+          }
+        | undefined;
+      return {
+        found: Boolean(post),
+        photos: (post?.attachments ?? [])
+          .filter((item) => item.type === "photo" && item.photo?.id != null)
+          .map((item) => ({
+            id: String(item.photo!.id),
+            ownerId: String(item.photo!.owner_id),
+            sizes: Array.isArray(item.photo!.sizes)
+              ? item.photo!.sizes.length
+              : 0,
+          })),
+      };
+    },
     configured: Boolean(token),
     verifyCredentials: async (groupId: string) => {
       await request("groups.getById", { group_id: groupId });
@@ -676,7 +710,7 @@ export const createVkClient = ({
       const postUrl = `https://vk.com/wall-${groupId}_${postId}`;
       if (photoAttachments.length) {
         try {
-          const result = await request("wall.getById", {
+          const result = await requestPhotoUpload("wall.getById", {
             posts: `-${groupId}_${postId}`,
           });
           const posts = Array.isArray(result)

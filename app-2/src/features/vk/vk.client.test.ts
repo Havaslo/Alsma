@@ -769,3 +769,34 @@ test("empty upload retries fresh server only and publishes once after success", 
     globalThis.fetch = original;
   }
 });
+
+test("wall inspection uses user photo access because group auth cannot read wall.getById", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (_input, init) => {
+    const body = new URLSearchParams(String(init?.body));
+    assert.equal(body.get("access_token"), "user");
+    return Response.json({
+      response: [
+        {
+          id: 15,
+          owner_id: -138003065,
+          attachments: [
+            { type: "photo", photo: { id: 456, owner_id: 123, sizes: [{}] } },
+          ],
+        },
+      ],
+    });
+  }) as typeof fetch;
+  try {
+    assert.deepEqual(
+      await createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).readWallPost("138003065", "15"),
+      { found: true, photos: [{ id: "456", ownerId: "123", sizes: 1 }] },
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});

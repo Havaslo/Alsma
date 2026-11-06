@@ -168,6 +168,36 @@ export function createVkDirectFactoryTestRouter(
       });
     }
   });
+  router.get("/posts/:postId", async (req, res) => {
+    if (!/^\d+$/.test(req.params.postId)) {
+      res.status(400).json({ error: "INVALID_POST_ID" });
+      return;
+    }
+    const groupToken = process.env.VK_BLACK_TURTLE_TEST_TOKEN?.trim();
+    const photoToken = getConnectedPhotoToken
+      ? await getConnectedPhotoToken().catch(() => undefined)
+      : connection.get(res.locals.admin.id);
+    if (!groupToken || !photoToken) {
+      res.status(409).json({ error: "TEST_ACCESS_MISSING" });
+      return;
+    }
+    try {
+      const client = createVkClient({
+        accessToken: groupToken,
+        photoUploadAccessToken: photoToken,
+        logger,
+        singleAttempt: true,
+      });
+      res.json(await client.readWallPost(groupId, req.params.postId));
+    } catch (error) {
+      res
+        .status(502)
+        .json({
+          error: "POST_READ_FAILED",
+          code: error instanceof VkApiError ? error.code : null,
+        });
+    }
+  });
   router.post("/publish", async (req, res) => {
     const input = inputSchema.safeParse(req.body);
     if (!input.success) {
