@@ -27,6 +27,7 @@ export function createVkDirectFactoryTestRouter(
   database: Database,
   storage: ManagedStorage,
   logger: Logger,
+  getConnectedPhotoToken?: () => Promise<string | undefined>,
 ): Router {
   const router = Router();
   const inProgress = new Set<string>();
@@ -45,6 +46,10 @@ export function createVkDirectFactoryTestRouter(
   // The signed-in owner pastes the address VK redirected to; the token is kept
   // in memory only and is never logged or returned to the browser.
   router.post("/token", async (req, res) => {
+    if (getConnectedPhotoToken) {
+      res.status(409).json({ error: "USE_SERVER_PHOTO_CONNECTION" });
+      return;
+    }
     const input = accessSchema.safeParse(req.body);
     const token = input.success ? extractVkAccessToken(input.data.url) : null;
     if (!token) {
@@ -84,7 +89,9 @@ export function createVkDirectFactoryTestRouter(
   });
   router.get("/status", async (_req, res) => {
     const groupToken = process.env.VK_BLACK_TURTLE_TEST_TOKEN?.trim();
-    const photoToken = connection.get(res.locals.admin.id);
+    const photoToken = getConnectedPhotoToken
+      ? await getConnectedPhotoToken().catch(() => undefined)
+      : connection.get(res.locals.admin.id);
     if (!groupToken || !photoToken) {
       res.json({
         ready: false,
@@ -123,7 +130,9 @@ export function createVkDirectFactoryTestRouter(
       return;
     }
     const groupToken = process.env.VK_BLACK_TURTLE_TEST_TOKEN?.trim();
-    const photoToken = connection.get(res.locals.admin.id);
+    const photoToken = getConnectedPhotoToken
+      ? await getConnectedPhotoToken().catch(() => undefined)
+      : connection.get(res.locals.admin.id);
     if (!groupToken || !photoToken) {
       res.status(409).json({ error: "TEST_ACCESS_MISSING" });
       return;

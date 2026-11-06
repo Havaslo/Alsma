@@ -25,8 +25,12 @@ import {
 export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   const [cachedWorkspace] = useState(readContentFactoryWorkspaceCache);
   const cachedSnapshot = cachedWorkspace?.snapshot;
-  const [activeSection, setActiveSection] =
-    useState<WorkspaceSection>("create");
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("vkPhotoConnection")
+      ? "plan"
+      : "create",
+  );
   const [prompt, setPrompt] = useState(cachedSnapshot?.prompt ?? "");
   const [brief, setBrief] = useState<ContentFactoryBrief>(
     cachedSnapshot?.brief ?? {

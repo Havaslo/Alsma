@@ -35,6 +35,8 @@ import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
 import { createVkDirectFactoryTestRouter } from "./features/vk/vk-direct-factory-test.js";
+import { createVkPhotoConnectionRouter } from "./features/vk/vk-photo-connection.routes.js";
+import type { VkPhotoConnectionService } from "./features/vk/vk-photo-connection.service.js";
 import { createVkTestPhotoUploadRouter } from "./features/vk/vk-test-photo-upload.js";
 import type { VkClient } from "./features/vk/vk.client.js";
 import { createVkRouter } from "./features/vk/vk.routes.js";
@@ -74,6 +76,7 @@ type CreateApiRouterOptions = {
   };
   readonly maxClient: MaxBotClient;
   readonly vkClient: VkClient;
+  readonly vkPhotoConnection?: VkPhotoConnectionService;
   readonly contentPlanPublishing: ContentPlanPublishingService;
   readonly vk: {
     readonly accessToken?: string;
@@ -116,6 +119,7 @@ export const createApiRouter = ({
   maxBot,
   maxClient,
   vkClient,
+  vkPhotoConnection,
   contentPlanPublishing,
   vk,
   yooKassaSecretKey,
@@ -126,11 +130,21 @@ export const createApiRouter = ({
   environment,
 }: CreateApiRouterOptions): Router => {
   const router = Router();
+  if (vkPhotoConnection)
+    router.use(
+      "/vk-photo-connection",
+      createVkPhotoConnectionRouter(database, vkPhotoConnection),
+    );
   if (environment === "development") {
     router.use("/vk-test-photo-upload", createVkTestPhotoUploadRouter());
     router.use(
       "/vk-factory-test",
-      createVkDirectFactoryTestRouter(database, managedStorage, logger),
+      createVkDirectFactoryTestRouter(
+        database,
+        managedStorage,
+        logger,
+        vkPhotoConnection?.getToken,
+      ),
     );
   }
   const chat = createChatService(database);

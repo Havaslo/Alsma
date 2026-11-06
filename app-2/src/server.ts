@@ -5,6 +5,7 @@ import { createContentPlanPublishingService } from "./features/content-factory/c
 import { createInstagramPublishingService } from "./features/instagram-publishing/instagram-publishing.service.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createTelegramBotClient } from "./features/telegram/telegram-bot.client.js";
+import { createVkPhotoConnectionService } from "./features/vk/vk-photo-connection.service.js";
 import { createVkClient } from "./features/vk/vk.client.js";
 import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
 import { attachVoiceAgentRealtime } from "./features/voice-agent/voice-agent.realtime.js";
@@ -37,9 +38,18 @@ const start = async (): Promise<void> => {
     proxyUrl: config.telegram.proxyUrl,
     token: config.telegram.token,
   });
+  const vkPhotoConnection = createVkPhotoConnectionService({
+    database,
+    configuration: config.vk.photoOAuth,
+    allowedOrigins: config.corsAllowedOrigins,
+    groupId: config.vk.groupId,
+    communityToken: config.vk.accessToken,
+    fallbackPhotoToken: config.vk.photoUploadAccessToken,
+    logger,
+  });
   const vkClient = createVkClient({
     accessToken: config.vk.accessToken,
-    photoUploadAccessToken: config.vk.photoUploadAccessToken,
+    getPhotoUploadAccessToken: vkPhotoConnection.getToken,
     logger,
   });
   const instagramPublishing = createInstagramPublishingService({
@@ -82,6 +92,7 @@ const start = async (): Promise<void> => {
     maxBot: config.maxBot,
     maxClient,
     vkClient,
+    vkPhotoConnection,
     contentPlanPublishing,
     vk: config.vk,
     yooKassaSecretKey: config.yooKassaSecretKey,

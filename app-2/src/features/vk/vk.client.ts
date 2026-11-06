@@ -8,10 +8,12 @@ const wait = (milliseconds: number) =>
 
 export class VkApiError extends Error {
   readonly code: number;
-  constructor(code: number, message: string) {
+  readonly subcode?: number;
+  constructor(code: number, message: string, subcode?: number) {
     super(message);
     this.name = "VkApiError";
     this.code = code;
+    this.subcode = subcode;
   }
 }
 const shouldRetry = (code: number) => code === 6 || code === 10 || code === 29;
@@ -69,12 +71,14 @@ const isGroupAuthPhotoDenial = (error: unknown) =>
 export const createVkClient = ({
   accessToken,
   photoUploadAccessToken,
+  getPhotoUploadAccessToken,
   logger,
   singleAttempt = false,
   validatePhotoUploadUrl,
 }: {
   readonly accessToken?: string;
   readonly photoUploadAccessToken?: string;
+  readonly getPhotoUploadAccessToken?: () => Promise<string | undefined>;
   readonly logger: Logger;
   readonly singleAttempt?: boolean;
   readonly validatePhotoUploadUrl?: (url: string) => boolean;
@@ -110,13 +114,18 @@ export const createVkClient = ({
         );
         const payload = (await response.json().catch(() => null)) as {
           response?: unknown;
-          error?: { error_code?: number; error_msg?: string };
+          error?: {
+            error_code?: number;
+            error_subcode?: number;
+            error_msg?: string;
+          };
         } | null;
         if (response.ok && payload?.response !== undefined)
           return payload.response;
         const error = new VkApiError(
           payload?.error?.error_code ?? response.status,
           payload?.error?.error_msg ?? "VK API request failed",
+          payload?.error?.error_subcode,
         );
         if (!shouldRetry(error.code) || attempt === maxAttempts) throw error;
       } catch (error) {
@@ -134,12 +143,16 @@ export const createVkClient = ({
     parameters: Record<string, string>,
   ) => {
     try {
-      return await requestWithToken(method, parameters, photoToken ?? token);
+      const uploadToken = getPhotoUploadAccessToken
+        ? await getPhotoUploadAccessToken()
+        : photoToken;
+      return await requestWithToken(method, parameters, uploadToken ?? token);
     } catch (error) {
       if (error instanceof VkApiError && [5, 15, 27].includes(error.code))
         throw new VkApiError(
           error.code,
           `VK photo upload access was denied: ${error.message}`,
+          error.subcode,
         );
       throw error;
     }
@@ -179,7 +192,7 @@ export const createVkClient = ({
       const missing =
         permissions.length > 0 && !permissions.includes("wall") ? ["wall"] : [];
       let canAttachPhotos = false;
-      if (photoToken && groupId) {
+      if ((photoToken || getPhotoUploadAccessToken) && groupId) {
         try {
           const upload = (await requestPhotoUpload(
             "photos.getWallUploadServer",

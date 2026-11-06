@@ -3,6 +3,7 @@ import { loadEnvFile } from "node:process";
 import { z } from "zod";
 
 import type { AdminPushEnvironment } from "../features/admin-push/admin-push.types.js";
+import type { VkPhotoOAuthConfiguration } from "../features/vk/vk-photo-connection.service.js";
 
 const GENERATED_ENV_PATH = "AMAZI_ENV_GENERATED.env";
 
@@ -85,6 +86,23 @@ const environmentSchema = z
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
     VK_ACCESS_TOKEN_OVERRIDE: optionalTrimmedEnvironmentValue,
     VK_PHOTO_UPLOAD_ACCESS_TOKEN: optionalTrimmedEnvironmentValue,
+    VK_PHOTO_OAUTH_APP_ID: z.string().regex(/^\d+$/u).optional(),
+    VK_PHOTO_OAUTH_APP_SECRET: optionalTrimmedEnvironmentValue,
+    VK_PHOTO_OAUTH_REDIRECT_URI: z
+      .string()
+      .url()
+      .refine(
+        (value) => new URL(value).protocol === "https:",
+        "VK OAuth redirect URI must use HTTPS",
+      )
+      .optional(),
+    VK_PHOTO_TOKEN_ENCRYPTION_KEY: z
+      .string()
+      .refine(
+        (value) => Buffer.from(value, "base64").length === 32,
+        "VK photo encryption key must contain 32 base64-encoded bytes",
+      )
+      .optional(),
     VK_GROUP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_CALLBACK_SECRET: z.string().min(1).optional(),
     VK_CALLBACK_SECRET_OVERRIDE: optionalTrimmedEnvironmentValue,
@@ -160,6 +178,7 @@ export type AppConfig = {
   readonly vk: {
     readonly accessToken?: string;
     readonly photoUploadAccessToken?: string;
+    readonly photoOAuth: VkPhotoOAuthConfiguration;
     readonly groupId?: string;
     readonly callbackSecret?: string;
     readonly confirmationCode?: string;
@@ -257,6 +276,12 @@ export const readConfig = (
       // VK photo-upload methods require user authorization. Keep that token
       // separate so the community credential continues to handle bot traffic.
       photoUploadAccessToken: parsed.VK_PHOTO_UPLOAD_ACCESS_TOKEN,
+      photoOAuth: {
+        appId: parsed.VK_PHOTO_OAUTH_APP_ID,
+        appSecret: parsed.VK_PHOTO_OAUTH_APP_SECRET,
+        redirectUri: parsed.VK_PHOTO_OAUTH_REDIRECT_URI,
+        encryptionKey: parsed.VK_PHOTO_TOKEN_ENCRYPTION_KEY,
+      },
       groupId: parsed.VK_GROUP_ID,
       // A re-created Callback API server brings a new secret that cannot be
       // edited inside the connected integration, so an explicit value wins.

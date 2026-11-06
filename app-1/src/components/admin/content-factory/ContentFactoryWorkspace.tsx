@@ -12,6 +12,7 @@ import { ContentPlanPanel } from "@/components/admin/content-factory/ContentPlan
 import { ContentPlanPostReviewDialog } from "@/components/admin/content-factory/ContentPlanPostReviewDialog";
 import { InstagramConnectionCard } from "@/components/admin/content-factory/InstagramConnectionCard";
 import { MediaLibraryPanel } from "@/components/admin/content-factory/MediaLibraryPanel";
+import { VkPhotoConnectionCard } from "@/components/admin/content-factory/VkPhotoConnectionCard";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import type {
   ContentChannel,
@@ -324,6 +325,7 @@ export const ContentFactoryWorkspace = () => {
 
         {factory.activeSection === "plan" && (
           <div className="space-y-4">
+            <VkPhotoConnectionCard />
             <InstagramConnectionCard />
             <ContentPlanPanel
               mediaItems={persistence.mediaItems}

@@ -1,6 +1,7 @@
 import { HttpError } from "../../lib/http/http-error.js";
 import { MetaGraphRequestError } from "../instagram-publishing/instagram-graph.client.js";
 import { isInstagramPublishError } from "../instagram-publishing/instagram-publishing.service.js";
+import { photoAuthDiagnostic } from "../vk/vk-photo-auth-diagnostic.js";
 
 type NamedError = Error & { readonly name: string };
 
@@ -53,6 +54,13 @@ export const safePublicationError = (error: unknown, uncertain: boolean) => {
   }
   if (isNamedError(error, "VkApiError")) {
     const code = Number((error as NamedError & { code?: number }).code);
+    if (photoAuthDiagnostic(error) === "IP_MISMATCH")
+      return "VK отклонил ключ фото из-за другого IP. Переподключите фотографии через серверную авторизацию VK в контент-плане.";
+    if (
+      code === 15 &&
+      (error as NamedError & { subcode?: number }).subcode === 1134
+    )
+      return "VK запретил wall.post для этого типа приложения (15/1134). Для записи используйте ключ сообщества; пользовательский доступ нужен только для фото.";
     if ([5, 15, 27].includes(code) && /photo upload/iu.test(error.message))
       return "VK не разрешил загрузить фото. Проверьте отдельный пользовательский ключ VK: он должен действовать, быть авторизован администратором сообщества и иметь доступ к фотографиям.";
     return code === 27

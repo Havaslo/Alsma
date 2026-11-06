@@ -7,6 +7,7 @@ import type { AdminPushConfiguration } from "./features/admin-push/admin-push.ty
 import type { ContentPlanPublishingService } from "./features/content-factory/content-plan-publishing.service.js";
 import type { InstagramPublishingConfiguration } from "./features/instagram-publishing/instagram-connection.service.js";
 import type { MaxBotClient } from "./features/max-bot/max-bot.client.js";
+import type { VkPhotoConnectionService } from "./features/vk/vk-photo-connection.service.js";
 import type { VkClient } from "./features/vk/vk.client.js";
 import type { Database } from "./lib/database/database.js";
 import { publicCorsMiddleware } from "./lib/http/cors.js";
@@ -44,6 +45,7 @@ type CreateAppOptions = {
   };
   readonly maxClient: MaxBotClient;
   readonly vkClient: VkClient;
+  readonly vkPhotoConnection?: VkPhotoConnectionService;
   readonly contentPlanPublishing: ContentPlanPublishingService;
   readonly vk: {
     readonly accessToken?: string;
@@ -99,6 +101,7 @@ export const createApp = ({
   maxBot,
   maxClient,
   vkClient,
+  vkPhotoConnection,
   contentPlanPublishing,
   vk,
   yooKassaSecretKey,
@@ -117,7 +120,8 @@ export const createApp = ({
         ignore: (request) =>
           (request.method === "GET" && request.url === "/health") ||
           request.url?.startsWith("/api/instagram-publishing/callback") ===
-            true,
+            true ||
+          request.url?.startsWith("/api/vk-photo-connection/callback") === true,
       },
       logger,
     }),
@@ -156,6 +160,7 @@ export const createApp = ({
     maxBot,
     maxClient,
     vkClient,
+    vkPhotoConnection,
     contentPlanPublishing,
     vk,
     yooKassaSecretKey,
