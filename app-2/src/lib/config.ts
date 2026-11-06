@@ -86,6 +86,12 @@ const environmentSchema = z
     VK_ACCESS_TOKEN: z.string().min(1).optional(),
     VK_ACCESS_TOKEN_OVERRIDE: optionalTrimmedEnvironmentValue,
     VK_PHOTO_UPLOAD_ACCESS_TOKEN: optionalTrimmedEnvironmentValue,
+    VK_PHOTO_VKID_APP_ID: z.string().regex(/^\d+$/u).optional(),
+    VK_PHOTO_VKID_REDIRECT_URI: z
+      .string()
+      .url()
+      .refine((value) => new URL(value).protocol === "https:")
+      .optional(),
     VK_PHOTO_OAUTH_APP_ID: z.string().regex(/^\d+$/u).optional(),
     VK_PHOTO_OAUTH_APP_SECRET: optionalTrimmedEnvironmentValue,
     VK_PHOTO_OAUTH_REDIRECT_URI: z
@@ -277,6 +283,8 @@ export const readConfig = (
       // separate so the community credential continues to handle bot traffic.
       photoUploadAccessToken: parsed.VK_PHOTO_UPLOAD_ACCESS_TOKEN,
       photoOAuth: {
+        vkIdAppId: parsed.VK_PHOTO_VKID_APP_ID,
+        vkIdRedirectUri: parsed.VK_PHOTO_VKID_REDIRECT_URI,
         appId: parsed.VK_PHOTO_OAUTH_APP_ID,
         appSecret: parsed.VK_PHOTO_OAUTH_APP_SECRET,
         redirectUri: parsed.VK_PHOTO_OAUTH_REDIRECT_URI,

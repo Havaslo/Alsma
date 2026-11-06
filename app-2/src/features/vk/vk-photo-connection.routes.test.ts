@@ -71,6 +71,20 @@ test("photo connection requires admin permission; callback carries only a safe o
           assert.equal(adminId, "admin");
           return { result: "CONNECTED" };
         },
+        startVkId: async (origin: string, adminId: string) => {
+          assert.equal(origin, "https://alsma.ru");
+          assert.equal(adminId, "admin");
+          return { authorizationUrl: "https://id.vk.ru/authorize" };
+        },
+        completeVkId: async (input: {
+          state?: string;
+          code?: string;
+          device_id?: string;
+        }) => {
+          assert.equal(input.code, "private-code");
+          assert.equal(input.device_id, "private-device");
+          return { origin: "https://alsma.ru", result: "VKID_CONNECTED" };
+        },
         getToken: async () => undefined,
       } as never,
     ),
@@ -104,7 +118,11 @@ test("photo connection requires admin permission; callback carries only a safe o
     });
     assert.equal(response.status, 200);
     assert.equal(startCalls, 1);
-    for (const path of ["/connect/manual/start", "/connect/manual/complete"]) {
+    for (const path of [
+      "/connect/manual/start",
+      "/connect/manual/complete",
+      "/vkid/start",
+    ]) {
       assert.equal(
         (
           await fetch(base + path, {
@@ -141,6 +159,31 @@ test("photo connection requires admin permission; callback carries only a safe o
     );
     assert.equal(callback.headers.get("cache-control"), "no-store");
     assert.equal(callback.headers.get("referrer-policy"), "no-referrer");
+    const renewable = await fetch(base + "/vkid/start", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer admin-session",
+        Origin: "https://alsma.ru",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    assert.equal(renewable.status, 200);
+    const renewableCallback = await fetch(
+      base +
+        "/vkid/callback?state=state&code=private-code&device_id=private-device",
+      { redirect: "manual" },
+    );
+    assert.equal(renewableCallback.status, 303);
+    assert.equal(
+      renewableCallback.headers.get("location"),
+      "https://alsma.ru/admin/content-factory?vkPhotoConnection=VKID_CONNECTED",
+    );
+    assert.equal(renewableCallback.headers.get("cache-control"), "no-store");
+    assert.equal(
+      renewableCallback.headers.get("referrer-policy"),
+      "no-referrer",
+    );
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));

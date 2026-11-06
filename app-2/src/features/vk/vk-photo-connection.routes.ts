@@ -32,6 +32,39 @@ export const createVkPhotoConnectionRouter = (
     res.json(await connection.status());
   });
   router.post(
+    "/vkid/start",
+    requireAdmin,
+    requireManage,
+    validateRequest({ body: z.object({}).strict() }),
+    async (req, res) => {
+      res.json(
+        await connection.startVkId(req.get("Origin"), res.locals.admin.id),
+      );
+    },
+  );
+  router.get(
+    "/vkid/callback",
+    validateRequest({
+      query: z.object({
+        state: z.string().max(256).optional(),
+        code: z.string().max(4096).optional(),
+        device_id: z.string().max(4096).optional(),
+        error: z.string().max(256).optional(),
+        error_description: z.string().max(4096).optional(),
+      }),
+    }),
+    async (_req, res) => {
+      const result = await connection.completeVkId(res.locals.input.query);
+      if (!result.origin) {
+        res.status(400).json({ code: "VK_PHOTO_ORIGIN_MISSING" });
+        return;
+      }
+      const destination = new URL("/admin/content-factory", result.origin);
+      destination.searchParams.set("vkPhotoConnection", result.result);
+      res.redirect(303, destination.toString());
+    },
+  );
+  router.post(
     "/connect/start",
     requireAdmin,
     requireManage,

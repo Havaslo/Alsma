@@ -7,11 +7,24 @@ import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactory
 import {
   completeVkPhotoManualConnection,
   loadVkPhotoConnection,
+  startVkIdPhotoConnection,
   startVkPhotoConnection,
   startVkPhotoManualConnection,
 } from "@/lib/content-factory/vkPhotoConnectionApi";
 
 const messages: Record<string, string> = {
+  VKID_CONNECTED:
+    "Доступ к фото и обновление токена проверены. Сервер будет обновлять доступ автоматически.",
+  VKID_PHOTOS_NOT_GRANTED:
+    "VK ID не выдал права на фотографии. Прежнее подключение сохранено.",
+  VKID_CONNECTION_DENIED:
+    "VK ID не подтвердил загрузку фото или обновление токена. Прежнее подключение сохранено.",
+  VKID_CODE_MISSING:
+    "VK ID не вернул данные для завершения входа. Начните подключение заново.",
+  VKID_REFRESH_FAILED:
+    "VK ID не смог обновить доступ к фото. Повторите проверку; если разрешение отозвано, подключите аккаунт снова.",
+  VKID_RECONNECT_REQUIRED:
+    "Настройки приложения VK ID изменились. Подключите фотографии снова.",
   CONNECTED:
     "Доступ к загрузке фото подтверждён. Можно планировать публикации.",
   INVALID_CALLBACK:
@@ -41,6 +54,10 @@ export const VkPhotoConnectionCard = () => {
   });
   const connect = useMutation({
     mutationFn: startVkPhotoConnection,
+    onSuccess: (url) => window.location.assign(url),
+  });
+  const vkIdConnect = useMutation({
+    mutationFn: startVkIdPhotoConnection,
     onSuccess: (url) => window.location.assign(url),
   });
   const [callbackUrl, setCallbackUrl] = useState("");
@@ -83,7 +100,7 @@ export const VkPhotoConnectionCard = () => {
           : "Для публикации новых фотографий подключите аккаунт администратора сообщества через VK."}
         {status.data?.photoReady &&
           status.data.expiresAt &&
-          ` Доступ действует до ${new Date(status.data.expiresAt).toLocaleString("ru-RU")}. После этого потребуется повторное подключение.`}
+          ` Текущий доступ действует до ${new Date(status.data.expiresAt).toLocaleString("ru-RU")}. ${status.data.vkId?.autoRenewal ? "Сервер обновляет его автоматически перед использованием." : "После этого потребуется повторное подключение."}`}
       </p>
       {status.data && !status.data.configured && (
         <p className="text-sm text-amber-800">
@@ -115,6 +132,36 @@ export const VkPhotoConnectionCard = () => {
             ? "Переподключить фотографии VK"
             : "Подключить фотографии VK"}
       </Button>
+      <div className="space-y-2 rounded-2xl border border-line p-4">
+        <p className="text-sm text-muted-ui-foreground">
+          {status.data?.vkId?.connected
+            ? "Подключение VK ID с автообновлением активно."
+            : "Подключение с автообновлением станет активным только после проверки доступа к фотографиям и обновления токена. До этого используется прежнее подключение."}
+        </p>
+        <Button
+          variant="secondary"
+          disabled={!status.data?.vkId?.configured || vkIdConnect.isPending}
+          onClick={() => vkIdConnect.mutate()}
+        >
+          {vkIdConnect.isPending
+            ? "Открываем VK ID…"
+            : "Проверить доступ с автообновлением"}
+        </Button>
+        {status.data && !status.data.vkId?.configured && (
+          <p className="text-sm text-muted-ui-foreground">
+            Для проверки нужно настроить приложение VK ID. Обратитесь к
+            администратору проекта.
+          </p>
+        )}
+        {vkIdConnect.error && (
+          <p role="alert" className="text-sm text-rose-700">
+            {contentFactoryErrorMessage(
+              vkIdConnect.error,
+              "Не удалось начать подключение VK ID.",
+            )}
+          </p>
+        )}
+      </div>
       <details className="space-y-3 rounded-2xl border border-line p-4">
         <summary className="cursor-pointer text-sm font-medium">
           VK сообщает об ошибке redirect_uri?

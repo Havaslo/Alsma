@@ -1,18 +1,17 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { Logger } from "pino";
 import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
+import { createVkIdPhotoService } from "./vk-id-photo.service.js";
 import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
+import { seal, unseal } from "./vk-photo-crypto.js";
 import { VkApiError, createVkClient } from "./vk.client.js";
 
 export type VkPhotoOAuthConfiguration = {
+  readonly vkIdAppId?: string;
+  readonly vkIdRedirectUri?: string;
   readonly appId?: string;
   readonly appSecret?: string;
   readonly redirectUri?: string;
@@ -33,39 +32,6 @@ const stateSchema = z.object({
   adminId: z.string().optional(),
 });
 const manualRedirectUri = "https://oauth.vk.com/blank.html";
-const keyBytes = (key: string) => {
-  const bytes = Buffer.from(key, "base64");
-  if (bytes.length !== 32)
-    throw new Error("VK photo encryption key must contain 32 bytes");
-  return bytes;
-};
-const seal = (token: string, key: string) => {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", keyBytes(key), iv);
-  cipher.setAAD(Buffer.from("alsma-vk-photo-v1"));
-  const encrypted = Buffer.concat([
-    cipher.update(token, "utf8"),
-    cipher.final(),
-  ]);
-  return [iv, cipher.getAuthTag(), encrypted]
-    .map((part) => part.toString("base64url"))
-    .join(".");
-};
-const unseal = (value: string, key: string) => {
-  const [iv, tag, encrypted] = value.split(".");
-  if (!iv || !tag || !encrypted) throw new Error("Invalid VK photo connection");
-  const cipher = createDecipheriv(
-    "aes-256-gcm",
-    keyBytes(key),
-    Buffer.from(iv, "base64url"),
-  );
-  cipher.setAAD(Buffer.from("alsma-vk-photo-v1"));
-  cipher.setAuthTag(Buffer.from(tag, "base64url"));
-  return Buffer.concat([
-    cipher.update(Buffer.from(encrypted, "base64url")),
-    cipher.final(),
-  ]).toString("utf8");
-};
 
 export const createVkPhotoConnectionService = (options: {
   readonly database: Database;
@@ -77,6 +43,12 @@ export const createVkPhotoConnectionService = (options: {
   readonly logger: Logger;
 }) => {
   const config = options.configuration;
+  const vkId = createVkIdPhotoService({
+    ...options,
+    appId: config.vkIdAppId,
+    redirectUri: config.vkIdRedirectUri,
+    encryptionKey: config.encryptionKey,
+  });
   const connectionKey = `vk.photo.connection.${options.groupId ?? "unconfigured"}`;
   const statePrefix = "vk.photo.oauth.state.";
   // Report names only: this status is admin-only and must never expose values.
@@ -105,6 +77,8 @@ export const createVkPhotoConnectionService = (options: {
     return parsed.data;
   };
   const getToken = async () => {
+    const renewable = await vkId.getToken();
+    if (renewable) return renewable;
     const saved = await read();
     if (!saved) return options.fallbackPhotoToken;
     if (saved.expiresAt !== null && saved.expiresAt <= Date.now())
@@ -134,21 +108,29 @@ export const createVkPhotoConnectionService = (options: {
       if (token && options.groupId && options.communityToken) {
         await verify(token);
         photoReady = true;
+        reason = null;
       } else reason = "PHOTO_TOKEN_MISSING";
     } catch (error) {
-      reason = photoAuthDiagnostic(error);
+      reason =
+        error instanceof HttpError ? error.code : photoAuthDiagnostic(error);
       if (reason === "UNKNOWN" && error instanceof VkApiError)
         reason = "PHOTO_ACCESS_DENIED";
     }
+    const renewable = await vkId.status();
     return {
+      vkId: renewable,
       configured,
       missingConfiguration,
       photoReady,
       reason,
-      connectedAt: saved?.connectedAt ?? null,
-      expiresAt: saved?.expiresAt
-        ? new Date(saved.expiresAt).toISOString()
-        : null,
+      connectedAt: renewable.connected
+        ? renewable.connectedAt
+        : (saved?.connectedAt ?? null),
+      expiresAt: renewable.connected
+        ? renewable.expiresAt
+        : saved?.expiresAt
+          ? new Date(saved.expiresAt).toISOString()
+          : null,
     };
   };
 
@@ -344,7 +326,16 @@ export const createVkPhotoConnectionService = (options: {
     });
     return { result: outcome.result };
   };
-  return { start, startManual, complete, completeManual, status, getToken };
+  return {
+    start,
+    startManual,
+    complete,
+    completeManual,
+    status,
+    getToken,
+    startVkId: vkId.start,
+    completeVkId: vkId.complete,
+  };
 };
 export type VkPhotoConnectionService = ReturnType<
   typeof createVkPhotoConnectionService
