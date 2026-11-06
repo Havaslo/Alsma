@@ -462,173 +462,198 @@ export const createVkClient = ({
         albumId: unknown;
       }> = [];
       for (const image of input.images) {
-        const messagesUpload = input.prepareOnly && input.diagnosticMessages;
-        const photoRequest = messagesUpload ? request : requestPhotoUpload;
-        let upload: { upload_url?: unknown };
-        try {
-          upload = (await photoRequest(
-            messagesUpload
-              ? "photos.getMessagesUploadServer"
-              : "photos.getWallUploadServer",
-            {
-              ...(input.prepareOnly &&
-              (input.diagnosticUserWall || input.diagnosticMessages)
-                ? {}
-                : { group_id: groupId }),
-            },
-          )) as { upload_url?: unknown };
-        } catch (error) {
-          if (isGroupAuthPhotoDenial(error))
-            throw new VkApiError(
-              27,
-              "VK photo upload requires a user access token; community authorization cannot upload wall photos",
-            );
-          throw error;
-        }
-        if (
-          typeof upload.upload_url !== "string" ||
-          (validatePhotoUploadUrl && !validatePhotoUploadUrl(upload.upload_url))
-        )
-          throw new Error("VK photo upload URL is invalid");
+        // Only a confirmed empty upload can be retried here: wall.post has
+        // not started. Request a fresh upload server for each bounded attempt.
+        for (let attempt = 0; ; attempt += 1) {
+          try {
+            const messagesUpload =
+              input.prepareOnly && input.diagnosticMessages;
+            const photoRequest = messagesUpload ? request : requestPhotoUpload;
+            let upload: { upload_url?: unknown };
+            try {
+              upload = (await photoRequest(
+                messagesUpload
+                  ? "photos.getMessagesUploadServer"
+                  : "photos.getWallUploadServer",
+                {
+                  ...(input.prepareOnly &&
+                  (input.diagnosticUserWall || input.diagnosticMessages)
+                    ? {}
+                    : { group_id: groupId }),
+                },
+              )) as { upload_url?: unknown };
+            } catch (error) {
+              if (isGroupAuthPhotoDenial(error))
+                throw new VkApiError(
+                  27,
+                  "VK photo upload requires a user access token; community authorization cannot upload wall photos",
+                );
+              throw error;
+            }
+            if (
+              typeof upload.upload_url !== "string" ||
+              (validatePhotoUploadUrl &&
+                !validatePhotoUploadUrl(upload.upload_url))
+            )
+              throw new Error("VK photo upload URL is invalid");
 
-        const form = new FormData();
-        const bytes = new ArrayBuffer(image.content.byteLength);
-        new Uint8Array(bytes).set(image.content);
-        form.append(
-          "photo",
-          new Blob([bytes], { type: image.contentType }),
-          image.fileName,
-        );
-        // Diagnostic preparation tests a fully buffered multipart body with
-        // the final CRLF expected by some legacy multipart parsers.
-        let body: BodyInit = form;
-        let headers: Record<string, string> | undefined;
-        if (input.prepareOnly) {
-          const encoded = new Request("https://localhost/", {
-            method: "POST",
-            body: form,
-          });
-          const serialized = Buffer.from(await encoded.arrayBuffer());
-          body = new Uint8Array(
-            serialized.subarray(-2).toString() === "\r\n"
-              ? serialized
-              : Buffer.concat([serialized, Buffer.from("\r\n")]),
-          );
-          headers = {
-            "Content-Type": encoded.headers.get("content-type")!,
-            "Content-Length": String(body.byteLength),
-          };
-        }
-        const uploadPhoto = (url: string) =>
-          input.prepareOnly && input.diagnosticTransport === "https"
-            ? uploadVkPhotoWithHttps(url, body as Uint8Array, headers!)
-            : fetch(url, {
-                body,
-                headers,
+            const form = new FormData();
+            const bytes = new ArrayBuffer(image.content.byteLength);
+            new Uint8Array(bytes).set(image.content);
+            form.append(
+              "photo",
+              new Blob([bytes], { type: image.contentType }),
+              image.fileName,
+            );
+            // Diagnostic preparation tests a fully buffered multipart body with
+            // the final CRLF expected by some legacy multipart parsers.
+            let body: BodyInit = form;
+            let headers: Record<string, string> | undefined;
+            if (input.prepareOnly) {
+              const encoded = new Request("https://localhost/", {
                 method: "POST",
-                redirect: "error",
-                signal: AbortSignal.timeout(30_000),
+                body: form,
               });
-        let uploadedResponse = await uploadPhoto(upload.upload_url);
-        const uploadAddress = new URL(upload.upload_url);
-        const originalHost = uploadAddress.hostname;
-        const originalStatus = uploadedResponse.status;
-        // Some VK-issued .com upload endpoints reject multipart POST with 405.
-        // Retry only the same capability on VK's .ru upload host, never wall.post.
-        if (
-          uploadedResponse.status === 405 &&
-          uploadAddress.protocol === "https:" &&
-          uploadAddress.hostname === "pu.vk.com" &&
-          !uploadAddress.port &&
-          !uploadAddress.username &&
-          !uploadAddress.password &&
-          /^\/c\d+\/ss\d+\/upload\.php$/.test(uploadAddress.pathname)
-        ) {
-          uploadAddress.hostname = "pu.vk.ru";
-          if (
-            !validatePhotoUploadUrl ||
-            validatePhotoUploadUrl(uploadAddress.toString())
-          ) {
-            await uploadedResponse.body?.cancel();
-            uploadedResponse = await uploadPhoto(uploadAddress.toString());
+              const serialized = Buffer.from(await encoded.arrayBuffer());
+              body = new Uint8Array(
+                serialized.subarray(-2).toString() === "\r\n"
+                  ? serialized
+                  : Buffer.concat([serialized, Buffer.from("\r\n")]),
+              );
+              headers = {
+                "Content-Type": encoded.headers.get("content-type")!,
+                "Content-Length": String(body.byteLength),
+              };
+            }
+            const uploadPhoto = (url: string) =>
+              input.prepareOnly && input.diagnosticTransport === "https"
+                ? uploadVkPhotoWithHttps(url, body as Uint8Array, headers!)
+                : fetch(url, {
+                    body,
+                    headers,
+                    method: "POST",
+                    redirect: "error",
+                    signal: AbortSignal.timeout(30_000),
+                  });
+            let uploadedResponse = await uploadPhoto(upload.upload_url);
+            const uploadAddress = new URL(upload.upload_url);
+            const originalHost = uploadAddress.hostname;
+            const originalStatus = uploadedResponse.status;
+            // Some VK-issued .com upload endpoints reject multipart POST with 405.
+            // Retry only the same capability on VK's .ru upload host, never wall.post.
+            if (
+              uploadedResponse.status === 405 &&
+              uploadAddress.protocol === "https:" &&
+              uploadAddress.hostname === "pu.vk.com" &&
+              !uploadAddress.port &&
+              !uploadAddress.username &&
+              !uploadAddress.password &&
+              /^\/c\d+\/ss\d+\/upload\.php$/.test(uploadAddress.pathname)
+            ) {
+              uploadAddress.hostname = "pu.vk.ru";
+              if (
+                !validatePhotoUploadUrl ||
+                validatePhotoUploadUrl(uploadAddress.toString())
+              ) {
+                await uploadedResponse.body?.cancel();
+                uploadedResponse = await uploadPhoto(uploadAddress.toString());
+              }
+            }
+            const uploadTransport = {
+              originalHost,
+              host: uploadAddress.hostname,
+              path: uploadAddress.pathname,
+              originalStatus,
+              status: uploadedResponse.status,
+            };
+            if (!uploadedResponse.ok) {
+              const error = new VkApiError(
+                uploadedResponse.status,
+                "VK photo upload failed",
+              );
+              error.method = "photos.upload";
+              error.uploadTransport = uploadTransport;
+              throw error;
+            }
+            const uploaded = (await uploadedResponse
+              .json()
+              .catch(() => null)) as {
+              hash?: unknown;
+              photo?: unknown;
+              server?: unknown;
+            } | null;
+            if (
+              !uploaded ||
+              typeof uploaded.hash !== "string" ||
+              typeof uploaded.photo !== "string" ||
+              (typeof uploaded.server !== "number" &&
+                typeof uploaded.server !== "string")
+            )
+              throw new Error("VK photo upload returned an invalid response");
+
+            const uploadDiagnostic = {
+              photoLength: uploaded.photo.length,
+              photoEmpty:
+                uploaded.photo.trim() === "[]" || !uploaded.photo.trim(),
+              hashPresent: Boolean(uploaded.hash),
+              serverPresent: Boolean(uploaded.server),
+            };
+            if (uploadDiagnostic.photoEmpty) {
+              const error = new VkPhotoUploadEmptyError();
+              error.uploadDiagnostic = uploadDiagnostic;
+              error.uploadTransport = uploadTransport;
+              throw error;
+            }
+            const saved = (await photoRequest(
+              messagesUpload
+                ? "photos.saveMessagesPhoto"
+                : "photos.saveWallPhoto",
+              {
+                ...(input.prepareOnly &&
+                (input.diagnosticUserWall || input.diagnosticMessages)
+                  ? {}
+                  : { group_id: groupId }),
+                hash: uploaded.hash,
+                photo: uploaded.photo,
+                server: String(uploaded.server),
+              },
+            ).catch((error) => {
+              if (error instanceof VkApiError)
+                error.uploadDiagnostic = uploadDiagnostic;
+              throw error;
+            })) as Array<Record<string, unknown>>;
+            const photo = Array.isArray(saved) ? saved[0] : undefined;
+            const ownerId = photo?.owner_id;
+            const photoId = photo?.id;
+            if (
+              (typeof ownerId !== "number" && typeof ownerId !== "string") ||
+              (typeof photoId !== "number" && typeof photoId !== "string")
+            )
+              throw new Error("VK did not return a saved photo ID");
+            const accessKey =
+              typeof photo?.access_key === "string"
+                ? `_${photo.access_key}`
+                : "";
+            photoAttachments.push(`photo${ownerId}_${photoId}${accessKey}`);
+            preparedPhotos.push({
+              ownerId: String(ownerId),
+              id: String(photoId),
+              hasAccessKey: Boolean(accessKey),
+              sizes: Array.isArray(photo?.sizes) ? photo.sizes.length : 0,
+              albumId:
+                typeof photo?.album_id === "number" ? photo.album_id : null,
+            });
+            break;
+          } catch (error) {
+            if (
+              !(error instanceof VkPhotoUploadEmptyError) ||
+              singleAttempt ||
+              attempt >= 2
+            )
+              throw error;
+            await wait(1000 * (attempt + 1));
           }
         }
-        const uploadTransport = {
-          originalHost,
-          host: uploadAddress.hostname,
-          path: uploadAddress.pathname,
-          originalStatus,
-          status: uploadedResponse.status,
-        };
-        if (!uploadedResponse.ok) {
-          const error = new VkApiError(
-            uploadedResponse.status,
-            "VK photo upload failed",
-          );
-          error.method = "photos.upload";
-          error.uploadTransport = uploadTransport;
-          throw error;
-        }
-        const uploaded = (await uploadedResponse.json().catch(() => null)) as {
-          hash?: unknown;
-          photo?: unknown;
-          server?: unknown;
-        } | null;
-        if (
-          !uploaded ||
-          typeof uploaded.hash !== "string" ||
-          typeof uploaded.photo !== "string" ||
-          (typeof uploaded.server !== "number" &&
-            typeof uploaded.server !== "string")
-        )
-          throw new Error("VK photo upload returned an invalid response");
-
-        const uploadDiagnostic = {
-          photoLength: uploaded.photo.length,
-          photoEmpty: uploaded.photo.trim() === "[]" || !uploaded.photo.trim(),
-          hashPresent: Boolean(uploaded.hash),
-          serverPresent: Boolean(uploaded.server),
-        };
-        if (uploadDiagnostic.photoEmpty) {
-          const error = new VkPhotoUploadEmptyError();
-          error.uploadDiagnostic = uploadDiagnostic;
-          error.uploadTransport = uploadTransport;
-          throw error;
-        }
-        const saved = (await photoRequest(
-          messagesUpload ? "photos.saveMessagesPhoto" : "photos.saveWallPhoto",
-          {
-            ...(input.prepareOnly &&
-            (input.diagnosticUserWall || input.diagnosticMessages)
-              ? {}
-              : { group_id: groupId }),
-            hash: uploaded.hash,
-            photo: uploaded.photo,
-            server: String(uploaded.server),
-          },
-        ).catch((error) => {
-          if (error instanceof VkApiError)
-            error.uploadDiagnostic = uploadDiagnostic;
-          throw error;
-        })) as Array<Record<string, unknown>>;
-        const photo = Array.isArray(saved) ? saved[0] : undefined;
-        const ownerId = photo?.owner_id;
-        const photoId = photo?.id;
-        if (
-          (typeof ownerId !== "number" && typeof ownerId !== "string") ||
-          (typeof photoId !== "number" && typeof photoId !== "string")
-        )
-          throw new Error("VK did not return a saved photo ID");
-        const accessKey =
-          typeof photo?.access_key === "string" ? `_${photo.access_key}` : "";
-        photoAttachments.push(`photo${ownerId}_${photoId}${accessKey}`);
-        preparedPhotos.push({
-          ownerId: String(ownerId),
-          id: String(photoId),
-          hasAccessKey: Boolean(accessKey),
-          sizes: Array.isArray(photo?.sizes) ? photo.sizes.length : 0,
-          albumId: typeof photo?.album_id === "number" ? photo.album_id : null,
-        });
       }
 
       if (input.prepareOnly)

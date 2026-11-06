@@ -496,7 +496,10 @@ test("empty upload photo cannot reach save or wall.post", async () => {
   } finally {
     globalThis.fetch = original;
   }
-  assert.deepEqual(calls, ["api.vk.ru", "upload.vk.test"]);
+  assert.deepEqual(
+    calls,
+    Array(3).fill(["api.vk.ru", "upload.vk.test"]).flat(),
+  );
 });
 
 test("wall.post success without a returned photo is not reported as success", async () => {
@@ -701,4 +704,68 @@ test("wall.post without a post ID has an uncertain result and is not retried", a
     },
   );
   assert.deepEqual(calls, ["wall.post"]);
+});
+
+test("empty upload retries fresh server only and publishes once after success", async () => {
+  const original = globalThis.fetch;
+  let uploads = 0;
+  let servers = 0;
+  let posts = 0;
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    if (url.hostname === "upload.vk.test")
+      return Response.json({
+        server: 1,
+        hash: "hash",
+        photo: ++uploads === 1 ? "" : "[photo]",
+      });
+    const method = url.pathname.split("/").pop();
+    if (method === "photos.getWallUploadServer") {
+      servers++;
+      return Response.json({
+        response: { upload_url: "https://upload.vk.test/photo" },
+      });
+    }
+    if (method === "photos.saveWallPhoto")
+      return Response.json({ response: [{ owner_id: 123, id: 456 }] });
+    if (method === "wall.post") {
+      posts++;
+      return Response.json({ response: { post_id: 99 } });
+    }
+    if (method === "wall.getById")
+      return Response.json({
+        response: [
+          {
+            id: 99,
+            owner_id: -138003065,
+            attachments: [{ type: "photo", photo: { owner_id: 123, id: 456 } }],
+          },
+        ],
+      });
+    throw Error("Unexpected request");
+  }) as typeof fetch;
+  try {
+    const result = await createVkClient({
+      accessToken: "group",
+      photoUploadAccessToken: "user",
+      logger,
+    }).publishWallPost({
+      groupId: "138003065",
+      idempotencyKey: "retry-empty",
+      text: "test",
+      images: [
+        {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "a.jpg",
+        },
+      ],
+    });
+    assert.equal(result.externalId, "99");
+    assert.equal(uploads, 2);
+    assert.equal(servers, 2);
+    assert.equal(posts, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
 });

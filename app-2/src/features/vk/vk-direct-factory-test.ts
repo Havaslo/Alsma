@@ -235,7 +235,7 @@ export function createVkDirectFactoryTestRouter(
         accessToken: groupToken,
         photoUploadAccessToken: photoToken,
         logger,
-        singleAttempt: true,
+        singleAttempt: Boolean(input.data.prepareOnly),
         diagnosticHttps: input.data.diagnosticTransport === "https",
         validatePhotoUploadUrl: (url) =>
           Boolean(

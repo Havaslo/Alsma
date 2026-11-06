@@ -148,6 +148,10 @@ export const createApiRouter = ({
     );
   if (environment === "development") {
     router.use("/vk-test-photo-upload", createVkTestPhotoUploadRouter());
+  }
+  // Authenticated test publisher is fixed to Black Turtle and its separate key.
+  // Keep the production photo-diagnostics route preparation-only.
+  if (vkPhotoConnection || environment === "development") {
     router.use(
       "/vk-factory-test",
       createVkDirectFactoryTestRouter(
