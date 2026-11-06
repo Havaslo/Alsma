@@ -1,5 +1,7 @@
 import type { Logger } from "pino";
 
+import { uploadVkPhotoWithHttps } from "./vk-photo-transport.js";
+
 const apiBaseUrl = "https://api.vk.com/method";
 const apiVersion = "5.199";
 const retryDelays = [250, 750] as const;
@@ -419,6 +421,7 @@ export const createVkClient = ({
       readonly groupId: string;
       readonly idempotencyKey: string;
       readonly prepareOnly?: boolean;
+      readonly diagnosticTransport?: "https";
       readonly images: readonly VkPublishImage[];
       readonly text: string;
     }) => {
@@ -485,13 +488,15 @@ export const createVkClient = ({
           };
         }
         const uploadPhoto = (url: string) =>
-          fetch(url, {
-            body,
-            headers,
-            method: "POST",
-            redirect: "error",
-            signal: AbortSignal.timeout(30_000),
-          });
+          input.prepareOnly && input.diagnosticTransport === "https"
+            ? uploadVkPhotoWithHttps(url, body as Uint8Array, headers!)
+            : fetch(url, {
+                body,
+                headers,
+                method: "POST",
+                redirect: "error",
+                signal: AbortSignal.timeout(30_000),
+              });
         let uploadedResponse = await uploadPhoto(upload.upload_url);
         const uploadAddress = new URL(upload.upload_url);
         const originalHost = uploadAddress.hostname;

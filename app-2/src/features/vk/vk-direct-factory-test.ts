@@ -1,5 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Router } from "express";
+import { readFile } from "node:fs/promises";
 import type { Logger } from "pino";
 import { z } from "zod";
 
@@ -23,7 +24,12 @@ import {
 
 const groupId = "138003065";
 const inputSchema = z
-  .object({ postId: z.string().uuid(), prepareOnly: z.boolean().optional() })
+  .object({
+    postId: z.string().uuid(),
+    prepareOnly: z.boolean().optional(),
+    diagnosticTransport: z.enum(["https"]).optional(),
+    fixture: z.boolean().optional(),
+  })
   .strict();
 const accessSchema = z
   .object({ url: z.string().trim().min(10).max(4096) })
@@ -155,6 +161,13 @@ export function createVkDirectFactoryTestRouter(
       res.status(400).json({ error: "INVALID_INPUT" });
       return;
     }
+    if (
+      (input.data.diagnosticTransport || input.data.fixture) &&
+      !input.data.prepareOnly
+    ) {
+      res.status(400).json({ error: "PREPARATION_REQUIRED" });
+      return;
+    }
     if (!allowPublishing && !input.data.prepareOnly) {
       res.status(403).json({ error: "PREPARATION_ONLY" });
       return;
@@ -240,11 +253,24 @@ export function createVkDirectFactoryTestRouter(
         contentType = "image/jpeg";
         fileName = "vk-photo.jpg";
       }
+      if (input.data.fixture) {
+        bytes = new Uint8Array(
+          await readFile(
+            new URL(
+              "../content-factory/assets/vk-test-photo.jpg",
+              import.meta.url,
+            ),
+          ),
+        );
+        contentType = "image/jpeg";
+        fileName = "test.jpg";
+      }
       providerStarted = true;
       const result = await client.publishWallPost({
         groupId,
         idempotencyKey: `test-${postId}`,
         prepareOnly: input.data.prepareOnly,
+        diagnosticTransport: input.data.diagnosticTransport,
         text: post.generatedCopy,
         images: [
           {
