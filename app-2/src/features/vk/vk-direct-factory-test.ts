@@ -245,6 +245,7 @@ export function createVkDirectFactoryTestRouter(
           code: error.code,
           method: error.method,
           invalidParameters: error.invalidParameters,
+          uploadDiagnostic: error.uploadDiagnostic,
         });
       else {
         unknown.add(postId);

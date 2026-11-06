@@ -11,6 +11,12 @@ export class VkApiError extends Error {
   readonly subcode?: number;
   method?: string;
   invalidParameters?: string[];
+  uploadDiagnostic?: {
+    photoLength: number;
+    photoEmpty: boolean;
+    hashPresent: boolean;
+    serverPresent: boolean;
+  };
   constructor(code: number, message: string, subcode?: number) {
     super(message);
     this.name = "VkApiError";
@@ -463,11 +469,30 @@ export const createVkClient = ({
         )
           throw new Error("VK photo upload returned an invalid response");
 
+        const uploadDiagnostic = {
+          photoLength: uploaded.photo.length,
+          photoEmpty: uploaded.photo.trim() === "[]" || !uploaded.photo.trim(),
+          hashPresent: Boolean(uploaded.hash),
+          serverPresent: Boolean(uploaded.server),
+        };
+        if (uploadDiagnostic.photoEmpty) {
+          const error = new VkApiError(
+            122,
+            "VK photo upload returned no photo",
+          );
+          error.method = "photos.upload";
+          error.uploadDiagnostic = uploadDiagnostic;
+          throw error;
+        }
         const saved = (await requestPhotoUpload("photos.saveWallPhoto", {
           group_id: groupId,
           hash: uploaded.hash,
           photo: uploaded.photo,
           server: String(uploaded.server),
+        }).catch((error) => {
+          if (error instanceof VkApiError)
+            error.uploadDiagnostic = uploadDiagnostic;
+          throw error;
         })) as Array<Record<string, unknown>>;
         const photo = Array.isArray(saved) ? saved[0] : undefined;
         const ownerId = photo?.owner_id;

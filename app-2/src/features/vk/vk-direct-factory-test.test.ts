@@ -305,6 +305,8 @@ test("a VK rejection of wall.post is final and allows a retry", async () => {
     assert.deepEqual(await denied.json(), {
       error: "TEST_POST_DENIED",
       code: 100,
+      method: "wall.post",
+      invalidParameters: [],
     });
     denyPost = false;
     assert.equal((await request("/publish")).status, 200);
