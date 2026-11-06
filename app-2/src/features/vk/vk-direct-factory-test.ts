@@ -233,6 +233,8 @@ export function createVkDirectFactoryTestRouter(
         res.status(502).json({
           error: "TEST_POST_DENIED",
           code: error.code,
+          method: error.method,
+          invalidParameters: error.invalidParameters,
         });
       else {
         unknown.add(postId);

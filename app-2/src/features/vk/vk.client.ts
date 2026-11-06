@@ -9,6 +9,8 @@ const wait = (milliseconds: number) =>
 export class VkApiError extends Error {
   readonly code: number;
   readonly subcode?: number;
+  method?: string;
+  invalidParameters?: string[];
   constructor(code: number, message: string, subcode?: number) {
     super(message);
     this.name = "VkApiError";
@@ -127,6 +129,11 @@ export const createVkClient = ({
           payload?.error?.error_msg ?? "VK API request failed",
           payload?.error?.error_subcode,
         );
+        error.method = method;
+        if (error.code === 100)
+          error.invalidParameters = Object.keys(parameters).filter((name) =>
+            new RegExp(`\\b${name}\\b`, "i").test(error.message),
+          );
         if (!shouldRetry(error.code) || attempt === maxAttempts) throw error;
       } catch (error) {
         if (error instanceof VkApiError) throw error;
