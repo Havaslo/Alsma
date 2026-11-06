@@ -11,8 +11,10 @@ const valid =
 
 test("accepts only the VK upload endpoint for the test group", () => {
   assert.ok(validateTestUploadUrl(valid));
+  assert.ok(validateTestUploadUrl(valid.replace("pu.vk.ru", "pu.vk.com")));
   for (const url of [
     valid.replace("pu.vk.ru", "evil.example"),
+    valid.replace("pu.vk.ru", "pu.vk.com.evil.example"),
     valid.replace("pu.vk.ru", "pu.vk.ru.evil.example"),
     valid.replace("https:", "http:"),
     valid.replace("138003065", "123"),

@@ -15,7 +15,7 @@ export const validateTestUploadUrl = (raw: string): URL | null => {
     const url = new URL(raw);
     if (
       url.protocol !== "https:" ||
-      url.hostname !== "pu.vk.ru" ||
+      !["pu.vk.ru", "pu.vk.com"].includes(url.hostname) ||
       url.port ||
       url.username ||
       url.password ||
