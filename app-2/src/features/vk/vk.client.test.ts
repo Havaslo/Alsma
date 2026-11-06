@@ -800,3 +800,91 @@ test("wall inspection uses user photo access because group auth cannot read wall
     globalThis.fetch = original;
   }
 });
+
+test("community copies are confirmed by image bytes, unrelated photos are rejected", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const same of [true, false]) {
+      globalThis.fetch = (async (input) => {
+        const url = new URL(String(input));
+        if (url.hostname === "photo.userapi.com")
+          return new Response(
+            url.pathname === "/saved" || same
+              ? "same image"
+              : "different image",
+          );
+        if (url.hostname === "upload.vk.test")
+          return Response.json({ server: 1, hash: "hash", photo: "[photo]" });
+        const method = url.pathname.split("/").pop();
+        if (method === "photos.getWallUploadServer")
+          return Response.json({
+            response: { upload_url: "https://upload.vk.test/photo" },
+          });
+        if (method === "photos.saveWallPhoto")
+          return Response.json({
+            response: [
+              {
+                owner_id: 123,
+                id: 456,
+                sizes: [
+                  {
+                    width: 1280,
+                    height: 720,
+                    url: "https://photo.userapi.com/saved",
+                  },
+                ],
+              },
+            ],
+          });
+        if (method === "wall.post")
+          return Response.json({ response: { post_id: 99 } });
+        if (method === "wall.getById")
+          return Response.json({
+            response: [
+              {
+                id: 99,
+                owner_id: -138003065,
+                attachments: [
+                  {
+                    type: "photo",
+                    photo: {
+                      owner_id: -138003065,
+                      id: 987,
+                      sizes: [
+                        {
+                          width: 1280,
+                          height: 720,
+                          url: "https://photo.userapi.com/copied",
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          });
+        throw Error("Unexpected request");
+      }) as typeof fetch;
+      const operation = createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).publishWallPost({
+        groupId: "138003065",
+        idempotencyKey: "copy-test",
+        text: "test",
+        images: [
+          {
+            content: new Uint8Array([1]),
+            contentType: "image/jpeg",
+            fileName: "a.jpg",
+          },
+        ],
+      });
+      if (same) assert.equal((await operation).externalId, "99");
+      else await assert.rejects(operation, VkPostVerificationError);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});

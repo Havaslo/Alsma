@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Logger } from "pino";
 
 import { uploadVkPhotoWithHttps } from "./vk-photo-transport.js";
@@ -7,6 +8,57 @@ const apiVersion = "5.199";
 const retryDelays = [250, 750] as const;
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+const photoUrl = (sizes: unknown): string | undefined => {
+  if (!Array.isArray(sizes)) return undefined;
+  return [...sizes]
+    .filter((item) => typeof item?.url === "string")
+    .sort(
+      (a, b) =>
+        Number(b.width) * Number(b.height) - Number(a.width) * Number(a.height),
+    )
+    .map((item) => item.url)
+    .find((raw) => {
+      try {
+        const url = new URL(raw);
+        return (
+          url.protocol === "https:" &&
+          !url.username &&
+          !url.password &&
+          !url.port &&
+          (url.hostname.endsWith(".userapi.com") ||
+            url.hostname.endsWith(".vkuserphoto.ru"))
+        );
+      } catch {
+        return false;
+      }
+    });
+};
+const photoDigest = async (url: string): Promise<string> => {
+  const response = await fetch(url, {
+    redirect: "error",
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok || !response.body)
+    throw new Error("VK photo verification download failed");
+  const reader = response.body.getReader();
+  const hash = createHash("sha256");
+  let total = 0;
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      total += next.value.byteLength;
+      if (total > 10 * 1024 * 1024)
+        throw new Error("VK photo verification image too large");
+      hash.update(next.value);
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  if (!total) throw new Error("VK photo verification image empty");
+  return hash.digest("hex");
+};
 
 export class VkApiError extends Error {
   readonly code: number;
@@ -488,6 +540,7 @@ export const createVkClient = ({
         throw new Error("VK post has too many images");
 
       const photoAttachments: string[] = [];
+      const preparedPhotoUrls: Array<string | undefined> = [];
       const preparedPhotos: Array<{
         ownerId: string;
         id: string;
@@ -669,6 +722,7 @@ export const createVkClient = ({
                 ? `_${photo.access_key}`
                 : "";
             photoAttachments.push(`photo${ownerId}_${photoId}${accessKey}`);
+            preparedPhotoUrls.push(photoUrl(photo?.sizes));
             preparedPhotos.push({
               ownerId: String(ownerId),
               id: String(photoId),
@@ -725,7 +779,7 @@ export const createVkClient = ({
             | {
                 attachments?: Array<{
                   type?: string;
-                  photo?: { id?: unknown; owner_id?: unknown };
+                  photo?: { id?: unknown; owner_id?: unknown; sizes?: unknown };
                 }>;
               }
             | undefined;
@@ -733,15 +787,40 @@ export const createVkClient = ({
             post?.attachments?.filter(
               (item) => item.type === "photo" && item.photo?.id != null,
             ) ?? [];
-          const actual = new Set(
-            photos.map((item) => `${item.photo?.owner_id}_${item.photo?.id}`),
-          );
-          if (
-            preparedPhotos.some(
-              (photo) => !actual.has(`${photo.ownerId}_${photo.id}`),
-            )
-          )
-            throw new VkPostVerificationError(postUrl);
+          const used = new Set<number>();
+          const digests = new Map<string, Promise<string>>();
+          const digest = (url: string) => {
+            if (!digests.has(url)) digests.set(url, photoDigest(url));
+            return digests.get(url)!;
+          };
+          for (const [index, expected] of preparedPhotos.entries()) {
+            const exact = photos.findIndex(
+              (item, i) =>
+                !used.has(i) &&
+                String(item.photo?.owner_id) === expected.ownerId &&
+                String(item.photo?.id) === expected.id,
+            );
+            if (exact >= 0) {
+              used.add(exact);
+              continue;
+            }
+            // VK may copy a user photo to the community and change its IDs.
+            // Confirm the bytes of the saved image, never just attachment count.
+            const expectedUrl = preparedPhotoUrls[index];
+            if (!expectedUrl) throw new VkPostVerificationError(postUrl);
+            const expectedHash = await digest(expectedUrl);
+            let match = -1;
+            for (const [i, item] of photos.entries()) {
+              if (used.has(i)) continue;
+              const actualUrl = photoUrl(item.photo?.sizes);
+              if (actualUrl && (await digest(actualUrl)) === expectedHash) {
+                match = i;
+                break;
+              }
+            }
+            if (match < 0) throw new VkPostVerificationError(postUrl);
+            used.add(match);
+          }
         } catch {
           throw new VkPostVerificationError(postUrl);
         }
