@@ -77,9 +77,17 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     assert.equal(url.searchParams.has("access_token"), false);
     calls.push(method);
     if (method === "groups.getById") {
-      assert.equal(params.get("access_token"), "group-secret");
+      assert.ok(
+        ["group-secret", "photo-secret-xxxxxxxxxxxxxxxx"].includes(
+          params.get("access_token")!,
+        ),
+      );
       assert.equal(params.get("group_id"), "138003065");
-      return Response.json({ response: [{ id: 138003065 }] });
+      return Response.json({
+        response: [
+          { id: 138003065, is_admin: 1, admin_level: 3, is_member: 1 },
+        ],
+      });
     }
     if (method === "photos.getWallUploadServer") {
       assert.equal(params.get("access_token"), "photo-secret-xxxxxxxxxxxxxxxx");
@@ -188,7 +196,10 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     const saved = await request("/token", true, access(token));
     assert.equal(saved.status, 200);
     status = await request("/status");
-    assert.deepEqual(await status.json(), { ready: true });
+    assert.deepEqual(await status.json(), {
+      ready: true,
+      photoGroupRole: { isAdmin: true, adminLevel: 3, isMember: true },
+    });
     assert.ok(!calls.includes("wall.post"));
     let r = await request("/publish");
     assert.equal(r.status, 200);

@@ -30,16 +30,6 @@ const withFetch = async (
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
     const method = url.pathname.split("/").pop() ?? "";
-    if (method === "wall.getById")
-      return Response.json({
-        response: [
-          {
-            id: 321,
-            owner_id: -177090031,
-            attachments: [{ type: "photo", photo: { id: 456 } }],
-          },
-        ],
-      });
     calls.push(method);
     return new Response(JSON.stringify(handler(method)), {
       headers: { "content-type": "application/json" },
@@ -385,10 +375,27 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
 test("photo preparation never publishes and only returns safe saved-photo metadata", async () => {
   const original = globalThis.fetch;
   const methods: string[] = [];
-  globalThis.fetch = (async (input) => {
+  globalThis.fetch = (async (input, init) => {
     const url = new URL(String(input));
-    if (url.hostname === "upload.vk.test")
+    if (url.hostname === "upload.vk.test") {
+      assert.ok(init?.body instanceof Uint8Array);
+      const wire = Buffer.from(init.body);
+      assert.equal(wire.subarray(-4).toString(), "--\r\n");
+      assert.equal(
+        new Headers(init.headers).get("content-length"),
+        String(wire.length),
+      );
+      const parsed = await new Response(wire, {
+        headers: init.headers,
+      }).formData();
+      const file = parsed.get("photo") as File;
+      assert.equal(file.name, "test.jpg");
+      assert.deepEqual(
+        new Uint8Array(await file.arrayBuffer()),
+        new Uint8Array([1]),
+      );
       return Response.json({ server: 1, photo: "photo", hash: "hash" });
+    }
     const method = url.pathname.split("/").pop()!;
     methods.push(method);
     if (method === "photos.getWallUploadServer")

@@ -132,7 +132,12 @@ export function createVkDirectFactoryTestRouter(
     try {
       await client.verifyCredentials(groupId);
       await client.verifyWallPhotoUpload(groupId);
-      res.json({ ready: true });
+      res.json({
+        ready: true,
+        photoGroupRole: await client
+          .inspectPhotoGroupRole(groupId)
+          .catch(() => null),
+      });
     } catch (error) {
       res.json({
         ready: false,

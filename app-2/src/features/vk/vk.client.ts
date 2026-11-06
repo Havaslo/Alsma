@@ -309,6 +309,24 @@ export const createVkClient = ({
       await request("groups.getById", { group_id: groupId });
     },
     inspectPublishingAccess,
+    inspectPhotoGroupRole: async (groupId: string) => {
+      const result = await requestPhotoUpload("groups.getById", {
+        group_id: groupId,
+      });
+      const groups = Array.isArray(result)
+        ? result
+        : (result as { groups?: unknown[] })?.groups;
+      const group = groups?.find(
+        (item) => String((item as { id?: unknown }).id) === groupId,
+      ) as
+        | { is_admin?: number; admin_level?: number; is_member?: number }
+        | undefined;
+      return {
+        isAdmin: group?.is_admin === 1,
+        adminLevel: group?.admin_level ?? null,
+        isMember: group?.is_member === 1,
+      };
+    },
     verifyWallPhotoUpload: async (groupId: string) => {
       const upload = (await requestPhotoUpload("photos.getWallUploadServer", {
         group_id: groupId,
@@ -427,9 +445,30 @@ export const createVkClient = ({
           new Blob([bytes], { type: image.contentType }),
           image.fileName,
         );
+        // Diagnostic preparation tests a fully buffered multipart body with
+        // the final CRLF expected by some legacy multipart parsers.
+        let body: BodyInit = form;
+        let headers: Record<string, string> | undefined;
+        if (input.prepareOnly) {
+          const encoded = new Request("https://localhost/", {
+            method: "POST",
+            body: form,
+          });
+          const serialized = Buffer.from(await encoded.arrayBuffer());
+          body = new Uint8Array(
+            serialized.subarray(-2).toString() === "\r\n"
+              ? serialized
+              : Buffer.concat([serialized, Buffer.from("\r\n")]),
+          );
+          headers = {
+            "Content-Type": encoded.headers.get("content-type")!,
+            "Content-Length": String(body.byteLength),
+          };
+        }
         const uploadPhoto = (url: string) =>
           fetch(url, {
-            body: form,
+            body,
+            headers,
             method: "POST",
             redirect: "error",
             signal: AbortSignal.timeout(30_000),
