@@ -76,14 +76,18 @@ export const createVkPhotoConnectionService = (options: {
   const config = options.configuration;
   const connectionKey = `vk.photo.connection.${options.groupId ?? "unconfigured"}`;
   const statePrefix = "vk.photo.oauth.state.";
-  const configured = Boolean(
-    config.appId &&
-    config.appSecret &&
-    config.redirectUri &&
-    config.encryptionKey &&
-    options.groupId &&
-    options.communityToken,
-  );
+  // Report names only: this status is admin-only and must never expose values.
+  const missingConfiguration = Object.entries({
+    VK_PHOTO_OAUTH_APP_ID: config.appId,
+    VK_PHOTO_OAUTH_APP_SECRET: config.appSecret,
+    VK_PHOTO_OAUTH_REDIRECT_URI: config.redirectUri,
+    VK_PHOTO_TOKEN_ENCRYPTION_KEY: config.encryptionKey,
+    VK_GROUP_ID: options.groupId,
+    VK_ACCESS_TOKEN: options.communityToken,
+  })
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  const configured = missingConfiguration.length === 0;
   const fallbackOrigin =
     options.allowedOrigins.find(
       (origin) => new URL(origin).hostname === "alsma.ru",
@@ -135,6 +139,7 @@ export const createVkPhotoConnectionService = (options: {
     }
     return {
       configured,
+      missingConfiguration,
       photoReady,
       reason,
       connectedAt: saved?.connectedAt ?? null,

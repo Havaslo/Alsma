@@ -237,3 +237,22 @@ test("VK client resolves the current photo access and retains provider subcode",
     globalThis.fetch = realFetch;
   }
 });
+
+test("configuration diagnostics list missing names without exposing credentials", async () => {
+  const { options } = setup();
+  const complete = await createVkPhotoConnectionService(options).status();
+  assert.equal(complete.configured, true);
+  assert.deepEqual(complete.missingConfiguration, []);
+  const incomplete = await createVkPhotoConnectionService({
+    ...options,
+    configuration: { ...options.configuration, appSecret: undefined },
+  }).status();
+  assert.equal(incomplete.configured, false);
+  assert.deepEqual(incomplete.missingConfiguration, [
+    "VK_PHOTO_OAUTH_APP_SECRET",
+  ]);
+  assert.ok(!JSON.stringify(incomplete).includes(options.communityToken));
+  assert.ok(
+    !JSON.stringify(incomplete).includes(options.configuration.encryptionKey),
+  );
+});
