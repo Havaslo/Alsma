@@ -40,6 +40,36 @@ export const createVkPhotoConnectionRouter = (
       res.json(await connection.start(req.get("Origin")));
     },
   );
+  router.post(
+    "/connect/manual/start",
+    requireAdmin,
+    requireManage,
+    validateRequest({ body: z.object({}).strict() }),
+    async (req, res) => {
+      res.json(
+        await connection.startManual(req.get("Origin"), res.locals.admin.id),
+      );
+    },
+  );
+  router.post(
+    "/connect/manual/complete",
+    requireAdmin,
+    requireManage,
+    validateRequest({
+      body: z
+        .object({ callbackUrl: z.string().trim().min(1).max(8192) })
+        .strict(),
+    }),
+    async (req, res) => {
+      res.json(
+        await connection.completeManual(
+          res.locals.input.body.callbackUrl,
+          req.get("Origin"),
+          res.locals.admin.id,
+        ),
+      );
+    },
+  );
   router.get(
     "/callback",
     validateRequest({

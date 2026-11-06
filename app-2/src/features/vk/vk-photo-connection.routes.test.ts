@@ -50,6 +50,27 @@ test("photo connection requires admin permission; callback carries only a safe o
           assert.equal(input.code, "private-code");
           return { origin: "https://alsma.ru", result: "CONNECTED" };
         },
+        startManual: async (origin: string, adminId: string) => {
+          assert.equal(origin, "https://alsma.ru");
+          assert.equal(adminId, "admin");
+          return {
+            authorizationUrl:
+              "https://oauth.vk.com/authorize?response_type=code",
+          };
+        },
+        completeManual: async (
+          url: string,
+          origin: string,
+          adminId: string,
+        ) => {
+          assert.equal(
+            url,
+            "https://oauth.vk.com/blank.html?code=private&state=state",
+          );
+          assert.equal(origin, "https://alsma.ru");
+          assert.equal(adminId, "admin");
+          return { result: "CONNECTED" };
+        },
         getToken: async () => undefined,
       } as never,
     ),
@@ -83,6 +104,32 @@ test("photo connection requires admin permission; callback carries only a safe o
     });
     assert.equal(response.status, 200);
     assert.equal(startCalls, 1);
+    for (const path of ["/connect/manual/start", "/connect/manual/complete"]) {
+      assert.equal(
+        (
+          await fetch(base + path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          })
+        ).status,
+        401,
+      );
+    }
+    const manual = await fetch(base + "/connect/manual/complete", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer admin-session",
+        Origin: "https://alsma.ru",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        callbackUrl: "https://oauth.vk.com/blank.html?code=private&state=state",
+      }),
+    });
+    assert.equal(manual.status, 200);
+    assert.deepEqual(await manual.json(), { result: "CONNECTED" });
+    assert.equal(manual.headers.get("cache-control"), "no-store");
     const callback = await fetch(
       base + "/callback?state=state&code=private-code",
       { redirect: "manual" },

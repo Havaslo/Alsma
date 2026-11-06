@@ -256,3 +256,110 @@ test("configuration diagnostics list missing names without exposing credentials"
     !JSON.stringify(incomplete).includes(options.configuration.encryptionKey),
   );
 });
+
+test("manual code flow binds admin and origin, preserves state on wrong actor and exchanges on backend", async () => {
+  const { service, rows, options } = setup();
+  const url = new URL(
+    (await service.startManual(origin, "admin-a")).authorizationUrl,
+  );
+  assert.equal(
+    url.searchParams.get("redirect_uri"),
+    "https://oauth.vk.com/blank.html",
+  );
+  assert.equal(url.searchParams.get("response_type"), "code");
+  assert.equal(url.searchParams.get("scope"), "photos");
+  const state = url.searchParams.get("state")!;
+  const callback = `https://oauth.vk.ru/blank.html#code=one-use-code&state=${state}`;
+  const realFetch = globalThis.fetch;
+  let exchanges = 0;
+  globalThis.fetch = async (input, init) => {
+    const params = init?.body as URLSearchParams;
+    if (String(input) === "https://oauth.vk.com/access_token") {
+      exchanges++;
+      assert.equal(
+        params.get("redirect_uri"),
+        "https://oauth.vk.com/blank.html",
+      );
+      assert.equal(params.get("code"), "one-use-code");
+      assert.equal(
+        params.get("client_secret"),
+        options.configuration.appSecret,
+      );
+      return Response.json({ access_token: photoToken, expires_in: 3600 });
+    }
+    assert.ok(String(input).endsWith("/photos.getWallUploadServer"));
+    return Response.json({
+      response: { upload_url: "https://upload.vk.test/photo" },
+    });
+  };
+  try {
+    assert.equal(
+      (await service.complete({ state, code: "one-use-code" })).result,
+      "INVALID_STATE",
+    );
+    assert.equal(
+      (await service.completeManual(callback, origin, "other-admin")).result,
+      "INVALID_STATE",
+    );
+    assert.equal(
+      (await service.completeManual(callback, "https://other.test", "admin-a"))
+        .result,
+      "INVALID_STATE",
+    );
+    assert.equal(exchanges, 0);
+    assert.equal(
+      (await service.completeManual(callback, origin, "admin-a")).result,
+      "CONNECTED",
+    );
+    assert.equal(exchanges, 1);
+    assert.equal(await service.getToken(), photoToken);
+    assert.ok(!JSON.stringify([...rows.values()]).includes(photoToken));
+    assert.equal(
+      (await service.completeManual(callback, origin, "admin-a")).result,
+      "INVALID_STATE",
+    );
+    assert.equal(exchanges, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("manual flow rejects foreign callbacks, browser tokens and ambiguous parameters before exchange", async () => {
+  const { service } = setup();
+  const badUrls = [
+    "https://evil.test/blank.html?code=a&state=b",
+    "https://oauth.vk.com.evil.test/blank.html?code=a&state=b",
+    "http://oauth.vk.com/blank.html?code=a&state=b",
+    "https://oauth.vk.com/other?code=a&state=b",
+    "https://user@oauth.vk.com/blank.html?code=a&state=b",
+    "https://oauth.vk.com:8443/blank.html?code=a&state=b",
+    "https://oauth.vk.com/blank.html?code=a&state=b#code=c",
+    "https://oauth.vk.com/blank.html?code=a",
+  ];
+  for (const url of badUrls)
+    assert.equal(
+      (await service.completeManual(url, origin, "admin")).result,
+      "INVALID_CALLBACK",
+    );
+  assert.equal(
+    (
+      await service.completeManual(
+        "https://oauth.vk.com/blank.html#access_token=private&state=b",
+        origin,
+        "admin",
+      )
+    ).result,
+    "TOKEN_INSTEAD_OF_CODE",
+  );
+  const direct = new URL((await service.start(origin)).authorizationUrl);
+  assert.equal(
+    (
+      await service.completeManual(
+        `https://oauth.vk.com/blank.html?code=a&state=${direct.searchParams.get("state")}`,
+        origin,
+        "admin",
+      )
+    ).result,
+    "INVALID_STATE",
+  );
+});

@@ -19,3 +19,20 @@ export const startVkPhotoConnection = async () => {
   );
   return response.data.authorizationUrl;
 };
+
+export const startVkPhotoManualConnection = async () => {
+  const response = await apiClient.post<{ authorizationUrl: string }>(
+    "/vk-photo-connection/connect/manual/start",
+    {},
+    { headers: headers() },
+  );
+  return response.data.authorizationUrl;
+};
+export const completeVkPhotoManualConnection = async (callbackUrl: string) => {
+  const response = await apiClient.post<{ result: string }>(
+    "/vk-photo-connection/connect/manual/complete",
+    { callbackUrl },
+    { headers: headers() },
+  );
+  return response.data.result;
+};

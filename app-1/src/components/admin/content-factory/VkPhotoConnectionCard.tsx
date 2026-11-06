@@ -1,15 +1,23 @@
+import { useState } from "react";
+
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/Button";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import {
+  completeVkPhotoManualConnection,
   loadVkPhotoConnection,
   startVkPhotoConnection,
+  startVkPhotoManualConnection,
 } from "@/lib/content-factory/vkPhotoConnectionApi";
 
 const messages: Record<string, string> = {
   CONNECTED:
     "Доступ к загрузке фото подтверждён. Можно планировать публикации.",
+  INVALID_CALLBACK:
+    "Вставьте полный адрес страницы oauth.vk.com/blank.html или oauth.vk.ru/blank.html после подтверждения доступа.",
+  TOKEN_INSTEAD_OF_CODE:
+    "VK вернул токен вместо кода. Начните подключение по ссылке из этого блока; старый браузерный токен сюда не подходит.",
   IP_MISMATCH:
     "VK отклонил доступ из-за другого IP сервера. Требуется проверить исходящий адрес и способ авторизации приложения.",
   EXPIRED: "Срок доступа к фотографиям истёк. Подключите VK снова.",
@@ -34,6 +42,23 @@ export const VkPhotoConnectionCard = () => {
   const connect = useMutation({
     mutationFn: startVkPhotoConnection,
     onSuccess: (url) => window.location.assign(url),
+  });
+  const [callbackUrl, setCallbackUrl] = useState("");
+  const [manualResult, setManualResult] = useState<string | null>(null);
+  const manualStart = useMutation({
+    mutationFn: startVkPhotoManualConnection,
+    onSuccess: () => {
+      setCallbackUrl("");
+      setManualResult(null);
+    },
+  });
+  const manualComplete = useMutation({
+    mutationFn: completeVkPhotoManualConnection,
+    onSuccess: (result) => {
+      setManualResult(result);
+      setCallbackUrl("");
+      void status.refetch();
+    },
   });
   const outcome = new URLSearchParams(window.location.search).get(
     "vkPhotoConnection",
@@ -90,6 +115,87 @@ export const VkPhotoConnectionCard = () => {
             ? "Переподключить фотографии VK"
             : "Подключить фотографии VK"}
       </Button>
+      <details className="space-y-3 rounded-2xl border border-line p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          VK сообщает об ошибке redirect_uri?
+        </summary>
+        <p className="text-sm text-muted-ui-foreground">
+          Можно проверить подключение через стандартную страницу VK. Оно
+          сработает, только если VK разрешит этому приложению серверный доступ к
+          фото. Один раз подтвердите разрешение и верните сюда адрес страницы.
+        </p>
+        <Button
+          variant="secondary"
+          disabled={
+            !status.data?.configured ||
+            manualStart.isPending ||
+            manualComplete.isPending
+          }
+          onClick={() => manualStart.mutate()}
+        >
+          {manualStart.isPending
+            ? "Готовим ссылку…"
+            : "Начать подключение без callback"}
+        </Button>
+        {manualStart.data && (
+          <div className="space-y-3">
+            <p className="text-sm">
+              <a
+                className="underline"
+                href={manualStart.data}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Открыть VK и разрешить доступ к фотографиям
+              </a>
+            </p>
+            <p className="text-sm text-muted-ui-foreground">
+              После подтверждения скопируйте полный адрес из адресной строки VK
+              и вставьте ниже. Ссылка действует 10 минут. Если VK показывает
+              ошибку, подключение пока недоступно — сохраните текст ошибки.
+            </p>
+            <label className="block space-y-1 text-sm">
+              <span>Адрес страницы после подтверждения VK</span>
+              <input
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full rounded-xl border border-line bg-transparent px-3 py-2"
+                value={callbackUrl}
+                onChange={(event) => setCallbackUrl(event.target.value)}
+                maxLength={8192}
+              />
+            </label>
+            <Button
+              variant="secondary"
+              disabled={
+                !callbackUrl.trim() ||
+                manualComplete.isPending ||
+                manualStart.isPending
+              }
+              onClick={() => manualComplete.mutate(callbackUrl.trim())}
+            >
+              {manualComplete.isPending
+                ? "Проверяем доступ…"
+                : "Подтвердить подключение"}
+            </Button>
+          </div>
+        )}
+        {manualResult && (
+          <p role="status" className="text-sm">
+            {messages[manualResult] ??
+              "VK не подтвердил подключение. Начните заново."}
+          </p>
+        )}
+        {(manualStart.error || manualComplete.error) && (
+          <p role="alert" className="text-sm text-rose-700">
+            {contentFactoryErrorMessage(
+              manualStart.error ?? manualComplete.error,
+              "Не удалось завершить подключение VK.",
+            )}
+          </p>
+        )}
+      </details>
     </section>
   );
 };

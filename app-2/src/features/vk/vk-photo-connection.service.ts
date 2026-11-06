@@ -29,7 +29,10 @@ const stateSchema = z.object({
   redirectUri: z.string().url(),
   groupId: z.string(),
   expiresAt: z.number(),
+  mode: z.enum(["redirect", "manual"]).default("redirect"),
+  adminId: z.string().optional(),
 });
+const manualRedirectUri = "https://oauth.vk.com/blank.html";
 const keyBytes = (key: string) => {
   const bytes = Buffer.from(key, "base64");
   if (bytes.length !== 32)
@@ -149,7 +152,7 @@ export const createVkPhotoConnectionService = (options: {
     };
   };
 
-  const start = async (origin: string | undefined) => {
+  const start = async (origin: string | undefined, manualAdminId?: string) => {
     if (!configured)
       throw new HttpError(
         409,
@@ -162,6 +165,7 @@ export const createVkPhotoConnectionService = (options: {
         "VK_PHOTO_ORIGIN_DENIED",
         "Недопустимый адрес страницы подключения VK.",
       );
+    const redirectUri = manualAdminId ? manualRedirectUri : config.redirectUri!;
     const state = randomBytes(32).toString("base64url");
     const key = statePrefix + createHash("sha256").update(state).digest("hex");
     await options.database.client.appSetting.deleteMany({
@@ -176,7 +180,9 @@ export const createVkPhotoConnectionService = (options: {
         value: {
           origin,
           groupId: options.groupId!,
-          redirectUri: config.redirectUri!,
+          redirectUri,
+          mode: manualAdminId ? "manual" : "redirect",
+          ...(manualAdminId ? { adminId: manualAdminId } : {}),
           expiresAt: Date.now() + 10 * 60_000,
         },
       },
@@ -184,7 +190,7 @@ export const createVkPhotoConnectionService = (options: {
     const url = new URL("https://oauth.vk.com/authorize");
     url.search = new URLSearchParams({
       client_id: config.appId!,
-      redirect_uri: config.redirectUri!,
+      redirect_uri: redirectUri,
       response_type: "code",
       scope: "photos",
       state,
@@ -198,6 +204,8 @@ export const createVkPhotoConnectionService = (options: {
     state?: string;
     code?: string;
     error?: string;
+    manualAdminId?: string;
+    manualOrigin?: string;
   }) => {
     const fallback = { origin: fallbackOrigin, result: "INVALID_STATE" };
     if (!input.state || input.state.length > 256) return fallback;
@@ -207,25 +215,31 @@ export const createVkPhotoConnectionService = (options: {
       where: { key },
     });
     if (!row) return fallback;
-    // Claim once across replicas before making any provider request.
-    const claimed = await options.database.client.appSetting.deleteMany({
-      where: { key, updatedAt: row.updatedAt },
-    });
     const state = stateSchema.safeParse(row.value);
     if (
-      claimed.count !== 1 ||
       !state.success ||
       state.data.expiresAt <= Date.now() ||
       !options.allowedOrigins.includes(state.data.origin) ||
       state.data.groupId !== options.groupId ||
-      state.data.redirectUri !== config.redirectUri
+      (state.data.mode === "manual"
+        ? !input.manualAdminId ||
+          state.data.adminId !== input.manualAdminId ||
+          state.data.origin !== input.manualOrigin ||
+          state.data.redirectUri !== manualRedirectUri
+        : Boolean(input.manualAdminId) ||
+          state.data.redirectUri !== config.redirectUri)
     )
       return fallback;
+    // Claim once across replicas after validating the initiating admin.
+    const claimed = await options.database.client.appSetting.deleteMany({
+      where: { key, updatedAt: row.updatedAt },
+    });
+    if (claimed.count !== 1) return fallback;
     const origin = state.data.origin;
     if (input.error) return { origin, result: "AUTHORIZATION_DENIED" };
     if (!input.code || !configured) return { origin, result: "NOT_CONFIGURED" };
     try {
-      // The token is issued to the backend, never copied from a browser IP.
+      // Exchange on the backend, then verify actual provider/IP compatibility.
       // photos only: wall.post continues to use the separate community token.
       const response = await fetch("https://oauth.vk.com/access_token", {
         method: "POST",
@@ -273,7 +287,56 @@ export const createVkPhotoConnectionService = (options: {
       };
     }
   };
-  return { start, complete, status, getToken };
+  const startManual = (origin: string | undefined, adminId: string) => {
+    if (!adminId)
+      throw new HttpError(401, "ADMIN_SESSION_INVALID", "Войдите снова.");
+    return start(origin, adminId);
+  };
+  const completeManual = async (
+    callbackUrl: string,
+    origin: string | undefined,
+    adminId: string,
+  ) => {
+    const invalid = { result: "INVALID_CALLBACK" };
+    let url: URL;
+    try {
+      url = new URL(callbackUrl);
+    } catch {
+      return invalid;
+    }
+    if (
+      url.protocol !== "https:" ||
+      !["oauth.vk.com", "oauth.vk.ru"].includes(url.hostname) ||
+      url.pathname !== "/blank.html" ||
+      url.port ||
+      url.username ||
+      url.password
+    )
+      return invalid;
+    const query = new URLSearchParams(url.search);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const params = new URLSearchParams([...query, ...fragment]);
+    // This flow accepts a one-use code, never a browser-issued access token.
+    if (params.has("access_token")) return { result: "TOKEN_INSTEAD_OF_CODE" };
+    if (
+      ["state", "code", "error"].some((name) => params.getAll(name).length > 1)
+    )
+      return invalid;
+    const code = params.get("code") ?? undefined;
+    const state = params.get("state") ?? undefined;
+    const error = params.get("error") ?? undefined;
+    if (!state || (!code && !error) || (code?.length ?? 0) > 4096)
+      return invalid;
+    const outcome = await complete({
+      code,
+      state,
+      error,
+      manualAdminId: adminId,
+      manualOrigin: origin,
+    });
+    return { result: outcome.result };
+  };
+  return { start, startManual, complete, completeManual, status, getToken };
 };
 export type VkPhotoConnectionService = ReturnType<
   typeof createVkPhotoConnectionService
