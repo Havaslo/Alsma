@@ -135,6 +135,17 @@ export const createApiRouter = ({
       "/vk-photo-connection",
       createVkPhotoConnectionRouter(database, vkPhotoConnection),
     );
+  if (vkPhotoConnection)
+    router.use(
+      "/vk-photo-diagnostics",
+      createVkDirectFactoryTestRouter(
+        database,
+        managedStorage,
+        logger,
+        vkPhotoConnection.getToken,
+        false,
+      ),
+    );
   if (environment === "development") {
     router.use("/vk-test-photo-upload", createVkTestPhotoUploadRouter());
     router.use(

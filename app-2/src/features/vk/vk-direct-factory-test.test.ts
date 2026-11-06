@@ -113,6 +113,16 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
   app.use(express.json());
   app.use(createVkDirectFactoryTestRouter(db, storage, logger));
   app.use(
+    "/probe",
+    createVkDirectFactoryTestRouter(
+      db,
+      storage,
+      logger,
+      async () => "photo-secret-xxxxxxxxxxxxxxxx",
+      false,
+    ),
+  );
+  app.use(
     (
       error: { statusCode?: number },
       _req: express.Request,
@@ -135,6 +145,10 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     });
   try {
     assert.notEqual((await request("/publish", false)).status, 200);
+    const forbidden = await request("/probe/publish");
+    assert.equal(forbidden.status, 403);
+    assert.deepEqual(await forbidden.json(), { error: "PREPARATION_ONLY" });
+    assert.equal(calls.length, 0);
     let status = await request("/status");
     assert.deepEqual(await status.json(), {
       ready: false,

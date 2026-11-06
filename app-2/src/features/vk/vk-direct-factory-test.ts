@@ -30,6 +30,7 @@ export function createVkDirectFactoryTestRouter(
   storage: ManagedStorage,
   logger: Logger,
   getConnectedPhotoToken?: () => Promise<string | undefined>,
+  allowPublishing = true,
 ): Router {
   const router = Router();
   const inProgress = new Set<string>();
@@ -142,6 +143,10 @@ export function createVkDirectFactoryTestRouter(
     const input = inputSchema.safeParse(req.body);
     if (!input.success) {
       res.status(400).json({ error: "INVALID_INPUT" });
+      return;
+    }
+    if (!allowPublishing && !input.data.prepareOnly) {
+      res.status(403).json({ error: "PREPARATION_ONLY" });
       return;
     }
     const postId = input.data.postId;
