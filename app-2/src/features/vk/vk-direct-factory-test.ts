@@ -142,6 +142,16 @@ export function createVkDirectFactoryTestRouter(
       await client.verifyWallPhotoUpload(groupId);
       res.json({
         ready: true,
+        communityAccess: await client.inspectPublishingAccess(groupId),
+        network: {
+          node: process.versions.node,
+          proxyConfigured: Boolean(
+            process.env.HTTPS_PROXY ||
+            process.env.HTTP_PROXY ||
+            process.env.ALL_PROXY,
+          ),
+          nodeUseEnvProxy: process.env.NODE_USE_ENV_PROXY === "1",
+        },
         photoGroupRole: await client
           .inspectPhotoGroupRole(groupId)
           .catch(() => null),
@@ -225,6 +235,7 @@ export function createVkDirectFactoryTestRouter(
         photoUploadAccessToken: photoToken,
         logger,
         singleAttempt: true,
+        diagnosticHttps: input.data.diagnosticTransport === "https",
         validatePhotoUploadUrl: (url) =>
           Boolean(
             validateTestUploadUrl(

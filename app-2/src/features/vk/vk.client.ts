@@ -97,6 +97,7 @@ export const createVkClient = ({
   getPhotoUploadAccessToken,
   logger,
   singleAttempt = false,
+  diagnosticHttps = false,
   validatePhotoUploadUrl,
 }: {
   readonly accessToken?: string;
@@ -104,6 +105,7 @@ export const createVkClient = ({
   readonly getPhotoUploadAccessToken?: () => Promise<string | undefined>;
   readonly logger: Logger;
   readonly singleAttempt?: boolean;
+  readonly diagnosticHttps?: boolean;
   readonly validatePhotoUploadUrl?: (url: string) => boolean;
 }) => {
   const token = accessToken?.trim();
@@ -122,19 +124,28 @@ export const createVkClient = ({
         v: apiVersion,
       });
       try {
-        const response = await fetch(
-          singleAttempt
-            ? `${apiBaseUrl}/${method}`
-            : `${apiBaseUrl}/${method}?${query}`,
-          singleAttempt
-            ? {
-                method: "POST",
-                body: query,
-                redirect: "error",
-                signal: AbortSignal.timeout(15_000),
-              }
-            : { signal: AbortSignal.timeout(15_000) },
-        );
+        const response = diagnosticHttps
+          ? await uploadVkPhotoWithHttps(
+              `${apiBaseUrl}/${method}`,
+              Buffer.from(query.toString()),
+              {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": String(Buffer.byteLength(query.toString())),
+              },
+            )
+          : await fetch(
+              singleAttempt
+                ? `${apiBaseUrl}/${method}`
+                : `${apiBaseUrl}/${method}?${query}`,
+              singleAttempt
+                ? {
+                    method: "POST",
+                    body: query,
+                    redirect: "error",
+                    signal: AbortSignal.timeout(15_000),
+                  }
+                : { signal: AbortSignal.timeout(15_000) },
+            );
         const payload = (await response.json().catch(() => null)) as {
           response?: unknown;
           error?: {

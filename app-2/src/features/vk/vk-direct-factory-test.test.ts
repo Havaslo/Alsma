@@ -203,16 +203,28 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
     const saved = await request("/token", true, access(token));
     assert.equal(saved.status, 200);
     status = await request("/status");
-    assert.deepEqual(await status.json(), {
-      ready: true,
-      photoGroupRole: {
-        userId: 120486641,
-        groupFound: true,
-        isAdmin: true,
-        adminLevel: 3,
-        isMember: true,
+    const connectedStatus = (await status.json()) as {
+      ready: boolean;
+      photoGroupRole: unknown;
+      network: unknown;
+    };
+    assert.ok(connectedStatus.network);
+    assert.deepEqual(
+      {
+        ready: connectedStatus.ready,
+        photoGroupRole: connectedStatus.photoGroupRole,
       },
-    });
+      {
+        ready: true,
+        photoGroupRole: {
+          userId: 120486641,
+          groupFound: true,
+          isAdmin: true,
+          adminLevel: 3,
+          isMember: true,
+        },
+      },
+    );
     assert.ok(!calls.includes("wall.post"));
     let r = await request("/publish");
     assert.equal(r.status, 200);
