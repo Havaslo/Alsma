@@ -18,6 +18,7 @@ import { prepareVkPhoto } from "./vk-photo-image.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import {
   VkApiError,
+  VkPhotoUploadEmptyError,
   VkPostVerificationError,
   createVkClient,
 } from "./vk.client.js";
@@ -299,6 +300,13 @@ export function createVkDirectFactoryTestRouter(
       if (error instanceof VkPostVerificationError) {
         unknown.add(postId);
         res.status(502).json({ error: "PHOTO_NOT_CONFIRMED", url: error.url });
+      } else if (error instanceof VkPhotoUploadEmptyError) {
+        res.status(502).json({
+          error: "PHOTO_UPLOAD_EMPTY",
+          method: error.method,
+          uploadDiagnostic: error.uploadDiagnostic,
+          uploadTransport: error.uploadTransport,
+        });
       } else if (!providerStarted)
         res.status(502).json({
           error: "TEST_PREFLIGHT_FAILED",

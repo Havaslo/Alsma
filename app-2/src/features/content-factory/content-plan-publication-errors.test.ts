@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { MaxImageUploadError } from "../max-bot/max-bot.client.js";
-import { VkApiError, VkPostVerificationError } from "../vk/vk.client.js";
+import {
+  VkApiError,
+  VkPhotoUploadEmptyError,
+  VkPostVerificationError,
+  VkPublicationUnknownError,
+} from "../vk/vk.client.js";
 import {
   isAmbiguousProviderError,
   safePublicationError,
@@ -47,4 +52,12 @@ test("unconfirmed VK attachments prevent automatic retry", () => {
     /фотографии не подтверждены/u,
   );
   assert.match(safePublicationError(error, true), /wall-138003065_15/u);
+});
+
+test("empty photo is local preparation failure, missing post ID is uncertain", () => {
+  const empty = new VkPhotoUploadEmptyError();
+  assert.equal(isAmbiguousProviderError(empty), false);
+  assert.doesNotMatch(safePublicationError(empty, false), /122/u);
+  assert.match(safePublicationError(empty, false), /Публикация не началась/u);
+  assert.equal(isAmbiguousProviderError(new VkPublicationUnknownError()), true);
 });

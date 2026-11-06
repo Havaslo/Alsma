@@ -33,6 +33,21 @@ export class VkApiError extends Error {
     this.subcode = subcode;
   }
 }
+export class VkPhotoUploadEmptyError extends Error {
+  readonly name = "VkPhotoUploadEmptyError";
+  readonly method = "photos.upload";
+  uploadDiagnostic?: VkApiError["uploadDiagnostic"];
+  uploadTransport?: VkApiError["uploadTransport"];
+  constructor() {
+    super("VK photo upload returned no photo");
+  }
+}
+export class VkPublicationUnknownError extends Error {
+  readonly name = "VkPublicationUnknownError";
+  constructor() {
+    super("VK did not return a post ID");
+  }
+}
 export class VkPostVerificationError extends Error {
   readonly name = "VkPostVerificationError";
   constructor(readonly url: string) {
@@ -575,11 +590,7 @@ export const createVkClient = ({
           serverPresent: Boolean(uploaded.server),
         };
         if (uploadDiagnostic.photoEmpty) {
-          const error = new VkApiError(
-            122,
-            "VK photo upload returned no photo",
-          );
-          error.method = "photos.upload";
+          const error = new VkPhotoUploadEmptyError();
           error.uploadDiagnostic = uploadDiagnostic;
           error.uploadTransport = uploadTransport;
           throw error;
@@ -635,7 +646,7 @@ export const createVkClient = ({
         typeof response.post_id !== "number" &&
         typeof response.post_id !== "string"
       )
-        throw new Error("VK did not return a post ID");
+        throw new VkPublicationUnknownError();
       const postId = String(response.post_id);
       const postUrl = `https://vk.com/wall-${groupId}_${postId}`;
       if (photoAttachments.length) {

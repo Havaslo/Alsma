@@ -4,7 +4,9 @@ import type { Logger } from "pino";
 
 import {
   VkApiError,
+  VkPhotoUploadEmptyError,
   VkPostVerificationError,
+  VkPublicationUnknownError,
   createVkClient,
 } from "./vk.client.js";
 import type { VkPublishingAccess } from "./vk.client.js";
@@ -488,8 +490,7 @@ test("empty upload photo cannot reach save or wall.post", async () => {
         ],
       }),
       (error) =>
-        error instanceof VkApiError &&
-        error.code === 122 &&
+        error instanceof VkPhotoUploadEmptyError &&
         error.method === "photos.upload",
     );
   } finally {
@@ -678,6 +679,24 @@ test("wall.post is attempted once even on a retryable API error", async () => {
           images: [],
         }),
         VkApiError,
+      );
+    },
+  );
+  assert.deepEqual(calls, ["wall.post"]);
+});
+
+test("wall.post without a post ID has an uncertain result and is not retried", async () => {
+  const calls = await withFetch(
+    () => ({ response: {} }),
+    async () => {
+      await assert.rejects(
+        createVkClient({ accessToken: "group", logger }).publishWallPost({
+          groupId: "138003065",
+          idempotencyKey: "missing-id",
+          text: "test",
+          images: [],
+        }),
+        VkPublicationUnknownError,
       );
     },
   );
