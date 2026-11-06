@@ -17,7 +17,9 @@ import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import { VkApiError, createVkClient } from "./vk.client.js";
 
 const groupId = "138003065";
-const inputSchema = z.object({ postId: z.string().uuid() }).strict();
+const inputSchema = z
+  .object({ postId: z.string().uuid(), prepareOnly: z.boolean().optional() })
+  .strict();
 const accessSchema = z
   .object({ url: z.string().trim().min(10).max(4096) })
   .strict();
@@ -212,6 +214,7 @@ export function createVkDirectFactoryTestRouter(
       const result = await client.publishWallPost({
         groupId,
         idempotencyKey: `test-${postId}`,
+        prepareOnly: input.data.prepareOnly,
         text: post.generatedCopy,
         images: [
           {
@@ -221,7 +224,9 @@ export function createVkDirectFactoryTestRouter(
           },
         ],
       });
-      res.json({ url: result.url, postId: result.externalId });
+      if (input.data.prepareOnly)
+        res.json({ prepared: true, photos: result.preparedPhotos });
+      else res.json({ url: result.url, postId: result.externalId });
     } catch (error) {
       if (!providerStarted)
         res.status(502).json({

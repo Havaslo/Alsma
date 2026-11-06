@@ -345,3 +345,62 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
     "wall.post",
   ]);
 });
+
+test("photo preparation never publishes and only returns safe saved-photo metadata", async () => {
+  const original = globalThis.fetch;
+  const methods: string[] = [];
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    if (url.hostname === "upload.vk.test")
+      return Response.json({ server: 1, photo: "photo", hash: "hash" });
+    const method = url.pathname.split("/").pop()!;
+    methods.push(method);
+    if (method === "photos.getWallUploadServer")
+      return Response.json({
+        response: { upload_url: "https://upload.vk.test/photo" },
+      });
+    if (method === "photos.saveWallPhoto")
+      return Response.json({
+        response: [
+          {
+            owner_id: 123,
+            id: 456,
+            access_key: "private-key",
+            album_id: -7,
+            sizes: [{ url: "private-url" }],
+          },
+        ],
+      });
+    throw new Error("Must not publish");
+  }) as typeof fetch;
+  try {
+    const result = await createVkClient({
+      accessToken: "group",
+      photoUploadAccessToken: "user",
+      logger,
+    }).publishWallPost({
+      groupId: "138003065",
+      idempotencyKey: "prepare",
+      prepareOnly: true,
+      text: "test",
+      images: [
+        {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "test.jpg",
+        },
+      ],
+    });
+    assert.equal(result.url, "");
+    assert.deepEqual(result.preparedPhotos, [
+      { ownerId: "123", id: "456", hasAccessKey: true, sizes: 1, albumId: -7 },
+    ]);
+    assert.ok(!JSON.stringify(result).includes("private-"));
+  } finally {
+    globalThis.fetch = original;
+  }
+  assert.deepEqual(methods, [
+    "photos.getWallUploadServer",
+    "photos.saveWallPhoto",
+  ]);
+});

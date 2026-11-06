@@ -369,6 +369,7 @@ export const createVkClient = ({
     publishWallPost: async (input: {
       readonly groupId: string;
       readonly idempotencyKey: string;
+      readonly prepareOnly?: boolean;
       readonly images: readonly VkPublishImage[];
       readonly text: string;
     }) => {
@@ -379,6 +380,13 @@ export const createVkClient = ({
         throw new Error("VK post has too many images");
 
       const photoAttachments: string[] = [];
+      const preparedPhotos: Array<{
+        ownerId: string;
+        id: string;
+        hasAccessKey: boolean;
+        sizes: number;
+        albumId: unknown;
+      }> = [];
       for (const image of input.images) {
         let upload: { upload_url?: unknown };
         try {
@@ -472,8 +480,17 @@ export const createVkClient = ({
         const accessKey =
           typeof photo?.access_key === "string" ? `_${photo.access_key}` : "";
         photoAttachments.push(`photo${ownerId}_${photoId}${accessKey}`);
+        preparedPhotos.push({
+          ownerId: String(ownerId),
+          id: String(photoId),
+          hasAccessKey: Boolean(accessKey),
+          sizes: Array.isArray(photo?.sizes) ? photo.sizes.length : 0,
+          albumId: typeof photo?.album_id === "number" ? photo.album_id : null,
+        });
       }
 
+      if (input.prepareOnly)
+        return { externalId: "", url: "", attachedImages: 0, preparedPhotos };
       const response = (await request("wall.post", {
         owner_id: `-${groupId}`,
         from_group: "1",
