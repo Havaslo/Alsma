@@ -269,7 +269,7 @@ test("user token uploads photos while community token publishes the wall post", 
     { method: "photos.getWallUploadServer", token: "user-token" },
     { method: "photos.saveWallPhoto", token: "user-token" },
     { method: "wall.post", token: "community-token" },
-    { method: "wall.getById", token: "community-token" },
+    { method: "wall.getById", token: "user-token" },
   ]);
 });
 
