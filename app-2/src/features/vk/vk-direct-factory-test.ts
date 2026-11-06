@@ -1,3 +1,4 @@
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Router } from "express";
 import type { Logger } from "pino";
 import { z } from "zod";
@@ -210,10 +211,25 @@ export function createVkDirectFactoryTestRouter(
         signal: AbortSignal.timeout(30000),
       });
       if (!response.ok) throw new Error("IMAGE_UNAVAILABLE");
-      const bytes = new Uint8Array(await response.arrayBuffer());
+      let bytes = new Uint8Array(await response.arrayBuffer());
+      let contentType = media.contentType;
+      let fileName = media.fileName;
       if (!bytes.length || bytes.length > limit) {
         res.status(400).json({ error: "INVALID_PHOTO" });
         return;
+      }
+      if (input.data.prepareOnly) {
+        const decoded = await loadImage(Buffer.from(bytes));
+        if (decoded.width * decoded.height > 40_000_000)
+          throw new Error("IMAGE_TOO_LARGE");
+        const canvas = createCanvas(decoded.width, decoded.height);
+        const context = canvas.getContext("2d");
+        context.fillStyle = "white";
+        context.fillRect(0, 0, decoded.width, decoded.height);
+        context.drawImage(decoded, 0, 0);
+        bytes = new Uint8Array(await canvas.encode("jpeg", 90));
+        contentType = "image/jpeg";
+        fileName = "vk-photo.jpg";
       }
       providerStarted = true;
       const result = await client.publishWallPost({
@@ -224,8 +240,8 @@ export function createVkDirectFactoryTestRouter(
         images: [
           {
             content: bytes,
-            contentType: media.contentType,
-            fileName: media.fileName,
+            contentType,
+            fileName,
           },
         ],
       });

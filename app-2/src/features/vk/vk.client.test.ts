@@ -404,3 +404,44 @@ test("photo preparation never publishes and only returns safe saved-photo metada
     "photos.saveWallPhoto",
   ]);
 });
+
+test("empty upload photo cannot reach save or wall.post", async () => {
+  const original = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    calls.push(url.hostname);
+    if (url.hostname === "upload.vk.test")
+      return Response.json({ server: 1, photo: "[]", hash: "hash" });
+    return Response.json({
+      response: { upload_url: "https://upload.vk.test/photo" },
+    });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).publishWallPost({
+        groupId: "138003065",
+        idempotencyKey: "empty",
+        text: "test",
+        images: [
+          {
+            content: new Uint8Array([1]),
+            contentType: "image/jpeg",
+            fileName: "test.jpg",
+          },
+        ],
+      }),
+      (error) =>
+        error instanceof VkApiError &&
+        error.code === 122 &&
+        error.method === "photos.upload",
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+  assert.deepEqual(calls, ["api.vk.com", "upload.vk.test"]);
+});
