@@ -99,12 +99,27 @@ export function createVkDirectFactoryTestRouter(
       });
       return;
     }
+    let uploadDestination:
+      { host: string; path: string; groupMatches: boolean } | undefined;
     const client = createVkClient({
       accessToken: groupToken,
       photoUploadAccessToken: photoToken,
       logger,
       singleAttempt: true,
-      validatePhotoUploadUrl: (url) => Boolean(validateTestUploadUrl(url)),
+      validatePhotoUploadUrl: (raw) => {
+        const valid = Boolean(validateTestUploadUrl(raw));
+        if (!valid) {
+          try {
+            const url = new URL(raw);
+            uploadDestination = {
+              host: url.hostname,
+              path: url.pathname,
+              groupMatches: url.searchParams.get("gid") === groupId,
+            };
+          } catch {}
+        }
+        return valid;
+      },
     });
     try {
       await client.verifyCredentials(groupId);
@@ -113,7 +128,10 @@ export function createVkDirectFactoryTestRouter(
     } catch (error) {
       res.json({
         ready: false,
-        reason: "ACCESS_NOT_VERIFIED",
+        reason: uploadDestination
+          ? "UPLOAD_URL_REJECTED"
+          : "ACCESS_NOT_VERIFIED",
+        ...(uploadDestination ? { uploadDestination } : {}),
         code: error instanceof VkApiError ? error.code : null,
       });
     }

@@ -131,12 +131,28 @@ export const VkPhotoConnectionCard = () => {
             manualStart.isPending ||
             manualComplete.isPending
           }
-          onClick={() => manualStart.mutate()}
+          onClick={() => manualStart.mutate(false)}
         >
           {manualStart.isPending
             ? "Готовим ссылку…"
             : "Начать подключение без callback"}
         </Button>
+        <Button
+          variant="secondary"
+          disabled={
+            !status.data?.configured ||
+            manualStart.isPending ||
+            manualComplete.isPending
+          }
+          onClick={() => manualStart.mutate(true)}
+        >
+          Запросить доступ без ежедневного входа
+        </Button>
+        <p className="text-sm text-muted-ui-foreground">
+          Этот вариант запрашивает дополнительное разрешение offline. VK может
+          отказать или ограничить срок; фактический результат появится после
+          подключения. При отказе текущий доступ сохраняется.
+        </p>
         {manualStart.data && (
           <div className="space-y-3">
             <p className="text-sm">

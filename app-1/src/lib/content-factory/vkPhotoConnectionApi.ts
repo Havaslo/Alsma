@@ -20,10 +20,10 @@ export const startVkPhotoConnection = async () => {
   return response.data.authorizationUrl;
 };
 
-export const startVkPhotoManualConnection = async () => {
+export const startVkPhotoManualConnection = async (offline = false) => {
   const response = await apiClient.post<{ authorizationUrl: string }>(
     "/vk-photo-connection/connect/manual/start",
-    {},
+    { offline },
     { headers: headers() },
   );
   return response.data.authorizationUrl;

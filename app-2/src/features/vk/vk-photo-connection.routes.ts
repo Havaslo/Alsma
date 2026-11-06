@@ -44,10 +44,16 @@ export const createVkPhotoConnectionRouter = (
     "/connect/manual/start",
     requireAdmin,
     requireManage,
-    validateRequest({ body: z.object({}).strict() }),
+    validateRequest({
+      body: z.object({ offline: z.boolean().optional() }).strict(),
+    }),
     async (req, res) => {
       res.json(
-        await connection.startManual(req.get("Origin"), res.locals.admin.id),
+        await connection.startManual(
+          req.get("Origin"),
+          res.locals.admin.id,
+          res.locals.input.body.offline,
+        ),
       );
     },
   );

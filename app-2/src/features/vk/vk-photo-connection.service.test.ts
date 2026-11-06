@@ -363,3 +363,12 @@ test("manual flow rejects foreign callbacks, browser tokens and ambiguous parame
     "INVALID_STATE",
   );
 });
+
+test("offline is opt-in and still uses server code exchange", async () => {
+  const { service } = setup();
+  const url = new URL(
+    (await service.startManual(origin, "admin-a", true)).authorizationUrl,
+  );
+  assert.equal(url.searchParams.get("scope"), "photos,offline");
+  assert.equal(url.searchParams.get("response_type"), "code");
+});

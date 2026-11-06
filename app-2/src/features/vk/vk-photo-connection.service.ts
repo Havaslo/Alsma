@@ -152,7 +152,11 @@ export const createVkPhotoConnectionService = (options: {
     };
   };
 
-  const start = async (origin: string | undefined, manualAdminId?: string) => {
+  const start = async (
+    origin: string | undefined,
+    manualAdminId?: string,
+    offline = false,
+  ) => {
     if (!configured)
       throw new HttpError(
         409,
@@ -192,7 +196,7 @@ export const createVkPhotoConnectionService = (options: {
       client_id: config.appId!,
       redirect_uri: redirectUri,
       response_type: "code",
-      scope: "photos",
+      scope: offline ? "photos,offline" : "photos",
       state,
       display: "page",
       v: "5.199",
@@ -287,10 +291,14 @@ export const createVkPhotoConnectionService = (options: {
       };
     }
   };
-  const startManual = (origin: string | undefined, adminId: string) => {
+  const startManual = (
+    origin: string | undefined,
+    adminId: string,
+    offline = false,
+  ) => {
     if (!adminId)
       throw new HttpError(401, "ADMIN_SESSION_INVALID", "Войдите снова.");
-    return start(origin, adminId);
+    return start(origin, adminId, offline);
   };
   const completeManual = async (
     callbackUrl: string,
