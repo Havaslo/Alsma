@@ -281,3 +281,67 @@ test("wall post keeps failing on a real token error", async () => {
   assert.ok(caught instanceof VkApiError);
   assert.equal(caught.code, 5);
 });
+
+test("retries a rejected com upload on exact ru host before saving and posts only once", async () => {
+  const original = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input, init) => {
+    const url = new URL(String(input));
+    calls.push(
+      url.hostname === "api.vk.com"
+        ? url.pathname.split("/").pop()!
+        : url.hostname,
+    );
+    if (url.hostname === "pu.vk.com") return new Response("", { status: 405 });
+    if (url.hostname === "pu.vk.ru") {
+      assert.equal(init?.method, "POST");
+      assert.equal(init?.redirect, "error");
+      assert.equal(url.searchParams.get("hash"), "capability");
+      return new Response(
+        JSON.stringify({ server: 1, photo: "photo", hash: "hash" }),
+      );
+    }
+    const method = url.pathname.split("/").pop();
+    return new Response(
+      JSON.stringify({
+        response:
+          method === "photos.getWallUploadServer"
+            ? {
+                upload_url:
+                  "https://pu.vk.com/c1/ss2/upload.php?hash=capability",
+              }
+            : method === "photos.saveWallPhoto"
+              ? [{ owner_id: -138003065, id: 42 }]
+              : { post_id: 99 },
+      }),
+    );
+  }) as typeof fetch;
+  try {
+    const result = await createVkClient({
+      accessToken: "group",
+      photoUploadAccessToken: "user",
+      logger,
+    }).publishWallPost({
+      groupId: "138003065",
+      idempotencyKey: "retry-upload",
+      text: "test",
+      images: [
+        {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "test.jpg",
+        },
+      ],
+    });
+    assert.equal(result.attachedImages, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+  assert.deepEqual(calls, [
+    "photos.getWallUploadServer",
+    "pu.vk.com",
+    "pu.vk.ru",
+    "photos.saveWallPhoto",
+    "wall.post",
+  ]);
+});

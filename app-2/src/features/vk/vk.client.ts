@@ -400,12 +400,35 @@ export const createVkClient = ({
           new Blob([bytes], { type: image.contentType }),
           image.fileName,
         );
-        const uploadedResponse = await fetch(upload.upload_url, {
-          body: form,
-          method: "POST",
-          ...(validatePhotoUploadUrl ? { redirect: "error" as const } : {}),
-          signal: AbortSignal.timeout(30_000),
-        });
+        const uploadPhoto = (url: string) =>
+          fetch(url, {
+            body: form,
+            method: "POST",
+            redirect: "error",
+            signal: AbortSignal.timeout(30_000),
+          });
+        let uploadedResponse = await uploadPhoto(upload.upload_url);
+        const uploadAddress = new URL(upload.upload_url);
+        // Some VK-issued .com upload endpoints reject multipart POST with 405.
+        // Retry only the same capability on VK's .ru upload host, never wall.post.
+        if (
+          uploadedResponse.status === 405 &&
+          uploadAddress.protocol === "https:" &&
+          uploadAddress.hostname === "pu.vk.com" &&
+          !uploadAddress.port &&
+          !uploadAddress.username &&
+          !uploadAddress.password &&
+          /^\/c\d+\/ss\d+\/upload\.php$/.test(uploadAddress.pathname)
+        ) {
+          uploadAddress.hostname = "pu.vk.ru";
+          if (
+            !validatePhotoUploadUrl ||
+            validatePhotoUploadUrl(uploadAddress.toString())
+          ) {
+            await uploadedResponse.body?.cancel();
+            uploadedResponse = await uploadPhoto(uploadAddress.toString());
+          }
+        }
         if (!uploadedResponse.ok)
           throw new VkApiError(
             uploadedResponse.status,
