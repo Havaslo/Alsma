@@ -565,3 +565,45 @@ test("missing group role flags remain unknown rather than false", async () => {
     },
   );
 });
+
+test("message-photo diagnostic uses only community auth and never publishes", async () => {
+  const calls = await withFetch(
+    (method) => {
+      if (method === "photos.getMessagesUploadServer")
+        return { response: { upload_url: "https://upload.vk.test/photo" } };
+      if (method === "photo")
+        return { server: 1, photo: "encoded", hash: "hash" };
+      if (method === "photos.saveMessagesPhoto")
+        return { response: [{ owner_id: -138003065, id: 1 }] };
+      throw new Error("Unexpected method");
+    },
+    async () => {
+      const result = await createVkClient({
+        accessToken: "group",
+        getPhotoUploadAccessToken: async () => {
+          throw new Error("User token must not be used");
+        },
+        logger,
+      }).publishWallPost({
+        groupId: "138003065",
+        idempotencyKey: "probe",
+        text: "test",
+        images: [
+          {
+            content: new Uint8Array([1]),
+            contentType: "image/jpeg",
+            fileName: "test.jpg",
+          },
+        ],
+        prepareOnly: true,
+        diagnosticMessages: true,
+      });
+      assert.equal(result.preparedPhotos?.[0]?.ownerId, "-138003065");
+    },
+  );
+  assert.deepEqual(calls, [
+    "photos.getMessagesUploadServer",
+    "photo",
+    "photos.saveMessagesPhoto",
+  ]);
+});

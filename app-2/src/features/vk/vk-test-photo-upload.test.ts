@@ -54,3 +54,16 @@ test("sends only the bundled test photo and validates the response", async () =>
     )) as typeof fetch;
   await assert.rejects(uploadTestPhoto(url, invalid));
 });
+
+test("user-wall preparation remains restricted to the connected test user", () => {
+  const base =
+    "https://pu.vk.com/c1/ss2/upload.php?act=do_add&hash=h&rhash=r&mid=120486641";
+  assert.ok(validateTestUploadUrl(base, true));
+  assert.ok(validateTestUploadUrl(`${base}&gid=0`, true));
+  assert.equal(validateTestUploadUrl(`${base}&gid=177090031`, true), null);
+  assert.equal(
+    validateTestUploadUrl(base.replace("120486641", "99"), true),
+    null,
+  );
+  assert.equal(validateTestUploadUrl(base), null);
+});

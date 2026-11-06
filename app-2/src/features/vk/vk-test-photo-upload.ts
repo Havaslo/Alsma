@@ -10,7 +10,11 @@ const asset = new URL(
 const bodySchema = z.object({ uploadUrl: z.string().max(2048) }).strict();
 
 // The VK upload URL is itself a short-lived bearer capability. Never log it.
-export const validateTestUploadUrl = (raw: string): URL | null => {
+export const validateTestUploadUrl = (
+  raw: string,
+  userWall = false,
+  messages = false,
+): URL | null => {
   try {
     const url = new URL(raw);
     if (
@@ -21,8 +25,13 @@ export const validateTestUploadUrl = (raw: string): URL | null => {
       url.password ||
       url.hash ||
       !/^\/c\d+\/ss\d+\/upload\.php$/.test(url.pathname) ||
-      url.searchParams.getAll("gid").length !== 1 ||
-      url.searchParams.get("gid") !== testGroupId ||
+      (!messages &&
+        (userWall
+          ? (url.searchParams.get("gid") !== "0" &&
+              url.searchParams.has("gid")) ||
+            url.searchParams.get("mid") !== "120486641"
+          : url.searchParams.getAll("gid").length !== 1 ||
+            url.searchParams.get("gid") !== testGroupId)) ||
       url.searchParams.getAll("act").length !== 1 ||
       url.searchParams.get("act") !== "do_add" ||
       !url.searchParams.get("hash") ||

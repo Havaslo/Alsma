@@ -29,6 +29,8 @@ const inputSchema = z
     prepareOnly: z.boolean().optional(),
     diagnosticTransport: z.enum(["https"]).optional(),
     fixture: z.boolean().optional(),
+    diagnosticUserWall: z.boolean().optional(),
+    diagnosticMessages: z.boolean().optional(),
   })
   .strict();
 const accessSchema = z
@@ -162,7 +164,10 @@ export function createVkDirectFactoryTestRouter(
       return;
     }
     if (
-      (input.data.diagnosticTransport || input.data.fixture) &&
+      (input.data.diagnosticTransport ||
+        input.data.fixture ||
+        input.data.diagnosticUserWall ||
+        input.data.diagnosticMessages) &&
       !input.data.prepareOnly
     ) {
       res.status(400).json({ error: "PREPARATION_REQUIRED" });
@@ -220,10 +225,18 @@ export function createVkDirectFactoryTestRouter(
         photoUploadAccessToken: photoToken,
         logger,
         singleAttempt: true,
-        validatePhotoUploadUrl: (url) => Boolean(validateTestUploadUrl(url)),
+        validatePhotoUploadUrl: (url) =>
+          Boolean(
+            validateTestUploadUrl(
+              url,
+              input.data.diagnosticUserWall,
+              input.data.diagnosticMessages,
+            ),
+          ),
       });
       await client.verifyCredentials(groupId);
-      await client.verifyWallPhotoUpload(groupId);
+      if (!input.data.diagnosticUserWall && !input.data.diagnosticMessages)
+        await client.verifyWallPhotoUpload(groupId);
       const download = await storage.getDownload(media.objectId);
       if (download.sizeBytes > limit) {
         res.status(400).json({ error: "INVALID_PHOTO" });
@@ -271,6 +284,8 @@ export function createVkDirectFactoryTestRouter(
         idempotencyKey: `test-${postId}`,
         prepareOnly: input.data.prepareOnly,
         diagnosticTransport: input.data.diagnosticTransport,
+        diagnosticUserWall: input.data.diagnosticUserWall,
+        diagnosticMessages: input.data.diagnosticMessages,
         text: post.generatedCopy,
         images: [
           {

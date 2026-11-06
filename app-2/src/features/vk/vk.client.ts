@@ -422,6 +422,8 @@ export const createVkClient = ({
       readonly idempotencyKey: string;
       readonly prepareOnly?: boolean;
       readonly diagnosticTransport?: "https";
+      readonly diagnosticUserWall?: boolean;
+      readonly diagnosticMessages?: boolean;
       readonly images: readonly VkPublishImage[];
       readonly text: string;
     }) => {
@@ -440,11 +442,21 @@ export const createVkClient = ({
         albumId: unknown;
       }> = [];
       for (const image of input.images) {
+        const messagesUpload = input.prepareOnly && input.diagnosticMessages;
+        const photoRequest = messagesUpload ? request : requestPhotoUpload;
         let upload: { upload_url?: unknown };
         try {
-          upload = (await requestPhotoUpload("photos.getWallUploadServer", {
-            group_id: groupId,
-          })) as { upload_url?: unknown };
+          upload = (await photoRequest(
+            messagesUpload
+              ? "photos.getMessagesUploadServer"
+              : "photos.getWallUploadServer",
+            {
+              ...(input.prepareOnly &&
+              (input.diagnosticUserWall || input.diagnosticMessages)
+                ? {}
+                : { group_id: groupId }),
+            },
+          )) as { upload_url?: unknown };
         } catch (error) {
           if (isGroupAuthPhotoDenial(error))
             throw new VkApiError(
@@ -567,12 +579,18 @@ export const createVkClient = ({
           error.uploadTransport = uploadTransport;
           throw error;
         }
-        const saved = (await requestPhotoUpload("photos.saveWallPhoto", {
-          group_id: groupId,
-          hash: uploaded.hash,
-          photo: uploaded.photo,
-          server: String(uploaded.server),
-        }).catch((error) => {
+        const saved = (await photoRequest(
+          messagesUpload ? "photos.saveMessagesPhoto" : "photos.saveWallPhoto",
+          {
+            ...(input.prepareOnly &&
+            (input.diagnosticUserWall || input.diagnosticMessages)
+              ? {}
+              : { group_id: groupId }),
+            hash: uploaded.hash,
+            photo: uploaded.photo,
+            server: String(uploaded.server),
+          },
+        ).catch((error) => {
           if (error instanceof VkApiError)
             error.uploadDiagnostic = uploadDiagnostic;
           throw error;

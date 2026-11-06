@@ -79,7 +79,7 @@ export const VkPhotoConnectionCard = () => {
       </h2>
       <p className="text-sm text-muted-ui-foreground">
         {status.data?.photoReady
-          ? "Загрузка фото подтверждена сервером."
+          ? "Аккаунт подключён. VK разрешил запросить адрес загрузки; отправка фото проверяется при публикации."
           : "Для публикации новых фотографий подключите аккаунт администратора сообщества через VK."}
         {status.data?.photoReady &&
           status.data.expiresAt &&
