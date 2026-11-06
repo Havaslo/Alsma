@@ -312,7 +312,7 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
   globalThis.fetch = (async (input, init) => {
     const url = new URL(String(input));
     calls.push(
-      url.hostname === "api.vk.com"
+      url.hostname === "api.vk.ru"
         ? url.pathname.split("/").pop()!
         : url.hostname,
     );
@@ -496,7 +496,7 @@ test("empty upload photo cannot reach save or wall.post", async () => {
   } finally {
     globalThis.fetch = original;
   }
-  assert.deepEqual(calls, ["api.vk.com", "upload.vk.test"]);
+  assert.deepEqual(calls, ["api.vk.ru", "upload.vk.test"]);
 });
 
 test("wall.post success without a returned photo is not reported as success", async () => {

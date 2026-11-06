@@ -2,7 +2,7 @@ import type { Logger } from "pino";
 
 import { uploadVkPhotoWithHttps } from "./vk-photo-transport.js";
 
-const apiBaseUrl = "https://api.vk.com/method";
+const apiBaseUrl = "https://api.vk.ru/method";
 const apiVersion = "5.199";
 const retryDelays = [250, 750] as const;
 const wait = (milliseconds: number) =>
