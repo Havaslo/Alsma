@@ -1,4 +1,3 @@
-import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Router } from "express";
 import { readFile } from "node:fs/promises";
 import type { Logger } from "pino";
@@ -15,6 +14,7 @@ import { createAdminAuthService } from "../admin-auth/admin-auth.service.js";
 import { extractVkAccessToken } from "./vk-access-token-input.js";
 import { createVkPhotoAccessStore } from "./vk-photo-access-store.js";
 import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
+import { prepareVkPhoto } from "./vk-photo-image.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import {
   VkApiError,
@@ -264,19 +264,6 @@ export function createVkDirectFactoryTestRouter(
         res.status(400).json({ error: "INVALID_PHOTO" });
         return;
       }
-      if (input.data.prepareOnly) {
-        const decoded = await loadImage(Buffer.from(bytes));
-        if (decoded.width * decoded.height > 40_000_000)
-          throw new Error("IMAGE_TOO_LARGE");
-        const canvas = createCanvas(decoded.width, decoded.height);
-        const context = canvas.getContext("2d");
-        context.fillStyle = "white";
-        context.fillRect(0, 0, decoded.width, decoded.height);
-        context.drawImage(decoded, 0, 0);
-        bytes = new Uint8Array(await canvas.encode("jpeg", 90));
-        contentType = "image/jpeg";
-        fileName = "vk-photo.jpg";
-      }
       if (input.data.fixture) {
         bytes = new Uint8Array(
           await readFile(
@@ -289,6 +276,11 @@ export function createVkDirectFactoryTestRouter(
         contentType = "image/jpeg";
         fileName = "test.jpg";
       }
+      const preparedImage = await prepareVkPhoto({
+        content: bytes,
+        contentType,
+        fileName,
+      });
       providerStarted = true;
       const result = await client.publishWallPost({
         groupId,
@@ -298,13 +290,7 @@ export function createVkDirectFactoryTestRouter(
         diagnosticUserWall: input.data.diagnosticUserWall,
         diagnosticMessages: input.data.diagnosticMessages,
         text: post.generatedCopy,
-        images: [
-          {
-            content: bytes,
-            contentType,
-            fileName,
-          },
-        ],
+        images: [preparedImage],
       });
       if (input.data.prepareOnly)
         res.json({ prepared: true, photos: result.preparedPhotos });

@@ -10,6 +10,7 @@ import {
   TelegramApiError,
   type TelegramBotClient,
 } from "../telegram/telegram-bot.client.js";
+import { prepareVkPhoto } from "../vk/vk-photo-image.js";
 import { VkApiError, type VkClient } from "../vk/vk.client.js";
 import { createContentPlanBlogPublisher } from "./content-plan-blog-publisher.js";
 import {
@@ -434,7 +435,11 @@ export const createContentPlanPublishingService = (options: {
     try {
       const targetChannel = deliveryChannel(post.channel);
       await verifyTarget(targetChannel);
-      const images = await loadImages(post.imageIds);
+      const loadedImages = await loadImages(post.imageIds);
+      const images =
+        targetChannel === "vk"
+          ? await Promise.all(loadedImages.map(prepareVkPhoto))
+          : loadedImages;
       providerRequestStarted = true;
       const result =
         targetChannel === "vk"

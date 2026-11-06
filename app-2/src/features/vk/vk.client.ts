@@ -116,7 +116,8 @@ export const createVkClient = ({
     authToken: string | undefined,
   ) => {
     if (!authToken) throw new Error("VK access token is not configured");
-    const maxAttempts = singleAttempt ? 0 : retryDelays.length;
+    const maxAttempts =
+      singleAttempt || method === "wall.post" ? 0 : retryDelays.length;
     for (let attempt = 0; attempt <= maxAttempts; attempt += 1) {
       const query = new URLSearchParams({
         ...parameters,
@@ -133,19 +134,12 @@ export const createVkClient = ({
                 "Content-Length": String(Buffer.byteLength(query.toString())),
               },
             )
-          : await fetch(
-              singleAttempt
-                ? `${apiBaseUrl}/${method}`
-                : `${apiBaseUrl}/${method}?${query}`,
-              singleAttempt
-                ? {
-                    method: "POST",
-                    body: query,
-                    redirect: "error",
-                    signal: AbortSignal.timeout(15_000),
-                  }
-                : { signal: AbortSignal.timeout(15_000) },
-            );
+          : await fetch(`${apiBaseUrl}/${method}`, {
+              method: "POST",
+              body: query,
+              redirect: "error",
+              signal: AbortSignal.timeout(15_000),
+            });
         const payload = (await response.json().catch(() => null)) as {
           response?: unknown;
           error?: {
@@ -661,7 +655,7 @@ export const createVkClient = ({
             | {
                 attachments?: Array<{
                   type?: string;
-                  photo?: { id?: unknown };
+                  photo?: { id?: unknown; owner_id?: unknown };
                 }>;
               }
             | undefined;
@@ -669,7 +663,14 @@ export const createVkClient = ({
             post?.attachments?.filter(
               (item) => item.type === "photo" && item.photo?.id != null,
             ) ?? [];
-          if (photos.length < photoAttachments.length)
+          const actual = new Set(
+            photos.map((item) => `${item.photo?.owner_id}_${item.photo?.id}`),
+          );
+          if (
+            preparedPhotos.some(
+              (photo) => !actual.has(`${photo.ownerId}_${photo.id}`),
+            )
+          )
             throw new VkPostVerificationError(postUrl);
         } catch {
           throw new VkPostVerificationError(postUrl);

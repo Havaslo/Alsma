@@ -197,8 +197,8 @@ test("VK client resolves the current photo access and retains provider subcode",
   const realFetch = globalThis.fetch;
   let access = "first-photo-key";
   const tokens: string[] = [];
-  globalThis.fetch = async (input) => {
-    tokens.push(new URL(String(input)).searchParams.get("access_token")!);
+  globalThis.fetch = async (_input, init) => {
+    tokens.push((init?.body as URLSearchParams).get("access_token")!);
     return Response.json({
       response: { upload_url: "https://upload.vk.test/photo" },
     });

@@ -27,7 +27,7 @@ const withFetch = async (
 ) => {
   const originalFetch = globalThis.fetch;
   const calls: string[] = [];
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     const method = url.pathname.split("/").pop() ?? "";
     calls.push(method);
@@ -166,9 +166,9 @@ test("community-only token does not silently publish an image post without its p
 test("photo preflight uses the separate token and requires an upload URL", async () => {
   const originalFetch = globalThis.fetch;
   const tokens: Array<string | null> = [];
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
-    tokens.push(url.searchParams.get("access_token"));
+    tokens.push((init?.body as URLSearchParams).get("access_token"));
     return new Response(JSON.stringify({ response: { upload_url: "" } }), {
       headers: { "content-type": "application/json" },
     });
@@ -199,7 +199,7 @@ test("user token uploads photos while community token publishes the wall post", 
         url: string;
       }
     | undefined;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     if (url.hostname === "upload.vk.test")
       return new Response(
@@ -207,14 +207,21 @@ test("user token uploads photos while community token publishes the wall post", 
         { headers: { "content-type": "application/json" } },
       );
     const method = url.pathname.split("/").pop() ?? "";
-    apiCalls.push({ method, token: url.searchParams.get("access_token") });
+    assert.equal(url.searchParams.has("access_token"), false);
+    assert.equal(init?.method, "POST");
+    apiCalls.push({
+      method,
+      token: (init?.body as URLSearchParams).get("access_token"),
+    });
     if (method === "wall.getById")
       return Response.json({
         response: [
           {
             id: 321,
             owner_id: -177090031,
-            attachments: [{ type: "photo", photo: { id: 456 } }],
+            attachments: [
+              { type: "photo", photo: { id: 456, owner_id: -177090031 } },
+            ],
           },
         ],
       });
@@ -323,7 +330,9 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
           {
             id: 99,
             owner_id: -138003065,
-            attachments: [{ type: "photo", photo: { id: 42 } }],
+            attachments: [
+              { type: "photo", photo: { id: 42, owner_id: -138003065 } },
+            ],
           },
         ],
       });
@@ -606,4 +615,71 @@ test("message-photo diagnostic uses only community auth and never publishes", as
     "photo",
     "photos.saveMessagesPhoto",
   ]);
+});
+
+test("an unrelated existing photo does not confirm the requested attachment", async () => {
+  await withFetch(
+    (method) => {
+      if (method === "photos.getWallUploadServer")
+        return { response: { upload_url: "https://upload.vk.test/photo" } };
+      if (method === "photo") return { server: 1, photo: "data", hash: "h" };
+      if (method === "photos.saveWallPhoto")
+        return { response: [{ owner_id: 123, id: 456 }] };
+      if (method === "wall.post") return { response: { post_id: 99 } };
+      if (method === "wall.getById")
+        return {
+          response: {
+            items: [
+              {
+                id: 99,
+                owner_id: -138003065,
+                attachments: [
+                  { type: "photo", photo: { owner_id: 999, id: 456 } },
+                ],
+              },
+            ],
+          },
+        };
+      throw Error("Unexpected method");
+    },
+    async () => {
+      await assert.rejects(
+        createVkClient({
+          accessToken: "group",
+          photoUploadAccessToken: "user",
+          logger,
+        }).publishWallPost({
+          groupId: "138003065",
+          idempotencyKey: "unique",
+          text: "test",
+          images: [
+            {
+              content: new Uint8Array([1]),
+              contentType: "image/jpeg",
+              fileName: "a.jpg",
+            },
+          ],
+        }),
+        VkPostVerificationError,
+      );
+    },
+  );
+});
+
+test("wall.post is attempted once even on a retryable API error", async () => {
+  const calls = await withFetch(
+    () => ({ error: { error_code: 10, error_msg: "internal" } }),
+    async () => {
+      await assert.rejects(
+        createVkClient({ accessToken: "group", logger }).publishWallPost({
+          groupId: "138003065",
+          idempotencyKey: "unique",
+          text: "test",
+          images: [],
+        }),
+        VkApiError,
+      );
+    },
+  );
+  assert.deepEqual(calls, ["wall.post"]);
 });

@@ -2,12 +2,17 @@ import express from "express";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { Logger } from "pino";
 
 import type { Database } from "../../lib/database/database.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import { createVkDirectFactoryTestRouter } from "./vk-direct-factory-test.js";
+
+const testJpeg = readFileSync(
+  new URL("../content-factory/assets/vk-test-photo.jpg", import.meta.url),
+);
 
 const postId = "11111111-1111-4111-8111-111111111111";
 const photoId = "22222222-2222-4222-8222-222222222222";
@@ -65,8 +70,7 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
   } as unknown as ManagedStorage;
   globalThis.fetch = (async (input, init) => {
     const url = new URL(String(input));
-    if (url.hostname === "storage.example")
-      return new Response(new Uint8Array([1, 2, 3]));
+    if (url.hostname === "storage.example") return new Response(testJpeg);
     if (url.hostname === "pu.vk.ru") {
       assert.equal(init?.redirect, "error");
       return Response.json({ server: 1, photo: "data", hash: "hash" });
@@ -121,7 +125,7 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
           {
             id: 99,
             owner_id: -138003065,
-            attachments: [{ type: "photo", photo: { id: 456 } }],
+            attachments: [{ type: "photo", photo: { id: 456, owner_id: 123 } }],
           },
         ],
       });
@@ -297,8 +301,7 @@ test("a VK rejection of wall.post is final and allows a retry", async () => {
   } as unknown as ManagedStorage;
   globalThis.fetch = (async (input, init) => {
     const url = new URL(String(input));
-    if (url.hostname === "storage.example")
-      return new Response(new Uint8Array([1, 2, 3]));
+    if (url.hostname === "storage.example") return new Response(testJpeg);
     if (url.hostname === "pu.vk.ru")
       return Response.json({ server: 1, photo: "data", hash: "hash" });
     const method = url.pathname.split("/").pop()!;
@@ -316,7 +319,9 @@ test("a VK rejection of wall.post is final and allows a retry", async () => {
             {
               id: 77,
               owner_id: -138003065,
-              attachments: [{ type: "photo", photo: { id: 456 } }],
+              attachments: [
+                { type: "photo", photo: { id: 456, owner_id: 123 } },
+              ],
             },
           ],
         },
