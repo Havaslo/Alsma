@@ -542,3 +542,26 @@ test("wall.post success without a returned photo is not reported as success", as
   }
   assert.equal(posts, 1);
 });
+
+test("missing group role flags remain unknown rather than false", async () => {
+  await withFetch(
+    (method) =>
+      method === "users.get"
+        ? { response: [{ id: 120486641 }] }
+        : { response: { groups: [{ id: 138003065 }] } },
+    async () => {
+      const result = await createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).inspectPhotoGroupRole("138003065");
+      assert.deepEqual(result, {
+        userId: 120486641,
+        groupFound: true,
+        isAdmin: null,
+        adminLevel: null,
+        isMember: null,
+      });
+    },
+  );
+});

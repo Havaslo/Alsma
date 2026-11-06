@@ -310,8 +310,15 @@ export const createVkClient = ({
     },
     inspectPublishingAccess,
     inspectPhotoGroupRole: async (groupId: string) => {
+      const users = (await requestPhotoUpload("users.get", {})) as Array<{
+        id?: number;
+      }>;
+      const userId =
+        Array.isArray(users) && typeof users[0]?.id === "number"
+          ? users[0].id
+          : null;
       const result = await requestPhotoUpload("groups.getById", {
-        group_id: groupId,
+        group_ids: groupId,
       });
       const groups = Array.isArray(result)
         ? result
@@ -322,9 +329,13 @@ export const createVkClient = ({
         | { is_admin?: number; admin_level?: number; is_member?: number }
         | undefined;
       return {
-        isAdmin: group?.is_admin === 1,
+        userId,
+        groupFound: Boolean(group),
+        isAdmin:
+          typeof group?.is_admin === "number" ? group.is_admin === 1 : null,
         adminLevel: group?.admin_level ?? null,
-        isMember: group?.is_member === 1,
+        isMember:
+          typeof group?.is_member === "number" ? group.is_member === 1 : null,
       };
     },
     verifyWallPhotoUpload: async (groupId: string) => {
