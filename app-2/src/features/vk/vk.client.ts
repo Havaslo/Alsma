@@ -10,6 +10,13 @@ export class VkApiError extends Error {
   readonly code: number;
   readonly subcode?: number;
   method?: string;
+  uploadTransport?: {
+    originalHost: string;
+    host: string;
+    path: string;
+    originalStatus: number;
+    status: number;
+  };
   invalidParameters?: string[];
   uploadDiagnostic?: {
     photoLength: number;
@@ -487,6 +494,8 @@ export const createVkClient = ({
           });
         let uploadedResponse = await uploadPhoto(upload.upload_url);
         const uploadAddress = new URL(upload.upload_url);
+        const originalHost = uploadAddress.hostname;
+        const originalStatus = uploadedResponse.status;
         // Some VK-issued .com upload endpoints reject multipart POST with 405.
         // Retry only the same capability on VK's .ru upload host, never wall.post.
         if (
@@ -507,11 +516,22 @@ export const createVkClient = ({
             uploadedResponse = await uploadPhoto(uploadAddress.toString());
           }
         }
-        if (!uploadedResponse.ok)
-          throw new VkApiError(
+        const uploadTransport = {
+          originalHost,
+          host: uploadAddress.hostname,
+          path: uploadAddress.pathname,
+          originalStatus,
+          status: uploadedResponse.status,
+        };
+        if (!uploadedResponse.ok) {
+          const error = new VkApiError(
             uploadedResponse.status,
             "VK photo upload failed",
           );
+          error.method = "photos.upload";
+          error.uploadTransport = uploadTransport;
+          throw error;
+        }
         const uploaded = (await uploadedResponse.json().catch(() => null)) as {
           hash?: unknown;
           photo?: unknown;
@@ -539,6 +559,7 @@ export const createVkClient = ({
           );
           error.method = "photos.upload";
           error.uploadDiagnostic = uploadDiagnostic;
+          error.uploadTransport = uploadTransport;
           throw error;
         }
         const saved = (await requestPhotoUpload("photos.saveWallPhoto", {
