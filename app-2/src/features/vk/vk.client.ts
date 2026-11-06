@@ -319,6 +319,7 @@ export const createVkClient = ({
           : null;
       const result = await requestPhotoUpload("groups.getById", {
         group_ids: groupId,
+        fields: "is_admin,admin_level,is_member",
       });
       const groups = Array.isArray(result)
         ? result
