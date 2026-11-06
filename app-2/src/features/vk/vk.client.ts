@@ -24,6 +24,12 @@ export class VkApiError extends Error {
     this.subcode = subcode;
   }
 }
+export class VkPostVerificationError extends Error {
+  readonly name = "VkPostVerificationError";
+  constructor(readonly url: string) {
+    super("VK created a post but did not confirm its photos");
+  }
+}
 const shouldRetry = (code: number) => code === 6 || code === 10 || code === 29;
 const randomIdFor = (value: string) => {
   let hash = 2_166_136_261;
@@ -531,6 +537,39 @@ export const createVkClient = ({
       )
         throw new Error("VK did not return a post ID");
       const postId = String(response.post_id);
+      const postUrl = `https://vk.com/wall-${groupId}_${postId}`;
+      if (photoAttachments.length) {
+        try {
+          const result = await request("wall.getById", {
+            posts: `-${groupId}_${postId}`,
+          });
+          const posts = Array.isArray(result)
+            ? result
+            : (result as { items?: unknown[] })?.items;
+          const post = posts?.find(
+            (item) =>
+              String((item as { id?: unknown }).id) === postId &&
+              String((item as { owner_id?: unknown }).owner_id) ===
+                `-${groupId}`,
+          ) as
+            | {
+                attachments?: Array<{
+                  type?: string;
+                  photo?: { id?: unknown };
+                }>;
+              }
+            | undefined;
+          const photos =
+            post?.attachments?.filter(
+              (item) => item.type === "photo" && item.photo?.id != null,
+            ) ?? [];
+          if (photos.length < photoAttachments.length)
+            throw new VkPostVerificationError(postUrl);
+        } catch {
+          throw new VkPostVerificationError(postUrl);
+        }
+      }
+
       return {
         externalId: postId,
         url: `https://vk.com/wall-${groupId}_${postId}`,

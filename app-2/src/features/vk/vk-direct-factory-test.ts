@@ -15,7 +15,11 @@ import { extractVkAccessToken } from "./vk-access-token-input.js";
 import { createVkPhotoAccessStore } from "./vk-photo-access-store.js";
 import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
-import { VkApiError, createVkClient } from "./vk.client.js";
+import {
+  VkApiError,
+  VkPostVerificationError,
+  createVkClient,
+} from "./vk.client.js";
 
 const groupId = "138003065";
 const inputSchema = z
@@ -249,7 +253,10 @@ export function createVkDirectFactoryTestRouter(
         res.json({ prepared: true, photos: result.preparedPhotos });
       else res.json({ url: result.url, postId: result.externalId });
     } catch (error) {
-      if (!providerStarted)
+      if (error instanceof VkPostVerificationError) {
+        unknown.add(postId);
+        res.status(502).json({ error: "PHOTO_NOT_CONFIRMED", url: error.url });
+      } else if (!providerStarted)
         res.status(502).json({
           error: "TEST_PREFLIGHT_FAILED",
           code: error instanceof VkApiError ? error.code : null,

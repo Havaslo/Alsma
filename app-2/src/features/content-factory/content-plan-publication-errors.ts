@@ -2,6 +2,7 @@ import { HttpError } from "../../lib/http/http-error.js";
 import { MetaGraphRequestError } from "../instagram-publishing/instagram-graph.client.js";
 import { isInstagramPublishError } from "../instagram-publishing/instagram-publishing.service.js";
 import { photoAuthDiagnostic } from "../vk/vk-photo-auth-diagnostic.js";
+import { VkPostVerificationError } from "../vk/vk.client.js";
 
 type NamedError = Error & { readonly name: string };
 
@@ -11,6 +12,7 @@ const isMetaApiError = (error: unknown): error is MetaGraphRequestError =>
   error instanceof MetaGraphRequestError;
 
 export const isAmbiguousProviderError = (error: unknown) => {
+  if (error instanceof VkPostVerificationError) return true;
   if (error instanceof TypeError) return true;
   if (isNamedError(error, "TimeoutError")) return true;
   if (isNamedError(error, "MaxApiError"))
@@ -32,6 +34,8 @@ export const isAmbiguousProviderError = (error: unknown) => {
 };
 
 export const safePublicationError = (error: unknown, uncertain: boolean) => {
+  if (error instanceof VkPostVerificationError)
+    return `VK создал запись, но фотографии не подтверждены. Проверьте ${error.url} перед повтором.`;
   if (uncertain)
     return "Платформа не подтвердила результат. Проверьте пост в соцсети перед повтором.";
   if (error instanceof HttpError) return error.message;

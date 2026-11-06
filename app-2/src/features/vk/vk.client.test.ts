@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Logger } from "pino";
 
-import { VkApiError, createVkClient } from "./vk.client.js";
+import {
+  VkApiError,
+  VkPostVerificationError,
+  createVkClient,
+} from "./vk.client.js";
 import type { VkPublishingAccess } from "./vk.client.js";
 
 const logger = {
@@ -26,6 +30,16 @@ const withFetch = async (
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
     const method = url.pathname.split("/").pop() ?? "";
+    if (method === "wall.getById")
+      return Response.json({
+        response: [
+          {
+            id: 321,
+            owner_id: -177090031,
+            attachments: [{ type: "photo", photo: { id: 456 } }],
+          },
+        ],
+      });
     calls.push(method);
     return new Response(JSON.stringify(handler(method)), {
       headers: { "content-type": "application/json" },
@@ -204,6 +218,16 @@ test("user token uploads photos while community token publishes the wall post", 
       );
     const method = url.pathname.split("/").pop() ?? "";
     apiCalls.push({ method, token: url.searchParams.get("access_token") });
+    if (method === "wall.getById")
+      return Response.json({
+        response: [
+          {
+            id: 321,
+            owner_id: -177090031,
+            attachments: [{ type: "photo", photo: { id: 456 } }],
+          },
+        ],
+      });
     const response =
       method === "photos.getWallUploadServer"
         ? { response: { upload_url: "https://upload.vk.test/photo" } }
@@ -246,6 +270,7 @@ test("user token uploads photos while community token publishes the wall post", 
     { method: "photos.getWallUploadServer", token: "user-token" },
     { method: "photos.saveWallPhoto", token: "user-token" },
     { method: "wall.post", token: "community-token" },
+    { method: "wall.getById", token: "community-token" },
   ]);
 });
 
@@ -302,6 +327,16 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
       );
     }
     const method = url.pathname.split("/").pop();
+    if (method === "wall.getById")
+      return Response.json({
+        response: [
+          {
+            id: 99,
+            owner_id: -138003065,
+            attachments: [{ type: "photo", photo: { id: 42 } }],
+          },
+        ],
+      });
     return new Response(
       JSON.stringify({
         response:
@@ -343,6 +378,7 @@ test("retries a rejected com upload on exact ru host before saving and posts onl
     "pu.vk.ru",
     "photos.saveWallPhoto",
     "wall.post",
+    "wall.getById",
   ]);
 });
 
@@ -444,4 +480,58 @@ test("empty upload photo cannot reach save or wall.post", async () => {
     globalThis.fetch = original;
   }
   assert.deepEqual(calls, ["api.vk.com", "upload.vk.test"]);
+});
+
+test("wall.post success without a returned photo is not reported as success", async () => {
+  const original = globalThis.fetch;
+  let posts = 0;
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    if (url.hostname === "upload.vk.test")
+      return Response.json({ server: 1, photo: "photo", hash: "hash" });
+    const method = url.pathname.split("/").pop();
+    if (method === "photos.getWallUploadServer")
+      return Response.json({
+        response: { upload_url: "https://upload.vk.test/photo" },
+      });
+    if (method === "photos.saveWallPhoto")
+      return Response.json({ response: [{ owner_id: 123, id: 456 }] });
+    if (method === "wall.post") {
+      posts++;
+      return Response.json({ response: { post_id: 77 } });
+    }
+    if (method === "wall.getById")
+      return Response.json({
+        response: {
+          items: [{ id: 77, owner_id: -138003065, attachments: [] }],
+        },
+      });
+    throw new Error("Unexpected method");
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).publishWallPost({
+        groupId: "138003065",
+        idempotencyKey: "missing",
+        text: "test",
+        images: [
+          {
+            content: new Uint8Array([1]),
+            contentType: "image/jpeg",
+            fileName: "test.jpg",
+          },
+        ],
+      }),
+      (error) =>
+        error instanceof VkPostVerificationError &&
+        error.url === "https://vk.com/wall-138003065_77",
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+  assert.equal(posts, 1);
 });

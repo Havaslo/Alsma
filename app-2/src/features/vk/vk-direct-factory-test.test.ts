@@ -100,6 +100,16 @@ test("test publishing is authenticated, uses separate tokens, and never targets 
         response: [{ owner_id: 123, id: 456, access_key: "key" }],
       });
     }
+    if (method === "wall.getById")
+      return Response.json({
+        response: [
+          {
+            id: 99,
+            owner_id: -138003065,
+            attachments: [{ type: "photo", photo: { id: 456 } }],
+          },
+        ],
+      });
     if (method === "wall.post") {
       assert.equal(params.get("access_token"), "group-secret");
       assert.equal(params.get("owner_id"), "-138003065");
@@ -262,6 +272,18 @@ test("a VK rejection of wall.post is final and allows a retry", async () => {
     if (method === "photos.saveWallPhoto")
       return Response.json({
         response: [{ owner_id: 123, id: 456, access_key: "key" }],
+      });
+    if (method === "wall.getById")
+      return Response.json({
+        response: {
+          items: [
+            {
+              id: 77,
+              owner_id: -138003065,
+              attachments: [{ type: "photo", photo: { id: 456 } }],
+            },
+          ],
+        },
       });
     if (method === "wall.post")
       return denyPost
