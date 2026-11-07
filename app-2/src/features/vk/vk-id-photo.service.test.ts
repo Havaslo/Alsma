@@ -198,6 +198,17 @@ test("missing photos, rejected refresh and invalid state never activate a candid
           .result,
         "VKID_CONNECTED",
       );
+      const attempt = (await service.status()).lastAttempt!;
+      assert.equal(
+        attempt.stage,
+        failure === "refresh"
+          ? "refresh"
+          : failure === "photo"
+            ? "photo_access"
+            : "code_exchange",
+      );
+      assert.ok(!JSON.stringify(attempt).includes(access(1)));
+      assert.ok(!JSON.stringify(attempt).includes(refresh(1)));
       assert.equal(rows.has("vk.photo.vkid.456"), false);
       assert.equal(
         rows.get("vk.photo.connection.456")!.value.ciphertext,

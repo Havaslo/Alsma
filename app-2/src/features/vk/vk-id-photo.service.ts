@@ -60,6 +60,20 @@ export const createVkIdPhotoService = (options: {
     options.communityToken,
   );
   const key = `vk.photo.vkid.${options.groupId ?? "unconfigured"}`;
+  const attemptKey = `${key}.lastAttempt`;
+  const recordAttempt = async (result: string, stage: string) => {
+    const value = {
+      appId: appId ?? null,
+      result,
+      stage,
+      at: new Date().toISOString(),
+    };
+    await database.client.appSetting.upsert({
+      where: { key: attemptKey },
+      create: { key: attemptKey, value },
+      update: { value },
+    });
+  };
   const prefix = "vk.photo.vkid.state.";
   const fallback =
     options.allowedOrigins.find((x) => new URL(x).hostname === "alsma.ru") ??
@@ -91,8 +105,20 @@ export const createVkIdPhotoService = (options: {
   const status = async () => {
     const row = await database.client.appSetting.findUnique({ where: { key } });
     const saved = row ? recordSchema.parse(row.value) : null;
+    const attempt = await database.client.appSetting.findUnique({
+      where: { key: attemptKey },
+    });
+    const lastAttempt = z
+      .object({
+        appId: z.string().nullable(),
+        result: z.string(),
+        stage: z.string(),
+        at: z.string(),
+      })
+      .safeParse(attempt?.value);
     return {
       configured,
+      lastAttempt: lastAttempt.success ? lastAttempt.data : null,
       connected: Boolean(saved),
       autoRenewal: Boolean(saved),
       connectedAt: saved?.connectedAt ?? null,
@@ -150,6 +176,7 @@ export const createVkIdPhotoService = (options: {
       code_challenge: createHash("sha256").update(verifier).digest("base64url"),
       code_challenge_method: "s256",
     }).toString();
+    await recordAttempt("AWAITING_CALLBACK", "authorization");
     return { authorizationUrl: url.toString() };
   };
   const complete = async (input: {
@@ -188,9 +215,15 @@ export const createVkIdPhotoService = (options: {
     });
     if (claimed.count !== 1) return invalid;
     const origin = state.origin;
-    if (input.error) return { origin, result: "AUTHORIZATION_DENIED" };
-    if (!input.code || !input.device_id)
+    if (input.error) {
+      await recordAttempt("AUTHORIZATION_DENIED", "callback");
+      return { origin, result: "AUTHORIZATION_DENIED" };
+    }
+    if (!input.code || !input.device_id) {
+      await recordAttempt("VKID_CODE_MISSING", "callback");
       return { origin, result: "VKID_CODE_MISSING" };
+    }
+    let stage = "code_exchange";
     try {
       const issued = await exchange({
         grant_type: "authorization_code",
@@ -201,8 +234,10 @@ export const createVkIdPhotoService = (options: {
         code_verifier: state.verifier,
         state: input.state,
       });
+      stage = "photo_access";
       await verify(issued.access_token);
       // Exercise actual refresh before activation, not just presence of a token.
+      stage = "refresh";
       const rotated = await exchange({
         grant_type: "refresh_token",
         client_id: appId!,
@@ -217,6 +252,7 @@ export const createVkIdPhotoService = (options: {
         String(issued.user_id) !== String(rotated.user_id)
       )
         throw new Error("VKID_USER_MISMATCH");
+      stage = "refreshed_photo_access";
       await verify(rotated.access_token);
       const credentials = {
         accessToken: rotated.access_token,
@@ -233,6 +269,7 @@ export const createVkIdPhotoService = (options: {
         connectedAt: now,
         lastRefreshAt: now,
       };
+      stage = "save";
       await database.client.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
         await tx.appSetting.upsert({
@@ -241,14 +278,16 @@ export const createVkIdPhotoService = (options: {
           update: { value },
         });
       });
+      await recordAttempt("VKID_CONNECTED", "complete");
       return { origin, result: "VKID_CONNECTED" };
     } catch (error) {
       const result =
         error instanceof Error && error.message === "VKID_PHOTOS_NOT_GRANTED"
           ? "VKID_PHOTOS_NOT_GRANTED"
           : "VKID_CONNECTION_DENIED";
+      await recordAttempt(result, stage);
       options.logger.warn(
-        { reason: result },
+        { reason: result, stage },
         "VK ID photo connection was not activated",
       );
       return { origin, result };
