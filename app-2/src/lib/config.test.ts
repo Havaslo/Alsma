@@ -71,3 +71,42 @@ test("Instagram image proxy is read separately from the Graph outbound proxy", (
   );
   assert.equal(config.instagramPublishing.proxyUrl, undefined);
 });
+
+test("ALSMA production supplies only public VK ID settings", () => {
+  const config = readConfig({ ...baseEnvironment, NODE_ENV: "production" });
+  assert.equal(config.vk.photoOAuth.vkIdAppId, "54881630");
+  assert.equal(
+    config.vk.photoOAuth.vkIdRedirectUri,
+    "https://8dd6f7cf-ea71-419d-a99c-5f6416bace1f--b80b0d0e.projects.amazi.pro/api/vk-photo-connection/vkid/callback",
+  );
+  assert.equal(config.vk.photoOAuth.encryptionKey, undefined);
+  assert.equal(readConfig(baseEnvironment).vk.photoOAuth.vkIdAppId, undefined);
+  assert.equal(
+    readConfig({
+      ...baseEnvironment,
+      NODE_ENV: "production",
+      CORS_ALLOWED_ORIGINS: "https://other.example",
+    }).vk.photoOAuth.vkIdAppId,
+    undefined,
+  );
+});
+
+test("VK ID overrides never mix another application with ALSMA callback", () => {
+  const config = readConfig({
+    ...baseEnvironment,
+    NODE_ENV: "production",
+    VK_PHOTO_VKID_APP_ID: "123",
+  });
+  assert.equal(config.vk.photoOAuth.vkIdAppId, "123");
+  assert.equal(config.vk.photoOAuth.vkIdRedirectUri, undefined);
+  const full = readConfig({
+    ...baseEnvironment,
+    NODE_ENV: "production",
+    VK_PHOTO_VKID_APP_ID: "123",
+    VK_PHOTO_VKID_REDIRECT_URI: "https://other.example/callback",
+  });
+  assert.equal(
+    full.vk.photoOAuth.vkIdRedirectUri,
+    "https://other.example/callback",
+  );
+});

@@ -219,6 +219,17 @@ export const readConfig = (
   environment: NodeJS.ProcessEnv = process.env,
 ): AppConfig => {
   const parsed = environmentSchema.parse(environment);
+  // Public deployment settings for ALSMA's registered VK ID application.
+  // Amazi can retain an older production environment after variables are saved.
+  // Keep credentials in the environment; only this public pair ships with code.
+  // Explicit overrides must provide the whole pair to avoid mixing applications.
+  const useAlsmaVkIdDefaults =
+    parsed.NODE_ENV === "production" &&
+    parsed.CORS_ALLOWED_ORIGINS.split(",").some(
+      (origin) => origin.trim() === "https://alsma.ru",
+    ) &&
+    !parsed.VK_PHOTO_VKID_APP_ID &&
+    !parsed.VK_PHOTO_VKID_REDIRECT_URI;
   return {
     databaseUrl: parsed.DATABASE_URL,
     aiGatewayOpenai: {
@@ -283,8 +294,12 @@ export const readConfig = (
       // separate so the community credential continues to handle bot traffic.
       photoUploadAccessToken: parsed.VK_PHOTO_UPLOAD_ACCESS_TOKEN,
       photoOAuth: {
-        vkIdAppId: parsed.VK_PHOTO_VKID_APP_ID,
-        vkIdRedirectUri: parsed.VK_PHOTO_VKID_REDIRECT_URI,
+        vkIdAppId: useAlsmaVkIdDefaults
+          ? "54881630"
+          : parsed.VK_PHOTO_VKID_APP_ID,
+        vkIdRedirectUri: useAlsmaVkIdDefaults
+          ? "https://8dd6f7cf-ea71-419d-a99c-5f6416bace1f--b80b0d0e.projects.amazi.pro/api/vk-photo-connection/vkid/callback"
+          : parsed.VK_PHOTO_VKID_REDIRECT_URI,
         appId: parsed.VK_PHOTO_OAUTH_APP_ID,
         appSecret: parsed.VK_PHOTO_OAUTH_APP_SECRET,
         redirectUri: parsed.VK_PHOTO_OAUTH_REDIRECT_URI,
