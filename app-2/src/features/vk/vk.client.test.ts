@@ -688,6 +688,42 @@ test("wall.post is attempted once even on a retryable API error", async () => {
   assert.deepEqual(calls, ["wall.post"]);
 });
 
+test("wall.post transport failures and incomplete responses stay uncertain and are never retried", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const response of [
+      () => new Response("gateway", { status: 502 }),
+      () => new Response("invalid json", { status: 200 }),
+      () => Response.json({}),
+      () => Response.json({ response: { post_id: "" } }),
+      () => Response.json({ response: { post_id: 0 } }),
+      () =>
+        Response.json(
+          { error: { error_code: 500, error_msg: "gateway" } },
+          { status: 500 },
+        ),
+    ]) {
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls++;
+        return response();
+      };
+      await assert.rejects(
+        createVkClient({ accessToken: "group", logger }).publishWallPost({
+          groupId: "138003065",
+          idempotencyKey: "unknown-response",
+          text: "test",
+          images: [],
+        }),
+        VkPublicationUnknownError,
+      );
+      assert.equal(calls, 1);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("wall.post without a post ID has an uncertain result and is not retried", async () => {
   const calls = await withFetch(
     () => ({ response: {} }),

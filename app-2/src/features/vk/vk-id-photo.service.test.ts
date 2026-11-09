@@ -149,6 +149,10 @@ test("PKCE exchange verifies photos and real refresh before activation; state is
     assert.ok(!serialized.includes("device-private"));
     const status = await service.status();
     assert.equal(status.autoRenewal, true);
+    assert.equal(status.lastExchange?.grantType, "refresh_token");
+    assert.equal(status.lastExchange?.expiresIn, 3600);
+    assert.equal(status.lastExchange?.refreshTokenPresent, true);
+    assert.deepEqual(status.lastExchange?.scopes, ["photos"]);
     assert.ok(!JSON.stringify(status).includes(access(2)));
   } finally {
     globalThis.fetch = old;
@@ -209,6 +213,8 @@ test("missing photos, rejected refresh and invalid state never activate a candid
       );
       assert.ok(!JSON.stringify(attempt).includes(access(1)));
       assert.ok(!JSON.stringify(attempt).includes(refresh(1)));
+      const evidence = (await service.status()).lastExchange;
+      if (failure === "scope") assert.deepEqual(evidence?.scopes, ["email"]);
       assert.equal(rows.has("vk.photo.vkid.456"), false);
       assert.equal(
         rows.get("vk.photo.connection.456")!.value.ciphertext,
