@@ -40,6 +40,14 @@ const responseSchema = z.object({
   user_id: z.union([z.number(), z.string()]).optional(),
 });
 const nonce = () => randomBytes(32).toString("base64url");
+class PhotoScopeDiagnosticError extends Error {
+  constructor(
+    readonly stage: string,
+    readonly result: string,
+  ) {
+    super(result);
+  }
+}
 
 // Separate from legacy OAuth: a failed experiment never replaces working access.
 export const createVkIdPhotoService = (options: {
@@ -127,8 +135,28 @@ export const createVkIdPhotoService = (options: {
     const parsed = responseSchema.safeParse(payload);
     if (!response.ok || !parsed.success || parsed.data.state !== state)
       throw new Error("VKID_EXCHANGE_DENIED");
-    if (!parsed.data.scope.split(/[ ,]+/).includes("photos"))
+    if (!parsed.data.scope.split(/[ ,]+/).includes("photos")) {
+      // Probe only during an explicit connection attempt. This requests an
+      // upload URL; it neither uploads a file nor creates a wall post.
+      // Even a successful probe does not activate an unscoped candidate.
+      if (parameters.grant_type === "authorization_code") {
+        try {
+          await verify(parsed.data.access_token);
+        } catch (error) {
+          throw new PhotoScopeDiagnosticError(
+            "photo_scope_probe",
+            error instanceof VkApiError
+              ? `VKID_API_${error.code}`
+              : "VKID_CONNECTION_DENIED",
+          );
+        }
+        throw new PhotoScopeDiagnosticError(
+          "photo_scope_probe_allowed",
+          "VKID_PHOTOS_NOT_GRANTED",
+        );
+      }
       throw new Error("VKID_PHOTOS_NOT_GRANTED");
+    }
     return parsed.data;
   };
   const status = async () => {
@@ -331,22 +359,25 @@ export const createVkIdPhotoService = (options: {
       });
       return { origin, result: "VKID_CONNECTED" };
     } catch (error) {
+      if (error instanceof PhotoScopeDiagnosticError) stage = error.stage;
       const result =
-        error instanceof VkApiError
-          ? `VKID_API_${error.code}`
-          : error instanceof Error &&
-              [
-                "VKID_PHOTOS_NOT_GRANTED",
-                "VKID_EXCHANGE_DENIED",
-                "VKID_INVALID_SCOPE",
-                "VKID_INVALID_GRANT",
-                "VKID_INVALID_CLIENT",
-                "VKID_INVALID_REQUEST",
-                "VKID_ACCESS_DENIED",
-                "VKID_USER_MISMATCH",
-              ].includes(error.message)
-            ? error.message
-            : "VKID_CONNECTION_DENIED";
+        error instanceof PhotoScopeDiagnosticError
+          ? error.result
+          : error instanceof VkApiError
+            ? `VKID_API_${error.code}`
+            : error instanceof Error &&
+                [
+                  "VKID_PHOTOS_NOT_GRANTED",
+                  "VKID_EXCHANGE_DENIED",
+                  "VKID_INVALID_SCOPE",
+                  "VKID_INVALID_GRANT",
+                  "VKID_INVALID_CLIENT",
+                  "VKID_INVALID_REQUEST",
+                  "VKID_ACCESS_DENIED",
+                  "VKID_USER_MISMATCH",
+                ].includes(error.message)
+              ? error.message
+              : "VKID_CONNECTION_DENIED";
       await recordAttempt(result, stage);
       options.logger.warn(
         { reason: result, stage },

@@ -223,15 +223,17 @@ test("missing photos, rejected refresh and invalid state never activate a candid
       const attempt = (await service.status()).lastAttempt!;
       assert.equal(
         attempt.stage,
-        failure === "refresh"
-          ? "refresh"
-          : failure === "photo"
-            ? "photo_access"
-            : failure === "refreshed_photo"
-              ? "refreshed_photo_access"
-              : failure === "save"
-                ? "save"
-                : "code_exchange",
+        failure === "scope"
+          ? "photo_scope_probe_allowed"
+          : failure === "refresh"
+            ? "refresh"
+            : failure === "photo"
+              ? "photo_access"
+              : failure === "refreshed_photo"
+                ? "refreshed_photo_access"
+                : failure === "save"
+                  ? "save"
+                  : "code_exchange",
       );
       assert.ok(!JSON.stringify(attempt).includes(access(1)));
       assert.ok(!JSON.stringify(attempt).includes(refresh(1)));
@@ -430,5 +432,70 @@ test("backend-only publication refreshes saved VK ID credentials and keeps commu
     assert.deepEqual(photoTokens, [access(3), access(3), access(4)]);
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+test("missing photo scope probes the method once without uploading, refreshing or replacing access", async () => {
+  const old = globalThis.fetch;
+  try {
+    for (const denied of [true, false]) {
+      const { service, rows } = setup();
+      const legacy = {
+        value: { ciphertext: "keep-legacy" },
+        updatedAt: new Date(),
+      };
+      rows.set("vk.photo.connection.456", legacy);
+      const state = new URL(
+        (await service.start(origin, "admin1")).authorizationUrl,
+      ).searchParams.get("state")!;
+      const calls: string[] = [];
+      globalThis.fetch = (async (input, init) => {
+        const url = String(input);
+        calls.push(url);
+        if (url === "https://id.vk.ru/oauth2/auth") {
+          assert.equal(
+            (init!.body as URLSearchParams).get("grant_type"),
+            "authorization_code",
+          );
+          return Response.json({
+            access_token: access(1),
+            refresh_token: refresh(1),
+            expires_in: 3600,
+            scope: "vkid.personal_info",
+            state,
+          });
+        }
+        assert.ok(
+          url.includes("photos.getWallUploadServer"),
+          "unexpected API operation",
+        );
+        return Response.json(
+          denied
+            ? { error: { error_code: 15, error_msg: "denied" } }
+            : { response: { upload_url: "https://pu.vk.ru/upload" } },
+        );
+      }) as typeof fetch;
+      const result = await service.complete({
+        state,
+        code: "code",
+        device_id: "device",
+      });
+      assert.equal(
+        result.result,
+        denied ? "VKID_API_15" : "VKID_PHOTOS_NOT_GRANTED",
+      );
+      assert.equal(calls.length, 2);
+      assert.equal(
+        (await service.status()).lastAttempt?.stage,
+        denied ? "photo_scope_probe" : "photo_scope_probe_allowed",
+      );
+      assert.equal(rows.has("vk.photo.vkid.456"), false);
+      assert.deepEqual(rows.get("vk.photo.connection.456"), legacy);
+      const diagnostic = JSON.stringify(await service.status());
+      assert.ok(!diagnostic.includes(access(1)));
+      assert.ok(!diagnostic.includes(refresh(1)));
+    }
+  } finally {
+    globalThis.fetch = old;
   }
 });
