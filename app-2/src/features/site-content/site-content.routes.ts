@@ -19,6 +19,7 @@ import {
   siteSectionParamsSchema,
   upsertSiteContentBodySchema,
 } from "./site-content.schemas.js";
+import { renderVkTestRss } from "./vk-rss.js";
 
 export const createSiteContentRouter = (database: Database): Router => {
   const router = Router();
@@ -26,6 +27,12 @@ export const createSiteContentRouter = (database: Database): Router => {
   const requireAdmin = createRequireAdmin(
     createAdminAuthService(createAdminAuthRepository(database)),
   );
+  // Only explicitly created test entries; never export the content plan or blog.
+  router.get("/feeds/vk-test.xml", async (_request, response) => {
+    const rows = await repository.listPublished("vk-rss-test");
+    response.setHeader("Cache-Control", "no-store");
+    response.type("application/rss+xml").send(renderVkTestRss(rows));
+  });
   router.get(
     "/:section",
     validateRequest({ params: siteSectionParamsSchema }),
