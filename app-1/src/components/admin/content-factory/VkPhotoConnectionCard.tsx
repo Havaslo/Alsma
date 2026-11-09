@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/Button";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
+import {
+  type BrowserRenewal,
+  disabledRenewal,
+  renewalStorageKey,
+  restoreRenewal,
+  shouldRenew,
+} from "@/lib/content-factory/vkBrowserRenewal";
 import {
   completeVkPhotoManualConnection,
   loadVkPhotoConnection,
@@ -47,11 +54,115 @@ const messages: Record<string, string> = {
 };
 
 export const VkPhotoConnectionCard = () => {
+  const [browserRenewal, setBrowserRenewal] = useState(() => {
+    try {
+      const restored = restoreRenewal(
+        window.sessionStorage.getItem(renewalStorageKey),
+        new URLSearchParams(window.location.search).get("vkPhotoConnection"),
+        Date.now(),
+      );
+      window.sessionStorage.setItem(
+        renewalStorageKey,
+        JSON.stringify(restored),
+      );
+      return restored;
+    } catch {
+      return disabledRenewal();
+    }
+  });
+  const [renewalError, setRenewalError] = useState<string | null>(null);
+  const saveRenewal = (value: BrowserRenewal) => {
+    window.sessionStorage.setItem(renewalStorageKey, JSON.stringify(value));
+    setBrowserRenewal(value);
+  };
   const status = useQuery({
     queryKey: ["content-factory", "vk-photo-connection"],
     queryFn: ({ signal }) => loadVkPhotoConnection(signal),
     staleTime: 15_000,
+    refetchInterval: browserRenewal.enabled ? 60_000 : false,
+    refetchIntervalInBackground: false,
   });
+  const browserConnect = useMutation({
+    mutationFn: async () => {
+      // Claim before the network call, so Back/reload cannot cause a redirect loop.
+      saveRenewal({
+        ...browserRenewal,
+        enabled: true,
+        pendingAt: Date.now(),
+        attemptedExpiry: status.data?.expiresAt ?? null,
+      });
+      const current = new URL(window.location.href);
+      current.searchParams.delete("vkPhotoConnection");
+      window.history.replaceState(window.history.state, "", current);
+      return startVkPhotoConnection();
+    },
+    onSuccess: (url) => window.location.assign(url),
+    onError: () => {
+      setBrowserRenewal(disabledRenewal());
+      try {
+        window.sessionStorage.removeItem(renewalStorageKey);
+      } catch {
+        /* Storage unavailable. */
+      }
+      setRenewalError(
+        "Автопереподключение остановлено. Проверьте подключение вручную.",
+      );
+    },
+  });
+  const renew = browserConnect.mutateAsync;
+  const renewalPending = browserConnect.isPending;
+  useEffect(() => {
+    if (!browserRenewal.enabled || !browserRenewal.verified) return;
+    const check = () => {
+      if (
+        document.visibilityState !== "visible" ||
+        renewalPending ||
+        !status.data ||
+        status.isError ||
+        Date.now() - status.dataUpdatedAt > 90_000 ||
+        !shouldRenew(browserRenewal, status.data, Date.now())
+      )
+        return;
+      // Do not interrupt typing. The user opts in to navigation in this tab.
+      if (
+        document.activeElement?.matches("input,textarea,[contenteditable=true]")
+      )
+        return;
+      if (!navigator.locks) return;
+      void navigator.locks.request(
+        "alsma-vk-browser-renewal",
+        { ifAvailable: true },
+        async (lock) => {
+          if (!lock) return;
+          try {
+            const expiry = status.data!.expiresAt!;
+            const claimKey = `${renewalStorageKey}-last-expiry`;
+            if (window.localStorage.getItem(claimKey) === expiry) return;
+            window.localStorage.setItem(claimKey, expiry);
+            await renew();
+          } catch {
+            // No blind retry: a fresh manual connection is required after failure.
+            setRenewalError(
+              "Автопереподключение не выполнено. Подключите VK вручную.",
+            );
+          }
+        },
+      );
+    };
+    const timer = window.setInterval(check, 15_000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [
+    browserRenewal,
+    renewalPending,
+    renew,
+    status.data,
+    status.dataUpdatedAt,
+    status.isError,
+  ]);
   const connect = useMutation({
     mutationFn: startVkPhotoConnection,
     onSuccess: (url) => window.location.assign(url),
@@ -132,6 +243,48 @@ export const VkPhotoConnectionCard = () => {
             ? "Переподключить фотографии VK"
             : "Подключить фотографии VK"}
       </Button>
+      <div className="space-y-2 rounded-2xl border border-line p-4">
+        <p className="text-sm text-muted-ui-foreground">
+          Переподключение через эту вкладку:{" "}
+          {browserRenewal.enabled && browserRenewal.verified
+            ? "включено"
+            : "выключено"}
+          . После успешной проверки возврата из VK фабрика откроет авторизацию
+          за 20 минут до истечения доступа. Работает только при открытой
+          активной вкладке и может потребовать подтверждения VK. Перед
+          включением сохраните изменения. Если VK отклоняет адрес возврата,
+          сначала зарегистрируйте callback приложения.
+        </p>
+        <Button
+          variant="secondary"
+          disabled={
+            !status.data?.configured ||
+            browserConnect.isPending ||
+            !navigator.locks
+          }
+          onClick={() => {
+            setRenewalError(null);
+            if (browserRenewal.enabled && browserRenewal.verified) {
+              try {
+                saveRenewal(disabledRenewal());
+              } catch {
+                setBrowserRenewal(disabledRenewal());
+              }
+            } else browserConnect.mutate();
+          }}
+        >
+          {browserConnect.isPending
+            ? "Открываем VK…"
+            : browserRenewal.enabled && browserRenewal.verified
+              ? "Выключить переподключение в этой вкладке"
+              : "Проверить и включить переподключение в этой вкладке"}
+        </Button>
+        {renewalError && (
+          <p role="alert" className="text-sm text-rose-700">
+            {renewalError}
+          </p>
+        )}
+      </div>
       <div className="space-y-2 rounded-2xl border border-line p-4">
         <p className="text-sm text-muted-ui-foreground">
           {status.data?.vkId?.connected
