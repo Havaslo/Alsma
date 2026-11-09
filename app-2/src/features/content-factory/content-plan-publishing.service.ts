@@ -481,10 +481,17 @@ export const createContentPlanPublishingService = (options: {
       where: {
         channel: "vk",
         status: {
-          in: ["needs_review", "approved", "scheduled", "publish_failed"],
+          in: [
+            "queued",
+            "generating",
+            "needs_review",
+            "approved",
+            "scheduled",
+            "publish_failed",
+          ],
         },
       },
-      select: { id: true, imageIds: true, imageStatus: true },
+      select: { id: true, imageIds: true, imageStatus: true, status: true },
       orderBy: [{ scheduledDate: "asc" }, { scheduledTime: "asc" }],
     });
   const photoPreparationStatus = async () => {
@@ -511,8 +518,7 @@ export const createContentPlanPublishingService = (options: {
       pending: ids.length - ready,
       failed,
       generatingPosts: posts.filter(
-        (post) =>
-          post.imageStatus === "pending" || post.imageStatus === "generating",
+        (post) => post.status === "queued" || post.status === "generating",
       ).length,
     };
   };

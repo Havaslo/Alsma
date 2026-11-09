@@ -85,6 +85,8 @@ export const VkPlanPhotoPreparation = () => {
         <p role="status">
           Подготовлено фотографий в текущих планах: {preparation.data.ready} из{" "}
           {preparation.data.total}. Осталось: {preparation.data.pending}.
+          {preparation.data.generatingPosts > 0 &&
+            ` Ещё создаются посты: ${preparation.data.generatingPosts}. Их фотографии будут подготовлены после генерации.`}
           {preparation.data.failed > 0 &&
             ` Не удалось подготовить: ${preparation.data.failed}. После обновления доступа сервер повторит загрузку.`}
           {!preparation.data.enabled &&
@@ -94,7 +96,8 @@ export const VkPlanPhotoPreparation = () => {
       <p className="text-muted-ui-foreground">
         Новые и заменённые фото требуют действующего доступа. Закрывать сайт
         можно: подготовка продолжится на сервере. Посты выходят только после
-        одобрения и постановки в расписание.
+        одобрения и постановки в расписание. Время публикации — московское
+        (UTC+3).
       </p>
       <Button
         variant="secondary"
