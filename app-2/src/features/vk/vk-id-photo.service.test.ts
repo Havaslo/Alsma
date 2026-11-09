@@ -149,6 +149,10 @@ test("PKCE exchange verifies photos and real refresh before activation; state is
     assert.ok(!serialized.includes("device-private"));
     const status = await service.status();
     assert.equal(status.autoRenewal, true);
+    assert.equal(status.lastExchange?.grantType, "refresh_token");
+    assert.equal(status.lastExchange?.expiresIn, 3600);
+    assert.equal(status.lastExchange?.refreshTokenPresent, true);
+    assert.deepEqual(status.lastExchange?.scopes, ["photos"]);
     assert.ok(!JSON.stringify(status).includes(access(2)));
   } finally {
     globalThis.fetch = old;
@@ -158,8 +162,26 @@ test("PKCE exchange verifies photos and real refresh before activation; state is
 test("missing photos, rejected refresh and invalid state never activate a candidate", async () => {
   const old = globalThis.fetch;
   try {
-    for (const failure of ["scope", "refresh", "state", "photo"]) {
-      const { service, rows } = setup();
+    for (const failure of [
+      "scope",
+      "refresh",
+      "state",
+      "photo",
+      "refreshed_photo",
+      "save",
+    ]) {
+      const { service, rows, options } = setup();
+      if (failure === "save") {
+        const originalUpsert = (options.database as any).client.appSetting
+          .upsert;
+        (options.database as any).client.appSetting.upsert = async (
+          args: any,
+        ) => {
+          if (args.where.key === "vk.photo.vkid.456")
+            throw new Error("mock storage unavailable");
+          return originalUpsert(args);
+        };
+      }
       rows.set("vk.photo.connection.456", {
         value: { ciphertext: "existing-legacy" },
         updatedAt: new Date(),
@@ -185,7 +207,7 @@ test("missing photos, rejected refresh and invalid state never activate a candid
             user_id: 123,
           });
         }
-        if (failure === "photo")
+        if (failure === "photo" || (failure === "refreshed_photo" && n === 2))
           return Response.json({
             error: { error_code: 15, error_msg: "denied" },
           });
@@ -205,10 +227,16 @@ test("missing photos, rejected refresh and invalid state never activate a candid
           ? "refresh"
           : failure === "photo"
             ? "photo_access"
-            : "code_exchange",
+            : failure === "refreshed_photo"
+              ? "refreshed_photo_access"
+              : failure === "save"
+                ? "save"
+                : "code_exchange",
       );
       assert.ok(!JSON.stringify(attempt).includes(access(1)));
       assert.ok(!JSON.stringify(attempt).includes(refresh(1)));
+      const evidence = (await service.status()).lastExchange;
+      if (failure === "scope") assert.deepEqual(evidence?.scopes, ["email"]);
       assert.equal(rows.has("vk.photo.vkid.456"), false);
       assert.equal(
         rows.get("vk.photo.connection.456")!.value.ciphertext,
@@ -247,7 +275,7 @@ test("replicas serialize refresh, rotate both tokens and reuse the committed res
       (await service.start(origin, "admin1")).authorizationUrl,
     ).searchParams.get("state")!;
     await service.complete({ state, code: "code", device_id: "device" });
-    rows.get("vk.photo.vkid.456")!.value.expiresAt = Date.now() - 1000;
+    rows.get("vk.photo.vkid.456")!.value.expiresAt = Date.now() + 119000;
     assert.deepEqual(
       await Promise.all([service.getToken(), other.getToken()]),
       [access(3), access(3)],
@@ -258,6 +286,15 @@ test("replicas serialize refresh, rotate both tokens and reuse the committed res
       unseal(rows.get("vk.photo.vkid.456")!.value.ciphertext, encryptionKey),
     );
     assert.equal(stored.refreshToken, refresh(3));
+    assert.deepEqual(
+      await Promise.all([
+        service.getToken(access(3)),
+        other.getToken(access(3)),
+      ]),
+      [access(4), access(4)],
+    );
+    assert.equal(n, 4);
+    assert.equal(await service.getToken(), access(4));
     rows.get("vk.photo.vkid.456")!.value.expiresAt = Date.now() - 1000;
     globalThis.fetch = (async () =>
       Response.json({ error: "invalid_grant" })) as typeof fetch;
@@ -269,7 +306,7 @@ test("replicas serialize refresh, rotate both tokens and reuse the committed res
       JSON.parse(
         unseal(rows.get("vk.photo.vkid.456")!.value.ciphertext, encryptionKey),
       ).refreshToken,
-      refresh(3),
+      refresh(4),
     );
   } finally {
     globalThis.fetch = old;
@@ -293,4 +330,105 @@ test("unconfigured service leaves legacy path alone and foreign origins are reje
     ).result,
     "INVALID_STATE",
   );
+});
+
+test("backend-only publication refreshes saved VK ID credentials and keeps community wall auth", async () => {
+  const { createVkClient } = await import("./vk.client.js");
+  const { service, rows, options } = setup();
+  const original = globalThis.fetch;
+  let exchanges = 0,
+    wallWrites = 0;
+  let publishing = false;
+  let saveRejected = false;
+  const photoTokens: string[] = [];
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (url === "https://upload.vk.test/photo")
+      return Response.json({ server: 1, photo: "uploaded", hash: "hash" });
+    const body = init!.body as URLSearchParams;
+    if (url === "https://id.vk.ru/oauth2/auth") {
+      exchanges++;
+      return Response.json({
+        access_token: access(exchanges),
+        refresh_token: refresh(exchanges),
+        expires_in: 3600,
+        scope: "photos",
+        state: body.get("state"),
+        user_id: 123,
+      });
+    }
+    const method = new URL(url).pathname.split("/").pop();
+    if (
+      method === "photos.getWallUploadServer" ||
+      method === "photos.saveWallPhoto"
+    ) {
+      if (publishing) photoTokens.push(body.get("access_token")!);
+      if (publishing && method === "photos.saveWallPhoto" && !saveRejected) {
+        saveRejected = true;
+        return Response.json({
+          error: { error_code: 5, error_msg: "expired" },
+        });
+      }
+      return Response.json({
+        response:
+          method === "photos.getWallUploadServer"
+            ? { upload_url: "https://upload.vk.test/photo" }
+            : [{ owner_id: -456, id: 7 }],
+      });
+    }
+    if (method === "wall.post") {
+      wallWrites++;
+      assert.equal(body.get("access_token"), "community");
+      assert.ok(body.get("guid"));
+      return Response.json({ response: { post_id: 8 } });
+    }
+    assert.equal(method, "wall.getById");
+    return Response.json({
+      response: [
+        {
+          id: 8,
+          owner_id: -456,
+          attachments: [{ type: "photo", photo: { owner_id: -456, id: 7 } }],
+        },
+      ],
+    });
+  }) as typeof fetch;
+  try {
+    const state = new URL(
+      (await service.start(origin, "admin")).authorizationUrl,
+    ).searchParams.get("state")!;
+    assert.equal(
+      (await service.complete({ state, code: "test", device_id: "device" }))
+        .result,
+      "VKID_CONNECTED",
+    );
+    rows.get("vk.photo.vkid.456")!.value.expiresAt = Date.now() + 60000;
+    publishing = true;
+    const restarted = createVkIdPhotoService(options);
+    const client = createVkClient({
+      accessToken: "community",
+      logger: options.logger,
+      getPhotoUploadAccessToken: async () =>
+        (await restarted.getToken()) ?? undefined,
+      refreshPhotoUploadAccessToken: restarted.getToken,
+    });
+    const result = await client.publishWallPost({
+      groupId: "456",
+      idempotencyKey: "one-publication",
+      text: "Mock publication",
+      images: [
+        {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "test.jpg",
+        },
+      ],
+    });
+    assert.equal(result.attachedImages, 1);
+    assert.equal(exchanges, 4);
+    assert.equal(wallWrites, 1);
+    assert.deepEqual(photoTokens, [access(3), access(3), access(4)]);
+  } finally {
+    globalThis.fetch = original;
+  }
 });

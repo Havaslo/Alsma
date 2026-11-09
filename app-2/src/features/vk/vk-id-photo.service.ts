@@ -4,8 +4,9 @@ import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
+import { oauthEvidence, oauthEvidenceSchema } from "./vk-oauth-evidence.js";
 import { seal, unseal } from "./vk-photo-crypto.js";
-import { createVkClient } from "./vk.client.js";
+import { VkApiError, createVkClient } from "./vk.client.js";
 
 const credentialsSchema = z.object({
   accessToken: z.string().min(20),
@@ -61,6 +62,7 @@ export const createVkIdPhotoService = (options: {
   );
   const key = `vk.photo.vkid.${options.groupId ?? "unconfigured"}`;
   const attemptKey = `${key}.lastAttempt`;
+  const evidenceKey = `${key}.lastExchange`;
   const recordAttempt = async (result: string, stage: string) => {
     const value = {
       appId: appId ?? null,
@@ -85,7 +87,10 @@ export const createVkIdPhotoService = (options: {
       logger: options.logger,
       singleAttempt: true,
     }).verifyWallPhotoUpload(options.groupId!);
-  const exchange = async (parameters: Record<string, string>) => {
+  const exchange = async (
+    parameters: Record<string, string>,
+    settings = database.client.appSetting,
+  ) => {
     const state = parameters.state;
     const response = await fetch("https://id.vk.ru/oauth2/auth", {
       method: "POST",
@@ -93,9 +98,33 @@ export const createVkIdPhotoService = (options: {
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
-    const parsed = responseSchema.safeParse(
-      await response.json().catch(() => null),
+    const payload: unknown = await response.json().catch(() => null);
+    const value = oauthEvidence(
+      payload,
+      response.status,
+      parameters.grant_type === "refresh_token"
+        ? "refresh_token"
+        : "authorization_code",
     );
+    await settings.upsert({
+      where: { key: evidenceKey },
+      create: { key: evidenceKey, value },
+      update: { value },
+    });
+    const oauthError = z
+      .object({
+        error: z.enum([
+          "invalid_scope",
+          "invalid_grant",
+          "invalid_client",
+          "invalid_request",
+          "access_denied",
+        ]),
+      })
+      .safeParse(payload);
+    if (oauthError.success)
+      throw new Error(`VKID_${oauthError.data.error.toUpperCase()}`);
+    const parsed = responseSchema.safeParse(payload);
     if (!response.ok || !parsed.success || parsed.data.state !== state)
       throw new Error("VKID_EXCHANGE_DENIED");
     if (!parsed.data.scope.split(/[ ,]+/).includes("photos"))
@@ -108,6 +137,10 @@ export const createVkIdPhotoService = (options: {
     const attempt = await database.client.appSetting.findUnique({
       where: { key: attemptKey },
     });
+    const evidence = await database.client.appSetting.findUnique({
+      where: { key: evidenceKey },
+    });
+    const lastExchange = oauthEvidenceSchema.safeParse(evidence?.value);
     const lastAttempt = z
       .object({
         appId: z.string().nullable(),
@@ -118,9 +151,16 @@ export const createVkIdPhotoService = (options: {
       .safeParse(attempt?.value);
     return {
       configured,
-      lastAttempt: lastAttempt.success ? lastAttempt.data : null,
+      callbackUrl: redirectUri ?? null,
+      lastExchange: lastExchange.success ? lastExchange.data : null,
+      lastAttempt: lastAttempt.success
+        ? lastAttempt.data.result === "AWAITING_CALLBACK" &&
+          Date.now() - Date.parse(lastAttempt.data.at) > 600000
+          ? { ...lastAttempt.data, result: "CALLBACK_NOT_RECEIVED" }
+          : lastAttempt.data
+        : null,
       connected: Boolean(saved),
-      autoRenewal: Boolean(saved),
+      autoRenewal: configured && Boolean(saved),
       connectedAt: saved?.connectedAt ?? null,
       expiresAt: saved ? new Date(saved.expiresAt).toISOString() : null,
       lastRefreshAt: saved?.lastRefreshAt ?? null,
@@ -277,14 +317,36 @@ export const createVkIdPhotoService = (options: {
           create: { key, value },
           update: { value },
         });
+        const attempt = {
+          appId: appId ?? null,
+          result: "VKID_CONNECTED",
+          stage: "save",
+          at: now,
+        };
+        await tx.appSetting.upsert({
+          where: { key: attemptKey },
+          create: { key: attemptKey, value: attempt },
+          update: { value: attempt },
+        });
       });
-      await recordAttempt("VKID_CONNECTED", "complete");
       return { origin, result: "VKID_CONNECTED" };
     } catch (error) {
       const result =
-        error instanceof Error && error.message === "VKID_PHOTOS_NOT_GRANTED"
-          ? "VKID_PHOTOS_NOT_GRANTED"
-          : "VKID_CONNECTION_DENIED";
+        error instanceof VkApiError
+          ? `VKID_API_${error.code}`
+          : error instanceof Error &&
+              [
+                "VKID_PHOTOS_NOT_GRANTED",
+                "VKID_EXCHANGE_DENIED",
+                "VKID_INVALID_SCOPE",
+                "VKID_INVALID_GRANT",
+                "VKID_INVALID_CLIENT",
+                "VKID_INVALID_REQUEST",
+                "VKID_ACCESS_DENIED",
+                "VKID_USER_MISMATCH",
+              ].includes(error.message)
+            ? error.message
+            : "VKID_CONNECTION_DENIED";
       await recordAttempt(result, stage);
       options.logger.warn(
         { reason: result, stage },
@@ -293,7 +355,7 @@ export const createVkIdPhotoService = (options: {
       return { origin, result };
     }
   };
-  const getToken = async (): Promise<string | null> => {
+  const getToken = async (rejectedToken?: string): Promise<string | null> => {
     // No new configuration means no change to existing legacy installations.
     if (!configured) return null;
     const row = await database.client.appSetting.findUnique({ where: { key } });
@@ -311,58 +373,80 @@ export const createVkIdPhotoService = (options: {
         );
       return value;
     };
-    if (saved.expiresAt > Date.now() + 120000)
+    if (saved.expiresAt > Date.now() + 120000 && !rejectedToken)
       return decode(saved.ciphertext).accessToken;
     // Cross-process serialization prevents reuse of a rotated refresh token.
-    return database.client.$transaction(
-      async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
-        const current = await tx.appSetting.findUnique({ where: { key } });
-        if (!current) throw new Error("VKID_CONNECTION_MISSING");
-        const record = recordSchema.parse(current.value),
-          credentials = decode(record.ciphertext);
-        if (record.expiresAt > Date.now() + 120000)
-          return credentials.accessToken;
-        try {
-          const refreshed = await exchange({
-            grant_type: "refresh_token",
-            client_id: credentials.appId,
-            redirect_uri: credentials.redirectUri,
-            device_id: credentials.deviceId,
-            refresh_token: credentials.refreshToken,
-            state: nonce(),
-          });
+    return database.client
+      .$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+          const current = await tx.appSetting.findUnique({ where: { key } });
+          if (!current) throw new Error("VKID_CONNECTION_MISSING");
+          const record = recordSchema.parse(current.value),
+            credentials = decode(record.ciphertext);
           if (
-            refreshed.user_id != null &&
-            credentials.userId &&
-            String(refreshed.user_id) !== credentials.userId
+            credentials.accessToken !== rejectedToken &&
+            record.expiresAt > Date.now() + 120000
           )
-            throw new Error("VKID_USER_MISMATCH");
-          const value = {
-            ...record,
-            ciphertext: seal(
-              JSON.stringify({
-                ...credentials,
-                accessToken: refreshed.access_token,
-                refreshToken: refreshed.refresh_token,
-              }),
-              encryptionKey!,
-            ),
-            expiresAt: Date.now() + refreshed.expires_in * 1000,
-            lastRefreshAt: new Date().toISOString(),
-          };
-          await tx.appSetting.update({ where: { key }, data: { value } });
-          return refreshed.access_token;
-        } catch {
-          throw new HttpError(
-            503,
-            "VKID_REFRESH_FAILED",
-            "VK ID не обновил доступ к фото. Повторите проверку подключения; при отзыве доступа потребуется вход в VK.",
-          );
-        }
-      },
-      { maxWait: 20000, timeout: 25000 },
-    );
+            return credentials.accessToken;
+          try {
+            const refreshed = await exchange(
+              {
+                grant_type: "refresh_token",
+                client_id: credentials.appId,
+                redirect_uri: credentials.redirectUri,
+                device_id: credentials.deviceId,
+                refresh_token: credentials.refreshToken,
+                state: nonce(),
+              },
+              tx.appSetting,
+            );
+            if (
+              refreshed.user_id != null &&
+              credentials.userId &&
+              String(refreshed.user_id) !== credentials.userId
+            )
+              throw new Error("VKID_USER_MISMATCH");
+            const value = {
+              ...record,
+              ciphertext: seal(
+                JSON.stringify({
+                  ...credentials,
+                  accessToken: refreshed.access_token,
+                  refreshToken: refreshed.refresh_token,
+                }),
+                encryptionKey!,
+              ),
+              expiresAt: Date.now() + refreshed.expires_in * 1000,
+              lastRefreshAt: new Date().toISOString(),
+            };
+            await tx.appSetting.update({ where: { key }, data: { value } });
+            const attempt = {
+              appId: appId ?? null,
+              result: "REFRESHED",
+              stage: "refresh",
+              at: new Date().toISOString(),
+            };
+            await tx.appSetting.upsert({
+              where: { key: attemptKey },
+              create: { key: attemptKey, value: attempt },
+              update: { value: attempt },
+            });
+            return refreshed.access_token;
+          } catch {
+            throw new HttpError(
+              503,
+              "VKID_REFRESH_FAILED",
+              "VK ID не обновил доступ к фото. Повторите проверку подключения; при отзыве доступа потребуется вход в VK.",
+            );
+          }
+        },
+        { maxWait: 20000, timeout: 25000 },
+      )
+      .catch(async (error: unknown) => {
+        await recordAttempt("VKID_REFRESH_FAILED", "refresh");
+        throw error;
+      });
   };
   return { start, complete, getToken, status };
 };

@@ -50,6 +50,7 @@ const start = async (): Promise<void> => {
   const vkClient = createVkClient({
     accessToken: config.vk.accessToken,
     getPhotoUploadAccessToken: vkPhotoConnection.getToken,
+    refreshPhotoUploadAccessToken: vkPhotoConnection.refreshRejectedToken,
     logger,
   });
   const instagramPublishing = createInstagramPublishingService({
