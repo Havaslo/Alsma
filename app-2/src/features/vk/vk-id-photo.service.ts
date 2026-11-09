@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
+import { oauthEvidence, oauthEvidenceSchema } from "./vk-oauth-evidence.js";
 import { seal, unseal } from "./vk-photo-crypto.js";
 import { createVkClient } from "./vk.client.js";
 
@@ -61,6 +62,7 @@ export const createVkIdPhotoService = (options: {
   );
   const key = `vk.photo.vkid.${options.groupId ?? "unconfigured"}`;
   const attemptKey = `${key}.lastAttempt`;
+  const evidenceKey = `${key}.lastExchange`;
   const recordAttempt = async (result: string, stage: string) => {
     const value = {
       appId: appId ?? null,
@@ -93,9 +95,20 @@ export const createVkIdPhotoService = (options: {
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
-    const parsed = responseSchema.safeParse(
-      await response.json().catch(() => null),
+    const payload: unknown = await response.json().catch(() => null);
+    const value = oauthEvidence(
+      payload,
+      response.status,
+      parameters.grant_type === "refresh_token"
+        ? "refresh_token"
+        : "authorization_code",
     );
+    await database.client.appSetting.upsert({
+      where: { key: evidenceKey },
+      create: { key: evidenceKey, value },
+      update: { value },
+    });
+    const parsed = responseSchema.safeParse(payload);
     if (!response.ok || !parsed.success || parsed.data.state !== state)
       throw new Error("VKID_EXCHANGE_DENIED");
     if (!parsed.data.scope.split(/[ ,]+/).includes("photos"))
@@ -108,6 +121,10 @@ export const createVkIdPhotoService = (options: {
     const attempt = await database.client.appSetting.findUnique({
       where: { key: attemptKey },
     });
+    const evidence = await database.client.appSetting.findUnique({
+      where: { key: evidenceKey },
+    });
+    const lastExchange = oauthEvidenceSchema.safeParse(evidence?.value);
     const lastAttempt = z
       .object({
         appId: z.string().nullable(),
@@ -118,6 +135,7 @@ export const createVkIdPhotoService = (options: {
       .safeParse(attempt?.value);
     return {
       configured,
+      lastExchange: lastExchange.success ? lastExchange.data : null,
       lastAttempt: lastAttempt.success ? lastAttempt.data : null,
       connected: Boolean(saved),
       autoRenewal: Boolean(saved),

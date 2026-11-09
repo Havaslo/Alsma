@@ -121,7 +121,10 @@ export const createApp = ({
           (request.method === "GET" && request.url === "/health") ||
           request.url?.startsWith("/api/instagram-publishing/callback") ===
             true ||
-          request.url?.startsWith("/api/vk-photo-connection/callback") === true,
+          request.url?.startsWith("/api/vk-photo-connection/callback") ===
+            true ||
+          request.url?.startsWith("/api/vk-photo-connection/vkid/callback") ===
+            true,
       },
       logger,
     }),

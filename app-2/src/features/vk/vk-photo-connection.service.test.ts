@@ -101,6 +101,9 @@ test("server exchanges code, verifies photos, persists encrypted access and reje
     const status = await restarted.status();
     assert.equal(status.photoReady, true);
     assert.ok(status.expiresAt);
+    assert.equal(status.lastExchange?.expiresIn, 3600);
+    assert.equal(status.lastExchange?.scopes, null);
+    assert.equal(status.lastExchange?.refreshTokenPresent, false);
     assert.ok(!JSON.stringify(status).includes(photoToken));
     assert.equal(
       (await service.complete({ state, code: "one-time-code" })).result,
