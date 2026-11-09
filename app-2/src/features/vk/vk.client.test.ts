@@ -688,6 +688,42 @@ test("wall.post is attempted once even on a retryable API error", async () => {
   assert.deepEqual(calls, ["wall.post"]);
 });
 
+test("wall.post transport failures and incomplete responses stay uncertain and are never retried", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const response of [
+      () => new Response("gateway", { status: 502 }),
+      () => new Response("invalid json", { status: 200 }),
+      () => Response.json({}),
+      () => Response.json({ response: { post_id: "" } }),
+      () => Response.json({ response: { post_id: 0 } }),
+      () =>
+        Response.json(
+          { error: { error_code: 500, error_msg: "gateway" } },
+          { status: 500 },
+        ),
+    ]) {
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls++;
+        return response();
+      };
+      await assert.rejects(
+        createVkClient({ accessToken: "group", logger }).publishWallPost({
+          groupId: "138003065",
+          idempotencyKey: "unknown-response",
+          text: "test",
+          images: [],
+        }),
+        VkPublicationUnknownError,
+      );
+      assert.equal(calls, 1);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("wall.post without a post ID has an uncertain result and is not retried", async () => {
   const calls = await withFetch(
     () => ({ response: {} }),
@@ -883,6 +919,46 @@ test("community copies are confirmed by image bytes, unrelated photos are reject
       });
       if (same) assert.equal((await operation).externalId, "99");
       else await assert.rejects(operation, VkPostVerificationError);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("photo auth rejection refreshes once; permission errors and second rejection do not loop", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const code of [5, 15, 27]) {
+      for (const secondFailure of [false, true]) {
+        let refreshes = 0;
+        const tokens: string[] = [];
+        globalThis.fetch = (async (_input, init) => {
+          tokens.push((init!.body as URLSearchParams).get("access_token")!);
+          return Response.json(
+            tokens.length === 1 || secondFailure
+              ? { error: { error_code: code, error_msg: "denied" } }
+              : { response: { upload_url: "https://pu.vk.ru/upload" } },
+          );
+        }) as typeof fetch;
+        const client = createVkClient({
+          accessToken: "community",
+          getPhotoUploadAccessToken: async () => "old-user",
+          refreshPhotoUploadAccessToken: async (rejected) => {
+            assert.equal(rejected, "old-user");
+            refreshes++;
+            return "new-user";
+          },
+          logger,
+        });
+        if (code === 5 && !secondFailure)
+          await client.verifyWallPhotoUpload("456");
+        else await assert.rejects(client.verifyWallPhotoUpload("456"));
+        assert.equal(refreshes, code === 5 ? 1 : 0);
+        assert.deepEqual(
+          tokens,
+          code === 5 ? ["old-user", "new-user"] : ["old-user"],
+        );
+      }
     }
   } finally {
     globalThis.fetch = original;

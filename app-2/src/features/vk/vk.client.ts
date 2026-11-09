@@ -162,6 +162,7 @@ export const createVkClient = ({
   accessToken,
   photoUploadAccessToken,
   getPhotoUploadAccessToken,
+  refreshPhotoUploadAccessToken,
   logger,
   singleAttempt = false,
   diagnosticHttps = false,
@@ -170,6 +171,9 @@ export const createVkClient = ({
   readonly accessToken?: string;
   readonly photoUploadAccessToken?: string;
   readonly getPhotoUploadAccessToken?: () => Promise<string | undefined>;
+  readonly refreshPhotoUploadAccessToken?: (
+    rejectedToken: string,
+  ) => Promise<string | null>;
   readonly logger: Logger;
   readonly singleAttempt?: boolean;
   readonly diagnosticHttps?: boolean;
@@ -217,6 +221,14 @@ export const createVkClient = ({
         } | null;
         if (response.ok && payload?.response !== undefined)
           return payload.response;
+        // A gateway failure or an incomplete body does not prove that VK
+        // rejected the write. Keep it out of the retryable failed queue.
+        if (
+          method === "wall.post" &&
+          (response.status >= 500 ||
+            typeof payload?.error?.error_code !== "number")
+        )
+          throw new VkPublicationUnknownError();
         const error = new VkApiError(
           payload?.error?.error_code ?? response.status,
           payload?.error?.error_msg ?? "VK API request failed",
@@ -246,7 +258,25 @@ export const createVkClient = ({
       const uploadToken = getPhotoUploadAccessToken
         ? await getPhotoUploadAccessToken()
         : photoToken;
-      return await requestWithToken(method, parameters, uploadToken ?? token);
+      try {
+        return await requestWithToken(method, parameters, uploadToken ?? token);
+      } catch (error) {
+        // Only an explicit auth rejection is safe to retry. Never retry wall.post.
+        if (
+          error instanceof VkApiError &&
+          error.code === 5 &&
+          uploadToken &&
+          refreshPhotoUploadAccessToken &&
+          ["photos.getWallUploadServer", "photos.saveWallPhoto"].includes(
+            method,
+          )
+        ) {
+          const refreshed = await refreshPhotoUploadAccessToken(uploadToken);
+          if (refreshed)
+            return await requestWithToken(method, parameters, refreshed);
+        }
+        throw error;
+      }
     } catch (error) {
       if (error instanceof VkApiError && [5, 15, 27].includes(error.code))
         throw new VkApiError(
@@ -756,8 +786,9 @@ export const createVkClient = ({
         guid: input.idempotencyKey,
       })) as { post_id?: unknown };
       if (
-        typeof response.post_id !== "number" &&
-        typeof response.post_id !== "string"
+        (typeof response.post_id !== "number" &&
+          typeof response.post_id !== "string") ||
+        !/^[1-9]\d*$/u.test(String(response.post_id))
       )
         throw new VkPublicationUnknownError();
       const postId = String(response.post_id);

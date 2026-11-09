@@ -4,7 +4,13 @@ import { apiClient } from "@/lib/api/api-client";
 const headers = () => ({ Authorization: `Bearer ${readAdminSession() ?? ""}` });
 export const loadVkPhotoConnection = async (signal?: AbortSignal) => {
   const response = await apiClient.get<{
+    activeSource: "vkid" | "legacy" | "environment" | null;
+    legacyConfigured: boolean;
     vkId?: {
+      callbackUrl: string | null;
+      expiresAt: string | null;
+      connectedAt: string | null;
+      lastAttempt: { result: string; stage: string; at: string } | null;
       configured: boolean;
       connected: boolean;
       autoRenewal: boolean;

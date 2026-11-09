@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import { createVkIdPhotoService } from "./vk-id-photo.service.js";
+import { oauthEvidence, oauthEvidenceSchema } from "./vk-oauth-evidence.js";
 import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
 import { seal, unseal } from "./vk-photo-crypto.js";
 import { VkApiError, createVkClient } from "./vk.client.js";
@@ -50,6 +51,7 @@ export const createVkPhotoConnectionService = (options: {
     encryptionKey: config.encryptionKey,
   });
   const connectionKey = `vk.photo.connection.${options.groupId ?? "unconfigured"}`;
+  const evidenceKey = `${connectionKey}.lastExchange`;
   const statePrefix = "vk.photo.oauth.state.";
   // Report names only: this status is admin-only and must never expose values.
   const missingConfiguration = Object.entries({
@@ -117,9 +119,23 @@ export const createVkPhotoConnectionService = (options: {
         reason = "PHOTO_ACCESS_DENIED";
     }
     const renewable = await vkId.status();
+    const evidence = await options.database.client.appSetting.findUnique({
+      where: { key: evidenceKey },
+    });
+    const lastExchange = oauthEvidenceSchema.safeParse(evidence?.value);
     return {
+      activeSource:
+        renewable.connected && renewable.configured
+          ? "vkid"
+          : saved
+            ? "legacy"
+            : options.fallbackPhotoToken
+              ? "environment"
+              : null,
+      legacyConfigured: configured,
       vkId: renewable,
-      configured,
+      lastExchange: lastExchange.success ? lastExchange.data : null,
+      configured: renewable.configured || configured,
       missingConfiguration,
       photoReady,
       reason,
@@ -238,12 +254,23 @@ export const createVkPhotoConnectionService = (options: {
         redirect: "error",
         signal: AbortSignal.timeout(15_000),
       });
+      const payload: unknown = await response.json().catch(() => null);
+      const evidence = oauthEvidence(
+        payload,
+        response.status,
+        "authorization_code",
+      );
+      await options.database.client.appSetting.upsert({
+        where: { key: evidenceKey },
+        create: { key: evidenceKey, value: evidence },
+        update: { value: evidence },
+      });
       const data = z
         .object({
           access_token: z.string().min(20),
           expires_in: z.number().int().nonnegative(),
         })
-        .safeParse(await response.json().catch(() => null));
+        .safeParse(payload);
       if (!response.ok || !data.success)
         return { origin, result: "CODE_EXCHANGE_DENIED" };
       await verify(data.data.access_token);
@@ -333,6 +360,7 @@ export const createVkPhotoConnectionService = (options: {
     completeManual,
     status,
     getToken,
+    refreshRejectedToken: vkId.getToken,
     startVkId: vkId.start,
     completeVkId: vkId.complete,
   };
