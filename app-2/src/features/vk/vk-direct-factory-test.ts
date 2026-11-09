@@ -15,6 +15,7 @@ import { extractVkAccessToken } from "./vk-access-token-input.js";
 import { createVkPhotoAccessStore } from "./vk-photo-access-store.js";
 import { photoAuthDiagnostic } from "./vk-photo-auth-diagnostic.js";
 import { prepareVkPhoto } from "./vk-photo-image.js";
+import { createVkPreparedTestRouter } from "./vk-prepared-test.routes.js";
 import { validateTestUploadUrl } from "./vk-test-photo-upload.js";
 import {
   VkApiError,
@@ -59,6 +60,19 @@ export function createVkDirectFactoryTestRouter(
       createAdminAuthService(createAdminAuthRepository(database)),
     ),
     createRequireAdminPermission("site.access", "site.manage"),
+  );
+  router.use(
+    "/prepared",
+    createVkPreparedTestRouter({
+      database,
+      storage,
+      logger,
+      allowPublishing,
+      getPhotoToken: () =>
+        getConnectedPhotoToken
+          ? getConnectedPhotoToken()
+          : Promise.resolve(undefined),
+    }),
   );
   // The signed-in owner pastes the address VK redirected to; the token is kept
   // in memory only and is never logged or returned to the browser.
@@ -190,12 +204,10 @@ export function createVkDirectFactoryTestRouter(
       });
       res.json(await client.readWallPost(groupId, req.params.postId));
     } catch (error) {
-      res
-        .status(502)
-        .json({
-          error: "POST_READ_FAILED",
-          code: error instanceof VkApiError ? error.code : null,
-        });
+      res.status(502).json({
+        error: "POST_READ_FAILED",
+        code: error instanceof VkApiError ? error.code : null,
+      });
     }
   });
   router.post("/publish", async (req, res) => {
