@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { FileSpreadsheet, LoaderCircle, Sparkles, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
 import {
   type FactoryMediaItem,
@@ -12,6 +13,8 @@ import type {
   ContentPlanPostInput,
   ContentPlanPreview,
 } from "@/lib/content-factory/contentFactoryTypes";
+
+import { VkPlanPhotoPreparation } from "./VkPlanPhotoPreparation";
 
 const maxFileSizeBytes = 10 * 1_024 * 1_024;
 
@@ -27,6 +30,8 @@ export const ContentPlanImportPanel = ({
     posts: ContentPlanPostInput[];
   }) => Promise<unknown>;
 }) => {
+  const [vkModal, setVkModal] = useState(false);
+  const [vkAcknowledged, setVkAcknowledged] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ContentPlanPreview | null>(null);
@@ -59,6 +64,7 @@ export const ContentPlanImportPanel = ({
   };
 
   const selectFile = (nextFile?: File) => {
+    setVkAcknowledged(false);
     if (nextFile && nextFile.size > maxFileSizeBytes) {
       setFile(null);
       setPreview(null);
@@ -76,7 +82,9 @@ export const ContentPlanImportPanel = ({
     setIsPreviewing(true);
     setError("");
     try {
-      setPreview(await onPreview(file));
+      const result = await onPreview(file);
+      setPreview(result);
+      if (result.posts.some((post) => post.channel === "vk")) setVkModal(true);
     } catch (cause) {
       setError(
         contentFactoryErrorMessage(
@@ -91,6 +99,13 @@ export const ContentPlanImportPanel = ({
 
   const generate = async () => {
     if (!preview) return;
+    if (
+      !vkAcknowledged &&
+      preview.posts.some((post) => post.channel === "vk")
+    ) {
+      setVkModal(true);
+      return;
+    }
     if (
       preview.posts.some(
         (post) =>
@@ -122,6 +137,28 @@ export const ContentPlanImportPanel = ({
 
   return (
     <section className="rounded-3xl border border-line bg-brand-foreground p-5 shadow-[0_8px_30px_rgba(25,45,34,0.045)] sm:p-6">
+      <Modal
+        open={vkModal}
+        onClose={() => setVkModal(false)}
+        title="Подготовка фотографий для VK"
+        closeLabel="Закрыть"
+      >
+        <div className="space-y-5 p-5">
+          <VkPlanPhotoPreparation />
+          <Button
+            onClick={() => {
+              setVkAcknowledged(true);
+              setVkModal(false);
+            }}
+          >
+            Продолжить подготовку плана
+          </Button>
+          <p className="text-xs text-muted-ui-foreground">
+            План можно создать без обновления доступа. Неподготовленные фото
+            будут ждать подключения VK.
+          </p>
+        </div>
+      </Modal>
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.13em] text-brand uppercase">

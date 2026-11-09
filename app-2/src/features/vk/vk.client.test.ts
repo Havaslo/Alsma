@@ -964,3 +964,36 @@ test("photo auth rejection refreshes once; permission errors and second rejectio
     globalThis.fetch = original;
   }
 });
+
+test("prepared attachments publish with community auth without accessing expired photo token", async () => {
+  const originalFetch = globalThis.fetch;
+  let posts = 0;
+  globalThis.fetch = (async (input, init) => {
+    assert.ok(String(input).includes("wall.post"));
+    const parameters = new URLSearchParams(String(init?.body));
+    assert.equal(parameters.get("access_token"), "community");
+    assert.equal(parameters.get("attachments"), "photo-123_11,photo-123_12");
+    assert.equal(parameters.get("guid"), "post-stable-id");
+    posts++;
+    return new Response(JSON.stringify({ response: { post_id: 99 } }));
+  }) as typeof fetch;
+  try {
+    const client = createVkClient({
+      accessToken: "community",
+      logger,
+      getPhotoUploadAccessToken: async () => {
+        throw new Error("expired");
+      },
+    });
+    const result = await client.publishPreparedWallPost({
+      groupId: "123",
+      idempotencyKey: "post-stable-id",
+      attachments: ["photo-123_11", "photo-123_12"],
+      text: "Scheduled post",
+    });
+    assert.equal(result.externalId, "99");
+    assert.equal(posts, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

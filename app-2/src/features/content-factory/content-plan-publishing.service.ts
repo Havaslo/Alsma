@@ -18,8 +18,8 @@ import {
   safePublicationError,
 } from "./content-plan-publication-errors.js";
 import { getMoscowDateTime, isFutureInMoscow } from "./content-plan-time.js";
-import { verifyVkPhotoTarget } from "./content-plan-vk-photo-check.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
+import { createVkPhotoPreparation } from "./vk-photo-preparation.js";
 
 const schedulerIntervalMilliseconds = 15_000;
 const stalePublishingMilliseconds = 5 * 60_000;
@@ -369,8 +369,16 @@ export const createContentPlanPublishingService = (options: {
         "Укажите будущие дату и время, затем снова одобрите пост.",
       );
     await verifyTarget(post.channel);
-    if (post.channel === "vk" && post.imageIds.length > 0)
-      await verifyVkPhotoTarget(options.vk, options.vkGroupId!);
+    if (post.channel === "vk" && post.imageIds.length > 0) {
+      for (const image of await selectedMedia(post.imageIds)) {
+        if (!(await preparation.read(image)))
+          throw new HttpError(
+            409,
+            "VK_PHOTOS_NOT_PREPARED",
+            "Дождитесь подготовки фотографий VK. Если доступ истёк, обновите его в блоке фотографий, затем запланируйте пост снова.",
+          );
+      }
+    }
 
     const scheduled = await repository.schedulePost(
       postId,
@@ -424,6 +432,124 @@ export const createContentPlanPublishingService = (options: {
     return images;
   };
 
+  const preparation = createVkPhotoPreparation({
+    database: options.database,
+    groupId: options.vkGroupId ?? "unconfigured",
+    upload: async (imageId) => {
+      const images = await loadImages([imageId]);
+      let attachments: readonly string[] = [];
+      await options.vk.publishWallPost({
+        onPreparedAttachments: (values) => {
+          attachments = values;
+        },
+        groupId: options.vkGroupId!,
+        idempotencyKey: `prepare-${imageId}`,
+        prepareOnly: true,
+        images: await Promise.all(images.map(prepareVkPhoto)),
+        text: "Подготовка фотографии контент-плана",
+      });
+      const attachment = attachments[0];
+      if (!attachment || attachments.length !== 1)
+        throw new Error("VK did not return a prepared attachment");
+      return attachment;
+    },
+  });
+  const selectedMedia = async (imageIds: readonly string[]) => {
+    const media = await options.database.client.contentFactoryMedia.findMany({
+      where: { id: { in: [...new Set(imageIds)] } },
+    });
+    const byId = new Map(media.map((item) => [item.id, item]));
+    return imageIds.map((id) => {
+      const item = byId.get(id);
+      if (!item)
+        throw new HttpError(
+          409,
+          "VK_PHOTO_MISSING",
+          "Фотография удалена из медиатеки. Выберите другую.",
+        );
+      return item;
+    });
+  };
+  const prepareVkImages = async (imageIds: readonly string[]) => {
+    const attachments: string[] = [];
+    for (const image of await selectedMedia(imageIds))
+      attachments.push(await preparation.prepare(image));
+    return attachments;
+  };
+  const pendingVkPosts = () =>
+    options.database.client.contentPlanPost.findMany({
+      where: {
+        channel: "vk",
+        status: {
+          in: ["needs_review", "approved", "scheduled", "publish_failed"],
+        },
+      },
+      select: { id: true, imageIds: true, imageStatus: true },
+      orderBy: [{ scheduledDate: "asc" }, { scheduledTime: "asc" }],
+    });
+  const photoPreparationStatus = async () => {
+    const posts = await pendingVkPosts();
+    const ids = [...new Set(posts.flatMap((post) => post.imageIds))];
+    let ready = 0;
+    let failed = 0;
+    // Missing media must be visible as unprepared, never counted as ready.
+    for (const id of ids) {
+      try {
+        const [image] = await selectedMedia([id]);
+        const state = await preparation.inspect(image!);
+        if (state.ready) ready++;
+        else if (state.error) failed++;
+      } catch {
+        failed++;
+      }
+    }
+    return {
+      enabled:
+        options.enabled && Boolean(options.vkGroupId && options.vk.configured),
+      total: ids.length,
+      ready,
+      pending: ids.length - ready,
+      failed,
+      generatingPosts: posts.filter(
+        (post) =>
+          post.imageStatus === "pending" || post.imageStatus === "generating",
+      ).length,
+    };
+  };
+  let preparing = false;
+  const preparePendingPhotos = async () => {
+    if (
+      preparing ||
+      !options.enabled ||
+      !options.vk.configured ||
+      !options.vkGroupId
+    )
+      return;
+    preparing = true;
+    try {
+      const posts = await pendingVkPosts();
+      const ids = [...new Set(posts.flatMap((post) => post.imageIds))];
+      let attempted = 0;
+      for (const id of ids) {
+        try {
+          const [image] = await selectedMedia([id]);
+          const state = await preparation.inspect(image!);
+          if (state.ready || state.retryAt > Date.now()) continue;
+          if (attempted++ >= 10) break;
+          await preparation.prepare(image!);
+        } catch (error) {
+          options.logger.warn(
+            { errorName: error instanceof Error ? error.name : "UnknownError" },
+            "VK photo preparation failed; cached photos retained",
+          );
+          if (isVkApiError(error) && [5, 15, 27].includes(error.code)) break;
+        }
+      }
+    } finally {
+      preparing = false;
+    }
+  };
+
   const publishPost = async (postId: string) => {
     const claimed = await repository.claimScheduledPost(postId);
     if (claimed.count === 0) return;
@@ -435,18 +561,19 @@ export const createContentPlanPublishingService = (options: {
     try {
       const targetChannel = deliveryChannel(post.channel);
       await verifyTarget(targetChannel);
-      const loadedImages = await loadImages(post.imageIds);
-      const images =
-        targetChannel === "vk"
-          ? await Promise.all(loadedImages.map(prepareVkPhoto))
-          : loadedImages;
+      const loadedImages =
+        targetChannel === "vk" ? [] : await loadImages(post.imageIds);
+      const images = loadedImages;
+      // Prepare before the wall request. Never silently publish without photos.
+      const attachments =
+        targetChannel === "vk" ? await prepareVkImages(post.imageIds) : [];
       providerRequestStarted = true;
       const result =
         targetChannel === "vk"
-          ? await options.vk.publishWallPost({
+          ? await options.vk.publishPreparedWallPost({
               groupId: options.vkGroupId!,
               idempotencyKey: post.id,
-              images,
+              attachments,
               text: post.generatedCopy,
             })
           : targetChannel === "max"
@@ -532,13 +659,31 @@ export const createContentPlanPublishingService = (options: {
   };
 
   const startProductionScheduler = () => {
+    const prepareTick = () =>
+      void preparePendingPhotos().catch((error: unknown) => {
+        options.logger.warn(
+          { errorName: error instanceof Error ? error.name : "UnknownError" },
+          "VK preparation worker failed",
+        );
+      });
+    const prepareTimer = setInterval(prepareTick, 30_000);
+    prepareTimer.unref();
+    prepareTick();
     const timer = setInterval(() => void tick(), schedulerIntervalMilliseconds);
     timer.unref();
     void tick();
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearInterval(prepareTimer);
+    };
   };
 
-  return { channelStatus, schedulePost, startProductionScheduler };
+  return {
+    channelStatus,
+    schedulePost,
+    startProductionScheduler,
+    photoPreparationStatus,
+  };
 };
 
 export type ContentPlanPublishingService = ReturnType<

@@ -126,6 +126,9 @@ export const createContentFactoryRouter = (
     "/plan/publishing/status",
     createGetContentPlanPublishingStatusHandler(publishing),
   );
+  router.get("/plan/photos/status", async (_request, response) => {
+    response.json(await publishing.photoPreparationStatus());
+  });
   router.patch(
     "/plan/posts/:postId",
     validateRequest({

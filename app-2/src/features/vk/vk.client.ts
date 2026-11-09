@@ -289,6 +289,7 @@ export const createVkClient = ({
   };
   const inspectPublishingAccess = async (
     groupId?: string,
+    checkPhotos = true,
   ): Promise<VkPublishingAccess> => {
     let tokenKind: VkPublishingAccess["tokenKind"] = "unknown";
     let permissions: string[] = [];
@@ -322,7 +323,7 @@ export const createVkClient = ({
       const missing =
         permissions.length > 0 && !permissions.includes("wall") ? ["wall"] : [];
       let canAttachPhotos = false;
-      if ((photoToken || getPhotoUploadAccessToken) && groupId) {
+      if (checkPhotos && (photoToken || getPhotoUploadAccessToken) && groupId) {
         try {
           const upload = (await requestPhotoUpload(
             "photos.getWallUploadServer",
@@ -348,7 +349,7 @@ export const createVkClient = ({
         probe: permissions.length > 0 ? "ok" : "unavailable",
       };
     }
-    if (tokenKind === "user" && groupId) {
+    if (checkPhotos && tokenKind === "user" && groupId) {
       try {
         // This prepares a wall photo upload but does not upload or publish
         // anything. It proves that the token can actually attach a photo to a
@@ -496,7 +497,7 @@ export const createVkClient = ({
         throw new Error("VK photo upload URL is missing or invalid");
     },
     verifyPublishingRights: async (groupId: string) => {
-      const access = await inspectPublishingAccess(groupId);
+      const access = await inspectPublishingAccess(groupId, false);
       if (access.canPublish) return;
       if (access.probe === "unavailable" && access.tokenKind === "unknown") {
         // The actual publish still reports VK's provider error; avoid a false
@@ -557,6 +558,7 @@ export const createVkClient = ({
       readonly groupId: string;
       readonly idempotencyKey: string;
       readonly prepareOnly?: boolean;
+      readonly onPreparedAttachments?: (attachments: readonly string[]) => void;
       readonly diagnosticTransport?: "https";
       readonly diagnosticUserWall?: boolean;
       readonly diagnosticMessages?: boolean;
@@ -774,8 +776,11 @@ export const createVkClient = ({
         }
       }
 
-      if (input.prepareOnly)
+      if (input.prepareOnly) {
+        if (!input.diagnosticMessages && !input.diagnosticUserWall)
+          input.onPreparedAttachments?.(photoAttachments);
         return { externalId: "", url: "", attachedImages: 0, preparedPhotos };
+      }
       const response = (await request("wall.post", {
         owner_id: `-${groupId}`,
         from_group: "1",
@@ -861,6 +866,38 @@ export const createVkClient = ({
         externalId: postId,
         url: `https://vk.com/wall-${groupId}_${postId}`,
         attachedImages: photoAttachments.length,
+      };
+    },
+    // Prepared wall photos are durable VK attachments. Publishing them uses only
+    // the community token, so an expired photo-upload token cannot block delivery.
+    publishPreparedWallPost: async (input: {
+      groupId: string;
+      idempotencyKey: string;
+      attachments: readonly string[];
+      text: string;
+    }) => {
+      if (!/^\d+$/u.test(input.groupId) || !input.text.trim())
+        throw new Error("Invalid VK post");
+      if (
+        input.attachments.length > 10 ||
+        input.attachments.some(
+          (value) => !/^photo-?\d+_\d+(?:_[a-zA-Z0-9_-]+)?$/u.test(value),
+        )
+      )
+        throw new Error("Invalid prepared VK attachments");
+      const result = (await request("wall.post", {
+        owner_id: `-${input.groupId}`,
+        from_group: "1",
+        message: input.text.trim(),
+        attachments: input.attachments.join(","),
+        guid: input.idempotencyKey,
+      })) as { post_id?: unknown };
+      if (!/^[1-9]\d*$/u.test(String(result.post_id ?? "")))
+        throw new VkPublicationUnknownError();
+      // This is provider acceptance, not a claim of visual verification.
+      return {
+        externalId: String(result.post_id),
+        url: `https://vk.com/wall-${input.groupId}_${result.post_id}`,
       };
     },
     logConfigurationError: () => logger.warn("VK API client is not configured"),

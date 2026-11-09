@@ -211,3 +211,61 @@ test("Telegram verification outages return a safe actionable error", async () =>
     status: 502,
   });
 });
+
+test("VK scheduling uses previously prepared photos without photo-token preflight", async () => {
+  let scheduled = false;
+  const post = {
+    id: "post-id",
+    channel: "vk",
+    status: "approved",
+    imageIds: ["image"],
+    generatedCopy: "Ready",
+    scheduledDate: new Date("2099-01-01"),
+    scheduledTime: "12:00",
+  };
+  const database = {
+    client: {
+      contentPlanPost: {
+        findUnique: async () => post,
+        updateMany: async () => {
+          scheduled = true;
+          return { count: 1 };
+        },
+      },
+      contentFactoryMedia: {
+        findMany: async () => [{ id: "image", objectId: "object" }],
+      },
+      appSetting: {
+        findUnique: async () => ({
+          value: {
+            attachment: "photo-123_77",
+            preparedAt: new Date().toISOString(),
+          },
+        }),
+      },
+    },
+  } as never;
+  const service = createContentPlanPublishingService({
+    database,
+    enabled: true,
+    instagram: {} as never,
+    logger: pino({ level: "silent" }),
+    managedStorage: {} as never,
+    max: {} as never,
+    telegram: {} as never,
+    vkGroupId: "123",
+    vk: {
+      configured: true,
+      verifyCredentials: async () => {},
+      verifyPublishingRights: async () => {},
+      verifyWallPhotoUpload: async () => {
+        throw new Error("expired");
+      },
+      publishWallPost: async () => {
+        throw new Error("must not upload or publish while scheduling");
+      },
+    } as never,
+  });
+  await service.schedulePost("post-id");
+  assert.equal(scheduled, true);
+});
