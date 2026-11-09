@@ -32,7 +32,7 @@ export const VkPlanPhotoPreparation = () => {
           pending: number;
           failed: number;
           generatingPosts: number;
-        }>("/content-factory/plan/photos/status", {
+        }>("/admin/content-factory/plan/photos/status", {
           signal,
           headers: { Authorization: `Bearer ${readAdminSession() ?? ""}` },
         })
