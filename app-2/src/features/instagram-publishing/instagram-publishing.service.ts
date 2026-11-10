@@ -316,6 +316,15 @@ export const createInstagramPublishingService = (options: {
     return {
       urls,
       cleanup: async () => {
+        // Temporary diagnostic switch: keeps freshly uploaded copies so the
+        // exact URL handed to Meta can be fetched and inspected afterwards.
+        if (process.env.INSTAGRAM_KEEP_TEMP_MEDIA === "1") {
+          options.logger.warn(
+            { objectIds: temporaryObjectIds, stage: "temporary_media_kept" },
+            "Instagram temporary images kept for diagnostics",
+          );
+          return;
+        }
         for (const objectId of temporaryObjectIds)
           await options.managedStorage.deleteObject(objectId).catch(() => {
             options.logger.warn(
@@ -398,14 +407,28 @@ export const createInstagramPublishingService = (options: {
         { stage: "instagram_media_urls", urls: media.urls },
         "Instagram media URLs prepared",
       );
+      const createContainer = async (parameters: Record<string, string>) => {
+        try {
+          return await graph.post(
+            `${target.instagramUserId}/media`,
+            target.accessToken,
+            parameters,
+          );
+        } catch (error) {
+          if (error instanceof MetaGraphRequestError)
+            throw new MetaGraphRequestError(
+              error.httpStatus,
+              error.providerCode,
+              `${error.providerMessage ?? ""} | image_url: ${parameters.image_url ?? ""}`.trim(),
+              error.providerSubcode,
+            );
+          throw error;
+        }
+      };
       let creationId: string;
       if (media.urls.length === 1) {
         creationId = containerId(
-          await graph.post(
-            `${target.instagramUserId}/media`,
-            target.accessToken,
-            { image_url: media.urls[0]!, caption },
-          ),
+          await createContainer({ image_url: media.urls[0]!, caption }),
         );
         await waitForContainer(creationId, target.accessToken);
       } else {
@@ -413,11 +436,10 @@ export const createInstagramPublishingService = (options: {
         for (const url of media.urls)
           children.push(
             containerId(
-              await graph.post(
-                `${target.instagramUserId}/media`,
-                target.accessToken,
-                { image_url: url, is_carousel_item: "true" },
-              ),
+              await createContainer({
+                image_url: url,
+                is_carousel_item: "true",
+              }),
             ),
           );
         for (const child of children)
