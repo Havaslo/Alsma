@@ -7,6 +7,7 @@ import {
   type FactoryMediaItem,
   type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
+import { resolvePlanPostImage } from "@/lib/content-factory/planPostImage";
 
 import { ChannelBadge, StatusBadge } from "./ContentFactoryPrimitives";
 
@@ -39,7 +40,7 @@ const PlanPostCard = ({
   onReschedule: (id: string) => void;
   onCancel: (id: string) => void;
 }) => {
-  const image = mediaItems.find((item) => item.id === post.imageId);
+  const imageUrl = resolvePlanPostImage(post, mediaItems);
   return (
     <article className="rounded-xl border border-line bg-brand-foreground p-2">
       <button
@@ -47,11 +48,11 @@ const PlanPostCard = ({
         onClick={() => onOpen(post)}
         type="button"
       >
-        {image && (
+        {imageUrl && (
           <img
             alt=""
             className="size-9 shrink-0 rounded-lg object-cover"
-            src={image.image}
+            src={imageUrl}
           />
         )}
         <span className="min-w-0 flex-1">
