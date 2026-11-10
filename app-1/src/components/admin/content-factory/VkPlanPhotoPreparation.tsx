@@ -12,6 +12,12 @@ import {
   startVkPhotoManualConnection,
 } from "@/lib/content-factory/vkPhotoConnectionApi";
 
+const formatExpiry = (value: string) =>
+  new Date(value).toLocaleString("ru-RU", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+
 export const VkPlanPhotoPreparation = () => {
   const client = useQueryClient();
   const [callback, setCallback] = useState("");
@@ -66,34 +72,34 @@ export const VkPlanPhotoPreparation = () => {
   });
   const error =
     access.error ?? preparation.error ?? start.error ?? complete.error;
+  const data = preparation.data;
+  const preparationSummary = (() => {
+    if (!data) return null;
+    if (!data.enabled) return "Автоматическая подготовка фотографий выключена.";
+    const parts: string[] = [];
+    if (data.pending > 0) parts.push(`Осталось подготовить: ${data.pending}.`);
+    if (data.failed > 0)
+      parts.push(`С ошибкой: ${data.failed} — повторяем автоматически.`);
+    if (data.generatingPosts > 0)
+      parts.push(
+        `Ещё создаются посты: ${data.generatingPosts}. Их фото подготовим после генерации.`,
+      );
+    if (parts.length > 0) return parts.join(" ");
+    if (data.total === 0) return "Фотографий для подготовки пока нет.";
+    return "Все фотографии готовы.";
+  })();
   return (
-    <div className="space-y-4 text-sm">
-      <p>
-        Фотографии контент-плана заранее загружаются в VK, пока действует
-        доступ. После подготовки публикации по расписанию используют сохранённые
-        вложения, даже если срок этого доступа истёк.
-      </p>
+    <div className="space-y-3 text-sm">
       <p role="status">
         {access.isPending
           ? "Проверяем доступ VK…"
           : access.data?.photoReady
-            ? "Доступ к загрузке фотографий активен."
-            : "Для загрузки новых фотографий обновите доступ VK."}
-        {access.data?.expiresAt &&
-          ` Действует до ${new Date(access.data.expiresAt).toLocaleString("ru-RU")}.`}
+            ? access.data.expiresAt
+              ? `Доступ активен до ${formatExpiry(access.data.expiresAt)}.`
+              : "Доступ активен."
+            : "Доступ не активен — обновите его, чтобы загружать новые фотографии."}
       </p>
-      {preparation.data && (
-        <p role="status">
-          Подготовлено фотографий в текущих планах: {preparation.data.ready} из{" "}
-          {preparation.data.total}. Осталось: {preparation.data.pending}.
-          {preparation.data.generatingPosts > 0 &&
-            ` Ещё создаются посты: ${preparation.data.generatingPosts}. Их фотографии будут подготовлены после генерации.`}
-          {preparation.data.failed > 0 &&
-            ` Не удалось подготовить: ${preparation.data.failed}. Сервис повторяет неудавшиеся загрузки автоматически.`}
-          {!preparation.data.enabled &&
-            " Автоматическая подготовка включается на основном сайте при настроенном VK."}
-        </p>
-      )}
+      {preparationSummary && <p role="status">{preparationSummary}</p>}
       {preparation.data?.errors?.length ? (
         <ul className="space-y-2 text-sm text-amber-900" role="status">
           {preparation.data.errors.map((error) => (
@@ -103,12 +109,6 @@ export const VkPlanPhotoPreparation = () => {
           ))}
         </ul>
       ) : null}
-      <p className="text-muted-ui-foreground">
-        Новые и заменённые фото требуют действующего доступа. Закрывать сайт
-        можно: подготовка продолжится на сервере. Посты выходят только после
-        одобрения и постановки в расписание. Время публикации — московское
-        (UTC+3).
-      </p>
       <Button
         variant="secondary"
         disabled={
@@ -158,6 +158,11 @@ export const VkPlanPhotoPreparation = () => {
             error,
             "Не удалось проверить VK. Повторите позже.",
           )}
+        </p>
+      )}
+      {data && data.pending + data.failed > 0 && (
+        <p className="text-xs text-muted-ui-foreground">
+          Закрывать сайт можно — подготовка идёт на сервере.
         </p>
       )}
     </div>
