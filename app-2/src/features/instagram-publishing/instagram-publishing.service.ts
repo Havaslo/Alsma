@@ -394,6 +394,10 @@ export const createInstagramPublishingService = (options: {
     const target = await verifyTarget();
     const media = await prepareMedia(input.images);
     try {
+      options.logger.info(
+        { stage: "instagram_media_urls", urls: media.urls },
+        "Instagram media URLs prepared",
+      );
       let creationId: string;
       if (media.urls.length === 1) {
         creationId = containerId(

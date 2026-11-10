@@ -5,6 +5,7 @@ export class MetaGraphRequestError extends Error {
     readonly httpStatus: number,
     readonly providerCode: number | null,
     readonly providerMessage: string | null = null,
+    readonly providerSubcode: number | null = null,
   ) {
     super("Meta Graph API request failed");
     this.name = "MetaGraphRequestError";
@@ -90,10 +91,16 @@ export const createInstagramGraphClient = (options: {
         typeof providerError?.message === "string"
           ? providerError.message
           : null;
+      const providerSubcode =
+        typeof providerError?.error_subcode === "number"
+          ? providerError.error_subcode
+          : null;
       options.logger.warn(
         {
           httpStatus: response.status,
           providerCode,
+          providerMessage,
+          providerSubcode,
           stage: request.method === "GET" ? "read" : "write",
         },
         "Instagram Graph API request failed",
@@ -102,6 +109,7 @@ export const createInstagramGraphClient = (options: {
         response.status,
         providerCode,
         providerMessage,
+        providerSubcode,
       );
     }
     if (!data)

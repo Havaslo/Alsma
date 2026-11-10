@@ -62,8 +62,15 @@ export const safePublicationError = (error: unknown, uncertain: boolean) => {
       return "Instagram больше не принимает сохранённый доступ. Переподключите аккаунт и повторите публикацию.";
     if (error.providerCode === 10 || error.providerCode === 200)
       return "У приложения Meta нет права публикации в Instagram. Проверьте разрешение instagram_content_publish.";
-    if (error.providerCode === 9004 || error.providerCode === 36001)
-      return "Instagram не смог загрузить изображение. Проверьте формат, размер и доступность картинки.";
+    if (error.providerCode === 9004 || error.providerCode === 36001) {
+      const details = [error.providerCode, error.providerSubcode]
+        .filter((value): value is number => typeof value === "number")
+        .join("/");
+      const message = error.providerMessage?.trim().slice(0, 160);
+      return `Instagram не смог загрузить изображение${
+        message ? ` (код ${details}: ${message})` : ` (код ${details})`
+      }. Проверьте формат, размер и доступность картинки.`;
+    }
     return `Instagram отклонил публикацию (код ${error.providerCode ?? error.httpStatus}). Проверьте подключение аккаунта и изображение.`;
   }
   if (isNamedError(error, "VkApiError")) {
