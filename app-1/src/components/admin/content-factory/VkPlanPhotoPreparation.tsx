@@ -1,16 +1,11 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-import { Button } from "@/components/ui/Button";
 import { readAdminSession } from "@/lib/admin/admin-session";
 import { apiClient } from "@/lib/api/api-client";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import {
-  completeVkPhotoManualConnection,
-  loadVkPhotoConnection,
-  startVkPhotoManualConnection,
-} from "@/lib/content-factory/vkPhotoConnectionApi";
+import { loadVkPhotoConnection } from "@/lib/content-factory/vkPhotoConnectionApi";
+
+import { VkPhotoAccessButton } from "./VkPhotoAccessButton";
 
 const formatExpiry = (value: string) =>
   new Date(value).toLocaleString("ru-RU", {
@@ -18,10 +13,11 @@ const formatExpiry = (value: string) =>
     timeStyle: "short",
   });
 
-export const VkPlanPhotoPreparation = () => {
-  const client = useQueryClient();
-  const [callback, setCallback] = useState("");
-  const [message, setMessage] = useState("");
+export const VkPlanPhotoPreparation = ({
+  showAction = true,
+}: {
+  showAction?: boolean;
+}) => {
   const access = useQuery({
     queryKey: ["content-factory", "vk-photo-connection"],
     queryFn: ({ signal }) => loadVkPhotoConnection(signal),
@@ -46,32 +42,7 @@ export const VkPlanPhotoPreparation = () => {
       ).data,
     refetchInterval: 10_000,
   });
-  const start = useMutation({
-    mutationFn: () => startVkPhotoManualConnection(false),
-    onSuccess: () => {
-      setCallback("");
-      setMessage("");
-    },
-  });
-  const complete = useMutation({
-    mutationFn: () => completeVkPhotoManualConnection(callback),
-    onSuccess: (result) => {
-      setCallback("");
-      setMessage(
-        result === "CONNECTED"
-          ? "Доступ обновлён. Сервер начнёт подготовку оставшихся фотографий автоматически."
-          : `VK не подтвердил подключение (${result}). Начните подключение заново.`,
-      );
-      void client.invalidateQueries({
-        queryKey: ["content-factory", "vk-photo-connection"],
-      });
-      void client.invalidateQueries({
-        queryKey: ["content-factory", "vk-photo-preparation"],
-      });
-    },
-  });
-  const error =
-    access.error ?? preparation.error ?? start.error ?? complete.error;
+  const error = access.error ?? preparation.error;
   const data = preparation.data;
   const preparationSummary = (() => {
     if (!data) return null;
@@ -90,7 +61,7 @@ export const VkPlanPhotoPreparation = () => {
   })();
   return (
     <div className="space-y-3 text-sm">
-      <p role="status">
+      <p className="text-muted-ui-foreground" role="status">
         {access.isPending
           ? "Проверяем доступ VK…"
           : access.data?.photoReady
@@ -99,7 +70,11 @@ export const VkPlanPhotoPreparation = () => {
               : "Доступ активен."
             : "Доступ не активен — обновите его, чтобы загружать новые фотографии."}
       </p>
-      {preparationSummary && <p role="status">{preparationSummary}</p>}
+      {preparationSummary && (
+        <p className="text-muted-ui-foreground" role="status">
+          {preparationSummary}
+        </p>
+      )}
       {preparation.data?.errors?.length ? (
         <ul className="space-y-2 text-sm text-amber-900" role="status">
           {preparation.data.errors.map((error) => (
@@ -109,49 +84,7 @@ export const VkPlanPhotoPreparation = () => {
           ))}
         </ul>
       ) : null}
-      <Button
-        variant="secondary"
-        disabled={
-          !access.data?.legacyConfigured ||
-          start.isPending ||
-          complete.isPending
-        }
-        onClick={() => start.mutate()}
-      >
-        {start.isPending
-          ? "Готовим подключение…"
-          : "Обновить доступ к фотографиям"}
-      </Button>
-      {start.data && (
-        <div className="space-y-3">
-          <a
-            href={start.data}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block underline"
-          >
-            Открыть VK и подтвердить доступ
-          </a>
-          <label className="block space-y-2">
-            <span>После подтверждения вставьте полный адрес страницы VK</span>
-            <input
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={callback}
-              onChange={(event) => setCallback(event.target.value)}
-              className="w-full rounded-xl border border-line p-3"
-            />
-          </label>
-          <Button
-            disabled={!callback.trim() || complete.isPending}
-            onClick={() => complete.mutate()}
-          >
-            {complete.isPending ? "Проверяем…" : "Сохранить доступ"}
-          </Button>
-        </div>
-      )}
-      {message && <p role="status">{message}</p>}
+      {showAction && <VkPhotoAccessButton />}
       {error && (
         <p role="alert" className="text-rose-700">
           {contentFactoryErrorMessage(
