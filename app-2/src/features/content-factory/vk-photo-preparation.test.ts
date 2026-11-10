@@ -140,3 +140,88 @@ test("a second worker cannot race the same upload and stale leases recover", asy
   await service.prepare(image);
   assert.equal(calls, 1);
 });
+
+test("native wall-upload provenance preserves user-owned saved photos across restart", async () => {
+  const { database, rows } = storage();
+  let uploads = 0;
+  const service = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    upload: async () => {
+      uploads++;
+      return "photo999_88_nativekey";
+    },
+  });
+  assert.equal(await service.prepare(image), "photo999_88_nativekey");
+  assert.equal((await service.inspect(image)).ready, true);
+  const restarted = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    upload: async () => {
+      throw new Error("expired");
+    },
+  });
+  assert.equal(await restarted.prepare(image), "photo999_88_nativekey");
+  assert.equal(uploads, 1);
+  assert.equal(
+    (rows.get(preparationKey("123", image))!.value as any).kind,
+    "wall",
+  );
+});
+
+test("a successful retry removes the old failure; diagnostics contain only safe labels", async () => {
+  const { database, rows } = storage();
+  const { VkApiError } = await import("../vk/vk.client.js");
+  let fail = true;
+  const service = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    upload: async () => {
+      if (fail) {
+        const error = new VkApiError(15, "private-secret-upload-url");
+        error.method = "photos.saveWallPhoto";
+        throw error;
+      }
+      return "photo999_88_nativekey";
+    },
+  });
+  await assert.rejects(service.prepare(image));
+  const state = await service.inspect(image);
+  assert.equal(state.code, "VK_15");
+  assert.equal(state.method, "photos.saveWallPhoto");
+  assert.doesNotMatch(JSON.stringify([...rows.values()]), /private-secret/);
+  fail = false;
+  await service.prepare(image);
+  assert.equal((await service.inspect(image)).ready, true);
+  assert.equal(rows.has(`${preparationKey("123", image)}.failure`), false);
+});
+
+test("production requires community ownership and a different album cache never reuses old wall attachments", async () => {
+  const { database } = storage();
+  const native = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    upload: async () => "photo-123_1",
+  });
+  await native.prepare(image);
+  const album = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    keyPrefix: "album.7.",
+    requireCommunityOwner: true,
+    upload: async () => "photo-123_2",
+  });
+  assert.equal((await album.inspect(image)).ready, false);
+  assert.equal(await album.prepare(image), "photo-123_2");
+  const wrong = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    keyPrefix: "album.8.",
+    requireCommunityOwner: true,
+    upload: async () => "photo999_88",
+  });
+  await assert.rejects(wrong.prepare(image), {
+    code: "VK_COMMUNITY_ALBUM_REQUIRED",
+  });
+  assert.equal((await wrong.inspect(image)).ready, false);
+});

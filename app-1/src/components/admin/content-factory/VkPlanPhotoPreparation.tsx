@@ -31,6 +31,7 @@ export const VkPlanPhotoPreparation = () => {
           ready: number;
           pending: number;
           failed: number;
+          errors?: { imageId: string; fileName: string; message: string }[];
           generatingPosts: number;
         }>("/admin/content-factory/plan/photos/status", {
           signal,
@@ -88,11 +89,20 @@ export const VkPlanPhotoPreparation = () => {
           {preparation.data.generatingPosts > 0 &&
             ` Ещё создаются посты: ${preparation.data.generatingPosts}. Их фотографии будут подготовлены после генерации.`}
           {preparation.data.failed > 0 &&
-            ` Не удалось подготовить: ${preparation.data.failed}. После обновления доступа сервер повторит загрузку.`}
+            ` Не удалось подготовить: ${preparation.data.failed}. Сервис повторяет неудавшиеся загрузки автоматически.`}
           {!preparation.data.enabled &&
             " Автоматическая подготовка включается на основном сайте при настроенном VK."}
         </p>
       )}
+      {preparation.data?.errors?.length ? (
+        <ul className="space-y-2 text-sm text-amber-900" role="status">
+          {preparation.data.errors.map((error) => (
+            <li key={error.imageId} className="break-words">
+              <strong>{error.fileName}:</strong> {error.message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <p className="text-muted-ui-foreground">
         Новые и заменённые фото требуют действующего доступа. Закрывать сайт
         можно: подготовка продолжится на сервере. Посты выходят только после

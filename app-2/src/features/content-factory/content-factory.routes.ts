@@ -1,5 +1,6 @@
 import { Router, raw } from "express";
 import type { Logger } from "pino";
+import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
@@ -125,6 +126,27 @@ export const createContentFactoryRouter = (
   router.get(
     "/plan/publishing/status",
     createGetContentPlanPublishingStatusHandler(publishing),
+  );
+  router.get("/plan/photos/albums", async (_request, response) => {
+    response.json(await publishing.photoAlbums());
+  });
+  router.post(
+    "/plan/photos/album",
+    validateRequest({ body: z.object({ create: z.literal(true) }).strict() }),
+    async (_request, response) => {
+      response.json(await publishing.configurePhotoAlbum());
+    },
+  );
+  router.get(
+    "/plan/posts/:postId/verify",
+    validateRequest({ params: contentPlanPostParamsSchema }),
+    async (_request, response) => {
+      response.json(
+        await publishing.inspectPublishedPost(
+          response.locals.input.params.postId,
+        ),
+      );
+    },
   );
   router.get("/plan/photos/status", async (_request, response) => {
     response.json(await publishing.photoPreparationStatus());

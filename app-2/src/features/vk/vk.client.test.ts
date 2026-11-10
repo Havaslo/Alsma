@@ -1091,3 +1091,93 @@ test("unavailable photo read does not turn a created post into a failure", async
     },
   );
 });
+
+test("album upload stores a group-owned photo using file1 and keeps wall publication separate", async () => {
+  const original = globalThis.fetch;
+  const methods: string[] = [];
+  globalThis.fetch = (async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname === "pu.vk.ru") {
+      const form = await new Response(init!.body, {
+        headers: init!.headers,
+      }).formData();
+      assert.ok(form.get("file1") instanceof File);
+      assert.equal(form.has("photo"), false);
+      return Response.json({ server: 1, photos_list: "[photo]", hash: "hash" });
+    }
+    const method = url.pathname.split("/").pop()!;
+    methods.push(method);
+    const params = new URLSearchParams(String(init?.body));
+    assert.equal(params.get("access_token"), "user");
+    assert.equal(params.get("group_id"), "177090031");
+    assert.equal(params.get("album_id"), "12345");
+    if (method === "photos.getUploadServer")
+      return Response.json({
+        response: {
+          upload_url:
+            "https://pu.vk.ru/c1/ss2/upload.php?gid=177090031&aid=12345",
+        },
+      });
+    if (method === "photos.save")
+      return Response.json({ response: [{ id: 88, owner_id: -177090031 }] });
+    throw new Error("Unexpected API request");
+  }) as typeof fetch;
+  try {
+    const client = createVkClient({
+      accessToken: "group",
+      photoUploadAccessToken: "user",
+      logger,
+    });
+    assert.equal(
+      await client.prepareAlbumPhoto({
+        groupId: "177090031",
+        albumId: "12345",
+        image: {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "a.jpg",
+        },
+      }),
+      "photo-177090031_88",
+    );
+    assert.deepEqual(methods, ["photos.getUploadServer", "photos.save"]);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("album preparation rejects photos saved under a user and does not publish", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = new URL(String(input));
+    if (url.hostname === "pu.vk.ru")
+      return Response.json({ server: 1, photos_list: "[photo]", hash: "hash" });
+    if (url.pathname.endsWith("photos.getUploadServer"))
+      return Response.json({
+        response: { upload_url: "https://pu.vk.ru/c1/ss2/upload.php" },
+      });
+    if (url.pathname.endsWith("photos.save"))
+      return Response.json({ response: [{ id: 88, owner_id: 999 }] });
+    throw new Error("Must not publish");
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      createVkClient({
+        accessToken: "group",
+        photoUploadAccessToken: "user",
+        logger,
+      }).prepareAlbumPhoto({
+        groupId: "177090031",
+        albumId: "12345",
+        image: {
+          content: new Uint8Array([1]),
+          contentType: "image/jpeg",
+          fileName: "a.jpg",
+        },
+      }),
+      /community-owned/,
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});

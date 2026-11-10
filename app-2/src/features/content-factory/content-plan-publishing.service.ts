@@ -1,4 +1,5 @@
 import type { Logger } from "pino";
+import { z } from "zod";
 
 import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
@@ -370,8 +371,9 @@ export const createContentPlanPublishingService = (options: {
       );
     await verifyTarget(post.channel);
     if (post.channel === "vk" && post.imageIds.length > 0) {
+      const activePreparation = await currentPreparation();
       for (const image of await selectedMedia(post.imageIds)) {
-        if (!(await preparation.read(image)))
+        if (!(await activePreparation.read(image)))
           throw new HttpError(
             409,
             "VK_PHOTOS_NOT_PREPARED",
@@ -435,8 +437,10 @@ export const createContentPlanPublishingService = (options: {
   const preparation = createVkPhotoPreparation({
     database: options.database,
     groupId: options.vkGroupId ?? "unconfigured",
+    requireCommunityOwner: true,
     upload: async (imageId) => {
       const images = await loadImages([imageId]);
+      const prepared = await Promise.all(images.map(prepareVkPhoto));
       let attachments: readonly string[] = [];
       await options.vk.publishWallPost({
         onPreparedAttachments: (values) => {
@@ -445,7 +449,7 @@ export const createContentPlanPublishingService = (options: {
         groupId: options.vkGroupId!,
         idempotencyKey: `prepare-${imageId}`,
         prepareOnly: true,
-        images: await Promise.all(images.map(prepareVkPhoto)),
+        images: prepared,
         text: "Подготовка фотографии контент-плана",
       });
       const attachment = attachments[0];
@@ -454,6 +458,39 @@ export const createContentPlanPublishingService = (options: {
       return attachment;
     },
   });
+  const albumPreparations = new Map<
+    string,
+    ReturnType<typeof createVkPhotoPreparation>
+  >();
+  const currentPreparation = async () => {
+    const row = await options.database.client.appSetting.findUnique({
+      where: { key: `vk.photo.album.${options.vkGroupId}` },
+    });
+    const configured = z
+      .object({ albumId: z.string().regex(/^[1-9]\d*$/) })
+      .safeParse(row?.value);
+    if (!configured.success) return preparation;
+    const albumId = configured.data.albumId;
+    if (!albumPreparations.has(albumId))
+      albumPreparations.set(
+        albumId,
+        createVkPhotoPreparation({
+          database: options.database,
+          groupId: options.vkGroupId!,
+          keyPrefix: `album.${albumId}.`,
+          requireCommunityOwner: true,
+          upload: async (imageId) => {
+            const [image] = await loadImages([imageId]);
+            return options.vk.prepareAlbumPhoto({
+              groupId: options.vkGroupId!,
+              albumId,
+              image: await prepareVkPhoto(image!),
+            });
+          },
+        }),
+      );
+    return albumPreparations.get(albumId)!;
+  };
   const selectedMedia = async (imageIds: readonly string[]) => {
     const media = await options.database.client.contentFactoryMedia.findMany({
       where: { id: { in: [...new Set(imageIds)] } },
@@ -471,9 +508,10 @@ export const createContentPlanPublishingService = (options: {
     });
   };
   const prepareVkImages = async (imageIds: readonly string[]) => {
+    const activePreparation = await currentPreparation();
     const attachments: string[] = [];
     for (const image of await selectedMedia(imageIds))
-      attachments.push(await preparation.prepare(image));
+      attachments.push(await activePreparation.prepare(image));
     return attachments;
   };
   const pendingVkPosts = () =>
@@ -495,19 +533,46 @@ export const createContentPlanPublishingService = (options: {
       orderBy: [{ scheduledDate: "asc" }, { scheduledTime: "asc" }],
     });
   const photoPreparationStatus = async () => {
+    const activePreparation = await currentPreparation();
     const posts = await pendingVkPosts();
     const ids = [...new Set(posts.flatMap((post) => post.imageIds))];
     let ready = 0;
     let failed = 0;
+    const errors: {
+      imageId: string;
+      fileName: string;
+      message: string;
+      code: string | null;
+      method: string | null;
+      at: string | null;
+    }[] = [];
     // Missing media must be visible as unprepared, never counted as ready.
     for (const id of ids) {
       try {
         const [image] = await selectedMedia([id]);
-        const state = await preparation.inspect(image!);
+        const state = await activePreparation.inspect(image!);
         if (state.ready) ready++;
-        else if (state.error) failed++;
+        else if (state.error) {
+          failed++;
+          errors.push({
+            imageId: id,
+            fileName: image!.fileName,
+            message: state.error,
+            code: state.code,
+            method: state.method,
+            at: state.at,
+          });
+        }
       } catch {
         failed++;
+        errors.push({
+          imageId: id,
+          fileName: "Изображение",
+          message: "Не удалось найти или прочитать фото в медиатеке.",
+          code: "MEDIA_UNAVAILABLE",
+          method: null,
+          at: null,
+        });
       }
     }
     return {
@@ -517,6 +582,7 @@ export const createContentPlanPublishingService = (options: {
       ready,
       pending: ids.length - ready,
       failed,
+      errors,
       generatingPosts: posts.filter(
         (post) => post.status === "queued" || post.status === "generating",
       ).length,
@@ -533,16 +599,17 @@ export const createContentPlanPublishingService = (options: {
       return;
     preparing = true;
     try {
+      const activePreparation = await currentPreparation();
       const posts = await pendingVkPosts();
       const ids = [...new Set(posts.flatMap((post) => post.imageIds))];
       let attempted = 0;
       for (const id of ids) {
         try {
           const [image] = await selectedMedia([id]);
-          const state = await preparation.inspect(image!);
+          const state = await activePreparation.inspect(image!);
           if (state.ready || state.retryAt > Date.now()) continue;
           if (attempted++ >= 10) break;
-          await preparation.prepare(image!);
+          await activePreparation.prepare(image!);
         } catch (error) {
           options.logger.warn(
             { errorName: error instanceof Error ? error.name : "UnknownError" },
@@ -554,6 +621,65 @@ export const createContentPlanPublishingService = (options: {
     } finally {
       preparing = false;
     }
+  };
+
+  const photoAlbums = async () => {
+    if (!options.vkGroupId)
+      throw new HttpError(409, "VK_NOT_CONFIGURED", "Сообщество не настроено.");
+    try {
+      return {
+        groupId: options.vkGroupId,
+        albums: await options.vk.listPhotoAlbums(options.vkGroupId),
+      };
+    } catch (error) {
+      throw new HttpError(
+        409,
+        "VK_ALBUM_ACCESS_DENIED",
+        `VK не разрешил чтение альбомов (код ${isVkApiError(error) ? error.code : "неизвестен"}).`,
+      );
+    }
+  };
+  const configurePhotoAlbum = async () => {
+    if (!options.vkGroupId)
+      throw new HttpError(409, "VK_NOT_CONFIGURED", "Сообщество не настроено.");
+    const key = `vk.photo.album.${options.vkGroupId}`;
+    const existing = await options.database.client.appSetting.findUnique({
+      where: { key },
+    });
+    const saved = z
+      .object({ albumId: z.string().regex(/^[1-9]\d*$/) })
+      .safeParse(existing?.value);
+    if (saved.success) return saved.data;
+    const albums = await options.vk.listPhotoAlbums(options.vkGroupId);
+    const known = albums.find(
+      (album) =>
+        album.title === "Фотографии для публикаций ALSMA" &&
+        album.ownerId === `-${options.vkGroupId}`,
+    );
+    const albumId =
+      known?.id ?? (await options.vk.createPhotoAlbum(options.vkGroupId));
+    const value = { albumId };
+    await options.database.client.appSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
+    return value;
+  };
+  const inspectPublishedPost = async (postId: string) => {
+    const post = await repository.findPostForPublishing(postId);
+    if (
+      !post ||
+      post.channel !== "vk" ||
+      !post.publishedExternalId ||
+      !options.vkGroupId
+    )
+      throw new HttpError(
+        409,
+        "VK_POST_NOT_PUBLISHED",
+        "Нет записи VK для проверки.",
+      );
+    return options.vk.readWallPost(options.vkGroupId, post.publishedExternalId);
   };
 
   const publishPost = async (postId: string) => {
@@ -690,6 +816,9 @@ export const createContentPlanPublishingService = (options: {
     schedulePost,
     startProductionScheduler,
     photoPreparationStatus,
+    photoAlbums,
+    configurePhotoAlbum,
+    inspectPublishedPost,
   };
 };
 

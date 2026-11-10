@@ -188,7 +188,9 @@ export const createVkClient = ({
   ) => {
     if (!authToken) throw new Error("VK access token is not configured");
     const maxAttempts =
-      singleAttempt || method === "wall.post" ? 0 : retryDelays.length;
+      singleAttempt || ["wall.post", "photos.createAlbum"].includes(method)
+        ? 0
+        : retryDelays.length;
     for (let attempt = 0; attempt <= maxAttempts; attempt += 1) {
       const query = new URLSearchParams({
         ...parameters,
@@ -278,12 +280,15 @@ export const createVkClient = ({
         throw error;
       }
     } catch (error) {
-      if (error instanceof VkApiError && [5, 15, 27].includes(error.code))
-        throw new VkApiError(
+      if (error instanceof VkApiError && [5, 15, 27].includes(error.code)) {
+        const denied = new VkApiError(
           error.code,
           `VK photo upload access was denied: ${error.message}`,
           error.subcode,
         );
+        denied.method = error.method;
+        throw denied;
+      }
       throw error;
     }
   };
@@ -416,6 +421,128 @@ export const createVkClient = ({
     };
   };
   return {
+    listPhotoAlbums: async (groupId: string) => {
+      if (!/^\d+$/.test(groupId)) throw new Error("Invalid community");
+      const result = (await requestPhotoUpload("photos.getAlbums", {
+        owner_id: `-${groupId}`,
+        count: "100",
+        need_system: "1",
+      })) as { items?: Array<Record<string, unknown>> };
+      return (result.items ?? []).map((album) => ({
+        id: String(album.id),
+        ownerId: String(album.owner_id),
+        title: String(album.title ?? ""),
+        canUpload: album.can_upload === 1 || album.can_upload === true,
+      }));
+    },
+    createPhotoAlbum: async (groupId: string) => {
+      if (!/^\d+$/.test(groupId)) throw new Error("Invalid community");
+      const album = (await requestPhotoUpload("photos.createAlbum", {
+        group_id: groupId,
+        title: "Фотографии для публикаций ALSMA",
+        upload_by_admins_only: "1",
+        comments_disabled: "1",
+      })) as { id?: unknown; owner_id?: unknown };
+      if (
+        !/^[1-9]\d*$/.test(String(album.id)) ||
+        String(album.owner_id) !== `-${groupId}`
+      )
+        throw new Error("VK did not create a community album");
+      return String(album.id);
+    },
+    prepareAlbumPhoto: async (input: {
+      groupId: string;
+      albumId: string;
+      image: VkPublishImage;
+    }) => {
+      if (!/^\d+$/.test(input.groupId) || !/^[1-9]\d*$/.test(input.albumId))
+        throw new Error("Invalid photo album");
+      const upload = (await requestPhotoUpload("photos.getUploadServer", {
+        group_id: input.groupId,
+        album_id: input.albumId,
+      })) as { upload_url?: unknown };
+      if (typeof upload.upload_url !== "string")
+        throw new Error("VK album upload URL missing");
+      const url = new URL(upload.upload_url);
+      if (
+        url.protocol !== "https:" ||
+        url.port ||
+        url.username ||
+        url.password ||
+        !/^(?:[a-z0-9-]+\.)*(?:vk\.com|vk\.ru|userapi\.com)$/.test(url.hostname)
+      )
+        throw new Error("Invalid VK album upload URL");
+      const bytes = new ArrayBuffer(input.image.content.byteLength);
+      new Uint8Array(bytes).set(input.image.content);
+      const form = new FormData();
+      form.append(
+        "file1",
+        new Blob([bytes], { type: input.image.contentType }),
+        input.image.fileName,
+      );
+      const encoded = new Request("https://localhost/", {
+        method: "POST",
+        body: form,
+      });
+      const wire = Buffer.from(await encoded.arrayBuffer());
+      const body =
+        wire.subarray(-2).toString() === "\r\n"
+          ? wire
+          : Buffer.concat([wire, Buffer.from("\r\n")]);
+      const send = (address: string) =>
+        fetch(address, {
+          method: "POST",
+          redirect: "error",
+          headers: {
+            "Content-Type": encoded.headers.get("content-type")!,
+            "Content-Length": String(body.byteLength),
+          },
+          body,
+          signal: AbortSignal.timeout(30000),
+        });
+      let response = await send(url.toString());
+      if (response.status === 405 && url.hostname === "pu.vk.com") {
+        await response.body?.cancel();
+        url.hostname = "pu.vk.ru";
+        response = await send(url.toString());
+      }
+      if (!response.ok) {
+        const error = new VkApiError(
+          response.status,
+          "VK album photo upload failed",
+        );
+        error.method = "photos.upload";
+        throw error;
+      }
+      const uploaded = (await response.json()) as {
+        server?: unknown;
+        photos_list?: unknown;
+        hash?: unknown;
+      };
+      if (
+        typeof uploaded.photos_list !== "string" ||
+        !uploaded.photos_list.trim() ||
+        uploaded.photos_list.trim() === "[]" ||
+        typeof uploaded.hash !== "string" ||
+        !uploaded.server
+      )
+        throw new VkPhotoUploadEmptyError();
+      const saved = (await requestPhotoUpload("photos.save", {
+        group_id: input.groupId,
+        album_id: input.albumId,
+        server: String(uploaded.server),
+        photos_list: uploaded.photos_list,
+        hash: uploaded.hash,
+      })) as Array<Record<string, unknown>>;
+      const photo = saved?.[0];
+      if (
+        saved.length !== 1 ||
+        String(photo?.owner_id) !== `-${input.groupId}` ||
+        !/^[1-9]\d*$/.test(String(photo?.id))
+      )
+        throw new Error("VK did not save a community-owned photo");
+      return `photo${photo!.owner_id}_${photo!.id}${typeof photo!.access_key === "string" ? `_${photo!.access_key}` : ""}`;
+    },
     readWallPost: async (groupId: string, postId: string) => {
       if (!/^\d+$/.test(groupId) || !/^\d+$/.test(postId))
         throw new Error("Invalid wall post ID");
