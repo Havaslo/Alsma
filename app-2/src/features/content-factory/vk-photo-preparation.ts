@@ -7,6 +7,11 @@ import { HttpError } from "../../lib/http/http-error.js";
 const attachmentSchema = z
   .string()
   .regex(/^photo-?\d+_\d+(?:_[a-zA-Z0-9_-]+)?$/u);
+// Only community-owned photos are durable attachments for a community wall
+// post. Diagnostics could persist a user-album photo under the same key; VK
+// accepts wall.post with it but may create the post without the image.
+const communityAttachment = (attachment: string, groupId: string) =>
+  attachment.startsWith(`photo-${groupId}_`);
 const readySchema = z.object({
   attachment: attachmentSchema,
   preparedAt: z.string(),
@@ -31,7 +36,10 @@ export const createVkPhotoPreparation = (options: {
     const row = await settings().findUnique({
       where: { key: preparationKey(options.groupId, image) },
     });
-    return readySchema.safeParse(row?.value).data ?? null;
+    const ready = readySchema.safeParse(row?.value).data ?? null;
+    return ready && communityAttachment(ready.attachment, options.groupId)
+      ? ready
+      : null;
   };
   const prepare = (image: PreparationImage): Promise<string> => {
     const key = preparationKey(options.groupId, image);

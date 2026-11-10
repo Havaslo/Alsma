@@ -581,6 +581,7 @@ export const createContentPlanPublishingService = (options: {
               idempotencyKey: post.id,
               attachments,
               text: post.generatedCopy,
+              verifyPhotos: true,
             })
           : targetChannel === "max"
             ? await options.max.publishChannelPost({

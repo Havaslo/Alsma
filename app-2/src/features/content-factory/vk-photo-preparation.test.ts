@@ -72,6 +72,29 @@ test("replaced images and a different community cannot reuse the wrong attachmen
   );
 });
 
+test("a cached user-album attachment is replaced before a community post", async () => {
+  const { database, rows } = storage();
+  rows.set(preparationKey("123", image), {
+    value: {
+      attachment: "photo999_77_deadbeef",
+      preparedAt: new Date().toISOString(),
+    },
+    updatedAt: new Date(),
+  });
+  let uploads = 0;
+  const service = createVkPhotoPreparation({
+    database,
+    groupId: "123",
+    upload: async () => {
+      uploads++;
+      return "photo-123_88";
+    },
+  });
+  assert.equal(await service.prepare(image), "photo-123_88");
+  assert.equal(uploads, 1);
+  assert.equal((await service.inspect(image)).ready, true);
+});
+
 test("partial batch persists successful images and retries failed ones", async () => {
   const { database } = storage();
   let fail = true;

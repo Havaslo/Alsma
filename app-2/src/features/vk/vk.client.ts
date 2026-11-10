@@ -875,6 +875,7 @@ export const createVkClient = ({
       idempotencyKey: string;
       attachments: readonly string[];
       text: string;
+      verifyPhotos?: boolean;
     }) => {
       if (!/^\d+$/u.test(input.groupId) || !input.text.trim())
         throw new Error("Invalid VK post");
@@ -894,10 +895,51 @@ export const createVkClient = ({
       })) as { post_id?: unknown };
       if (!/^[1-9]\d*$/u.test(String(result.post_id ?? "")))
         throw new VkPublicationUnknownError();
-      // This is provider acceptance, not a claim of visual verification.
+      const postId = String(result.post_id);
+      const postUrl = `https://vk.com/wall-${input.groupId}_${postId}`;
+      // VK can accept wall.post with an attachment but create the record
+      // without it. Never report success until the published post shows the
+      // expected photos. Verification needs the user photo token; when that
+      // read is unavailable, keep the provider's acceptance instead of
+      // turning a possibly successful publication into a failure.
+      if (input.verifyPhotos && input.attachments.length > 0) {
+        try {
+          const inspected = await requestPhotoUpload("wall.getById", {
+            posts: `-${input.groupId}_${postId}`,
+          });
+          const items = Array.isArray(inspected)
+            ? inspected
+            : (inspected as { items?: unknown[] })?.items;
+          const post = items?.find(
+            (item) =>
+              String((item as { id?: unknown }).id) === postId &&
+              String((item as { owner_id?: unknown }).owner_id) ===
+                `-${input.groupId}`,
+          ) as
+            | {
+                attachments?: Array<{
+                  type?: string;
+                  photo?: { id?: unknown };
+                }>;
+              }
+            | undefined;
+          const photos =
+            post?.attachments?.filter(
+              (item) => item.type === "photo" && item.photo?.id != null,
+            ) ?? [];
+          if (photos.length < input.attachments.length)
+            throw new VkPostVerificationError(postUrl);
+        } catch (error) {
+          if (error instanceof VkPostVerificationError) throw error;
+          logger.warn(
+            { method: "wall.getById" },
+            "VK prepared post photo verification unavailable",
+          );
+        }
+      }
       return {
-        externalId: String(result.post_id),
-        url: `https://vk.com/wall-${input.groupId}_${result.post_id}`,
+        externalId: postId,
+        url: postUrl,
       };
     },
     logConfigurationError: () => logger.warn("VK API client is not configured"),

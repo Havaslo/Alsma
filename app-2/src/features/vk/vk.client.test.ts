@@ -997,3 +997,97 @@ test("prepared attachments publish with community auth without accessing expired
     globalThis.fetch = originalFetch;
   }
 });
+
+test("prepared publication fails when VK hides the attached photos", async () => {
+  const client = createVkClient({
+    accessToken: "community",
+    getPhotoUploadAccessToken: async () => "user",
+    logger,
+  });
+  await withFetch(
+    (method) => {
+      if (method === "wall.post") return { response: { post_id: 99 } };
+      if (method === "wall.getById")
+        return {
+          response: {
+            items: [{ id: 99, owner_id: -123, attachments: [] }],
+          },
+        };
+      throw new Error(`unexpected method ${method}`);
+    },
+    async () => {
+      await assert.rejects(
+        client.publishPreparedWallPost({
+          groupId: "123",
+          idempotencyKey: "prepared",
+          attachments: ["photo-123_11"],
+          text: "Scheduled post",
+          verifyPhotos: true,
+        }),
+        { name: "VkPostVerificationError" },
+      );
+    },
+  );
+});
+
+test("prepared publication confirms the attached photos after posting", async () => {
+  const client = createVkClient({
+    accessToken: "community",
+    getPhotoUploadAccessToken: async () => "user",
+    logger,
+  });
+  await withFetch(
+    (method) => {
+      if (method === "wall.post") return { response: { post_id: 99 } };
+      if (method === "wall.getById")
+        return {
+          response: {
+            items: [
+              {
+                id: 99,
+                owner_id: -123,
+                attachments: [{ type: "photo", photo: { id: 11 } }],
+              },
+            ],
+          },
+        };
+      throw new Error(`unexpected method ${method}`);
+    },
+    async () => {
+      const result = await client.publishPreparedWallPost({
+        groupId: "123",
+        idempotencyKey: "prepared",
+        attachments: ["photo-123_11"],
+        text: "Scheduled post",
+        verifyPhotos: true,
+      });
+      assert.equal(result.externalId, "99");
+    },
+  );
+});
+
+test("unavailable photo read does not turn a created post into a failure", async () => {
+  const client = createVkClient({
+    accessToken: "community",
+    getPhotoUploadAccessToken: async () => "user",
+    logger,
+  });
+  await withFetch(
+    (method) => {
+      if (method === "wall.post") return { response: { post_id: 99 } };
+      if (method === "wall.getById")
+        return { error: { error_code: 5, error_msg: "denied" } };
+      throw new Error(`unexpected method ${method}`);
+    },
+    async () => {
+      const result = await client.publishPreparedWallPost({
+        groupId: "123",
+        idempotencyKey: "prepared",
+        attachments: ["photo-123_11"],
+        text: "Scheduled post",
+        verifyPhotos: true,
+      });
+      assert.equal(result.externalId, "99");
+    },
+  );
+});
