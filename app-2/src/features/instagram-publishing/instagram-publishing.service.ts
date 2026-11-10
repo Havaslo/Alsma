@@ -16,6 +16,7 @@ const captionLimit = 2_200;
 const carouselItemLimit = 10;
 const containerPollIntervalMilliseconds = 2_000;
 const containerWaitMilliseconds = 90_000;
+const mediaProbeTimeoutMilliseconds = 10_000;
 // Meta rejects feed images outside 4:5 … 1.91:1 with a generic
 // "could not download the image" error, so every upload is cropped in range.
 const minFeedAspect = 4 / 5;
@@ -183,13 +184,48 @@ export const createInstagramPublishingService = (options: {
     }
   };
 
-  const publicMediaUrl = (objectId: string) => {
-    const token = Buffer.from(objectId, "utf8").toString("base64url");
-    const proxy = configuration.mediaProxyUrl?.trim().replace(/\/+$/u, "");
-    if (proxy) return `${proxy}/${token}`;
+  const mediaToken = (objectId: string) =>
+    Buffer.from(objectId, "utf8").toString("base64url");
+
+  const directMediaUrl = (objectId: string) => {
     const base = resolvePublicMediaBaseUrl(configuration.publicMediaBaseUrl);
     if (!base) return undefined;
-    return `${base}/api/media/managed/${token}`;
+    return `${base}/api/media/managed/${mediaToken(objectId)}`;
+  };
+
+  const proxyMediaUrl = (objectId: string) => {
+    const proxy = configuration.mediaProxyUrl?.trim().replace(/\/+$/u, "");
+    if (!proxy) return undefined;
+    return `${proxy}/${mediaToken(objectId)}`;
+  };
+
+  // Meta downloads the image itself, so a link that answers with an error or
+  // with HTML ends up as a generic "could not download the image" rejection.
+  // The configured proxy is probed once per publication: if it does not serve
+  // an image, the public backend address is used instead.
+  const proxyServesImages = async (objectId: string) => {
+    const url = proxyMediaUrl(objectId);
+    if (!url) return false;
+    try {
+      const fetchImplementation = options.fetchImplementation ?? fetch;
+      const response = await fetchImplementation(url, {
+        method: "HEAD",
+        signal: AbortSignal.timeout(mediaProbeTimeoutMilliseconds),
+      });
+      const contentType = response.headers.get("content-type") ?? "";
+      if (response.ok && contentType.startsWith("image/")) return true;
+      options.logger.warn(
+        { httpStatus: response.status, stage: "media_proxy_probe" },
+        "Instagram media proxy does not serve images; using the backend URL",
+      );
+      return false;
+    } catch (error) {
+      options.logger.warn(
+        { error, stage: "media_proxy_probe" },
+        "Instagram media proxy is unreachable; using the backend URL",
+      );
+      return false;
+    }
   };
 
   const normalizeForFeed = async (
@@ -241,17 +277,22 @@ export const createInstagramPublishingService = (options: {
 
   const prepareMedia = async (images: readonly InstagramPublishImage[]) => {
     const temporaryObjectIds: string[] = [];
+    const probeObjectId = images.find((image) => image.objectId)?.objectId;
+    const useProxy = probeObjectId
+      ? await proxyServesImages(probeObjectId)
+      : false;
+    const mediaUrl = (objectId: string) => {
+      const proxied = useProxy ? proxyMediaUrl(objectId) : undefined;
+      return proxied ?? directMediaUrl(objectId);
+    };
     const urls: string[] = [];
     for (const image of images) {
       const normalized = await normalizeForFeed(image);
-      const directUrl = image.objectId
-        ? publicMediaUrl(image.objectId)
-        : undefined;
-      // With an inbound proxy configured, never fall back to a storage URL
-      // that Meta may not be able to reach. Upload a temporary copy instead.
+      // Never fall back to a storage URL that Meta may not be able to reach
+      // when a public media address is known; upload a temporary copy instead.
       const reusableUrl =
-        directUrl ??
-        (configuration.mediaProxyUrl ? undefined : image.downloadUrl);
+        (image.objectId ? mediaUrl(image.objectId) : undefined) ??
+        (useProxy ? undefined : image.downloadUrl);
       if (!normalized.changed && reusableUrl) {
         urls.push(reusableUrl);
         continue;
@@ -262,7 +303,7 @@ export const createInstagramPublishingService = (options: {
         name: `instagram-${randomUUID()}.jpg`,
       });
       temporaryObjectIds.push(uploaded.objectId);
-      const uploadedUrl = publicMediaUrl(uploaded.objectId);
+      const uploadedUrl = mediaUrl(uploaded.objectId);
       if (uploadedUrl) {
         urls.push(uploadedUrl);
         continue;
