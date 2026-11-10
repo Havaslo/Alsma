@@ -328,13 +328,13 @@ export const createContentPlanPublishingService = (options: {
         "Для MAX текст поста должен быть не длиннее 4 000 символов.",
       );
     if (
-      post.channel === "zen" &&
+      (post.channel === "telegram" || post.channel === "zen") &&
       post.generatedCopy.trim().length > maximumTelegramTextLength
     )
       throw new HttpError(
         409,
-        "ZEN_TELEGRAM_CROSSPOST_TEXT_TOO_LONG",
-        "Связка с Дзена публикует через Telegram. Сократите текст до 4 096 символов для отправки.",
+        "TELEGRAM_POST_TEXT_TOO_LONG",
+        "Telegram принимает не больше 4 096 символов в одном сообщении, а Дзен получает тот же пост. Сократите текст.",
       );
     if (post.channel === "instagram") {
       if (post.generatedCopy.trim().length > 2_200)

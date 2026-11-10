@@ -8,6 +8,7 @@ import {
   type PlanPublication,
   createEmptyDraftVariant,
   getDraftVariantSourceImageIds,
+  normalizeContentChannels,
   normalizeDraftVariant,
 } from "@/lib/content-factory/contentFactoryData";
 import type {
@@ -159,7 +160,6 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
           telegram: media.id,
           max: media.id,
           instagram: media.id,
-          zen: media.id,
           blog: media.id,
         },
         channelImageGalleryIds: {
@@ -167,7 +167,6 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
           telegram: [media.id],
           max: [media.id],
           instagram: [media.id],
-          zen: [media.id],
           blog: [media.id],
         },
       };
@@ -280,7 +279,7 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
       imageSourceMode: post.imageSourceMode ?? "generate",
       sourceImageRecommendation: post.sourceImageRecommendation ?? "",
     });
-    const editableChannels = post.channels;
+    const editableChannels = normalizeContentChannels(post.channels);
     setSelectedChannels(editableChannels.length ? editableChannels : ["vk"]);
     setActiveChannel(editableChannels[0] ?? "vk");
     const postImageIds = [
@@ -327,7 +326,9 @@ export const useContentFactoryState = (mediaItems: FactoryMediaItem[]) => {
   const openDraft = (draft: SavedContentFactoryDraft) => {
     setCurrentDraftId(draft.id);
     setPrompt(draft.snapshot.prompt);
-    setSelectedChannels(draft.snapshot.selectedChannels);
+    setSelectedChannels(
+      normalizeContentChannels(draft.snapshot.selectedChannels),
+    );
     setBrief(
       draft.snapshot.brief ?? {
         postType: "",

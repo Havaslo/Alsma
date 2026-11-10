@@ -104,8 +104,7 @@ const parseChannel = (value: unknown) => {
   if (channel === "vk" || channel === "вконтакте") return "vk";
   if (channel === "telegram" || channel === "телеграм") return "telegram";
   if (channel === "max" || channel === "макс") return "max";
-  if (["blog", "блог", "сайт", "блогсайта"].includes(channel))
-    return "blog";
+  if (["blog", "блог", "сайт", "блогсайта"].includes(channel)) return "blog";
   if (channel === "instagram" || channel === "инстаграм") return "instagram";
   if (
     channel === "zen" ||
@@ -113,7 +112,8 @@ const parseChannel = (value: unknown) => {
     channel === "яндексдзен" ||
     channel === "яндексзен"
   ) {
-    return "zen";
+    // Дзен публикуется тем же постом, что и Telegram.
+    return "telegram";
   }
   return null;
 };

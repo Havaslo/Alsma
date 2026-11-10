@@ -5,6 +5,10 @@ import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
+import {
+  type ContentFactoryChannelId,
+  normalizeContentChannelId,
+} from "./content-factory-guidelines.js";
 import { assertReferencePhoto } from "./content-factory-image-processing.js";
 import { createContentFactoryRepository } from "./content-factory.repository.js";
 import type { ContentFactoryImageGenerationBody } from "./content-factory.schemas.js";
@@ -116,11 +120,14 @@ export const createContentFactoryImageGenerationJobsService = (options: {
           return { ...photo, content };
         }),
       );
-      const selectedChannels = z
+      const storedChannels = z
         .array(contentChannelSchema)
         .min(1)
         .max(6)
         .parse(job.selectedChannels);
+      const selectedChannels = [
+        ...new Set(storedChannels.map(normalizeContentChannelId)),
+      ] as ContentFactoryChannelId[];
       const imageCount = z.number().int().min(1).max(4).parse(job.imageCount);
 
       const result = await options.ai.generateImage({

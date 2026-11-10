@@ -26,7 +26,6 @@ const generationResultSchema = z.object({
           telegram: z.string(),
           max: z.string(),
           instagram: z.string(),
-          zen: z.string(),
           blog: z.string(),
         }),
       }),

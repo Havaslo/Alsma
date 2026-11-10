@@ -14,7 +14,8 @@ const channelTextSchema = z.object({
   telegram: z.string().max(20_000),
   max: z.string().max(20_000),
   instagram: z.string().max(20_000),
-  zen: z.string().max(20_000),
+  /** Устаревшее поле: Дзен получает тот же текст, что и Telegram. */
+  zen: z.string().max(20_000).optional(),
   blog: z.string().max(20_000).optional(),
 });
 
@@ -44,7 +45,7 @@ const draftVariantSchema = z.object({
       telegram: z.array(z.string().max(120)).max(4),
       max: z.array(z.string().max(120)).max(4),
       instagram: z.array(z.string().max(120)).max(4),
-      zen: z.array(z.string().max(120)).max(4),
+      zen: z.array(z.string().max(120)).max(4).optional(),
       blog: z.array(z.string().max(120)).max(4).optional(),
     })
     .optional(),
@@ -53,7 +54,7 @@ const draftVariantSchema = z.object({
     telegram: z.string().max(120),
     max: z.string().max(120),
     instagram: z.string().max(120),
-    zen: z.string().max(120),
+    zen: z.string().max(120).optional(),
     blog: z.string().max(120).optional(),
   }),
   adaptations: channelTextSchema,

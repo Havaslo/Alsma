@@ -1,20 +1,47 @@
 export const CONTENT_CHANNELS = [
   { id: "vk", label: "VK", shortLabel: "VK" },
-  { id: "telegram", label: "Telegram", shortLabel: "TG" },
+  { id: "telegram", label: "Telegram\\Дзен", shortLabel: "TG/Д" },
   { id: "max", label: "Max", shortLabel: "M" },
   { id: "instagram", label: "Instagram", shortLabel: "IG" },
-  { id: "zen", label: "Яндекс.Дзен", shortLabel: "Д" },
   { id: "blog", label: "Блог сайта", shortLabel: "Блог" },
 ] as const;
 
 export type ContentChannel = (typeof CONTENT_CHANNELS)[number]["id"];
 
-export const CONTENT_PLAN_CHANNELS = CONTENT_CHANNELS;
+/**
+ * Канал "zen" больше не выбирается: Дзен получает тот же пост через
+ * синхробот Telegram. Значение остаётся для уже созданных публикаций.
+ */
+export const LEGACY_CONTENT_PLAN_CHANNELS = [
+  { id: "zen", label: "Telegram\\Дзен", shortLabel: "TG/Д" },
+] as const;
+
+export const CONTENT_PLAN_CHANNELS = [
+  ...CONTENT_CHANNELS,
+  ...LEGACY_CONTENT_PLAN_CHANNELS,
+];
 
 export type ContentPlanChannel = (typeof CONTENT_PLAN_CHANNELS)[number]["id"];
 
-export const getChannelLabel = (channel: ContentPlanChannel) =>
+export const getChannelLabel = (channel: string) =>
   CONTENT_PLAN_CHANNELS.find((item) => item.id === channel)?.label ?? channel;
+
+export const normalizeContentChannel = (
+  channel: string,
+): ContentChannel | null => {
+  if (channel === "zen") return "telegram";
+  return CONTENT_CHANNELS.find((item) => item.id === channel)?.id ?? null;
+};
+
+export const normalizeContentChannels = (
+  channels: readonly string[],
+): ContentChannel[] => [
+  ...new Set(
+    channels
+      .map(normalizeContentChannel)
+      .filter((channel): channel is ContentChannel => channel !== null),
+  ),
+];
 
 export interface FactoryMediaItem {
   id: string;
@@ -54,7 +81,6 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     telegram: "",
     max: "",
     instagram: "",
-    zen: "",
     blog: "",
   },
   channelImageGalleryIds: {
@@ -62,7 +88,6 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     telegram: [],
     max: [],
     instagram: [],
-    zen: [],
     blog: [],
   },
   adaptations: {
@@ -70,27 +95,46 @@ export const createEmptyDraftVariant = (): DraftVariant => ({
     telegram: "",
     max: "",
     instagram: "",
-    zen: "",
     blog: "",
   },
 });
 
-export const normalizeDraftVariant = (variant: DraftVariant): DraftVariant => ({
-  ...variant,
-  channelImageIds: {
-    ...variant.channelImageIds,
-    blog: variant.channelImageIds.blog ?? "",
-  },
-  channelImageGalleryIds: {
-    vk: variant.channelImageGalleryIds?.vk ?? [],
-    telegram: variant.channelImageGalleryIds?.telegram ?? [],
-    max: variant.channelImageGalleryIds?.max ?? [],
-    instagram: variant.channelImageGalleryIds?.instagram ?? [],
-    zen: variant.channelImageGalleryIds?.zen ?? [],
-    blog: variant.channelImageGalleryIds?.blog ?? [],
-  },
-  adaptations: { ...variant.adaptations, blog: variant.adaptations.blog ?? "" },
-});
+/**
+ * Черновики, сохранённые до объединения Telegram и Дзена, хранят отдельные
+ * значения для "zen". Переносим их в объединённый канал.
+ */
+type LegacyChannelFields = {
+  channelImageIds?: Record<string, string | undefined>;
+  channelImageGalleryIds?: Record<string, string[] | undefined>;
+  adaptations?: Record<string, string | undefined>;
+};
+
+export const normalizeDraftVariant = (variant: DraftVariant): DraftVariant => {
+  const legacy = variant as DraftVariant & LegacyChannelFields;
+  const legacyZenGallery = legacy.channelImageGalleryIds?.zen ?? [];
+  const telegramGallery = variant.channelImageGalleryIds?.telegram ?? [];
+  return {
+    ...variant,
+    channelImageIds: {
+      ...variant.channelImageIds,
+      telegram:
+        variant.channelImageIds.telegram || legacy.channelImageIds?.zen || "",
+      blog: variant.channelImageIds.blog ?? "",
+    },
+    channelImageGalleryIds: {
+      vk: variant.channelImageGalleryIds?.vk ?? [],
+      telegram: telegramGallery.length ? telegramGallery : legacyZenGallery,
+      max: variant.channelImageGalleryIds?.max ?? [],
+      instagram: variant.channelImageGalleryIds?.instagram ?? [],
+      blog: variant.channelImageGalleryIds?.blog ?? [],
+    },
+    adaptations: {
+      ...variant.adaptations,
+      telegram: variant.adaptations.telegram || legacy.adaptations?.zen || "",
+      blog: variant.adaptations.blog ?? "",
+    },
+  };
+};
 
 export const getDraftVariantSourceImageIds = (variant: DraftVariant) => {
   if (variant.sourceImageIds !== undefined) {

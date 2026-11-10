@@ -37,7 +37,7 @@ test("accepts the site blog as a content-factory destination", () => {
 });
 
 test("accepts the site blog alongside all social destinations in a manual plan", () => {
-  const channels = ["vk", "telegram", "max", "instagram", "zen", "blog"];
+  const channels = ["vk", "telegram", "max", "instagram", "blog"];
   const input = {
     date: "2027-01-01",
     time: "12:00",
@@ -49,7 +49,7 @@ test("accepts the site blog alongside all social destinations in a manual plan",
     })),
   };
 
-  assert.equal(manualContentPlanPostSchema.parse(input).posts.length, 6);
+  assert.equal(manualContentPlanPostSchema.parse(input).posts.length, 5);
 });
 
 test("accepts text refinement without a reference image", () => {

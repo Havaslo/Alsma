@@ -7,6 +7,7 @@ import {
   type ContentFactoryChannelId,
   contentFactoryModels,
   getContentFactoryChannelGuideline,
+  normalizeContentChannelId,
 } from "./content-factory-guidelines.js";
 import { addAlsmaLogo } from "./content-factory-image-branding.js";
 import {
@@ -149,7 +150,10 @@ export const createContentFactoryImageGenerationService = (options: {
         width: number;
       }
     >();
-    for (const channelId of input.selectedChannels) {
+    const selectedChannelIds = [
+      ...new Set(input.selectedChannels.map(normalizeContentChannelId)),
+    ] as ContentFactoryChannelId[];
+    for (const channelId of selectedChannelIds) {
       const channel = getContentFactoryChannelGuideline(channelId);
       const {
         apiSize,

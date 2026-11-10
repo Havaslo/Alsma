@@ -7,6 +7,7 @@ import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import {
   contentFactoryChannelGuidelines,
   contentFactoryModels,
+  normalizeContentChannelId,
 } from "./content-factory-guidelines.js";
 import { createContentFactoryImageGenerationService } from "./content-factory-image-generation.service.js";
 import {
@@ -22,7 +23,6 @@ const generatedAdaptationsSchema = z.object({
   telegram: z.string().trim().min(1).max(20_000),
   max: z.string().trim().min(1).max(20_000),
   instagram: z.string().trim().min(1).max(20_000),
-  zen: z.string().trim().min(1).max(20_000),
   blog: z.string().trim().max(20_000).optional(),
 });
 
@@ -383,7 +383,7 @@ export const createContentFactoryAiService = (options: {
           )
         : null;
       const channelContext = buildContentFactoryChannelPromptContext();
-      const systemPrompt = `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"zen":string,"blog":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех шести подготовь самостоятельные адаптации. Для блога сайта пиши как для полноценной статьи с заголовком, полезным контекстом и последовательными абзацами, а не как короткую подпись. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если задача просит карусель, не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Если приложено фото, используй его только как визуальный ориентир и опирайся на видимые детали; отсутствие фото — нормальный режим, не требующий догадок о содержимом изображения. Метаданные фото помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и подтверждённых сведений. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`;
+      const systemPrompt = `Ты — редактор контента загородного отеля ALSMA. Отвечай только JSON-объектом вида {"variants":[{"title":string,"concept":string,"text":string,"adaptations":{"vk":string,"telegram":string,"max":string,"instagram":string,"blog":string}}]}. Создай ровно три разных варианта на русском языке. В основной текст включи выбранные площадки; для всех пяти подготовь самостоятельные адаптации. Канал telegram — это объединённая площадка «Telegram\\Дзен»: один пост выходит в Telegram-канале, а синхробот переносит его в Дзен, поэтому не делай отдельную версию для Дзена. Для блога сайта пиши как для полноценной статьи с заголовком, полезным контекстом и последовательными абзацами, а не как короткую подпись. Учитывай правила площадок из контекста ниже; рекомендации по формату изображения не выдавай за гарантию отображения. Если задача просит карусель, не утверждай, что альбом или вложения являются одинаковой native-каруселью везде. Если приложено фото, используй его только как визуальный ориентир и опирайся на видимые детали; отсутствие фото — нормальный режим, не требующий догадок о содержимом изображения. Метаданные фото помогают понять тему, но факты о цене, сроках, акциях, адресах и доступности бери только из задачи и подтверждённых сведений. Не выдумывай ссылки и обещания; если фактов недостаточно, выбери нейтральную формулировку и отметь это в концепции. Это только черновики для человека: ничего не публикуй и не сообщай, будто материал уже отправлен.\n\nПрофили каналов: ${JSON.stringify(channelContext)}`;
       const userContent = referencePhoto
         ? [
             {
@@ -415,7 +415,7 @@ export const createContentFactoryAiService = (options: {
             referencePhoto: null,
           });
       const retryFormatInstruction =
-        "Проверь формат особенно внимательно: верни ровно 3 варианта. У каждого обязательны непустые title, concept, text и adaptations; в adaptations обязательны непустые строки vk, telegram, max, instagram, zen и blog. Верни только JSON без Markdown.";
+        "Проверь формат особенно внимательно: верни ровно 3 варианта. У каждого обязательны непустые title, concept, text и adaptations; в adaptations обязательны непустые строки vk, telegram, max, instagram и blog. Верни только JSON без Markdown.";
       let generatedResult: z.infer<typeof generatedTextSchema> | null = null;
       let lastAttempt: ReturnType<typeof parseGeneratedTextResponse> | null =
         null;
@@ -484,18 +484,16 @@ export const createContentFactoryAiService = (options: {
           ...variant,
           adaptations: {
             ...variant.adaptations,
-            blog:
-              variant.adaptations.blog?.trim() ||
-              variant.adaptations.zen ||
-              variant.text,
+            blog: variant.adaptations.blog?.trim() || variant.text,
           },
         })),
       };
     },
 
     generatePlanCopy: async (input: ContentPlanPostInput) => {
+      const channel = normalizeContentChannelId(input.channel);
       const channelGuideline = contentFactoryChannelGuidelines.find(
-        (guideline) => guideline.id === input.channel,
+        (guideline) => guideline.id === channel,
       );
       if (!channelGuideline) {
         throw new HttpError(

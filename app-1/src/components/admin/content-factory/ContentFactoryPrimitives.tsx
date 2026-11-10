@@ -16,7 +16,7 @@ const channelTone: Record<ContentPlanChannel, string> = {
   telegram: "bg-sky-50 text-sky-700 ring-sky-100",
   max: "bg-violet-50 text-violet-700 ring-violet-100",
   instagram: "bg-pink-50 text-pink-700 ring-pink-100",
-  zen: "bg-orange-50 text-orange-800 ring-orange-100",
+  zen: "bg-sky-50 text-sky-700 ring-sky-100",
   blog: "bg-emerald-50 text-emerald-800 ring-emerald-100",
 };
 

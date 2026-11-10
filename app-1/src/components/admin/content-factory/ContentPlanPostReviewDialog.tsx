@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import type {
-  FactoryMediaItem,
-  PlanPublication,
+import {
+  type FactoryMediaItem,
+  type PlanPublication,
 } from "@/lib/content-factory/contentFactoryData";
 import type { ContentPlanPublishingStatus } from "@/lib/content-factory/contentFactoryTypes";
 import { resolveMediaUrl } from "@/lib/site/media-url";
@@ -118,17 +118,14 @@ export const ContentPlanPostReviewDialog = ({
       : primaryChannel === "max"
         ? publishingStatus?.max.configured === true &&
           publishingStatus.max.targetConfigured
-        : primaryChannel === "telegram"
+        : primaryChannel === "telegram" || primaryChannel === "zen"
           ? publishingStatus?.telegram.configured === true &&
             publishingStatus.telegram.targetConfigured
-          : primaryChannel === "zen"
-            ? publishingStatus?.telegram.configured === true &&
-              publishingStatus.telegram.targetConfigured
-            : primaryChannel === "instagram"
-              ? publishingStatus?.instagram?.configured === true
-              : primaryChannel === "blog"
-                ? publishingStatus?.blog.configured === true
-                : false);
+          : primaryChannel === "instagram"
+            ? publishingStatus?.instagram?.configured === true
+            : primaryChannel === "blog"
+              ? publishingStatus?.blog.configured === true
+              : false);
   const canSchedule =
     !hasChanges &&
     (post.sourceStatus === "approved" ||

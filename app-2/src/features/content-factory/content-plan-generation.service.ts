@@ -4,6 +4,10 @@ import type { Database } from "../../lib/database/database.js";
 import { HttpError } from "../../lib/http/http-error.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
 import type { ContentFactoryAiService } from "./content-factory-ai.service.js";
+import {
+  type ContentFactoryChannelId,
+  normalizeContentChannelId,
+} from "./content-factory-guidelines.js";
 import { assertReferencePhoto } from "./content-factory-image-processing.js";
 import { createContentPlanRepository } from "./content-plan.repository.js";
 import type {
@@ -99,21 +103,20 @@ export const createContentPlanGenerationService = (options: {
       });
     }
 
+    const channelId = normalizeContentChannelId(
+      input.channel,
+    ) as ContentFactoryChannelId;
     const result = await options.ai.generateImage({
       adminId: input.adminId,
       imageCount: 1,
       mode: input.imageSourceMode === "edit" ? "edit" : "generate",
       postText: input.postText,
       prompt: input.imagePrompt,
-      selectedChannels: [
-        input.channel as ContentPlanImportBody["posts"][number]["channel"],
-      ],
+      selectedChannels: [channelId],
       referencePhotos,
     });
     const asset = result.assets.find((item) =>
-      item.channels.includes(
-        input.channel as ContentPlanImportBody["posts"][number]["channel"],
-      ),
+      item.channels.includes(channelId),
     );
     if (!asset) {
       throw new HttpError(

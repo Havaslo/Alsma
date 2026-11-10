@@ -22,7 +22,6 @@ const generatedResult = {
       telegram: "Telegram",
       max: "MAX",
       instagram: "Instagram",
-      zen: "Статья для Дзена",
       blog: "Статья для блога",
     },
   })),

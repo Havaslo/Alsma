@@ -44,7 +44,6 @@ const createTextResponse = (includeBlog = true) => ({
               max: `MAX ${number}`,
               telegram: `Telegram ${number}`,
               vk: `VK ${number}`,
-              zen: `Дзен ${number}`,
               ...(includeBlog ? { blog: `Статья для блога ${number}` } : {}),
             },
             concept: `Идея ${number}`,
@@ -121,7 +120,7 @@ test("generates three structured draft variants through the Gateway", async () =
   assert.match(String(imageUrl.url), /data:image\/png;base64,/u);
 });
 
-test("falls back to the article adaptation when Gateway omits the new blog field", async () => {
+test("falls back to the main text when Gateway omits the new blog field", async () => {
   const service = createContentFactoryAiService({
     apiKey: "gateway-test-key",
     baseUrl: "https://gateway.example/v1",
@@ -139,7 +138,7 @@ test("falls back to the article adaptation when Gateway omits the new blog field
     sourceTags: [],
   });
 
-  assert.equal(result.variants[0]?.adaptations.blog, "Дзен 1");
+  assert.equal(result.variants[0]?.adaptations.blog, "Текст 1");
 });
 
 test("retries one invalid text response with a stricter format and larger output budget", async () => {
@@ -289,7 +288,7 @@ test("generates and stores each requested image for every selected channel forma
     mode: "edit",
     postText: "Время для спокойного отдыха в загородном отеле",
     prompt: "Мягкий утренний свет",
-    selectedChannels: ["instagram", "vk", "telegram", "max", "zen"],
+    selectedChannels: ["instagram", "vk", "telegram", "max"],
     referencePhotos: [
       {
         content: png,
@@ -310,19 +309,19 @@ test("generates and stores each requested image for every selected channel forma
 
   assert.deepEqual(
     requestedPaths,
-    Array(5).fill("https://gateway.example/v1/images/edits"),
+    Array(3).fill("https://gateway.example/v1/images/edits"),
   );
   assert.deepEqual(
     imageRequests.map(({ size }) => size),
-    ["1024x1024", "1024x1536", "1024x1536", "1536x1024", "1536x1024"],
+    ["1024x1024", "1024x1536", "1024x1536"],
   );
   assert.deepEqual(
     imageRequests.map(({ imageCount }) => imageCount),
-    ["2", "1", "1", "1", "1"],
+    ["2", "1", "1"],
   );
   assert.deepEqual(
     imageRequests.map(({ mask }) => mask !== null),
-    [false, true, true, false, false],
+    [false, true, true],
   );
   for (const request of imageRequests) {
     assert.equal(request.model, "gpt-image-2");
@@ -343,23 +342,16 @@ test("generates and stores each requested image for every selected channel forma
     assert.match(request.prompt, /дорисовка \(outpainting\)/u);
     assert.match(request.prompt, /не переписывай и не добавляй текст/u);
   }
-  for (const request of imageRequests.slice(3)) {
-    assert.equal(request.images.length, 1);
-    assert.match(request.prompt, /горизонтальный вариант/u);
-    assert.match(request.prompt, /не менее 25% высоты/u);
-  }
-  assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
+  assert.deepEqual(storedContentTypes, Array(4).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
     { width: 1200, height: 1200 },
-    { width: 1600, height: 900 },
     { width: 1080, height: 1350 },
     { width: 1200, height: 1200 },
-    { width: 1600, height: 900 },
   ]);
-  assert.equal(createdMedia.length, 6);
+  assert.equal(createdMedia.length, 4);
   assert.ok(createdMedia.every((media) => media.createdById === "admin-id"));
-  assert.equal(result.assets.length, 6);
+  assert.equal(result.assets.length, 4);
   assert.deepEqual(
     [...new Set(result.assets.map(({ setIndex }) => setIndex))],
     [0, 1],
@@ -370,12 +362,8 @@ test("generates and stores each requested image for every selected channel forma
   const square = result.assets.find(({ channels }) =>
     channels.includes("telegram"),
   );
-  const landscape = result.assets.find(({ channels }) =>
-    channels.includes("zen"),
-  );
   assert.deepEqual(portrait?.channels, ["instagram", "vk"]);
   assert.deepEqual(square?.channels, ["telegram", "max"]);
-  assert.deepEqual(landscape?.channels, ["zen"]);
 });
 
 test("generates new images from text without requiring source photos", async () => {
@@ -475,7 +463,6 @@ test("refines the publication through the Gateway with task, photo, and custom i
                   telegram: "Telegram-версия",
                   max: "MAX-версия",
                   instagram: "Instagram-версия",
-                  zen: "Версия для Дзена",
                 },
               }),
             },
@@ -502,7 +489,7 @@ test("refines the publication through the Gateway with task, photo, and custom i
   assert.equal(result.model, "gpt-4.1-mini");
   assert.equal(result.text, "Новый короткий текст");
   assert.equal(result.adaptations.telegram, "Telegram-версия");
-  assert.equal(result.adaptations.blog, "Версия для Дзена");
+  assert.equal(result.adaptations.blog, "Новый короткий текст");
   const messages = requestBody.messages as Array<Record<string, unknown>>;
   const content = messages[1]?.content as Array<Record<string, unknown>>;
   assert.match(String(content[0]?.text), /спокойный призыв к бронированию/u);

@@ -9,7 +9,10 @@ import {
 
 import { Button } from "@/components/ui/Button";
 import { contentFactoryErrorMessage } from "@/lib/content-factory/contentFactoryApi";
-import type { PlanPublication } from "@/lib/content-factory/contentFactoryData";
+import {
+  type PlanPublication,
+  getChannelLabel,
+} from "@/lib/content-factory/contentFactoryData";
 import type { ContentPlanPublishingStatus } from "@/lib/content-factory/contentFactoryTypes";
 
 import { QuietButton } from "./ContentFactoryPrimitives";
@@ -100,12 +103,13 @@ export const ContentPlanDeliveryStatus = ({
         </p>
       )}
 
-      {primaryChannel === "zen" && channelReady && (
-        <p className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
-          Дзен уже связан с Telegram через синхробота. При планировании пост
-          сначала выйдет в Telegram, затем синхробот перенесёт его в Дзен.
-        </p>
-      )}
+      {(primaryChannel === "telegram" || primaryChannel === "zen") &&
+        channelReady && (
+          <p className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
+            Это один канал: пост выйдет в Telegram-канале, а синхробот перенесёт
+            его в Дзен. Отдельная публикация для Дзена не создаётся.
+          </p>
+        )}
 
       {import.meta.env.DEV &&
         (post.sourceStatus === "approved" ||
@@ -185,17 +189,15 @@ export const ContentPlanDeliveryStatus = ({
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
             {primaryChannel === "max"
               ? "Для MAX ещё не выбран канал публикации. Добавьте MAX-бота администратором целевого канала с правом публикации; адрес канала будет определён через подключённый webhook."
-              : primaryChannel === "telegram"
-                ? "Для Telegram задайте адрес целевого канала и добавьте бота администратором с правом публикации."
-                : primaryChannel === "zen"
-                  ? "Для публикации в Дзене подключите Telegram-бота и целевой канал: синхробот перенесёт сообщение в Дзен."
-                  : primaryChannel === "vk"
-                    ? "Публикация в VK пока не настроена."
-                    : primaryChannel === "instagram"
-                      ? "Подключите Instagram-аккаунт в разделе «Фабрика контента», чтобы публиковать посты автоматически."
-                      : primaryChannel === "blog"
-                        ? "Публикация в блог сайта пока не настроена."
-                        : "Автоматическая отправка для этой площадки пока не подключена."}
+              : primaryChannel === "telegram" || primaryChannel === "zen"
+                ? "Для Telegram\\Дзен задайте адрес целевого Telegram-канала и добавьте бота администратором с правом публикации. Дзен получит тот же пост через синхробота."
+                : primaryChannel === "vk"
+                  ? "Публикация в VK пока не настроена."
+                  : primaryChannel === "instagram"
+                    ? "Подключите Instagram-аккаунт в разделе «Фабрика контента», чтобы публиковать посты автоматически."
+                    : primaryChannel === "blog"
+                      ? "Публикация в блог сайта пока не настроена."
+                      : "Автоматическая отправка для этой площадки пока не подключена."}
           </p>
         )}
 
@@ -216,9 +218,11 @@ export const ContentPlanDeliveryStatus = ({
           <p className="font-semibold">Поставить пост в расписание?</p>
           {scheduleTimeIsFuture ? (
             <p className="mt-1 leading-5">
-              {primaryChannel === "zen"
-                ? "Пост будет отправлен в Telegram и автоматически перенесён в Дзен синхроботом"
-                : `Пост будет опубликован в ${primaryChannel?.toUpperCase()}`}{" "}
+              {primaryChannel === "telegram" || primaryChannel === "zen"
+                ? "Пост выйдет в Telegram и автоматически перенесётся в Дзен синхроботом"
+                : primaryChannel
+                  ? `Пост будет опубликован в ${getChannelLabel(primaryChannel)}`
+                  : "Пост будет опубликован в выбранном канале"}{" "}
               {date} в {time} по московскому времени. Подтверждая, вы разрешаете
               отправить его в указанный канал в это время.
             </p>
