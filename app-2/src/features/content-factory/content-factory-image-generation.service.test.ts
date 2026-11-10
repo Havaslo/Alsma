@@ -90,8 +90,8 @@ test("uses one square master for square, portrait outpainting, and landscape", a
   assert.deepEqual(calls[2]?.images[0]?.content, square);
   assert.match(calls[1]?.prompt ?? "", /дорисовка/i);
   assert.match(calls[2]?.prompt ?? "", /переданный квадрат как главный/i);
-  assert.equal(generated.assets.length, 3);
-  assert.deepEqual(generated.assets[2]?.channels, ["blog"]);
+  assert.equal(generated.assets.length, 2);
+  assert.deepEqual(generated.assets[1]?.channels, ["telegram", "blog"]);
 
   const outputDimensions = await Promise.all(
     uploadedImages.map(async (content) => {
@@ -101,7 +101,6 @@ test("uses one square master for square, portrait outpainting, and landscape", a
   );
   assert.deepEqual(outputDimensions, [
     [1080, 1350],
-    [1200, 1200],
     [1600, 900],
   ]);
 });

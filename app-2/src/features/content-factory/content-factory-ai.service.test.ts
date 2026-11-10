@@ -309,19 +309,19 @@ test("generates and stores each requested image for every selected channel forma
 
   assert.deepEqual(
     requestedPaths,
-    Array(3).fill("https://gateway.example/v1/images/edits"),
+    Array(5).fill("https://gateway.example/v1/images/edits"),
   );
   assert.deepEqual(
     imageRequests.map(({ size }) => size),
-    ["1024x1024", "1024x1536", "1024x1536"],
+    ["1024x1024", "1024x1536", "1024x1536", "1536x1024", "1536x1024"],
   );
   assert.deepEqual(
     imageRequests.map(({ imageCount }) => imageCount),
-    ["2", "1", "1"],
+    ["2", "1", "1", "1", "1"],
   );
   assert.deepEqual(
     imageRequests.map(({ mask }) => mask !== null),
-    [false, true, true],
+    [false, true, true, false, false],
   );
   for (const request of imageRequests) {
     assert.equal(request.model, "gpt-image-2");
@@ -342,16 +342,23 @@ test("generates and stores each requested image for every selected channel forma
     assert.match(request.prompt, /дорисовка \(outpainting\)/u);
     assert.match(request.prompt, /не переписывай и не добавляй текст/u);
   }
-  assert.deepEqual(storedContentTypes, Array(4).fill("image/png"));
+  for (const request of imageRequests.slice(3)) {
+    assert.equal(request.images.length, 1);
+    assert.match(request.prompt, /горизонтальный вариант/u);
+    assert.match(request.prompt, /не менее 25% высоты/u);
+  }
+  assert.deepEqual(storedContentTypes, Array(6).fill("image/png"));
   assert.deepEqual(storedDimensions, [
     { width: 1080, height: 1350 },
+    { width: 1600, height: 900 },
     { width: 1200, height: 1200 },
     { width: 1080, height: 1350 },
+    { width: 1600, height: 900 },
     { width: 1200, height: 1200 },
   ]);
-  assert.equal(createdMedia.length, 4);
+  assert.equal(createdMedia.length, 6);
   assert.ok(createdMedia.every((media) => media.createdById === "admin-id"));
-  assert.equal(result.assets.length, 4);
+  assert.equal(result.assets.length, 6);
   assert.deepEqual(
     [...new Set(result.assets.map(({ setIndex }) => setIndex))],
     [0, 1],
@@ -359,11 +366,13 @@ test("generates and stores each requested image for every selected channel forma
   const portrait = result.assets.find(({ channels }) =>
     channels.includes("instagram"),
   );
-  const square = result.assets.find(({ channels }) =>
+  const square = result.assets.find(({ channels }) => channels.includes("max"));
+  const landscape = result.assets.find(({ channels }) =>
     channels.includes("telegram"),
   );
   assert.deepEqual(portrait?.channels, ["instagram", "vk"]);
-  assert.deepEqual(square?.channels, ["telegram", "max"]);
+  assert.deepEqual(square?.channels, ["max"]);
+  assert.deepEqual(landscape?.channels, ["telegram"]);
 });
 
 test("generates new images from text without requiring source photos", async () => {
@@ -402,7 +411,7 @@ test("generates new images from text without requiring source photos", async () 
     postText: "Спокойный день в SPA",
     prompt: "Тёплый свет",
     referencePhotos: [],
-    selectedChannels: ["telegram"],
+    selectedChannels: ["max"],
   });
 
   assert.equal(requestPath, "https://gateway.example/v1/images/generations");

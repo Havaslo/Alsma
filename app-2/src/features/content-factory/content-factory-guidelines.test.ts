@@ -19,6 +19,6 @@ test("Telegram and Zen share one editor profile", () => {
   assert.equal(getContentFactoryChannelGuideline("zen").id, "telegram");
   assert.equal(
     getContentFactoryChannelGuideline("telegram").image.ratio,
-    "1:1",
+    "16:9",
   );
 });
