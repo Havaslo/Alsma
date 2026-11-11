@@ -54,6 +54,15 @@ const providerCodeOf = (error: unknown): number | null =>
 const httpStatusOf = (error: unknown): number | null =>
   error instanceof MetaGraphRequestError ? error.httpStatus : null;
 
+const mediaUrlForDiagnostic = (value: string): string => {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return "[invalid media URL]";
+  }
+};
+
 // Public media URLs are built as `${origin}/api/media/managed/${token}`.
 // The configured value is usually the API base of the backend, so a trailing
 // `/api` segment has to be removed; otherwise Meta receives `/api/api/...`
@@ -303,11 +312,6 @@ export const createInstagramPublishingService = (options: {
         name: `instagram-${randomUUID()}.jpg`,
       });
       temporaryObjectIds.push(uploaded.objectId);
-      const uploadedUrl = mediaUrl(uploaded.objectId);
-      if (uploadedUrl) {
-        urls.push(uploadedUrl);
-        continue;
-      }
       const download = await options.managedStorage.getDownload(
         uploaded.objectId,
       );
@@ -404,8 +408,8 @@ export const createInstagramPublishingService = (options: {
     const media = await prepareMedia(input.images);
     try {
       options.logger.info(
-        { stage: "instagram_media_urls", urls: media.urls },
-        "Instagram media URLs prepared",
+        { count: media.urls.length, stage: "instagram_media_prepared" },
+        "Instagram media prepared",
       );
       const createContainer = async (parameters: Record<string, string>) => {
         try {
@@ -419,7 +423,7 @@ export const createInstagramPublishingService = (options: {
             throw new MetaGraphRequestError(
               error.httpStatus,
               error.providerCode,
-              `${error.providerMessage ?? ""} | image_url: ${parameters.image_url ?? ""}`.trim(),
+              `${error.providerMessage ?? ""} | image_url: ${mediaUrlForDiagnostic(parameters.image_url ?? "")}`.trim(),
               error.providerSubcode,
             );
           throw error;

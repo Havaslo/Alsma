@@ -4,6 +4,7 @@ import test from "node:test";
 import pino from "pino";
 
 import { encryptInstagramToken } from "./instagram-connection.service.js";
+import { MetaGraphRequestError } from "./instagram-graph.client.js";
 import {
   createInstagramPublishingService,
   resolvePublicMediaBaseUrl,
@@ -251,7 +252,101 @@ test("feed image link is served from a reachable media URL", async () => {
   assert.doesNotMatch(String(creation?.body), /api%2Fapi/u);
 });
 
-test("Instagram uses the inbound proxy for existing and temporary images", async () => {
+test("normalized temporary images use a signed storage download URL", async () => {
+  const canvas = createCanvas(40, 40);
+  canvas.getContext("2d").fillRect(0, 0, 40, 40);
+  const png = new Uint8Array(canvas.toBuffer("image/png"));
+  const requests: Array<Record<string, unknown>> = [];
+  const deleted: string[] = [];
+  const service = createService({
+    mediaBaseUrl: "https://backend.example",
+    onFetch: (request) => {
+      requests.push(request);
+      const url = String(request.url);
+      if (url.endsWith("/media")) return json({ id: "container-temp" });
+      if (url.includes("/container-temp?"))
+        return json({ status_code: "FINISHED" });
+      if (url.endsWith("/media_publish")) return json({ id: "media-temp" });
+      if (url.includes("/media-temp?")) return json({ permalink: null });
+      throw new Error(`unexpected Instagram request ${url}`);
+    },
+    storage: {
+      upload: async () => ({ objectId: "temporary-image" }),
+      getDownload: async (objectId) => ({
+        downloadUrl: `https://storage.example/${objectId}?signature=private`,
+      }),
+      deleteObject: async (objectId) => {
+        deleted.push(objectId);
+      },
+    },
+  });
+
+  await service.publish({
+    images: [
+      {
+        content: png,
+        contentType: "image/png",
+        fileName: "source.png",
+        objectId: "original-image",
+      },
+    ],
+    text: "Проверка JPEG",
+  });
+
+  const creation = requests.find((request) =>
+    String(request.url).endsWith("/media"),
+  );
+  assert.equal(
+    new URLSearchParams(String(creation?.body)).get("image_url"),
+    "https://storage.example/temporary-image?signature=private",
+  );
+  assert.deepEqual(deleted, ["temporary-image"]);
+});
+
+test("Instagram errors do not expose signed media URL query parameters", async () => {
+  const canvas = createCanvas(40, 40);
+  canvas.getContext("2d").fillRect(0, 0, 40, 40);
+  const png = new Uint8Array(canvas.toBuffer("image/png"));
+  const service = createService({
+    onFetch: () =>
+      Response.json(
+        { error: { message: "Only photo or video can be accepted" } },
+        { status: 400 },
+      ),
+    storage: {
+      upload: async () => ({ objectId: "temporary-image" }),
+      getDownload: async () => ({
+        downloadUrl:
+          "https://storage.example/temporary-image?signature=private",
+      }),
+      deleteObject: async () => undefined,
+    },
+  });
+
+  await assert.rejects(
+    service.publish({
+      images: [
+        {
+          content: png,
+          contentType: "image/png",
+          fileName: "source.png",
+        },
+      ],
+      text: "Проверка ошибки",
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof MetaGraphRequestError);
+      assert.match(
+        error.providerMessage ?? "",
+        /storage\.example\/temporary-image/u,
+      );
+      assert.doesNotMatch(error.providerMessage ?? "", /signature=private/u);
+      return true;
+    },
+  );
+});
+
+test("Instagram uses the inbound proxy for existing images and signed URLs for temporary ones", async () => {
   const canvas = createCanvas(40, 40);
   canvas.getContext("2d").fillRect(0, 0, 40, 40);
   const jpeg = new Uint8Array(canvas.toBuffer("image/jpeg"));
@@ -281,7 +376,10 @@ test("Instagram uses the inbound proxy for existing and temporary images", async
         return { objectId: id };
       },
       getDownload: async () => {
-        throw new Error("proxy must not fall back to a storage download URL");
+        return {
+          downloadUrl:
+            "https://storage.example/temporary.jpg?signature=private",
+        };
       },
       deleteObject: async (id) => {
         deleted.push(id);
@@ -321,12 +419,11 @@ test("Instagram uses the inbound proxy for existing and temporary images", async
       new URLSearchParams(String(request.body)).get("image_url"),
     )
     .filter((url): url is string => Boolean(url));
-  assert.deepEqual(
-    imageUrls,
-    ["existing-id", "temporary-1", "temporary-2"].map(
-      (id) => `${proxy}/${Buffer.from(id).toString("base64url")}`,
-    ),
-  );
+  assert.deepEqual(imageUrls, [
+    `${proxy}/${Buffer.from("existing-id").toString("base64url")}`,
+    "https://storage.example/temporary.jpg?signature=private",
+    "https://storage.example/temporary.jpg?signature=private",
+  ]);
   assert.deepEqual(uploaded, ["temporary-1", "temporary-2"]);
   assert.deepEqual(deleted, uploaded);
 });
