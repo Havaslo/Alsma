@@ -1,4 +1,4 @@
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import assert from "node:assert/strict";
 import test from "node:test";
 import pino from "pino";
@@ -181,6 +181,91 @@ test("carousel converts non-JPEG images and removes temporary copies", async () 
   assert.deepEqual(result, { externalId: "media-2", url: null });
   assert.deepEqual(uploads, ["image/jpeg", "image/jpeg"]);
   assert.deepEqual(deletions, ["temporary-1", "temporary-2"]);
+});
+
+test("converted JPEG keeps photographic detail", async () => {
+  const width = 1080;
+  const height = 1350;
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext("2d");
+  const original = context.createImageData(width, height);
+  let seed = 987654321;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+      const noise = (seed % 41) - 20;
+      const offset = (y * width + x) * 4;
+      original.data[offset] = Math.max(
+        0,
+        Math.min(255, Math.round((x / width) * 255) + noise),
+      );
+      original.data[offset + 1] = Math.max(
+        0,
+        Math.min(255, Math.round((y / height) * 255) + noise),
+      );
+      original.data[offset + 2] = Math.max(0, Math.min(255, 128 + noise));
+      original.data[offset + 3] = 255;
+    }
+  }
+  context.putImageData(original, 0, 0);
+
+  let uploaded: Uint8Array | null = null;
+  const service = createService({
+    onFetch: (request) => {
+      const url = String(request.url);
+      if (url.endsWith("/media")) return json({ id: "container-quality" });
+      if (url.includes("/container-quality?"))
+        return json({ status_code: "FINISHED" });
+      if (url.includes("/media_publish")) return json({ id: "media-quality" });
+      if (url.includes("/media-quality?")) return json({ permalink: null });
+      throw new Error(`unexpected Instagram request ${url}`);
+    },
+    storage: {
+      deleteObject: async () => undefined,
+      getDownload: async () => ({
+        downloadUrl: "https://storage.example/quality.jpg",
+      }),
+      upload: async (input) => {
+        uploaded = input.content;
+        return { objectId: "temporary-quality" };
+      },
+    },
+  });
+
+  await service.publish({
+    images: [
+      {
+        content: new Uint8Array(canvas.toBuffer("image/png")),
+        contentType: "image/png",
+        fileName: "detail.png",
+      },
+    ],
+    text: "Проверка качества",
+  });
+
+  assert.ok(uploaded, "the prepared JPEG should be uploaded");
+  const decoded = await loadImage(Buffer.from(uploaded));
+  assert.equal(decoded.width, width);
+  assert.equal(decoded.height, height);
+  const decodedCanvas = createCanvas(width, height);
+  const decodedContext = decodedCanvas.getContext("2d");
+  decodedContext.drawImage(decoded, 0, 0);
+  const actual = decodedContext.getImageData(0, 0, width, height);
+  let squaredError = 0;
+  for (let index = 0; index < original.data.length; index += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      const difference =
+        (original.data[index + channel] ?? 0) -
+        (actual.data[index + channel] ?? 0);
+      squaredError += difference * difference;
+    }
+  }
+  const meanSquaredError = squaredError / (width * height * 3);
+  const psnr = 10 * Math.log10((255 * 255) / meanSquaredError);
+  assert.ok(
+    psnr > 32,
+    `converted JPEG quality is too low (PSNR ${psnr.toFixed(1)} dB)`,
+  );
 });
 
 test("public media base keeps a single /api segment", () => {

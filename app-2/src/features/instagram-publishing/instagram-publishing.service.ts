@@ -280,7 +280,10 @@ export const createInstagramPublishingService = (options: {
     );
     return {
       changed: true,
-      content: new Uint8Array(canvas.toBuffer("image/jpeg", 0.92)),
+      // @napi-rs/canvas expects JPEG quality on a 0–100 scale. A fractional
+      // value such as 0.92 is treated as almost zero and visibly destroys the
+      // image with 8×8 compression blocks.
+      content: new Uint8Array(canvas.toBuffer("image/jpeg", 92)),
     };
   };
 
@@ -296,15 +299,6 @@ export const createInstagramPublishingService = (options: {
     };
     const urls: string[] = [];
     const cleanup = async () => {
-      // Temporary diagnostic switch: keeps freshly uploaded copies so the
-      // exact URL handed to Meta can be fetched and inspected afterwards.
-      if (process.env.INSTAGRAM_KEEP_TEMP_MEDIA === "1") {
-        options.logger.warn(
-          { objectIds: temporaryObjectIds, stage: "temporary_media_kept" },
-          "Instagram temporary images kept for diagnostics",
-        );
-        return;
-      }
       for (const objectId of temporaryObjectIds)
         await options.managedStorage.deleteObject(objectId).catch(() => {
           options.logger.warn(
