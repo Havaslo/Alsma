@@ -210,8 +210,8 @@ export const createInstagramPublishingService = (options: {
 
   // Meta downloads the image itself, so a link that answers with an error or
   // with HTML ends up as a generic "could not download the image" rejection.
-  // The configured proxy is probed once per publication: if it does not serve
-  // an image, the public backend address is used instead.
+  // Probe proxy URLs before handing them to Meta so an unavailable proxy is
+  // never mistaken for an image.
   const proxyServesImages = async (objectId: string) => {
     const url = proxyMediaUrl(objectId);
     if (!url) return false;
@@ -295,49 +295,67 @@ export const createInstagramPublishingService = (options: {
       return proxied ?? directMediaUrl(objectId);
     };
     const urls: string[] = [];
-    for (const image of images) {
-      const normalized = await normalizeForFeed(image);
-      // Never fall back to a storage URL that Meta may not be able to reach
-      // when a public media address is known; upload a temporary copy instead.
-      const reusableUrl =
-        (image.objectId ? mediaUrl(image.objectId) : undefined) ??
-        (useProxy ? undefined : image.downloadUrl);
-      if (!normalized.changed && reusableUrl) {
-        urls.push(reusableUrl);
-        continue;
+    const cleanup = async () => {
+      // Temporary diagnostic switch: keeps freshly uploaded copies so the
+      // exact URL handed to Meta can be fetched and inspected afterwards.
+      if (process.env.INSTAGRAM_KEEP_TEMP_MEDIA === "1") {
+        options.logger.warn(
+          { objectIds: temporaryObjectIds, stage: "temporary_media_kept" },
+          "Instagram temporary images kept for diagnostics",
+        );
+        return;
       }
-      const uploaded = await options.managedStorage.upload({
-        content: normalized.content,
-        contentType: "image/jpeg",
-        name: `instagram-${randomUUID()}.jpg`,
-      });
-      temporaryObjectIds.push(uploaded.objectId);
-      const download = await options.managedStorage.getDownload(
-        uploaded.objectId,
-      );
-      urls.push(download.downloadUrl);
-    }
-    return {
-      urls,
-      cleanup: async () => {
-        // Temporary diagnostic switch: keeps freshly uploaded copies so the
-        // exact URL handed to Meta can be fetched and inspected afterwards.
-        if (process.env.INSTAGRAM_KEEP_TEMP_MEDIA === "1") {
+      for (const objectId of temporaryObjectIds)
+        await options.managedStorage.deleteObject(objectId).catch(() => {
           options.logger.warn(
-            { objectIds: temporaryObjectIds, stage: "temporary_media_kept" },
-            "Instagram temporary images kept for diagnostics",
+            { stage: "temporary_media_cleanup" },
+            "Instagram temporary image could not be removed",
           );
-          return;
-        }
-        for (const objectId of temporaryObjectIds)
-          await options.managedStorage.deleteObject(objectId).catch(() => {
-            options.logger.warn(
-              { stage: "temporary_media_cleanup" },
-              "Instagram temporary image could not be removed",
-            );
-          });
-      },
+        });
     };
+
+    try {
+      for (const image of images) {
+        const normalized = await normalizeForFeed(image);
+        // Reuse source media through the configured public route when possible.
+        const reusableUrl =
+          (image.objectId ? mediaUrl(image.objectId) : undefined) ??
+          (useProxy ? undefined : image.downloadUrl);
+        if (!normalized.changed && reusableUrl) {
+          urls.push(reusableUrl);
+          continue;
+        }
+        const uploaded = await options.managedStorage.upload({
+          content: normalized.content,
+          contentType: "image/jpeg",
+          name: `instagram-${randomUUID()}.jpg`,
+        });
+        temporaryObjectIds.push(uploaded.objectId);
+
+        // Conversion creates a new object ID. Send that JPEG through the same
+        // inbound proxy rather than bypassing it with a Storage signed URL.
+        const proxiedTemporaryUrl = proxyMediaUrl(uploaded.objectId);
+        if (proxiedTemporaryUrl) {
+          if (!(await proxyServesImages(uploaded.objectId)))
+            throw new HttpError(
+              502,
+              "INSTAGRAM_MEDIA_PROXY_UNAVAILABLE",
+              "Не удалось проверить временное изображение через настроенный прокси. Прямая ссылка хранилища не использовалась.",
+            );
+          urls.push(proxiedTemporaryUrl);
+          continue;
+        }
+
+        const download = await options.managedStorage.getDownload(
+          uploaded.objectId,
+        );
+        urls.push(download.downloadUrl);
+      }
+      return { urls, cleanup };
+    } catch (error) {
+      await cleanup();
+      throw error;
+    }
   };
 
   const containerId = (payload: Record<string, unknown>) => {

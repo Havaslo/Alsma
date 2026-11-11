@@ -346,7 +346,7 @@ test("Instagram errors do not expose signed media URL query parameters", async (
   );
 });
 
-test("Instagram uses the inbound proxy for existing images and signed URLs for temporary ones", async () => {
+test("Instagram uses the inbound proxy for existing and temporary images", async () => {
   const canvas = createCanvas(40, 40);
   canvas.getContext("2d").fillRect(0, 0, 40, 40);
   const jpeg = new Uint8Array(canvas.toBuffer("image/jpeg"));
@@ -421,11 +421,60 @@ test("Instagram uses the inbound proxy for existing images and signed URLs for t
     .filter((url): url is string => Boolean(url));
   assert.deepEqual(imageUrls, [
     `${proxy}/${Buffer.from("existing-id").toString("base64url")}`,
-    "https://storage.example/temporary.jpg?signature=private",
-    "https://storage.example/temporary.jpg?signature=private",
+    `${proxy}/${Buffer.from("temporary-1").toString("base64url")}`,
+    `${proxy}/${Buffer.from("temporary-2").toString("base64url")}`,
   ]);
   assert.deepEqual(uploaded, ["temporary-1", "temporary-2"]);
   assert.deepEqual(deleted, uploaded);
+});
+
+test("Instagram does not bypass a configured proxy when a temporary JPEG probe fails", async () => {
+  const canvas = createCanvas(40, 40);
+  canvas.getContext("2d").fillRect(0, 0, 40, 40);
+  const png = new Uint8Array(canvas.toBuffer("image/png"));
+  const proxy = "https://gateway.example/v1/inbound-proxy/route-id";
+  const originalToken = Buffer.from("original-id").toString("base64url");
+  const deleted: string[] = [];
+  const service = createService({
+    mediaBaseUrl: "https://backend.example",
+    mediaProxyUrl: proxy,
+    onFetch: () => {
+      throw new Error(
+        "Meta must not be called when temporary media is unavailable",
+      );
+    },
+    onHead: (url) =>
+      url.endsWith(`/${originalToken}`)
+        ? imageResponse()
+        : new Response(null, { status: 403 }),
+    storage: {
+      upload: async () => ({ objectId: "temporary-image" }),
+      getDownload: async () => {
+        throw new Error(
+          "a configured proxy must not fall back to Storage URLs",
+        );
+      },
+      deleteObject: async (objectId) => {
+        deleted.push(objectId);
+      },
+    },
+  });
+
+  await assert.rejects(
+    service.publish({
+      images: [
+        {
+          content: png,
+          contentType: "image/png",
+          fileName: "source.png",
+          objectId: "original-id",
+        },
+      ],
+      text: "Проверка прокси",
+    }),
+    { code: "INSTAGRAM_MEDIA_PROXY_UNAVAILABLE", status: 502 },
+  );
+  assert.deepEqual(deleted, ["temporary-image"]);
 });
 
 test("Instagram falls back to the backend URL when the media proxy fails", async () => {
