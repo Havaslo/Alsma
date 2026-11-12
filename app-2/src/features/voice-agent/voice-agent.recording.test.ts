@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fetchMangoRecording } from "./voice-agent.recording.js";
+import {
+  MangoRecordingError,
+  fetchMangoRecording,
+} from "./voice-agent.recording.js";
 import { transcriptSegmentId } from "./voice-agent.repository.js";
 
 test("transcript segment identity is stable for repeated provider events", () => {
@@ -39,6 +42,59 @@ test("recording proxy rejects non-Mango redirects", async () => {
       fetchImpl,
     }),
     /unsafe recording URL/u,
+  );
+});
+
+test("recording proxy surfaces the provider refusal reason", async () => {
+  const fetchImpl: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        name: "Unauthorized",
+        message: "Service disabled",
+        code: 0,
+        status: 401,
+      }),
+      { status: 401, headers: { "content-type": "application/json" } },
+    );
+  await assert.rejects(
+    fetchMangoRecording({
+      apiKey: "key",
+      recordingId: "recording",
+      salt: "salt",
+      fetchImpl,
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof MangoRecordingError);
+      assert.equal(error.code, "http_401");
+      assert.match(error.detail ?? "", /Service disabled/u);
+      return true;
+    },
+  );
+});
+
+test("recording proxy reports an unreachable Mango API", async () => {
+  const cause = Object.assign(
+    new Error("getaddrinfo ENOTFOUND app.mango-office.ru"),
+    {
+      code: "ENOTFOUND",
+    },
+  );
+  const fetchImpl: typeof fetch = async () => {
+    throw new TypeError("fetch failed", { cause });
+  };
+  await assert.rejects(
+    fetchMangoRecording({
+      apiKey: "key",
+      recordingId: "recording",
+      salt: "salt",
+      fetchImpl,
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof MangoRecordingError);
+      assert.equal(error.code, "request_failed");
+      assert.match(error.detail ?? "", /ENOTFOUND/u);
+      return true;
+    },
   );
 });
 

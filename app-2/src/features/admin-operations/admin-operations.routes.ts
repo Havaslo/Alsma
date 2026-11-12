@@ -131,16 +131,25 @@ export const createAdminOperationsRouter = (
               }
             : { stage: "unknown" as const };
         const providerCode = diagnostic.providerCode
-          ?.replace(/[^A-Za-z0-9_.:,-]/gu, "")
+          ?.replace(/[\p{Cc}\p{Cf}]+/gu, " ")
+          .replace(/\s+/gu, " ")
+          .trim()
           .slice(0, 300);
         const requestId = diagnostic.requestId
           ?.replace(/[^A-Za-z0-9_.:-]/gu, "")
           .slice(0, 100);
+        const recordingAccessDenied =
+          diagnostic.stage === "mango_recording" &&
+          /^http_40[13]\b/u.test(providerCode ?? "");
         logger.error(
           {
             callId: call.id,
             recordingId: call.providerRecordingId,
             ...diagnostic,
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : error,
           },
           "Admin retranscription failed",
         );
@@ -150,9 +159,11 @@ export const createAdminOperationsRouter = (
             diagnosticCode: `RETRANSCRIPTION_${diagnostic.stage.toUpperCase()}`,
             ...(providerCode ? { providerCode } : {}),
             ...(requestId ? { requestId } : {}),
-            message: providerCode
-              ? `Сбой транскрибации (${providerCode})${requestId ? `. ID запроса: ${requestId}` : ""}.`
-              : `Не удалось повторить транскрибацию. Этап: ${diagnostic.stage}.`,
+            message: recordingAccessDenied
+              ? "Mango Office запрещает доступ к записям разговоров (Service disabled). Проверьте доступ к записям в личном кабинете Mango Office."
+              : providerCode
+                ? `Сбой транскрибации (${providerCode})${requestId ? `. ID запроса: ${requestId}` : ""}.`
+                : `Не удалось повторить транскрибацию. Этап: ${diagnostic.stage}.`,
           },
         });
       }
@@ -297,7 +308,13 @@ export const createAdminOperationsRouter = (
           response.end();
         } catch (error) {
           logger.warn(
-            { callId: call.providerRecordingId, error },
+            {
+              callId: call.providerRecordingId,
+              error:
+                error instanceof Error
+                  ? { name: error.name, message: error.message }
+                  : error,
+            },
             "Mango recording fetch failed",
           );
           response

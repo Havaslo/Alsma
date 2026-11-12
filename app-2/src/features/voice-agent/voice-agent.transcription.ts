@@ -1,5 +1,8 @@
 import { createLogger } from "../../lib/logger.js";
-import { fetchMangoRecording } from "./voice-agent.recording.js";
+import {
+  MangoRecordingError,
+  fetchMangoRecording,
+} from "./voice-agent.recording.js";
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
 
 type DiarizedSegment = {
@@ -141,6 +144,9 @@ export const transcribeMangoRecording = async ({
     throw new MangoTranscriptionError(
       "Mango recording could not be fetched",
       "mango_recording",
+      error instanceof MangoRecordingError
+        ? [error.code, error.detail].filter(Boolean).join(": ").slice(0, 300)
+        : "recording_fetch_failed",
     );
   }
   let audio: Buffer;

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { VoiceAgentRepository } from "./voice-agent.repository.js";
-import { transcribeMangoRecording } from "./voice-agent.transcription.js";
+import {
+  MangoTranscriptionError,
+  transcribeMangoRecording,
+} from "./voice-agent.transcription.js";
 
 test("uses separate Mango and OpenAI credentials for recording transcription", async () => {
   const requests: Array<{ input: string; init?: RequestInit }> = [];
@@ -192,8 +195,12 @@ test("does not call STT when Mango recording download fails", async () => {
         repository: {} as VoiceAgentRepository,
         salt: "mango-salt",
       }),
-    (error: unknown) =>
-      error instanceof Error && error.name === "MangoTranscriptionError",
+    (error: unknown) => {
+      assert.ok(error instanceof MangoTranscriptionError);
+      assert.equal(error.stage, "mango_recording");
+      assert.match(error.providerCode ?? "", /^download_http_503/u);
+      return true;
+    },
   );
   assert.equal(calls, 2);
 });
