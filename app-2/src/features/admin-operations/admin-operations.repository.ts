@@ -171,15 +171,15 @@ export const createAdminOperationsRepository = (database: Database) => ({
   listNotifications: async () => {
     const [leads, requests, bookings] = await Promise.all([
       database.client.siteLead.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
         take: 20,
       }),
       database.client.adminRequest.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
         take: 20,
       }),
       database.client.bookingRequest.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
         take: 20,
       }),
     ]);
@@ -192,6 +192,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
         description:
           item.name ?? item.phone ?? item.email ?? "Новая заявка сайта",
         status: item.status,
+        activityAt: item.updatedAt,
         createdAt: item.createdAt,
       })),
       ...requests.map((item) => ({
@@ -205,6 +206,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
           item.description ??
           "Новое обращение",
         status: item.status,
+        activityAt: item.updatedAt,
         createdAt: item.createdAt,
       })),
       ...bookings.map((item) => ({
@@ -214,11 +216,12 @@ export const createAdminOperationsRepository = (database: Database) => ({
         title: "Новая заявка на бронирование",
         description: item.guestName,
         status: item.status,
+        activityAt: item.updatedAt,
         createdAt: item.createdAt,
       })),
     ]
       .sort(
-        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+        (left, right) => right.activityAt.getTime() - left.activityAt.getTime(),
       )
       .slice(0, 30);
     return {
@@ -334,7 +337,7 @@ export const createAdminOperationsRepository = (database: Database) => ({
     };
     const [items, total, setting] = await database.client.$transaction([
       database.client.adminRequest.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
         skip,
         take,
         where: requestsWhere,

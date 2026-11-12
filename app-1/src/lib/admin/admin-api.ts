@@ -163,6 +163,7 @@ export type AdminNotification = {
   readonly title: string;
   readonly description: string;
   readonly status: string;
+  readonly activityAt?: string;
   readonly createdAt: string;
 };
 export type DashboardAnalytics = {

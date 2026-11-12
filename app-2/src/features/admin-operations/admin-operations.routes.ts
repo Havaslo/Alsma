@@ -182,6 +182,7 @@ export const createAdminOperationsRouter = (
         ...result,
         items: result.items.map((item) => ({
           ...item,
+          activityAt: item.activityAt.toISOString(),
           createdAt: item.createdAt.toISOString(),
         })),
       });

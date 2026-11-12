@@ -33,7 +33,7 @@ const conversationIdFor = (chatId: string) => {
   const hex = digest.toString("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
-const extractMessage = (payload: Record<string, unknown>) => {
+export const extractMessage = (payload: Record<string, unknown>) => {
   const message = asRecord(payload.message ?? payload);
   const body = asRecord(message.body);
   const recipient = asRecord(message.recipient);
@@ -45,6 +45,7 @@ const extractMessage = (payload: Record<string, unknown>) => {
       payload.id,
       message.id,
       message.mid,
+      body.mid,
     ),
     senderId: firstString(sender.user_id, sender.id, payload.user_id),
     text: firstString(body.text, message.text, payload.text),
@@ -276,7 +277,13 @@ export const createMaxBotRouter = ({
           details: { ...currentDetails, maxChatId: chatId, source: "MAX" },
         },
       });
-      await chat.publish(conversationId, "guest", text);
+      await chat.publish(
+        conversationId,
+        "guest",
+        text,
+        undefined,
+        eventId ? `max:${eventId}` : undefined,
+      );
       if (!isManagerMode(currentDetails)) {
         const result = await agent.reply(conversationId, text, "max");
         if (result?.action === "transfer")

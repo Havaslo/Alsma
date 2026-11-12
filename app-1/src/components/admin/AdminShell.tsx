@@ -431,7 +431,9 @@ export const AdminShell = ({
                             {notificationLabel(item.type)}
                           </span>
                           <time className="shrink-0 text-[11px] text-muted-ui-foreground">
-                            {new Date(item.createdAt).toLocaleString("ru-RU", {
+                            {new Date(
+                              item.activityAt ?? item.createdAt,
+                            ).toLocaleString("ru-RU", {
                               day: "2-digit",
                               hour: "2-digit",
                               minute: "2-digit",
