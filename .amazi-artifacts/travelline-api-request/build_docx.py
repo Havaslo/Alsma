@@ -77,16 +77,16 @@ def table(rows):
 
 body = []
 body.append(para('Запрос на подключение TravelLine Partner API', style='Title', before=0, after=60, line=400, keep=True))
-body.append(para('Собственный модуль бронирования и ИИ-агенты АЛСМА', style='Subtitle', before=0, after=180, line=300, keep=True))
+body.append(para('Оформление бронирования на сайте и ИИ-агенты АЛСМА', style='Subtitle', before=0, after=180, line=300, keep=True))
 body.append(para([
     run('Добрый день! ', bold=True),
-    run('Для замены Eptera на TravelLine мы подключаем собственный модуль бронирования сайта, а также текстового и голосового ИИ-агентов. Просим подтвердить и предоставить доступ к API ниже для соответствующих объектов размещения. Запросы к TravelLine будет выполнять наш backend; секретные ключи не будут передаваться браузеру или ИИ-моделям.')
+    run('Для замены Eptera на TravelLine мы хотим подключить TravelLine к существующему процессу оформления бронирования на сайте, а также к текстовому и голосовому ИИ-агентам. Просим подтвердить и предоставить доступ к API ниже для соответствующих объектов размещения. Запросы к TravelLine будет выполнять наш backend; секретные ключи не будут передаваться браузеру или ИИ-моделям.')
 ], after=150, line=280))
 body.append(para('Необходимые API', style='Heading1', before=80, after=90, line=300, keep=True))
 rows = [
     ['API и назначение', 'Что требуется для нашего сценария'],
     ['Search API\nОбязательно', [
-        para([run('Поиск актуальных предложений: ', bold=True, size=19), run('доступность, категории номеров, тарифы, цена и условия по датам и составу гостей. Используется модулем сайта и всеми агентами, которым нужно отвечать о наличии номеров.', size=19)], after=50, line=245),
+        para([run('Поиск актуальных предложений: ', bold=True, size=19), run('доступность, категории номеров, тарифы, цена и условия по датам и составу гостей. Используется в форме оформления бронирования на сайте и агентами, которым нужно отвечать о наличии номеров.', size=19)], after=50, line=245),
         para([run('Метод: ', bold=True, size=19), run('GET /api/search/v1/properties/{propertyId}/room-stays', size=19, font='Consolas')], after=30, line=245)
     ]],
     ['Content API\nДля каталога', [
@@ -97,14 +97,14 @@ rows = [
         para([run('Методы: ', bold=True, size=19), run('POST /api/reservation/v1/bookings/verify и POST /api/reservation/v1/bookings', size=19, font='Consolas')], after=30, line=245)
     ]],
     ['Read Reservation API\nДля синхронизации', [
-        para([run('Чтение списка, деталей и статусов брони: ', bold=True, size=19), run('для личного кабинета гостя и ответов агентов по существующим броням, включая брони из других каналов. Просим подтвердить, будут ли здесь доступны брони, созданные нашим модулем.', size=19)], after=30, line=245)
+        para([run('Чтение списка, деталей и статусов брони: ', bold=True, size=19), run('для личного кабинета гостя и ответов агентов по существующим броням, включая брони из других каналов. Просим подтвердить, будут ли здесь доступны брони, оформленные через наш сайт и другие каналы.', size=19)], after=30, line=245)
     ]],
     ['Вебхуки\nЕсли доступны', [
         para([run('Уведомления об изменениях: ', bold=True, size=19), run('создание, изменение и отмена броней, а также обновление контента/доступности. Если такие события не поддерживаются для данного типа подключения, просим указать рекомендуемый способ и периодичность синхронизации через Read Reservation API.', size=19)], after=30, line=245)
     ]],
 ]
 body.append(table(rows))
-body.append(para('Предлагаемый поток бронирования', style='Heading1', before=180, after=75, line=300, keep=True))
+body.append(para('Предлагаемый процесс оформления бронирования', style='Heading1', before=180, after=75, line=300, keep=True))
 body.append(para([
     run('1. ', bold=True), run('Наш сервер ищет предложения через Search API.  '),
     run('2. ', bold=True), run('Гость выбирает тариф и передаёт данные заказчика и проживающих.  '),
@@ -174,7 +174,7 @@ content_types = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </Types>'''
 
 core = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Запрос на подключение TravelLine Partner API</dc:title><dc:subject>Собственный модуль бронирования и ИИ-агенты АЛСМА</dc:subject><dc:creator>АЛСМА</dc:creator><cp:keywords>TravelLine, Partner API, бронирование</cp:keywords><dcterms:created xsi:type="dcterms:W3CDTF">2026-11-20T00:00:00Z</dcterms:created></cp:coreProperties>'''
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Запрос на подключение TravelLine Partner API</dc:title><dc:subject>Оформление бронирования на сайте и ИИ-агенты АЛСМА</dc:subject><dc:creator>АЛСМА</dc:creator><cp:keywords>TravelLine, Partner API, бронирование</cp:keywords><dcterms:created xsi:type="dcterms:W3CDTF">2026-11-20T00:00:00Z</dcterms:created></cp:coreProperties>'''
 app = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Office Word</Application></Properties>'''
 
 with ZipFile(OUT, 'w', ZIP_DEFLATED) as z:
