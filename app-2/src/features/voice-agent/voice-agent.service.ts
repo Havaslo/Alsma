@@ -40,7 +40,7 @@ export const createVoiceAgentService = (
   database: Database,
   apiKey?: string,
   openaiBaseUrl?: string,
-  eptera?: EpteraClient,
+  eptera?: Pick<EpteraClient, "enabled" | "getOffers">,
   mango?: {
     readonly mangoApiKey?: string;
     readonly mangoApiSalt?: string;

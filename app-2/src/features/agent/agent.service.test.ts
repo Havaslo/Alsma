@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { Database } from "../../lib/database/database.js";
+import { createTravelLineService } from "../travelline/travelline.service.js";
 import {
   formatEpteraOffersForGuest,
   normalizeAgentOfferSummaries,
@@ -28,6 +29,7 @@ const offer = {
 
 const createHarness = (
   options: {
+    travelLine?: boolean;
     emptyOffersFirst?: boolean;
     epteraEnabled?: boolean;
     gatewayFailure?: boolean;
@@ -339,6 +341,15 @@ const createHarness = (
     chat: chat as never,
     database: { client } as unknown as Database,
     epteraEnabled: options.epteraEnabled,
+    travelLine: options.travelLine
+      ? createTravelLineService({
+          enabled: true,
+          clientId: "test",
+          clientSecret: "test",
+          propertyId: "21062",
+          bookingUrl: "https://booking.example/reserve",
+        })
+      : undefined,
     logger: {
       warn: (fields: Record<string, unknown>, message: string) =>
         warnings.push({ fields, message }),
@@ -994,6 +1005,24 @@ test("leaves check-in and check-out answers to the model and available knowledge
       harness.published.at(-1)?.text ?? "",
       /заезд — в 16:00/u,
     );
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("TravelLine hands off checkout without collecting contacts or creating an Eptera reservation", async () => {
+  const harness = createHarness({ travelLine: true });
+  try {
+    await harness.service.reply(
+      "tl-test",
+      "Да, бронируйте с 2026-10-13 по 2026-10-15, 1 взрослый",
+    );
+    assert.equal(harness.reservations.length, 0);
+    assert.match(
+      harness.published.at(-1)?.bookingUrl ?? "",
+      /^https:\/\/booking\.example\/reserve/u,
+    );
+    assert.ok(harness.prompts.some((prompt) => prompt.includes("TravelLine")));
   } finally {
     globalThis.fetch = harness.originalFetch;
   }

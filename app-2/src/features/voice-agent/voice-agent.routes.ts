@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import type { Database } from "../../lib/database/database.js";
 import { validateRequest } from "../../lib/http/validate-request.js";
 import type { ManagedStorage } from "../../lib/storage/managed-storage.js";
+import type { EpteraClient } from "../booking/eptera.client.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import { createAmaziEventRelay } from "./voice-agent.amazi.relay.js";
 import { pcm16Mono24kToWav } from "./voice-agent.audio-diagnostic.js";
@@ -55,6 +56,7 @@ export const createVoiceAgentRouter = (
   voiceConfigurationSecret?: string,
   logger?: Logger,
   managedStorage?: ManagedStorage,
+  availability?: Pick<EpteraClient, "enabled" | "getOffers">,
 ): Router => {
   const router = Router();
   const service = createVoiceAgentService(
@@ -62,7 +64,7 @@ export const createVoiceAgentRouter = (
     database,
     apiKey,
     openaiBaseUrl,
-    createEpteraClient(eptera ?? {}),
+    availability ?? createEpteraClient(eptera ?? {}),
     {
       ...mango,
     },

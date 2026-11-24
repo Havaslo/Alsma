@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { AdminClientBonusModal } from "@/components/admin/AdminClientBonusModal";
 import { AdminClientEditModal } from "@/components/admin/AdminClientEditModal";
+import { AdminTravelLineBookingLink } from "@/components/admin/AdminTravelLineBookingLink";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Loader } from "@/components/ui/Loader";
@@ -80,6 +81,10 @@ export const AdminClientDetail = ({
 
   return (
     <div className="space-y-5">
+      <AdminTravelLineBookingLink
+        userId={clientId}
+        onLinked={() => void clientQuery.refetch()}
+      />
       <section className="rounded-3xl border border-line bg-brand-foreground p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>

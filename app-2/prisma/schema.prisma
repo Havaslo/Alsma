@@ -450,6 +450,12 @@ model GuestBonusProgram {
 }
 
 model GuestBooking {
+  provider                     String             @default("eptera")
+  providerPropertyId           String?            @map("provider_property_id")
+  providerBookingId            String?            @map("provider_booking_id")
+  providerModifiedAt           DateTime?          @map("provider_modified_at") @db.Timestamptz(3)
+  providerSyncAttemptedAt      DateTime?          @map("provider_sync_attempted_at") @db.Timestamptz(3)
+  providerSyncedAt             DateTime?          @map("provider_synced_at") @db.Timestamptz(3)
   id                           String             @id @default(uuid()) @db.Uuid
   userId                       String             @map("user_id") @db.Uuid
   user                         GuestUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -502,6 +508,7 @@ model GuestBooking {
   selectedOffer                Json?              @map("selected_offer")
   createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
 
+  @@unique([provider, providerPropertyId, providerBookingId], map: "guest_bookings_provider_external_key")
   @@index([userId, checkInDate])
   @@index([groupId])
   @@index([paymentStatus, paymentDeadlineAt, cancellationStatus])

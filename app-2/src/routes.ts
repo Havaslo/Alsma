@@ -34,6 +34,13 @@ import { expireServicePaymentHolds } from "./features/services/service-payments.
 import { createServicesRouter } from "./features/services/services.routes.js";
 import { createSiteContentRouter } from "./features/site-content/site-content.routes.js";
 import { createSystemRouter } from "./features/system/system.routes.js";
+import { createTravelLineSyncService } from "./features/travelline/travelline-sync.service.js";
+import {
+  createTravelLineAdminRouter,
+  createTravelLineRouter,
+} from "./features/travelline/travelline.routes.js";
+import { createTravelLineService } from "./features/travelline/travelline.service.js";
+import type { TravelLineConfiguration } from "./features/travelline/travelline.service.js";
 import { createVkDirectFactoryTestRouter } from "./features/vk/vk-direct-factory-test.js";
 import { createVkPhotoConnectionRouter } from "./features/vk/vk-photo-connection.routes.js";
 import type { VkPhotoConnectionService } from "./features/vk/vk-photo-connection.service.js";
@@ -53,6 +60,7 @@ type CreateApiRouterOptions = {
   };
   readonly corsAllowedOrigins: readonly string[];
   readonly database: Database;
+  readonly travelLine?: TravelLineConfiguration;
   readonly epteraEnabled?: boolean;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
@@ -104,6 +112,7 @@ export const createApiRouter = ({
   aiGatewayOpenai,
   corsAllowedOrigins,
   database,
+  travelLine,
   epteraEnabled = true,
   epteraApiKey,
   epteraHotelId,
@@ -163,9 +172,25 @@ export const createApiRouter = ({
     );
   }
   const chat = createChatService(database);
+  const travelLineService = createTravelLineService(
+    travelLine ?? { enabled: false },
+  );
+  const travelLineSync = createTravelLineSyncService(
+    database,
+    travelLineService,
+    logger,
+  );
+  router.use(
+    "/travelline",
+    createTravelLineRouter(database, travelLineService, travelLineSync),
+  );
+  router.use(
+    "/admin/travelline",
+    createTravelLineAdminRouter(database, travelLineService, travelLineSync),
+  );
   const eptera = createEpteraClient({
     apiKey: epteraApiKey,
-    enabled: epteraEnabled,
+    enabled: epteraEnabled && !travelLineService.enabled,
     hotelId: epteraHotelId,
     paymentLoginToken: epteraPaymentLoginToken,
     reservationLoginToken: epteraReservationLoginToken,
@@ -184,14 +209,24 @@ export const createApiRouter = ({
     eptera,
     yookassa,
   );
+  const agentBooking = travelLineService.enabled
+    ? {
+        ...booking,
+        offers: async (input: Parameters<typeof booking.offers>[0]) => ({
+          offers: await travelLineService.getOffers(input),
+          search: input,
+        }),
+      }
+    : booking;
   const agent = createAiAgentService({
     apiKey: openaiApiKey,
     baseUrl: openaiBaseUrl,
     bookingUrl: "",
-    epteraEnabled,
+    epteraEnabled: epteraEnabled || travelLineService.enabled,
+    travelLine: travelLineService.enabled ? travelLineService : undefined,
     chat,
     database,
-    booking,
+    booking: agentBooking,
     bookingReturnUrl: maxBot.siteUrl
       ? new URL("/booking/return", maxBot.siteUrl).toString()
       : "https://alsma.ru/booking/return",
@@ -232,7 +267,11 @@ export const createApiRouter = ({
     "/admin/integrations",
     createAdminIntegrationsStatusRouter(database, {
       ai: Boolean(openaiApiKey && openaiBaseUrl),
-      eptera: epteraEnabled && Boolean(epteraApiKey && epteraHotelId),
+      travelline: travelLineService.enabled,
+      eptera:
+        !travelLineService.enabled &&
+        epteraEnabled &&
+        Boolean(epteraApiKey && epteraHotelId),
       max: Boolean(maxBot.token),
       vk: Boolean(
         vk.accessToken &&
@@ -249,7 +288,10 @@ export const createApiRouter = ({
     createGuestAuthRouter(
       database,
       mailRu,
-      guestBookingSync.syncUserBookings,
+      async (userId) => {
+        await guestBookingSync.syncUserBookings(userId);
+        await travelLineSync.syncUserBookings(userId);
+      },
       () =>
         expireServicePaymentHolds(database.client, yookassa).then(
           () => undefined,
@@ -258,7 +300,7 @@ export const createApiRouter = ({
   );
   router.use(
     "/booking",
-    createBookingRouter(booking, yookassa, logger, database),
+    createBookingRouter(agentBooking, yookassa, logger, database),
   );
   router.use("/chat", createChatRouter(database, chat, agent));
   router.use(
@@ -350,6 +392,7 @@ export const createApiRouter = ({
       voiceConfigurationSecret,
       logger,
       managedStorage,
+      travelLineService.enabled ? travelLineService : undefined,
     ),
   );
   return router;

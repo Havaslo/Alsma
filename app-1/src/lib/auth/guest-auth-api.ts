@@ -34,6 +34,9 @@ export type GuestProfile = {
     readonly level: string;
   } | null;
   readonly bookings: Array<{
+    readonly provider?: string;
+    readonly providerBookingId?: string | null;
+    readonly providerSyncedAt?: string | null;
     readonly checkInDate: string;
     readonly checkOutDate: string;
     readonly createdAt: string;
@@ -148,3 +151,11 @@ export const logoutGuest = () =>
     {},
     { headers: authHeaders() },
   );
+
+export const requestTravelLineCancellation = (input: {
+  bookingId: string;
+  reason?: string;
+}) =>
+  apiClient.post("/travelline/cancellation-requests", input, {
+    headers: authHeaders(),
+  });

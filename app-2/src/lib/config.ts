@@ -3,6 +3,7 @@ import { loadEnvFile } from "node:process";
 import { z } from "zod";
 
 import type { AdminPushEnvironment } from "../features/admin-push/admin-push.types.js";
+import type { TravelLineConfiguration } from "../features/travelline/travelline.service.js";
 import type { VkPhotoOAuthConfiguration } from "../features/vk/vk-photo-connection.service.js";
 
 const GENERATED_ENV_PATH = "AMAZI_ENV_GENERATED.env";
@@ -41,6 +42,16 @@ const environmentSchema = z
       .enum(["development", "production", "test"])
       .default("development"),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+    TRAVELLINE_ENABLED: z.stringbool().default(false),
+    TRAVELLINE_CLIENT_ID: optionalTrimmedEnvironmentValue,
+    TRAVELLINE_CLIENT_SECRET: optionalTrimmedEnvironmentValue,
+    TRAVELLINE_PROPERTY_ID: z.string().regex(/^\d+$/u).optional(),
+    TRAVELLINE_BOOKING_URL: z
+      .string()
+      .url()
+      .refine((x) => new URL(x).protocol === "https:")
+      .optional(),
+    TRAVELLINE_WEBHOOK_SECRET: z.string().min(32).optional(),
     EPTERA_API_KEY: z.string().min(1).optional(),
     EPTERA_HOTEL_ID: z.string().regex(/^\d+$/).optional(),
     EPTERA_ENABLED: z.stringbool().default(true),
@@ -143,6 +154,7 @@ export type AppConfig = {
   };
   readonly databaseUrl: string;
   readonly corsAllowedOrigins: readonly string[];
+  readonly travelLine: TravelLineConfiguration;
   readonly epteraEnabled: boolean;
   readonly epteraApiKey?: string;
   readonly epteraHotelId?: string;
@@ -242,6 +254,14 @@ export const readConfig = (
         ? parsed.AMAZI_PREVIEW_FRONTEND_HOST
         : undefined,
     ),
+    travelLine: {
+      enabled: parsed.TRAVELLINE_ENABLED,
+      clientId: parsed.TRAVELLINE_CLIENT_ID,
+      clientSecret: parsed.TRAVELLINE_CLIENT_SECRET,
+      propertyId: parsed.TRAVELLINE_PROPERTY_ID,
+      bookingUrl: parsed.TRAVELLINE_BOOKING_URL,
+      webhookSecret: parsed.TRAVELLINE_WEBHOOK_SECRET,
+    },
     epteraEnabled: parsed.EPTERA_ENABLED,
     epteraApiKey: parsed.EPTERA_API_KEY,
     epteraHotelId: parsed.EPTERA_HOTEL_ID,
