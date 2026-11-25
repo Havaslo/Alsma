@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import WebSocket, { WebSocketServer } from "ws";
 
 import type { Database } from "../../lib/database/database.js";
+import type { EpteraClient } from "../booking/eptera.client.js";
 import { createEpteraClient } from "../booking/eptera.client.js";
 import { formatEventsContext, listPublishedEvents } from "./events-context.js";
 import { getVoiceInstructions } from "./voice-agent.prompt.js";
@@ -50,6 +51,7 @@ export const attachVoiceAgentRealtime = (
     readonly database: Database;
     readonly logger: Logger;
     readonly openaiBaseUrl?: string;
+    readonly availability?: Pick<EpteraClient, "enabled" | "getOffers">;
     readonly eptera?: {
       readonly apiKey?: string;
       readonly enabled?: boolean;
@@ -57,7 +59,8 @@ export const attachVoiceAgentRealtime = (
     };
   },
 ): void => {
-  const eptera = createEpteraClient(options.eptera ?? {});
+  const availability =
+    options.availability ?? createEpteraClient(options.eptera ?? {});
   const websocketServer = new WebSocketServer({
     maxPayload: 8 * 1024 * 1024,
     noServer: true,
@@ -201,14 +204,14 @@ export const attachVoiceAgentRealtime = (
                       functionEvent.name === "check_availability" ||
                       functionEvent.name === "compare_rooms"
                     ) {
-                      if (!eptera.enabled) {
+                      if (!availability.enabled) {
                         output = {
                           available: false,
                           reason: "integration_disabled",
                           readOnly: true,
                         };
                       } else {
-                        const result = await eptera.getOffers({
+                        const result = await availability.getOffers({
                           adults: Number(args.adults),
                           checkIn: String(args.checkIn ?? ""),
                           checkOut: String(args.checkOut ?? ""),

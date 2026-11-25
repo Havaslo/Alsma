@@ -5,6 +5,7 @@ import { createContentPlanPublishingService } from "./features/content-factory/c
 import { createInstagramPublishingService } from "./features/instagram-publishing/instagram-publishing.service.js";
 import { createMaxBotClient } from "./features/max-bot/max-bot.client.js";
 import { createTelegramBotClient } from "./features/telegram/telegram-bot.client.js";
+import { createTravelLineService } from "./features/travelline/travelline.service.js";
 import { createVkPhotoConnectionService } from "./features/vk/vk-photo-connection.service.js";
 import { createVkClient } from "./features/vk/vk.client.js";
 import { attachAdminRealtime } from "./features/voice-agent/admin-realtime.js";
@@ -116,6 +117,9 @@ const start = async (): Promise<void> => {
   let stopContentPlanPublishing: () => void = () => undefined;
   attachVoiceAgentRealtime(server, {
     apiKey: config.openaiApiKey,
+    availability: config.travelLine.enabled
+      ? createTravelLineService(config.travelLine)
+      : undefined,
     database,
     eptera: {
       apiKey: config.epteraApiKey,
