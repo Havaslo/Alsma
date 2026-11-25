@@ -68,6 +68,26 @@ test("handoff retains dates/guests, never sends guest identity or invents room s
   );
 });
 
+test("hosted TravelLine form receives its own date and guest parameters", () => {
+  const base =
+    "https://b.tlintegration.com/metasearch/?hotel_id=21062&tl-lng=ru&tl-children-age=9";
+  const input = { checkIn: "2026-12-01", checkOut: "2026-12-03", adults: 2 };
+  const url = new URL(travelLineBookingUrl(base, { ...input, childAges: [7] }));
+  assert.equal(url.searchParams.get("hotel_id"), "21062");
+  assert.equal(url.searchParams.get("tl-date"), input.checkIn);
+  assert.equal(url.searchParams.get("tl-nights"), "2");
+  assert.equal(url.searchParams.get("tl-adults"), "2");
+  assert.equal(url.searchParams.get("tl-children-age"), "7");
+  assert.equal(url.searchParams.has("date"), false);
+  assert.equal(url.searchParams.has("adults"), false);
+  assert.equal(
+    new URL(travelLineBookingUrl(base, input)).searchParams.has(
+      "tl-children-age",
+    ),
+    false,
+  );
+});
+
 test("single-room offers join actual names, preserve separate check-in taxes and reject unsupported multi-room search", async () => {
   const client = createTravelLineClient({
     ...credentials,

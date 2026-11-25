@@ -36,22 +36,30 @@ export const travelLineBookingUrl = (
       ...input,
       childAges: [...(input.childAges ?? [])],
     });
-  if (input?.checkIn) url.searchParams.set("date", input.checkIn);
+  const hostedForm =
+    url.hostname === "b.tlintegration.com" && url.pathname === "/metasearch/";
+  const parameter = (name: string) => (hostedForm ? `tl-${name}` : name);
+  if (input?.checkIn) url.searchParams.set(parameter("date"), input.checkIn);
   if (input?.checkIn && input.checkOut)
     url.searchParams.set(
-      "nights",
+      parameter("nights"),
       String(
         Math.round(
           (Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86_400_000,
         ),
       ),
     );
-  if (input?.adults) url.searchParams.set("adults", String(input.adults));
+  if (input?.adults)
+    url.searchParams.set(parameter("adults"), String(input.adults));
   if (input) {
-    url.searchParams.set("children", String(input.childAges?.length ?? 0));
+    if (!hostedForm)
+      url.searchParams.set("children", String(input.childAges?.length ?? 0));
     if (input.childAges?.length)
-      url.searchParams.set("children-age", input.childAges.join(","));
-    else url.searchParams.delete("children-age");
+      url.searchParams.set(
+        parameter("children-age"),
+        input.childAges.join(","),
+      );
+    else url.searchParams.delete(parameter("children-age"));
   }
   return url.toString();
 };
