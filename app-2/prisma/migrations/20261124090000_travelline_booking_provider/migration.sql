@@ -1,0 +1,2 @@
+ALTER TABLE "guest_bookings" ADD COLUMN "provider" TEXT NOT NULL DEFAULT 'eptera', ADD COLUMN "provider_property_id" TEXT, ADD COLUMN "provider_booking_id" TEXT, ADD COLUMN "provider_modified_at" TIMESTAMPTZ(3), ADD COLUMN "provider_sync_attempted_at" TIMESTAMPTZ(3), ADD COLUMN "provider_synced_at" TIMESTAMPTZ(3);
+CREATE UNIQUE INDEX "guest_bookings_provider_external_key" ON "guest_bookings"("provider", "provider_property_id", "provider_booking_id");

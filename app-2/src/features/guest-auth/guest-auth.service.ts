@@ -35,6 +35,12 @@ const publicUser = (user: {
     contactFirstName: string | null;
     contactLastName: string | null;
     contactPhone: string | null;
+    provider?: string;
+    providerBookingId?: string | null;
+    providerPropertyId?: string | null;
+    providerModifiedAt?: Date | null;
+    providerSyncAttemptedAt?: Date | null;
+    providerSyncedAt?: Date | null;
     epteraReservationId: string | null;
     epteraPaymentSyncAttemptedAt: Date | null;
     epteraPaymentSyncStatus: string;
@@ -120,6 +126,9 @@ const publicUser = (user: {
       refundRequestedAt: _refundRequestedAt,
       refundStatus,
       refundedAt: _refundedAt,
+      providerPropertyId: _providerPropertyId,
+      providerModifiedAt: _providerModifiedAt,
+      providerSyncAttemptedAt: _providerSyncAttemptedAt,
       ...publicBooking
     } = booking;
     return {

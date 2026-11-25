@@ -6,6 +6,7 @@ import type { BookingService } from "../booking/booking.service.js";
 import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
+import type { TravelLineService } from "../travelline/travelline.service.js";
 import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import {
   agentBookingSchema,
@@ -101,6 +102,7 @@ type AgentOptions = {
   readonly chat: ChatService;
   readonly database: Database;
   readonly epteraEnabled?: boolean;
+  readonly travelLine?: TravelLineService;
   readonly logger: Logger;
 };
 const asSettings = (value: unknown) => ({
@@ -543,6 +545,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       select: { value: true },
     });
     const settings = asSettings(setting?.value);
+    if (options.travelLine) settings.canCreateBooking = false;
     if (
       !settings.enabled ||
       !settings[channel] ||
@@ -553,7 +556,7 @@ export const createAiAgentService = (options: AgentOptions) => {
     const conversationMessages = (
       await options.chat.list(conversationId)
     ).slice(-20);
-    const history = conversationMessages
+    let history = conversationMessages
       .filter((item) => epteraEnabled || item.author !== "agent")
       .map(
         (item) =>
@@ -565,6 +568,20 @@ export const createAiAgentService = (options: AgentOptions) => {
       select: { contact: true, details: true, requester: true },
     });
     const storedState = asConversationState(requestState?.details);
+    const previousProvider =
+      requestState?.details &&
+      typeof requestState.details === "object" &&
+      !Array.isArray(requestState.details)
+        ? (requestState.details as Record<string, unknown>).bookingProvider
+        : undefined;
+    if (options.travelLine && previousProvider !== "travelline")
+      history = conversationMessages
+        .filter((item) => item.author !== "agent")
+        .map(
+          (item) =>
+            `${item.author === "guest" ? "Гость" : "Менеджер"}: ${item.text}`,
+        )
+        .join("\n");
     const previousState = epteraEnabled
       ? storedState
       : {
@@ -657,7 +674,11 @@ export const createAiAgentService = (options: AgentOptions) => {
       serviceMention(message) ?? previousState.serviceContext;
     const nextAvailabilityOffers =
       epteraEnabled && !requestedOtherDates
-        ? (previousState.availabilityOffers ?? [])
+        ? (previousState.availabilityOffers ?? []).filter((offer) =>
+            options.travelLine
+              ? offer.id.startsWith("tl:")
+              : !offer.id.startsWith("tl:"),
+          )
         : [];
     await options.database.client.adminRequest.update({
       where: { id: conversationId },
@@ -666,6 +687,7 @@ export const createAiAgentService = (options: AgentOptions) => {
           ...(requestState?.details && typeof requestState.details === "object"
             ? requestState.details
             : {}),
+          bookingProvider: options.travelLine ? "travelline" : "eptera",
           bookingContext: nextBooking,
           availabilityOffers: nextAvailabilityOffers,
           bookingPreparation: epteraEnabled
@@ -710,13 +732,24 @@ export const createAiAgentService = (options: AgentOptions) => {
       );
     const globalInstructions = [
       settings.globalInstructions.trim() || DEFAULT_AGENT_GLOBAL_INSTRUCTIONS,
-      epteraEnabled
-        ? `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`
-        : `Проверка наличия и тарифов, а также оформление брони через систему бронирования временно отключены. Не называй цены, тарифы или наличие из прошлых сообщений; сообщи гостю, что сейчас не можешь проверить актуальные варианты. Регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта остаются доступны.`,
+      ...(options.travelLine
+        ? [
+            "Используется TravelLine. Проверяй наличие инструментом check_availability. Если гость хочет оформить бронь, используй action=create_booking для перехода к форме. Бронь и оплата выполняются гостем в форме TravelLine; не утверждай, что бронь создана. Не собирай для брони ФИО, телефон, email, платежные данные: гость введёт их в форме. При нескольких номерах направляй в форму, не утверждай, что распределение подтверждено. Налоги при заезде сообщай отдельно от стоимости проживания.",
+          ]
+        : []),
+      options.travelLine
+        ? `Доступные инструменты: проверка наличия через TravelLine (${settings.canCheckAvailability}), переход в форму бронирования TravelLine, регистрация обращения и ссылки на страницы сайта.`
+        : epteraEnabled
+          ? `Доступные инструменты: проверка наличия номеров через Eptera (${settings.canCheckAvailability}), создание брони (${settings.canCreateBooking}), регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта.`
+          : `Проверка наличия и тарифов, а также оформление брони через систему бронирования временно отключены. Не называй цены, тарифы или наличие из прошлых сообщений; сообщи гостю, что сейчас не можешь проверить актуальные варианты. Регистрация обращения (${settings.canCreateRequest}), запрос подключения сотрудника (${settings.canTransferToEmployee}) и ссылки на страницы сайта остаются доступны.`,
       "Выбирай инструмент самостоятельно по контексту разговора. После результата инструмента сформулируй для гостя естественный ответ; не подменяй ответ готовой репликой и не утверждай, что действие завершено, пока его результат не подтверждён.",
-      "При подготовке бронирования не выдумывай контактные данные и не используй контакты, которых гость сам не сообщил или которые не сохранены в обращении. После выбора номера и тарифа проверь обязательные данные: имя, фамилию, телефон и email. Запроси все отсутствующие данные одним сообщением, не спрашивай по одному и не проси повторно уже известные поля. Email нужен для чека ЮKassa и входа в личный кабинет. Только когда весь набор данных собран, покажи итог и попроси одно явное подтверждение; бронирование создавай только после него.",
+      options.travelLine
+        ? "Оформление выполняется в форме TravelLine; контактные данные для брони в чате не нужны."
+        : "При подготовке бронирования не выдумывай контактные данные и не используй контакты, которых гость сам не сообщил или которые не сохранены в обращении. После выбора номера и тарифа проверь обязательные данные: имя, фамилию, телефон и email. Запроси все отсутствующие данные одним сообщением, не спрашивай по одному и не проси повторно уже известные поля. Email нужен для чека ЮKassa и входа в личный кабинет. Только когда весь набор данных собран, покажи итог и попроси одно явное подтверждение; бронирование создавай только после него.",
       "Технический формат ответа: верни только JSON без markdown: {action:'answer'|'open_page'|'check_availability'|'create_booking'|'create_request'|'transfer', confirmed?:boolean, offerId?, page?:'about'|'all-inclusive'|'celebrations'|'entertainment'|'faq'|'hardware-procedures'|'offers'|'rooms'|'spa', name?, phone?, email?, checkInDate?, checkOutDate?, guestsCount?, booking?:{checkInDate,checkOutDate,adults,childAges,roomCount,offerId,firstName,lastName,phone,email,paymentMethod,guests?}, answer:string}. Для open_page укажи page; для check_availability передай параметры в booking.",
-    ].join("\n\n");
+    ]
+      .join("\n\n")
+      .replaceAll("Eptera", options.travelLine ? "TravelLine" : "Eptera");
     const userInput = [
       `База знаний:\n${context || "Нет подходящей статьи."}`,
       `Опубликованные акции:\n${offersContext || "Нет опубликованных акций."}`,
@@ -725,7 +758,9 @@ export const createAiAgentService = (options: AgentOptions) => {
         ? `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`
         : "Актуальные цены и наличие сейчас не проверяются; подтверждённых вариантов нет.",
       `Уже известные контакты для брони: ${JSON.stringify(nextBookingContact)}. Контакты для заявки: ${JSON.stringify(contactRequestDetails)}.`,
-      `Обязательные контакты для брони: имя, фамилия, телефон и email. Сейчас не хватает: ${missingBookingContactFields(nextBookingContact).join(", ") || "ничего"}. Используй только данные, сообщённые гостем, и контакты, сохранённые в обращении; не заполняй недостающие поля самостоятельно.`,
+      options.travelLine
+        ? "Контакты и оплату гость указывает в модуле TravelLine, не запрашивай их в чате."
+        : `Обязательные контакты для брони: имя, фамилия, телефон и email. Сейчас не хватает: ${missingBookingContactFields(nextBookingContact).join(", ") || "ничего"}. Используй только данные, сообщённые гостем, и контакты, сохранённые в обращении; не заполняй недостающие поля самостоятельно.`,
       `Состояние диалога: ${JSON.stringify({ availabilityOffers, booking: nextBooking, bookingPreparation: previousState.bookingPreparation, serviceContext: nextServiceContext })}`,
       `История разговора:\n${history || "Нет предыдущих сообщений."}`,
       `Сообщение гостя: ${message}`,
@@ -987,7 +1022,42 @@ export const createAiAgentService = (options: AgentOptions) => {
         }
       }
     }
-    if (finalAction === "create_booking") {
+    if (finalAction === "create_booking" && options.travelLine) {
+      const criteria = bookingFromContext(bookingState);
+      finalAction = "answer";
+      if (criteria) {
+        try {
+          bookingUrl = options.travelLine.checkoutUrl({
+            checkIn: criteria.checkInDate,
+            checkOut: criteria.checkOutDate,
+            adults: criteria.adults,
+            childAges: criteria.childAges,
+          });
+          actionOutcome = {
+            tool: "create_booking",
+            status: "not_created",
+            handoffReady: true,
+            bookingUrl,
+            instruction:
+              "Предложи гостю перейти по ссылке в форму TravelLine для выбора номера, оформления и оплаты. Бронь ещё не создана; не запрашивай контакты в чате.",
+          };
+        } catch {
+          actionOutcome = {
+            tool: "create_booking",
+            status: "not_created",
+            reason: "checkout_temporarily_unavailable",
+            instruction:
+              "Форма бронирования временно недоступна. Предложи обращение к менеджеру, не утверждай создание брони.",
+          };
+        }
+      } else
+        actionOutcome = {
+          tool: "create_booking",
+          status: "not_created",
+          missingParameters: ["checkInDate", "checkOutDate", "adults"],
+          instruction: "Уточни даты и состав гостей для перехода к оформлению.",
+        };
+    } else if (finalAction === "create_booking") {
       const bookingData = agentBookingSchema.safeParse({
         adults: bookingState.adults,
         checkInDate: bookingState.checkInDate,
