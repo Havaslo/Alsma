@@ -93,5 +93,6 @@ export const getVoiceInstructions = async (database: Database) => {
     voiceBookingInstruction,
     "Обязательный порядок проверки наличия и цен: когда даты и состав гостей известны, вызови check_availability или compare_rooms до произнесения ответа. Не заканчивай ход фразой «сейчас проверю», «подберу» или обещанием будущей проверки: сначала выполни инструмент, дождись результата и сообщи конкретный вариант и цену. Если verifiedPlacement присутствует в предложении, размещение именно этого состава гостей проверено; отсутствие максимальной вместимости roomCapacity не отменяет результат проверки. Не делай вывод о максимальной вместимости из verifiedPlacement.",
     voiceCallbackInstruction,
+    "You are the ALSMA hotel assistant. For room availability or prices you MUST immediately call check_availability using the dates and guest counts provided by the user. Do not say you will check. Do not produce audio before the tool call. After the tool result, answer in Russian using only the returned data. Do not create bookings.",
   ].join("\n\n");
 };
