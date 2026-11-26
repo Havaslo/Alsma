@@ -38,6 +38,7 @@ const createHarness = (
     initialContact?: string;
     initialRequester?: string;
     malformedConfirmation?: boolean;
+    requestedRoomCount?: number;
   } = {},
 ) => {
   let details: Record<string, unknown> = options.initialDetails ?? {};
@@ -265,7 +266,7 @@ const createHarness = (
                   checkInDate: "2026-10-13",
                   checkOutDate: "2026-10-15",
                   childAges: [],
-                  roomCount: 1,
+                  roomCount: options.requestedRoomCount ?? 1,
                 },
               }
             : /^(?:привет|здравствуйте|добрый день)[,!\s]/iu.test(guestMessage)
@@ -1023,6 +1024,24 @@ test("TravelLine hands off checkout without collecting contacts or creating an E
       /^https:\/\/booking\.example\/reserve/u,
     );
     assert.ok(harness.prompts.some((prompt) => prompt.includes("TravelLine")));
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("TravelLine multi-room requests receive a checkout link without an unsupported search", async () => {
+  const harness = createHarness({ travelLine: true, requestedRoomCount: 2 });
+  try {
+    await harness.service.reply(
+      "tl-multi",
+      "Нужен номер, точнее два номера на 13–15 октября",
+    );
+    assert.equal(harness.bookingSearches.length, 0);
+    assert.equal(harness.reservations.length, 0);
+    assert.match(
+      harness.published.at(-1)?.bookingUrl ?? "",
+      /^https:\/\/booking\.example\/reserve/u,
+    );
   } finally {
     globalThis.fetch = harness.originalFetch;
   }

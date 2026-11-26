@@ -57,6 +57,7 @@ export type AgentOfferSummary = Pick<
   | "roomType"
   | "roomToSell"
   | "price"
+  | "verifiedPlacement"
 >;
 
 const isExcludedRoom = (
@@ -89,6 +90,9 @@ export const summarizeEpteraOffers = (
       roomToSell: offer.roomToSell,
       roomType: offer.roomType,
       price: offer.price,
+      ...(offer.verifiedPlacement
+        ? { verifiedPlacement: offer.verifiedPlacement }
+        : {}),
     })),
   );
 
@@ -168,7 +172,14 @@ export const formatEpteraOffersForAgent = (
     .map((offer) => {
       const details = [
         `Название: ${offer.roomType}`,
-        `Вместимость: до ${offer.roomCapacity ?? "не указана"} гостей`,
+        ...(offer.verifiedPlacement
+          ? [
+              `Подтверждено размещение: взрослых ${offer.verifiedPlacement.adults}; возраст детей: ${offer.verifiedPlacement.childAges.join(", ") || "без детей"}; номеров ${offer.verifiedPlacement.roomCount}. Цена рассчитана на этот состав гостей`,
+              ...(offer.roomCapacity
+                ? [`Максимальная вместимость: ${offer.roomCapacity} гостей`]
+                : []),
+            ]
+          : [`Вместимость: до ${offer.roomCapacity ?? "не указана"} гостей`]),
         `Площадь: ${offer.roomArea ? `${offer.roomArea} м²` : "не указана"}`,
         `Цена за период: ${formatPrice(offerPrice(offer), offer.currency)}`,
         ...(detailed

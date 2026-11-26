@@ -18,7 +18,7 @@ const agentUnavailableMessage =
   "Извините, сейчас не удалось подготовить ответ. Попробуйте, пожалуйста, отправить сообщение ещё раз немного позже.";
 
 const conversationSchema = z.object({
-  conversationId: z.string().trim().min(1).max(100),
+  conversationId: z.string().uuid(),
 });
 const guestMessageSchema = conversationSchema.extend({
   contact: z.string().trim().min(3).max(50),

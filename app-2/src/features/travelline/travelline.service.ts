@@ -19,6 +19,27 @@ export type TravelLineConfiguration = {
   webhookSecret?: string;
 };
 
+const mealNames: Record<string, string> = {
+  AllInclusive: "Всё включено",
+  UltraAllInclusive: "Ультра всё включено",
+  BuffetBreakfast: "Завтрак — шведский стол",
+  ContinentalBreakfast: "Континентальный завтрак",
+  EnglishBreakfast: "Английский завтрак",
+  AmericanBreakfast: "Американский завтрак",
+  BreakFast: "Завтрак",
+  FullBoard: "Полный пансион",
+  FullBoardBuffet: "Полный пансион — шведский стол",
+  FullBoardCarte: "Полный пансион — по меню",
+  HalfBoard: "Полупансион",
+  HalfBoardLunch: "Завтрак и обед",
+  HalfBoardDinner: "Завтрак и ужин",
+  HalfBoardLunchDinner: "Обед и ужин",
+  Lunch: "Обед",
+  Dinner: "Ужин",
+  BuffetDinner: "Ужин — шведский стол",
+  DinnerCarte: "Ужин — по меню",
+};
+
 export const travelLineBookingUrl = (
   base: string,
   input?: {
@@ -151,6 +172,11 @@ export const createTravelLineService = (
             .filter((x) => new URL(x).protocol === "https:");
           const price = stay.total.priceBeforeTax;
           return {
+            verifiedPlacement: {
+              adults: stay.guestCount.adultCount,
+              childAges: [...(stay.guestCount.childAges ?? [])],
+              roomCount: 1,
+            },
             id: `tl:${createHash("sha256")
               .update(
                 JSON.stringify([
@@ -168,7 +194,8 @@ export const createTravelLineService = (
             roomType: room.name,
             boardTypeId: 0,
             boardType:
-              stay.mealPlanCode ?? "Питание уточняется в форме бронирования",
+              mealNames[stay.mealPlanCode ?? ""] ??
+              "Питание уточняется в форме бронирования",
             rateTypeId: Number(rate.id),
             rateType: rate.name,
             rateCodeId: 0,

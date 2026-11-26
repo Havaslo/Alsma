@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  formatEpteraOffersForAgent,
+  summarizeEpteraOffers,
+} from "../agent/agent-booking.js";
 import { createTravelLineClient } from "./travelline.client.js";
 import {
   createTravelLineService,
@@ -120,6 +124,7 @@ test("single-room offers join actual names, preserve separate check-in taxes and
             },
             availability: 2,
             currencyCode: "RUB",
+            mealPlanCode: "FullBoardBuffet",
             total: { priceBeforeTax: 12000, taxAmount: 240 },
             cancellationPolicy: null,
           },
@@ -138,6 +143,26 @@ test("single-room offers join actual names, preserve separate check-in taxes and
   assert.equal(result[0]?.roomType, "Стандарт");
   assert.equal(result[0]?.rateType, "Все включено");
   assert.equal(result[0]?.price, 12000);
+  assert.equal(result[0]?.boardType, "Полный пансион — шведский стол");
+  assert.deepEqual(result[0]?.verifiedPlacement, {
+    adults: 2,
+    childAges: [],
+    roomCount: 1,
+  });
+  const familyOffer = {
+    ...result[0]!,
+    verifiedPlacement: { adults: 2, childAges: [7], roomCount: 1 },
+  };
+  const context = formatEpteraOffersForAgent(
+    summarizeEpteraOffers([familyOffer]),
+    true,
+  );
+  assert.match(
+    context,
+    /Подтверждено размещение: взрослых 2; возраст детей: 7/u,
+  );
+  assert.doesNotMatch(context, /FullBoardBuffet|Вместимость: до не указана/u);
+  assert.equal(familyOffer.roomCapacity, null);
   assert.match(result[0]?.benefits[0] ?? "", /240 RUB/u);
   assert.equal(result[0]?.roomImageUrl, "https://images.example/room.jpg");
   await assert.rejects(service.getOffers({ ...search, roomCount: 2 }), {

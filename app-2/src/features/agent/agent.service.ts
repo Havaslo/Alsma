@@ -755,7 +755,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       `Опубликованные акции:\n${offersContext || "Нет опубликованных акций."}`,
       `Опубликованные мероприятия${calendarDateInMessage(message) ? ` на ${calendarDateInMessage(message)}` : ""}:\n${eventsContext || "Нет данных из публичного календаря."}`,
       epteraEnabled
-        ? `Текущие данные и результаты поиска Eptera:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`
+        ? `Текущие данные и результаты поиска ${options.travelLine ? "TravelLine" : "Eptera"}:\n${formatEpteraOffersForAgent(availabilityOffers, asksOfferDetails) || "Подтверждённые варианты ещё не проверялись."}`
         : "Актуальные цены и наличие сейчас не проверяются; подтверждённых вариантов нет.",
       `Уже известные контакты для брони: ${JSON.stringify(nextBookingContact)}. Контакты для заявки: ${JSON.stringify(contactRequestDetails)}.`,
       options.travelLine
@@ -915,6 +915,18 @@ export const createAiAgentService = (options: AgentOptions) => {
     let finalAction = canCompleteBooking ? "create_booking" : effectiveAction;
     let bookingUrl: string | undefined;
     let actionOutcome: Record<string, unknown> | undefined;
+    const handoffCriteria = requestedBooking.success
+      ? requestedBooking.data
+      : bookingFromContext(nextBooking);
+    if (
+      options.travelLine &&
+      finalAction === "check_availability" &&
+      handoffCriteria &&
+      handoffCriteria.roomCount > 1
+    ) {
+      bookingState = { ...bookingState, ...handoffCriteria };
+      finalAction = "create_booking";
+    }
     if (finalAction === "check_availability") {
       finalAction = "answer";
       const searchCriteria = requestedBooking.success
@@ -1039,7 +1051,7 @@ export const createAiAgentService = (options: AgentOptions) => {
             handoffReady: true,
             bookingUrl,
             instruction:
-              "Предложи гостю перейти по ссылке в форму TravelLine для выбора номера, оформления и оплаты. Бронь ещё не создана; не запрашивай контакты в чате.",
+              "Предложи гостю перейти по ссылке в форму TravelLine для выбора номера, оформления и оплаты. Бронь ещё не создана; не запрашивай контакты в чате. Если нужно несколько номеров, гость выбирает их в форме; наличие и распределение по номерам ещё не подтверждены.",
           };
         } catch {
           actionOutcome = {

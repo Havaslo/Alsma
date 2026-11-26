@@ -23,6 +23,11 @@ type Session = {
 };
 
 export type EpteraOffer = {
+  readonly verifiedPlacement?: {
+    readonly adults: number;
+    readonly childAges: readonly number[];
+    readonly roomCount: number;
+  };
   readonly id: string;
   readonly hotelId: number;
   readonly marketId: number | null;
