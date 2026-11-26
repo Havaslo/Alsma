@@ -174,6 +174,9 @@ export const createVoiceAgentService = (
             rateType: offer.rateType,
             roomArea: offer.roomArea,
             roomCapacity: offer.roomCapacity,
+            ...(offer.verifiedPlacement
+              ? { verifiedPlacement: offer.verifiedPlacement }
+              : {}),
             roomDescription: offer.roomDescription,
             roomType: offer.roomType,
             roomToSell: offer.roomToSell,

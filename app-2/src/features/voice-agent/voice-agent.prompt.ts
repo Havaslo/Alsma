@@ -91,6 +91,7 @@ export const getVoiceInstructions = async (database: Database) => {
     getVoiceGreetingInstruction(),
     voiceAgentCommunicationInstruction,
     voiceBookingInstruction,
+    "Обязательный порядок проверки наличия и цен: когда даты и состав гостей известны, вызови check_availability или compare_rooms до произнесения ответа. Не заканчивай ход фразой «сейчас проверю», «подберу» или обещанием будущей проверки: сначала выполни инструмент, дождись результата и сообщи конкретный вариант и цену. Если verifiedPlacement присутствует в предложении, размещение именно этого состава гостей проверено; отсутствие максимальной вместимости roomCapacity не отменяет результат проверки. Не делай вывод о максимальной вместимости из verifiedPlacement.",
     voiceCallbackInstruction,
   ].join("\n\n");
 };
