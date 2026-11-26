@@ -27,7 +27,7 @@ const bookingSchema = z.object({
   checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   adults: z.number().int().min(1).max(12),
   childAges: z.array(z.number().int().min(0).max(17)).max(8).default([]),
-  roomCount: z.number().int().min(1).max(2),
+  roomCount: z.number().int().min(1).max(2).default(1),
 });
 const actionSchema = z.object({
   action: z.enum([
@@ -350,13 +350,32 @@ const extractEntities = (text: string) => {
   const adultsMatch = text.match(
     /(?:нас\s+)?(\d{1,2})\s*(?:взросл\w*|человек\w*|гост\w*)/iu,
   );
-  const wordAdults = /\b(один|одна|двое|трое|четверо)\b/iu
-    .exec(text)?.[1]
-    ?.toLocaleLowerCase("ru-RU");
+  const wordAdults = (
+    text.match(
+      /(?:^|[^\p{L}])(один|одна|двое|два|двух|трое|три|тр[её]х|четверо|четыре|четыр[её]х)\s+(?:взросл|человек|гост)/iu,
+    )?.[1] ??
+    text.match(/нас\s+(один|одна|двое|трое|четверо)(?=$|[^\p{L}])/iu)?.[1]
+  )
+    ?.toLocaleLowerCase("ru-RU")
+    .replaceAll("ё", "е");
   const adults = adultsMatch
     ? Number(adultsMatch[1])
     : wordAdults
-      ? { один: 1, одна: 1, двое: 2, трое: 3, четверо: 4 }[wordAdults]
+      ? (
+          {
+            один: 1,
+            одна: 1,
+            двое: 2,
+            два: 2,
+            двух: 2,
+            трое: 3,
+            три: 3,
+            трех: 3,
+            четверо: 4,
+            четыре: 4,
+            четырех: 4,
+          } as Record<string, number>
+        )[wordAdults]
       : undefined;
   const roomsMatch = text.match(/(\d{1,2})\s*номер\w*/iu);
   const childMention = /реб[её]н|дет(?:и|ей|ям|ьми)|малыш/iu.test(text);
@@ -374,7 +393,6 @@ const extractEntities = (text: string) => {
   }
   if (adults) result.adults = adults;
   if (roomsMatch) result.roomCount = Number(roomsMatch[1]);
-  if (adults && !roomsMatch) result.roomCount = 1;
   if (childAges) result.childAges = childAges;
   return result;
 };
@@ -920,9 +938,10 @@ export const createAiAgentService = (options: AgentOptions) => {
       : bookingFromContext(nextBooking);
     if (
       options.travelLine &&
-      finalAction === "check_availability" &&
       handoffCriteria &&
-      handoffCriteria.roomCount > 1
+      ((finalAction === "check_availability" &&
+        handoffCriteria.roomCount > 1) ||
+        /ссылк[\s\S]*(?:оформ|брон)|(?:оформ|брон)[\s\S]*ссылк/iu.test(message))
     ) {
       bookingState = { ...bookingState, ...handoffCriteria };
       finalAction = "create_booking";
@@ -1035,7 +1054,7 @@ export const createAiAgentService = (options: AgentOptions) => {
       }
     }
     if (finalAction === "create_booking" && options.travelLine) {
-      const criteria = bookingFromContext(bookingState);
+      const criteria = handoffCriteria ?? bookingFromContext(bookingState);
       finalAction = "answer";
       if (criteria) {
         try {
@@ -1044,6 +1063,23 @@ export const createAiAgentService = (options: AgentOptions) => {
             checkOut: criteria.checkOutDate,
             adults: criteria.adults,
             childAges: criteria.childAges,
+          });
+          bookingState = { ...bookingState, ...criteria };
+          await options.database.client.adminRequest.update({
+            where: { id: conversationId },
+            data: {
+              details: {
+                ...(requestState?.details &&
+                typeof requestState.details === "object"
+                  ? requestState.details
+                  : {}),
+                bookingProvider: "travelline",
+                bookingContext: bookingState,
+                availabilityOffers,
+                bookingPreparation: null,
+                serviceContext: nextServiceContext,
+              },
+            },
           });
           actionOutcome = {
             tool: "create_booking",
