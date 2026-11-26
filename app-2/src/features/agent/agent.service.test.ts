@@ -1085,7 +1085,9 @@ test("TravelLine link handoff recognizes Russian adult counts in an existing con
       "Для четырёх взрослых пришлите ссылку на оформление",
     );
     assert.match(harness.published.at(-1)?.bookingUrl ?? "", /adults=4/u);
-    assert.ok(harness.prompts.some((prompt) => prompt.includes('"roomCount":2')));
+    assert.ok(
+      harness.prompts.some((prompt) => prompt.includes('"roomCount":2')),
+    );
     assert.equal(harness.reservations.length, 0);
   } finally {
     globalThis.fetch = harness.originalFetch;
