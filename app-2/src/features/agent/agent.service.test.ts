@@ -1046,3 +1046,48 @@ test("TravelLine multi-room requests receive a checkout link without an unsuppor
     globalThis.fetch = harness.originalFetch;
   }
 });
+
+test("TravelLine uses valid model criteria for the first checkout and preserves them for later link requests", async () => {
+  const harness = createHarness({ travelLine: true });
+  try {
+    await harness.service.reply("tl-initial", "Создавай");
+    assert.match(
+      harness.published.at(-1)?.bookingUrl ?? "",
+      /^https:\/\/booking\.example\/reserve/u,
+    );
+    await harness.service.reply("tl-initial", "Пришлите ссылку на оформление");
+    assert.match(
+      harness.published.at(-1)?.bookingUrl ?? "",
+      /date=2026-10-13/u,
+    );
+    assert.equal(harness.reservations.length, 0);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
+
+test("TravelLine link handoff recognizes Russian adult counts in an existing conversation", async () => {
+  const harness = createHarness({
+    travelLine: true,
+    initialDetails: {
+      bookingProvider: "travelline",
+      bookingContext: {
+        checkInDate: "2026-12-01",
+        checkOutDate: "2026-12-03",
+        roomCount: 2,
+        childAges: [],
+      },
+    },
+  });
+  try {
+    await harness.service.reply(
+      "tl-russian-count",
+      "Для четырёх взрослых пришлите ссылку на оформление",
+    );
+    assert.match(harness.published.at(-1)?.bookingUrl ?? "", /adults=4/u);
+    assert.ok(harness.prompts.some((prompt) => prompt.includes('"roomCount":2')));
+    assert.equal(harness.reservations.length, 0);
+  } finally {
+    globalThis.fetch = harness.originalFetch;
+  }
+});
