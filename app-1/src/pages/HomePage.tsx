@@ -1,5 +1,7 @@
 import corporateCheckinsImage from "@/assets/alsma/corporate-checkins.jpg";
 import heroImage from "@/assets/alsma/hero.jpg";
+import forestMobile from "@/assets/alsma/home-hero-forest-900.webp";
+import forestDesktop from "@/assets/alsma/home-hero-forest-1920.webp";
 import { CatalogSections } from "@/components/site/CatalogSections";
 import { HomeBookingBar } from "@/components/site/HomeBookingBar";
 import {
@@ -22,6 +24,7 @@ import {
   HOME_REVIEWS,
   type HomeReview,
 } from "@/lib/site/home-content";
+import { canonicalMediaUrl } from "@/lib/site/media-url";
 import {
   ACTIVE_OFFERS,
   type ActiveOffer,
@@ -31,16 +34,28 @@ import {
 import { getRoomCards } from "@/lib/site/rooms-content";
 import { usePublishedSiteContent } from "@/lib/site/useSiteContent";
 
+// The published forest photo has a stable media ID. New CMS uploads retain
+// their own URLs and take precedence over these bundled sizes.
+const forestMediaPath =
+  "/api/media/managed/OTg0NGQ1NWEtZjRlNC00ODMwLWIxY2ItMGU2MmNiOTY5OWQz";
+
 export const HomePage = () => {
   const content = usePublishedSiteContent("home");
   const roomsContent = usePublishedSiteContent("rooms");
   const offersContent = usePublishedSiteContent("offers");
-  if (content.isLoading || roomsContent.isLoading || offersContent.isLoading) {
-    return <main className="min-h-screen bg-page" aria-busy="true" />;
-  }
   const hero = content.data?.items?.find(
     (item) => item.itemKey === "hero",
   )?.content;
+  const heroSource =
+    typeof hero?.mediaUrl === "string" && hero.mediaUrl.trim()
+      ? hero.mediaUrl
+      : typeof hero?.image === "string" && hero.image.trim()
+        ? hero.image
+        : undefined;
+  const useBundledForest =
+    (heroSource &&
+      canonicalMediaUrl(heroSource).split("?")[0] === forestMediaPath) ||
+    (!heroSource && (content.isPending || content.isError));
   const configuredRestCards = getSiteCollection<ReadyScenario>(
     offersContent.data?.items,
     "ready-scenarios",
@@ -91,19 +106,18 @@ export const HomePage = () => {
 
   return (
     <main className="min-h-screen bg-page text-page-foreground">
-      <section className="relative min-h-screen overflow-hidden text-brand-foreground">
+      <section className="relative min-h-screen overflow-hidden bg-brand text-brand-foreground">
         <SiteHeroMedia
           alt="Загородный отель АЛСМА"
           className="absolute inset-0 size-full object-cover"
           poster={
             typeof hero?.posterUrl === "string" ? hero.posterUrl : undefined
           }
-          source={
-            typeof hero?.mediaUrl === "string"
-              ? hero.mediaUrl
-              : typeof hero?.image === "string"
-                ? hero.image
-                : heroImage
+          source={useBundledForest ? forestDesktop : (heroSource ?? heroImage)}
+          srcSet={
+            useBundledForest
+              ? `${forestMobile} 900w, ${forestDesktop} 1920w`
+              : undefined
           }
         />
         <div className="absolute inset-0 bg-hero-media-tint" />

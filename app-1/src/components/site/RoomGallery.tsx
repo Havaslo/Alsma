@@ -34,6 +34,8 @@ export const RoomGallery = ({
         >
           <img
             alt={title}
+            decoding="async"
+            loading="lazy"
             className="aspect-square size-full object-cover"
             src={resolveMediaUrl(currentImage)}
           />

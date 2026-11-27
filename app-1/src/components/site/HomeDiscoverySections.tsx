@@ -125,6 +125,8 @@ const HomeMapSection = () => (
       <div className="rounded-4xl border border-supporting p-5">
         <div className="relative overflow-hidden rounded-3xl">
           <img
+            decoding="async"
+            loading="lazy"
             alt="Пространство тишины с видом сверху"
             className="w-full"
             src={spaceImage}
@@ -168,6 +170,8 @@ export const HomeExperienceSections = () => (
             <article className="rounded-3xl" key={title}>
               <div className="relative h-64 overflow-hidden rounded-3xl">
                 <img
+                  decoding="async"
+                  loading="lazy"
                   alt={title}
                   className="size-full object-cover"
                   src={resolveMediaUrl(image)}
@@ -206,6 +210,8 @@ export const HomeExperienceSections = () => (
               key={title}
             >
               <img
+                decoding="async"
+                loading="lazy"
                 alt={title}
                 className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
                 src={resolveMediaUrl(image)}
@@ -227,6 +233,8 @@ export const HomeExperienceSections = () => (
         </div>
         <article className="mt-10 grid overflow-hidden rounded-4xl bg-panel lg:grid-cols-2">
           <img
+            decoding="async"
+            loading="lazy"
             alt="Корпоративные заезды"
             className="size-full min-h-80 object-cover"
             src={corporateImage}
@@ -272,6 +280,8 @@ export const HomeExperienceSections = () => (
               key={title}
             >
               <img
+                decoding="async"
+                loading="lazy"
                 alt={title}
                 className="h-48 w-full object-cover md:h-auto md:w-2/5 xl:h-48 xl:w-full"
                 src={resolveMediaUrl(image)}
@@ -393,6 +403,7 @@ export const HomeContactSections = () => {
           </div>
           <iframe
             allowFullScreen
+            loading="lazy"
             className="h-full min-h-130 w-full rounded-4xl border-0"
             src="https://yandex.ru/map-widget/v1/?ll=44.113128%2C56.537617&z=16"
             title="Яндекс Карта с отметкой отеля АЛСМА"
@@ -403,6 +414,8 @@ export const HomeContactSections = () => {
       <section className="px-4 pt-6 pb-24 sm:px-6">
         <div className="relative mx-auto max-w-[100rem] overflow-hidden rounded-4xl px-6 py-12 text-center text-brand-foreground">
           <img
+            decoding="async"
+            loading="lazy"
             alt=""
             className="absolute inset-0 size-full object-cover"
             src={ctaImage}

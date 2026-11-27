@@ -50,6 +50,8 @@ export const SiteOfferPopup = () => {
       </button>
       <img
         alt=""
+        decoding="async"
+        fetchPriority="low"
         className="h-48 w-full object-cover sm:h-52"
         src={resolveMediaUrl(banner.image)}
       />
