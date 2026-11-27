@@ -338,6 +338,7 @@ const createHarness = (
     baseUrl: "https://gateway.test/v1",
     booking: booking as never,
     bookingReturnUrl: "https://alsma.ru/booking/return",
+    travelLineSiteBookingUrl: "https://alsma.ru/booking",
     bookingUrl: "/booking",
     chat: chat as never,
     database: { client } as unknown as Database,
@@ -1019,9 +1020,9 @@ test("TravelLine hands off checkout without collecting contacts or creating an E
       "Да, бронируйте с 2026-10-13 по 2026-10-15, 1 взрослый",
     );
     assert.equal(harness.reservations.length, 0);
-    assert.match(
-      harness.published.at(-1)?.bookingUrl ?? "",
-      /^https:\/\/booking\.example\/reserve/u,
+    assert.equal(
+      harness.published.at(-1)?.bookingUrl,
+      "https://alsma.ru/booking?date=2026-10-13&nights=2&adults=1&children=0",
     );
     assert.ok(harness.prompts.some((prompt) => prompt.includes("TravelLine")));
   } finally {
@@ -1040,7 +1041,7 @@ test("TravelLine multi-room requests receive a checkout link without an unsuppor
     assert.equal(harness.reservations.length, 0);
     assert.match(
       harness.published.at(-1)?.bookingUrl ?? "",
-      /^https:\/\/booking\.example\/reserve/u,
+      /^https:\/\/alsma\.ru\/booking\?/u,
     );
   } finally {
     globalThis.fetch = harness.originalFetch;
@@ -1053,7 +1054,7 @@ test("TravelLine uses valid model criteria for the first checkout and preserves 
     await harness.service.reply("tl-initial", "Создавай");
     assert.match(
       harness.published.at(-1)?.bookingUrl ?? "",
-      /^https:\/\/booking\.example\/reserve/u,
+      /^https:\/\/alsma\.ru\/booking\?/u,
     );
     await harness.service.reply("tl-initial", "Пришлите ссылку на оформление");
     assert.match(

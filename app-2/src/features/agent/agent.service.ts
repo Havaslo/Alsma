@@ -6,7 +6,10 @@ import type { BookingService } from "../booking/booking.service.js";
 import type { ChatService } from "../chat/chat.service.js";
 import { createKnowledgeBaseRepository } from "../knowledge-base/knowledge-base.repository.js";
 import { createKnowledgeBaseService } from "../knowledge-base/knowledge-base.service.js";
-import type { TravelLineService } from "../travelline/travelline.service.js";
+import {
+  type TravelLineService,
+  travelLineBookingUrl,
+} from "../travelline/travelline.service.js";
 import { loadPublishedEventsContext } from "../voice-agent/events-context.js";
 import {
   agentBookingSchema,
@@ -103,6 +106,7 @@ type AgentOptions = {
   readonly database: Database;
   readonly epteraEnabled?: boolean;
   readonly travelLine?: TravelLineService;
+  readonly travelLineSiteBookingUrl?: string;
   readonly logger: Logger;
 };
 const asSettings = (value: unknown) => ({
@@ -1058,12 +1062,15 @@ export const createAiAgentService = (options: AgentOptions) => {
       finalAction = "answer";
       if (criteria) {
         try {
-          bookingUrl = options.travelLine.checkoutUrl({
+          const search = {
             checkIn: criteria.checkInDate,
             checkOut: criteria.checkOutDate,
             adults: criteria.adults,
             childAges: criteria.childAges,
-          });
+          };
+          bookingUrl = options.travelLineSiteBookingUrl
+            ? travelLineBookingUrl(options.travelLineSiteBookingUrl, search)
+            : options.travelLine.checkoutUrl(search);
           bookingState = { ...bookingState, ...criteria };
           await options.database.client.adminRequest.update({
             where: { id: conversationId },
@@ -1087,7 +1094,7 @@ export const createAiAgentService = (options: AgentOptions) => {
             handoffReady: true,
             bookingUrl,
             instruction:
-              "Предложи гостю перейти по ссылке в форму TravelLine для выбора номера, оформления и оплаты. Бронь ещё не создана; не запрашивай контакты в чате. Если нужно несколько номеров, гость выбирает их в форме; наличие и распределение по номерам ещё не подтверждены.",
+              "Предложи гостю открыть приложенную кнопку для выбора номера, оформления и оплаты. Не вставляй URL в текст, ссылка будет приложена отдельно. Бронь ещё не создана; не запрашивай контакты в чате. Если нужно несколько номеров, гость выбирает их в форме; наличие и распределение по номерам ещё не подтверждены.",
           };
         } catch {
           actionOutcome = {
