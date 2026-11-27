@@ -21,11 +21,13 @@ export const SiteHeroMedia = ({
   className,
   poster,
   source,
+  srcSet,
 }: {
   readonly alt?: string;
   readonly className: string;
   readonly poster?: string;
   readonly source: string;
+  readonly srcSet?: string;
 }) => {
   const resolvedSource = resolveMediaUrl(source);
   const resolvedPoster = poster ? resolveMediaUrl(poster) : undefined;
@@ -42,6 +44,13 @@ export const SiteHeroMedia = ({
       src={resolvedSource}
     />
   ) : (
-    <img alt={alt} className={className} src={resolvedSource} />
+    <img
+      alt={alt}
+      className={className}
+      fetchPriority="high"
+      src={resolvedSource}
+      srcSet={srcSet}
+      sizes={srcSet ? "100vw" : undefined}
+    />
   );
 };

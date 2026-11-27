@@ -127,6 +127,8 @@ export const HomeRestSection = ({
           </div>
           <div className="order-1 min-h-80 overflow-hidden lg:order-2">
             <img
+              decoding="async"
+              loading="lazy"
               alt={card.title}
               className="size-full object-cover transition duration-500 group-hover:scale-105"
               src={resolveMediaUrl(card.image)}
@@ -171,6 +173,8 @@ export const HomePromotionsSection = ({
               >
                 <div className="h-56 overflow-hidden">
                   <img
+                    decoding="async"
+                    loading="lazy"
                     alt={offer.title}
                     className="size-full object-cover transition duration-500 group-hover:scale-105"
                     src={resolveMediaUrl(offer.image)}
@@ -217,6 +221,7 @@ export const HomePromotionsSection = ({
         {selectedOffer && (
           <>
             <img
+              decoding="async"
               alt={selectedOffer.title}
               className="relative -mx-6 block aspect-video w-[calc(100%+3rem)] max-w-none shrink-0 object-cover"
               src={resolveMediaUrl(selectedOffer.image)}
@@ -296,6 +301,8 @@ export const HomeReviewsSection = ({
                   )
                   .map((image, index) => (
                     <img
+                      decoding="async"
+                      loading="lazy"
                       alt={`Фото к отзыву ${review.name} ${index + 1}`}
                       className="size-16 rounded-2xl object-cover"
                       key={image}
@@ -343,6 +350,8 @@ export const HomeRoomsSection = ({
               key={room.title}
             >
               <img
+                decoding="async"
+                loading="lazy"
                 alt={room.title}
                 className="h-64 w-full object-cover"
                 src={resolveMediaUrl(room.image)}
