@@ -224,6 +224,7 @@ export const createApiRouter = ({
     bookingUrl: "",
     epteraEnabled: epteraEnabled || travelLineService.enabled,
     travelLine: travelLineService.enabled ? travelLineService : undefined,
+    travelLineSiteBookingUrl: "https://alsma.ru/booking",
     chat,
     database,
     booking: agentBooking,

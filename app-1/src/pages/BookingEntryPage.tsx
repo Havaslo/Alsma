@@ -14,6 +14,16 @@ const initialDate = (offset: number) => {
   date.setDate(date.getDate() + offset);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
+const departureDate = (arrival: string, nights: string | null) => {
+  const duration = Number(nights);
+  if (!Number.isInteger(duration) || duration < 1 || duration > 100)
+    return undefined;
+  const date = new Date(arrival + "T00:00:00Z");
+  if (!Number.isFinite(date.getTime())) return undefined;
+  date.setUTCDate(date.getUTCDate() + duration);
+  return date.toISOString().slice(0, 10);
+};
+
 const TravelLineForm = ({
   ready,
   standalone = true,
@@ -22,16 +32,19 @@ const TravelLineForm = ({
   standalone?: boolean;
 }) => {
   const params = new URLSearchParams(window.location.search);
-  const [checkIn, setCheckIn] = useState(
-    params.get("checkIn") ?? initialDate(7),
-  );
+  const arrival = params.get("checkIn") ?? params.get("date") ?? initialDate(7);
+  const [checkIn, setCheckIn] = useState(arrival);
   const [checkOut, setCheckOut] = useState(
-    params.get("checkOut") ?? initialDate(9),
+    params.get("checkOut") ??
+      departureDate(arrival, params.get("nights")) ??
+      initialDate(9),
   );
   const [adults, setAdults] = useState(
     Math.max(1, Math.min(12, Number(params.get("adults")) || 2)),
   );
-  const [childAges, setChildAges] = useState(params.get("childAges") ?? "");
+  const [childAges, setChildAges] = useState(
+    params.get("childAges") ?? params.get("children-age") ?? "",
+  );
   const [error, setError] = useState("");
   const form = (
     <section className={standalone ? "mx-auto max-w-3xl px-5 py-12" : ""}>
