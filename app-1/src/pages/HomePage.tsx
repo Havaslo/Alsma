@@ -15,6 +15,7 @@ import {
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteHeroMedia } from "@/components/site/SiteHeroMedia";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
+import { TravelLineSearch } from "@/components/site/TravelLineWidget";
 import { getSiteCollection } from "@/lib/site/content-collections";
 import {
   HOME_REST_CARDS,
@@ -136,6 +137,9 @@ export const HomePage = () => {
                 : "Загородный отель в окружении соснового леса: уютные номера, SPA, авторская кухня и настоящее спокойствие."}
             </p>
             <HomeBookingBar />
+          </div>
+          <div className="mx-auto w-full max-w-[75rem]">
+            <TravelLineSearch />
           </div>
         </div>
       </section>

@@ -3,6 +3,7 @@ import { PublicHero } from "@/components/site/PublicHero";
 import { RoomCard } from "@/components/site/RoomCard";
 import { RoomsSupportSections } from "@/components/site/RoomsSupportSections";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { TravelLineSearch } from "@/components/site/TravelLineWidget";
 import { PUBLIC_PAGES } from "@/lib/site/public-pages";
 import { getRoomComparisonValue, getRoomId } from "@/lib/site/rooms";
 import { getRoomCards, getRoomComparison } from "@/lib/site/rooms-content";
@@ -37,6 +38,9 @@ export const RoomsPage = () => {
         image={page.heroImage}
         title={title}
       />
+      <div className="mx-auto max-w-[100rem] px-5 pt-7 sm:px-8">
+        <TravelLineSearch />
+      </div>
       <section
         className="mx-auto max-w-[100rem] px-5 py-24 sm:px-8"
         id="details"
